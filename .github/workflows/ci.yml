@@ -34,7 +34,7 @@ jobs:
     - name: Checkout Commit
       uses: actions/checkout@v3
     - name: Install pnpm
-      uses: pnpm/action-setup@v2.4.0
+      uses: pnpm/action-setup@master
       with:
         version: next-9
         standalone: true
