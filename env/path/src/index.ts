@@ -21,7 +21,7 @@ export function prependDirsToPath (prependDirs: string[], env = process.env): Pr
     name: PATH,
     value: [
       prepend,
-      ...(envPath != null ? [envPath] : []),
+      envPath ?? '',
     ].join(path.delimiter),
     updated: true,
   }
