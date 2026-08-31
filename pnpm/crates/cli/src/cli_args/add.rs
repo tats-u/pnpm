@@ -450,7 +450,7 @@ impl AddArgs {
             self.save_exact || config.save_exact,
             self.save_prefix
                 .as_deref()
-                .or(self.tilde.then_some("~"))
+                .or_else(|| self.tilde.then_some("~"))
                 .or(config.save_prefix.as_deref()),
         )
     }
