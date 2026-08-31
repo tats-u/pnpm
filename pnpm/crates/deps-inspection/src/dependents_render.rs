@@ -169,6 +169,10 @@ fn dependents_to_tree_nodes(
                     ),
                 )
             };
+            if let Some(requires) = &dep.requires {
+                label.push(' ');
+                label.push_str(&plain(&format!("(requires {requires})")));
+            }
             if dep.circular {
                 label.push_str(&circular_label());
             }
