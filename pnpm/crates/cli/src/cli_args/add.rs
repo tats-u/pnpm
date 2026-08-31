@@ -133,8 +133,11 @@ pub struct AddArgs {
     /// the default semver range operator.
     #[clap(short = 'E', long = "save-exact")]
     pub save_exact: bool,
+    /// Save the resolved version with a `~` range prefix. Equivalent to `--save-prefix=~`.
+    #[clap(long = "tilde", overrides_with = "save_prefix")]
+    pub tilde: bool,
     /// The prefix of the saved version range: `^` (default), `~`, `=` for an explicit exact pin, or empty for a bare exact version.
-    #[clap(long = "save-prefix", value_name = "prefix")]
+    #[clap(long = "save-prefix", value_name = "prefix", overrides_with = "tilde")]
     pub save_prefix: Option<String>,
     /// Save the new dependency to the default catalog. Shorthand for `--save-catalog-name=default`.
     #[clap(long = "save-catalog")]
@@ -440,12 +443,15 @@ impl AddArgs {
     }
 
     /// The style that decides the saved range: `--save-exact` /
-    /// `--save-prefix` layered over the `saveExact` and `savePrefix`
+    /// `--tilde` / `--save-prefix` layered over the `saveExact` and `savePrefix`
     /// settings, mirroring pnpm's `getRangeSpecStyle`.
     fn range_spec_style(&self, config: &Config) -> RangeSpecStyle {
         RangeSpecStyle::from_save_options(
             self.save_exact || config.save_exact,
-            self.save_prefix.as_deref().or(config.save_prefix.as_deref()),
+            self.save_prefix
+                .as_deref()
+                .or(self.tilde.then_some("~"))
+                .or(config.save_prefix.as_deref()),
         )
     }
 }

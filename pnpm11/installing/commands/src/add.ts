@@ -16,6 +16,7 @@ import { createGlobalPolicyCallbacks } from './resolutionPolicyManifest.js'
 
 export const shorthands: Record<string, string> = {
   'save-catalog': '--save-catalog-name=default',
+  tilde: '--save-prefix=~',
   d: '--save-dev',
   e: '--save-exact',
   o: '--save-optional',
@@ -146,6 +147,10 @@ export function help (): string {
             description: 'Install exact version',
             name: '--[no-]save-exact',
             shortAlias: '-e',
+          },
+          {
+            description: 'Save the resolved version with a `~` range prefix',
+            name: '--tilde',
           },
           {
             description: 'Save packages from the workspace with a "workspace:" protocol. True by default',

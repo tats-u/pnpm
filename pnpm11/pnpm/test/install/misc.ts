@@ -133,6 +133,18 @@ test('install --save-exact', async () => {
   expect(pkg.devDependencies).toStrictEqual({ 'is-positive': '3.1.0' })
 })
 
+test('add --tilde', async () => {
+  const project = prepare()
+
+  await execPnpm(['add', 'is-positive', '--tilde'])
+
+  project.has('is-positive')
+
+  const pkg = await readPackageJsonFromDir(process.cwd())
+
+  expect(pkg.dependencies?.['is-positive']).toMatch(/^~(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Z-]+(?:\.[0-9A-Z-]+)*))?(?:\+[0-9A-Z-]+)?$/i)
+})
+
 test('install to a project that uses package.yaml', async () => {
   const project = prepareEmpty()
 

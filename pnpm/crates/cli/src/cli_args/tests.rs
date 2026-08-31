@@ -82,6 +82,24 @@ fn add_allow_build_collects_repeated_values() {
 }
 
 #[test]
+fn add_tilde_is_a_save_prefix_shortcut() {
+    let args = add_args(&["pacquet", "add", "foo", "--tilde"]);
+    assert!(args.tilde);
+    assert_eq!(args.save_prefix, None);
+}
+
+#[test]
+fn add_tilde_and_save_prefix_resolve_last_one_wins() {
+    let args = add_args(&["pacquet", "add", "foo", "--save-prefix=^", "--tilde"]);
+    assert!(args.tilde, "--tilde should win when it is last");
+    assert_eq!(args.save_prefix, None);
+
+    let args = add_args(&["pacquet", "add", "foo", "--tilde", "--save-prefix="]);
+    assert!(!args.tilde, "--save-prefix should win when it is last");
+    assert_eq!(args.save_prefix.as_deref(), Some(""));
+}
+
+#[test]
 fn store_dir_is_global_and_parses_on_either_side_of_the_subcommand() {
     for argv in [
         ["pacquet", "--store-dir", "custom-store", "install"].as_slice(),
