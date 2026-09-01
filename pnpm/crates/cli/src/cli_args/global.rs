@@ -906,6 +906,7 @@ async fn run_group_install<Reporter: self::Reporter + 'static>(
         None,
         lockfile_only,
         config.supported_architectures.clone(),
+        false,
         Some([DependencyGroup::Prod]),
     )
     .await?;

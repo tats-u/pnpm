@@ -26,15 +26,15 @@ use pnpm_lockfile::{Lockfile, MaybeLazyLockfile};
 use pnpm_lockfile_preferred_versions::get_preferred_versions_from_lockfile_and_manifests;
 use pnpm_network::{ThrottledClient, redact_and_sanitize};
 use pnpm_package_manifest::{DependencyGroup, PackageManifest, PackageManifestError};
-use pnpm_registry::RangeSpecStyle;
+use pnpm_registry::{PackageVersion, RangeSpecStyle};
 use pnpm_reporter::{LogEvent, LogLevel, PackageManifestLog, PackageManifestMessage, Reporter};
 use pnpm_resolving_deps_resolver::{UpdateDepth, UpdateTargets, is_valid_dependency_alias};
 use pnpm_resolving_git_resolver::{
     GitFetchContext, GitResolver, HostedGit, HostedOpts, RealGitProbe, RealGitRunner,
 };
 use pnpm_resolving_npm_resolver::{
-    DeclaredSpecifiers, InMemoryPackageMetaCache, PackumentFetchLocker, PickPackageError,
-    PickPackageOptions, calc_specifier_for_workspace_dep, calc_version_range,
+    DeclaredSpecifiers, FetchMetadataError, InMemoryPackageMetaCache, PackumentFetchLocker,
+    PickPackageError, PickPackageOptions, calc_specifier_for_workspace_dep, calc_version_range,
     infer_range_spec_style, parse_bare_specifier, pick_matching_local_version_or_null,
     pick_package, pick_registry_for_package, shared_packument_fetch_locker,
 };
@@ -70,6 +70,10 @@ where
     pub dependency_groups: Option<DependencyGroupList>,
     /// Package selectors, each of which may carry an `@<version>` suffix.
     pub package_names: &'a [String],
+    /// Whether to add the matching `@types/*` package to
+    /// `devDependencies` when the package does not bundle its own
+    /// declarations.
+    pub save_types: bool,
     /// How the freshly-resolved version is pinned into the manifest range,
     /// derived from `--save-exact` / `--save-prefix`. See
     /// [`RangeSpecStyle::from_save_options`].
@@ -187,6 +191,7 @@ where
             lockfile_path,
             dependency_groups,
             package_names,
+            save_types,
             range_spec_style,
             save_catalog_name,
             resolved_packages,
@@ -214,6 +219,7 @@ where
             lockfile,
             dependency_groups.as_deref(),
             package_names,
+            save_types,
             &latest_picker,
             range_spec_style,
             save_catalog_name.as_deref(),
@@ -363,6 +369,7 @@ where
             lockfile_path,
             dependency_groups,
             package_names,
+            save_types,
             range_spec_style,
             save_catalog_name,
             resolved_packages,
@@ -386,6 +393,7 @@ where
             lockfile,
             dependency_groups.as_deref(),
             package_names,
+            save_types,
             range_spec_style,
             save_catalog_name.as_deref(),
         )
@@ -594,6 +602,7 @@ async fn prepare_selected_manifests<Reporter: self::Reporter>(
     lockfile: Option<&Lockfile>,
     dependency_groups: Option<&[DependencyGroup]>,
     package_names: &[String],
+    save_types: bool,
     range_spec_style: RangeSpecStyle,
     save_catalog_name: Option<&str>,
 ) -> Result<SelectedAddPreparation, AddError> {
@@ -623,6 +632,7 @@ async fn prepare_selected_manifests<Reporter: self::Reporter>(
             lockfile,
             dependency_groups,
             package_names,
+            save_types,
             &latest_picker,
             range_spec_style,
             save_catalog_name,
@@ -676,6 +686,7 @@ async fn prepare_manifest<'a, Reporter: self::Reporter>(
     lockfile: Option<&Lockfile>,
     dependency_groups: Option<&[DependencyGroup]>,
     package_names: &[String],
+    save_types: bool,
     latest_picker: &tokio::sync::OnceCell<LatestPicker<'a>>,
     range_spec_style: RangeSpecStyle,
     save_catalog_name: Option<&str>,
@@ -685,7 +696,7 @@ async fn prepare_manifest<'a, Reporter: self::Reporter>(
     fetch_locker: &PackumentFetchLocker,
     workspace_packages: Option<&WorkspacePackages>,
 ) -> Result<Catalogs, AddError> {
-    let resolved_dependencies = {
+    let mut resolved_dependencies = {
         let mut resolution_futures = FuturesOrdered::new();
         for package_selector in package_names {
             resolution_futures.push_back(resolve_added_dependency(
@@ -716,23 +727,57 @@ async fn prepare_manifest<'a, Reporter: self::Reporter>(
         dependencies
     };
 
+    if save_types {
+        let mut type_resolution_futures = FuturesOrdered::new();
+        for dependency in &resolved_dependencies {
+            type_resolution_futures.push_back(resolve_types_dependency(
+                dependency.types_lookup_package_name.clone(),
+                dependency.has_bundled_types,
+                manifest,
+                config,
+                lockfile,
+                http_client,
+                http_client_arc,
+                latest_picker,
+                range_spec_style,
+                save_catalog_name,
+                catalogs,
+                prefix,
+                meta_cache,
+                fetch_locker,
+                workspace_packages,
+            ));
+        }
+        while let Some(types_dependency) = type_resolution_futures.next().await {
+            if let Some(types_dependency) = types_dependency? {
+                if let Some(warning) = &types_dependency.warning {
+                    Reporter::emit(warning);
+                }
+                resolved_dependencies.push(types_dependency);
+            }
+        }
+    }
+
     emit_initial_package_manifest::<Reporter>(manifest);
 
     for dependency in &resolved_dependencies {
         let inferred;
-        let groups: &[DependencyGroup] = match dependency_groups {
+        let groups: &[DependencyGroup] = match dependency.target_groups.as_deref() {
             Some(groups) => groups,
-            // pnpm's `guessDependencyType`: keep an already-declared
-            // package in its group; a peer-only entry stays untouched
-            // (the install still resolves it); a new package lands in
-            // `dependencies`.
-            None => match guess_dependency_group(manifest, &dependency.package_name) {
-                Some(DependencyGroup::Peer) => &[],
-                Some(group) => {
-                    inferred = [group];
-                    &inferred
-                }
-                None => &[DependencyGroup::Prod],
+            None => match dependency_groups {
+                Some(groups) => groups,
+                // pnpm's `guessDependencyType`: keep an already-declared
+                // package in its group; a peer-only entry stays untouched
+                // (the install still resolves it); a new package lands in
+                // `dependencies`.
+                None => match guess_dependency_group(manifest, &dependency.package_name) {
+                    Some(DependencyGroup::Peer) => &[],
+                    Some(group) => {
+                        inferred = [group];
+                        &inferred
+                    }
+                    None => &[DependencyGroup::Prod],
+                },
             },
         };
         for &dependency_group in groups {
@@ -813,6 +858,9 @@ struct ResolvedAddedDependency {
     manifest_specifier: String,
     updated_catalogs: Catalogs,
     warning: Option<LogEvent>,
+    target_groups: Option<Vec<DependencyGroup>>,
+    types_lookup_package_name: Option<String>,
+    has_bundled_types: Option<bool>,
 }
 
 #[expect(
@@ -866,6 +914,9 @@ async fn resolve_added_dependency<'a>(
         ])
         .find(|(name, _)| *name == package_name)
         .map(|(_, spec)| spec.to_string());
+    let types_lookup_package_name =
+        types_lookup_package_name(package_name, explicit_spec, prev_specifier.as_deref(), config);
+    let mut has_bundled_types = None;
 
     // The bare specifier to reconcile against the catalogs:
     // - an explicit `@<version>` is resolved to a concrete version and
@@ -921,29 +972,16 @@ async fn resolve_added_dependency<'a>(
             .unwrap_or_else(|| normalized_save_specifier(spec)),
             (None, Some(prev)) => prev.to_string(),
             (None, None) => {
-                let latest = latest_picker
-                    .get_or_try_init(|| {
-                        std::future::ready(
-                            PickPolicy::from_config(config)
-                                .map(|policy| {
-                                    LatestPicker::new(
-                                        config,
-                                        http_client,
-                                        policy,
-                                        std::sync::Arc::clone(meta_cache),
-                                        std::sync::Arc::clone(fetch_locker),
-                                    )
-                                })
-                                .map_err(AddError::MinimumReleaseAgeExclude),
-                        )
-                    })
-                    .await?
-                    .resolve(package_name, false)
-                    .await
-                    .map_err(|error| AddError::ResolveLatest {
-                        name: package_name.to_string(),
-                        error,
-                    })?;
+                let latest = resolve_latest_package(
+                    package_name,
+                    latest_picker,
+                    config,
+                    http_client,
+                    meta_cache,
+                    fetch_locker,
+                )
+                .await?;
+                has_bundled_types = Some(package_has_bundled_types(&latest));
                 calc_version_range(&latest.version, None, None, range_spec_style)
             }
         }
@@ -976,7 +1014,124 @@ async fn resolve_added_dependency<'a>(
         manifest_specifier,
         updated_catalogs,
         warning: outcome.warning,
+        target_groups: None,
+        types_lookup_package_name,
+        has_bundled_types,
     })
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "types lookup reuses the add command's shared resolution inputs"
+)]
+async fn resolve_types_dependency<'a>(
+    types_lookup_package_name: Option<String>,
+    has_bundled_types: Option<bool>,
+    manifest: &PackageManifest,
+    config: &'static Config,
+    lockfile: Option<&Lockfile>,
+    http_client: &'a ThrottledClient,
+    http_client_arc: &std::sync::Arc<ThrottledClient>,
+    latest_picker: &tokio::sync::OnceCell<LatestPicker<'a>>,
+    range_spec_style: RangeSpecStyle,
+    save_catalog_name: Option<&str>,
+    catalogs: &Catalogs,
+    prefix: &str,
+    meta_cache: &std::sync::Arc<InMemoryPackageMetaCache>,
+    fetch_locker: &PackumentFetchLocker,
+    workspace_packages: Option<&WorkspacePackages>,
+) -> Result<Option<ResolvedAddedDependency>, AddError> {
+    let Some(package_name) = types_lookup_package_name else {
+        return Ok(None);
+    };
+    let has_bundled_types = match has_bundled_types {
+        Some(has_bundled_types) => has_bundled_types,
+        None => {
+            let latest = resolve_latest_package(
+                &package_name,
+                latest_picker,
+                config,
+                http_client,
+                meta_cache,
+                fetch_locker,
+            )
+            .await?;
+            package_has_bundled_types(&latest)
+        }
+    };
+    if has_bundled_types {
+        return Ok(None);
+    }
+    let types_package_name = definitely_typed_package_name(&package_name)
+        .expect("types lookup name never points at an @types package");
+    match resolve_added_dependency(
+        &types_package_name,
+        config,
+        manifest,
+        lockfile,
+        http_client,
+        http_client_arc,
+        latest_picker,
+        range_spec_style,
+        save_catalog_name,
+        catalogs,
+        prefix,
+        meta_cache,
+        fetch_locker,
+        workspace_packages,
+    )
+    .await
+    {
+        Ok(ResolvedAddedDependency {
+            package_name,
+            manifest_specifier,
+            updated_catalogs,
+            warning,
+            target_groups: _,
+            types_lookup_package_name: _,
+            has_bundled_types: _,
+        }) => Ok(Some(ResolvedAddedDependency {
+            package_name,
+            manifest_specifier,
+            updated_catalogs,
+            warning,
+            target_groups: Some(vec![DependencyGroup::Dev]),
+            types_lookup_package_name: None,
+            has_bundled_types: None,
+        })),
+        Err(error) if is_missing_types_package_error(&error) => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+
+async fn resolve_latest_package<'a>(
+    package_name: &str,
+    latest_picker: &tokio::sync::OnceCell<LatestPicker<'a>>,
+    config: &'static Config,
+    http_client: &'a ThrottledClient,
+    meta_cache: &std::sync::Arc<InMemoryPackageMetaCache>,
+    fetch_locker: &PackumentFetchLocker,
+) -> Result<std::sync::Arc<PackageVersion>, AddError> {
+    latest_picker
+        .get_or_try_init(|| {
+            std::future::ready(
+                PickPolicy::from_config(config)
+                    .map(|policy| {
+                        LatestPicker::new(
+                            config,
+                            http_client,
+                            policy,
+                            std::sync::Arc::clone(meta_cache),
+                            std::sync::Arc::clone(fetch_locker),
+                        )
+                    })
+                    .map_err(AddError::MinimumReleaseAgeExclude),
+            )
+        })
+        .await?
+        .resolve(package_name, false)
+        .await
+        .map_err(|error| AddError::ResolveLatest { name: package_name.to_string(), error })
 }
 
 struct AliaslessGitDependency {
@@ -1242,6 +1397,73 @@ fn split_name_spec(input: &str) -> (&str, Option<&str>) {
     match input.get(1..).and_then(|rest| rest.find('@')).map(|offset| offset + 1) {
         Some(idx) => (&input[..idx], Some(&input[idx + 1..])),
         None => (input, None),
+    }
+}
+
+fn types_lookup_package_name(
+    package_name: &str,
+    explicit_spec: Option<&str>,
+    prev_specifier: Option<&str>,
+    config: &Config,
+) -> Option<String> {
+    if package_name.starts_with("@types/") {
+        return None;
+    }
+    let specifier = explicit_spec.or(prev_specifier);
+    if prev_specifier.is_some_and(|specifier| specifier.starts_with("catalog:"))
+        && explicit_spec.is_none()
+    {
+        return Some(package_name.to_string());
+    }
+    match specifier {
+        Some(specifier) => {
+            let registries: std::collections::HashMap<String, String> =
+                config.resolved_registries().into_iter().collect();
+            let registry = pick_registry_for_package(&registries, package_name, Some(specifier));
+            parse_bare_specifier(specifier, Some(package_name), "latest", &registry).and_then(
+                |parsed| parsed.normalized_bare_specifier.is_none().then_some(parsed.name),
+            )
+        }
+        None => Some(package_name.to_string()),
+    }
+}
+
+fn definitely_typed_package_name(package_name: &str) -> Option<String> {
+    if package_name.starts_with("@types/") {
+        return None;
+    }
+    Some(if let Some(rest) = package_name.strip_prefix('@') {
+        format!("@types/{}", rest.replace('/', "__"))
+    } else {
+        format!("@types/{package_name}")
+    })
+}
+
+fn package_has_bundled_types(package: &PackageVersion) -> bool {
+    package.other.contains_key("types") || package.other.contains_key("typings")
+}
+
+fn is_missing_types_package_error(error: &AddError) -> bool {
+    match error {
+        AddError::ResolveLatest {
+            error:
+                crate::resolve_latest::ResolveLatestError::Registry(
+                    pnpm_registry::RegistryError::Network(pnpm_registry::NetworkError {
+                        error,
+                        ..
+                    }),
+                ),
+            ..
+        } => error.status().is_some_and(|status| status.as_u16() == 404),
+        AddError::ResolveLatest {
+            error: crate::resolve_latest::ResolveLatestError::Pick(pick_error),
+            ..
+        } => matches!(
+            pick_error.as_ref(),
+            PickPackageError::Fetch(FetchMetadataError::Network { error, .. })
+                if error.status().is_some_and(|status| status.as_u16() == 404)
+        ),
+        _ => false,
     }
 }
 

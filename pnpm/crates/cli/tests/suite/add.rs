@@ -15,6 +15,7 @@ use pnpm_testing_utils::{
     registry::TestRegistry,
 };
 use pretty_assertions::assert_eq;
+use serde_json::json;
 #[cfg(unix)]
 use std::fs;
 use std::{
@@ -33,6 +34,65 @@ where
         CommandTempCwd::init().add_mocked_registry();
     pacquet.with_args(args).assert().success();
     (root, workspace, npmrc_info)
+}
+
+fn write_custom_registry_config(workspace: &Path, registry: &str) {
+    std::fs::write(
+        workspace.join(".npmrc"),
+        format!("registry={registry}\nstore-dir=../pacquet-store\ncache-dir=../pacquet-cache\n"),
+    )
+    .expect("write .npmrc");
+    std::fs::write(
+        workspace.join("pnpm-workspace.yaml"),
+        "storeDir: ../pacquet-store\ncacheDir: ../pacquet-cache\nenableGlobalVirtualStore: false\n",
+    )
+    .expect("write pnpm-workspace.yaml");
+}
+
+fn package_version_json(
+    package_name: &str,
+    registry_url: &str,
+    bundled_types_field: Option<(&str, &str)>,
+) -> serde_json::Value {
+    let mut version = json!({
+        "name": package_name,
+        "version": "1.0.0",
+        "dist": {
+            "integrity": "sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa==",
+            "tarball": format!("{registry_url}{package_name}/-/package-1.0.0.tgz"),
+        }
+    });
+    if let Some((field, value)) = bundled_types_field {
+        version
+            .as_object_mut()
+            .expect("version manifest is an object")
+            .insert(field.to_string(), json!(value));
+    }
+    version
+}
+
+fn package_version_body(
+    package_name: &str,
+    registry_url: &str,
+    bundled_types_field: Option<(&str, &str)>,
+) -> String {
+    package_version_json(package_name, registry_url, bundled_types_field).to_string()
+}
+
+fn packument_body(
+    package_name: &str,
+    registry_url: &str,
+    bundled_types_field: Option<(&str, &str)>,
+) -> String {
+    let version = package_version_json(package_name, registry_url, bundled_types_field);
+    json!({
+        "name": package_name,
+        "dist-tags": { "latest": "1.0.0" },
+        "versions": {
+            "1.0.0": version,
+        }
+    })
+    .to_string()
 }
 
 #[test]
@@ -192,6 +252,199 @@ fn should_add_to_package_json() {
             .any(|(k, _)| k == "@pnpm.e2e/hello-world-js-bin"),
     );
     drop((root, anchor)); // cleanup
+}
+
+#[test]
+fn add_types_installs_the_matching_definitely_typed_package_into_dev_dependencies() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    let mut registry = mockito::Server::new();
+    let registry_url = format!("{}/", registry.url());
+    write_custom_registry_config(&workspace, &registry_url);
+
+    let _pkg_latest = registry
+        .mock("GET", "/needs-types/latest")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(package_version_body("needs-types", &registry_url, None))
+        .create();
+    let _pkg_packument = registry
+        .mock("GET", "/needs-types")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(packument_body("needs-types", &registry_url, None))
+        .create();
+    let _types_latest = registry
+        .mock("GET", "/@types%2Fneeds-types/latest")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(package_version_body("@types/needs-types", &registry_url, None))
+        .create();
+    let _types_packument = registry
+        .mock("GET", "/@types%2Fneeds-types")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(packument_body("@types/needs-types", &registry_url, None))
+        .create();
+
+    pacquet.with_args(["add", "needs-types", "--types", "--lockfile-only"]).assert().success();
+
+    let manifest =
+        PackageManifest::from_path(workspace.join("package.json")).expect("read package.json");
+    assert!(
+        manifest.dependencies([DependencyGroup::Prod]).any(|(name, _)| name == "needs-types"),
+        "main dependency should stay in dependencies",
+    );
+    assert!(
+        manifest.dependencies([DependencyGroup::Dev]).any(|(name, _)| name == "@types/needs-types"),
+        "types dependency should be added to devDependencies",
+    );
+
+    drop((root, registry));
+}
+
+#[test]
+fn add_types_skips_definitely_typed_lookup_for_packages_with_bundled_types() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    let mut registry = mockito::Server::new();
+    let registry_url = format!("{}/", registry.url());
+    write_custom_registry_config(&workspace, &registry_url);
+
+    let _pkg_latest = registry
+        .mock("GET", "/has-types/latest")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(package_version_body("has-types", &registry_url, Some(("types", "index.d.ts"))))
+        .create();
+    let _pkg_packument = registry
+        .mock("GET", "/has-types")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(packument_body("has-types", &registry_url, Some(("types", "index.d.ts"))))
+        .create();
+    let types_latest =
+        registry.mock("GET", "/@types%2Fhas-types/latest").with_status(500).expect(0).create();
+    let types_packument =
+        registry.mock("GET", "/@types%2Fhas-types").with_status(500).expect(0).create();
+
+    pacquet.with_args(["add", "has-types", "--types", "--lockfile-only"]).assert().success();
+
+    let manifest =
+        PackageManifest::from_path(workspace.join("package.json")).expect("read package.json");
+    assert!(
+        manifest.dependencies([DependencyGroup::Prod]).any(|(name, _)| name == "has-types"),
+        "main dependency should be added",
+    );
+    assert!(
+        !manifest.dependencies([DependencyGroup::Dev]).any(|(name, _)| name == "@types/has-types"),
+        "bundled types should suppress @types lookup",
+    );
+    types_latest.assert();
+    types_packument.assert();
+
+    drop((root, registry));
+}
+
+#[test]
+fn add_types_ignores_missing_definitely_typed_package() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    let mut registry = mockito::Server::new();
+    let registry_url = format!("{}/", registry.url());
+    write_custom_registry_config(&workspace, &registry_url);
+
+    let _pkg_latest = registry
+        .mock("GET", "/no-types-published/latest")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(package_version_body("no-types-published", &registry_url, None))
+        .create();
+    let _pkg_packument = registry
+        .mock("GET", "/no-types-published")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(packument_body("no-types-published", &registry_url, None))
+        .create();
+    let _types_latest =
+        registry.mock("GET", "/@types%2Fno-types-published/latest").with_status(404).create();
+    let _types_packument =
+        registry.mock("GET", "/@types%2Fno-types-published").with_status(404).create();
+
+    pacquet
+        .with_args(["add", "no-types-published", "--types", "--lockfile-only"])
+        .assert()
+        .success();
+
+    let manifest =
+        PackageManifest::from_path(workspace.join("package.json")).expect("read package.json");
+    assert!(
+        manifest
+            .dependencies([DependencyGroup::Prod])
+            .any(|(name, _)| name == "no-types-published"),
+        "main dependency should still be added",
+    );
+    assert!(
+        !manifest
+            .dependencies([DependencyGroup::Dev])
+            .any(|(name, _)| name == "@types/no-types-published"),
+        "missing @types package should be ignored",
+    );
+
+    drop((root, registry));
+}
+
+#[test]
+fn add_types_with_save_dev_puts_both_packages_in_dev_dependencies() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    let mut registry = mockito::Server::new();
+    let registry_url = format!("{}/", registry.url());
+    write_custom_registry_config(&workspace, &registry_url);
+
+    let _pkg_latest = registry
+        .mock("GET", "/dev-needs-types/latest")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(package_version_body("dev-needs-types", &registry_url, None))
+        .create();
+    let _pkg_packument = registry
+        .mock("GET", "/dev-needs-types")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(packument_body("dev-needs-types", &registry_url, None))
+        .create();
+    let _types_latest = registry
+        .mock("GET", "/@types%2Fdev-needs-types/latest")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(package_version_body("@types/dev-needs-types", &registry_url, None))
+        .create();
+    let _types_packument = registry
+        .mock("GET", "/@types%2Fdev-needs-types")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(packument_body("@types/dev-needs-types", &registry_url, None))
+        .create();
+
+    pacquet
+        .with_args(["add", "-D", "dev-needs-types", "--types", "--lockfile-only"])
+        .assert()
+        .success();
+
+    let manifest =
+        PackageManifest::from_path(workspace.join("package.json")).expect("read package.json");
+    assert!(
+        !manifest.dependencies([DependencyGroup::Prod]).any(|(name, _)| name == "dev-needs-types"),
+        "save-dev should keep the main dependency out of dependencies",
+    );
+    let dev_dependencies = manifest.dependencies([DependencyGroup::Dev]).collect::<Vec<_>>();
+    assert!(
+        dev_dependencies.iter().any(|(name, _)| *name == "dev-needs-types"),
+        "main dependency should be saved to devDependencies",
+    );
+    assert!(
+        dev_dependencies.iter().any(|(name, _)| *name == "@types/dev-needs-types"),
+        "types dependency should be saved to devDependencies",
+    );
+
+    drop((root, registry));
 }
 
 #[test]

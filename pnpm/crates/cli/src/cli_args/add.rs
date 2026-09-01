@@ -126,6 +126,10 @@ pub struct AddArgs {
     /// --save-prod, --save-dev, --save-optional, --save-peer
     #[clap(flatten)]
     pub dependency_options: AddDependencyOptions,
+    /// Add the matching `@types/*` package to `devDependencies` when the package
+    /// does not bundle its own declarations.
+    #[clap(long)]
+    pub types: bool,
     /// `--cpu`, `--os`, and `--libc` filters for which optional dependencies are installed.
     #[clap(flatten)]
     pub supported_architectures: SupportedArchitecturesArgs,
@@ -245,6 +249,9 @@ impl AddArgs {
         if !self.config {
             return Ok(None);
         }
+        if self.types {
+            return Err(miette::miette!("`pnpm add --types` cannot be combined with --config."));
+        }
 
         let mut added = BTreeMap::new();
         for package_name in &self.package_names {
@@ -328,6 +335,7 @@ impl AddArgs {
             save_catalog_name,
             self.lockfile_only,
             supported_architectures,
+            self.types,
             dependency_options.save_target(),
         )
         .await?;
@@ -389,6 +397,7 @@ impl AddArgs {
             lockfile_path: Some(&lockfile_path),
             dependency_groups,
             package_names: &self.package_names,
+            save_types: self.types,
             range_spec_style,
             save_catalog_name,
             resolved_packages,
@@ -424,6 +433,9 @@ impl AddArgs {
             return Err(miette::miette!(
                 "`pnpm add --lockfile-only` cannot be combined with --global."
             ));
+        }
+        if self.types {
+            return Err(miette::miette!("`pnpm add --types` cannot be combined with --global."));
         }
         let supported_architectures =
             self.supported_architectures.apply_to(config.supported_architectures.clone());
@@ -549,6 +561,7 @@ where
         save_catalog_name,
         lockfile_only,
         supported_architectures,
+        false,
         Some(dependency_groups),
     ))
     .await
@@ -632,6 +645,7 @@ pub(crate) async fn add_packages<Reporter, DependencyGroupList>(
     save_catalog_name: Option<String>,
     lockfile_only: bool,
     supported_architectures: Option<pnpm_package_is_installable::SupportedArchitectures>,
+    save_types: bool,
     dependency_groups: Option<DependencyGroupList>,
 ) -> miette::Result<()>
 where
@@ -654,6 +668,7 @@ where
         lockfile_path: Some(&lockfile_path),
         dependency_groups,
         package_names,
+        save_types,
         range_spec_style,
         save_catalog_name,
         resolved_packages,

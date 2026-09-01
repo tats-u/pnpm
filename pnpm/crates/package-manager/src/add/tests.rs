@@ -1,13 +1,14 @@
 use super::{
-    Add, AddError, node_runtime_version_spec, normalized_save_specifier,
-    persist_selected_manifests, prepare_selected_manifests, selected_project_indices,
+    Add, AddError, definitely_typed_package_name, node_runtime_version_spec,
+    normalized_save_specifier, package_has_bundled_types, persist_selected_manifests,
+    prepare_selected_manifests, selected_project_indices, types_lookup_package_name,
     workspace_save_specifier,
 };
 use crate::ResolvedPackages;
 use pnpm_config::{Config, LinkWorkspacePackages};
 use pnpm_network::ThrottledClient;
 use pnpm_package_manifest::{DependencyGroup, PackageManifest};
-use pnpm_registry::RangeSpecStyle;
+use pnpm_registry::{PackageVersion, RangeSpecStyle};
 use pnpm_reporter::{LogEvent, LogLevel, Reporter, SilentReporter};
 use pnpm_workspace::Project;
 use serde_json::json;
@@ -36,6 +37,45 @@ fn explicit_npm_specifier_is_not_rewritten_as_a_workspace_dependency() {
         ),
         None,
     );
+}
+
+#[test]
+fn types_lookup_uses_the_underlying_name_of_an_npm_alias() {
+    let config = Config::new();
+
+    assert_eq!(
+        types_lookup_package_name("alias", Some("npm:@scope/pkg@^1.0.0"), None, &config),
+        Some("@scope/pkg".to_string()),
+    );
+}
+
+#[test]
+fn types_lookup_skips_workspace_protocol_dependencies() {
+    let config = Config::new();
+
+    assert_eq!(types_lookup_package_name("foo", Some("workspace:*"), None, &config), None);
+}
+
+#[test]
+fn definitely_typed_package_name_folds_scoped_packages() {
+    assert_eq!(definitely_typed_package_name("foo"), Some("@types/foo".to_string()));
+    assert_eq!(definitely_typed_package_name("@scope/pkg"), Some("@types/scope__pkg".to_string()),);
+    assert_eq!(definitely_typed_package_name("@types/foo"), None);
+}
+
+#[test]
+fn package_has_bundled_types_treats_typings_as_bundled() {
+    let package = serde_json::from_value::<PackageVersion>(json!({
+        "name": "foo",
+        "version": "1.0.0",
+        "typings": "dist/index.d.ts",
+        "dist": {
+            "tarball": "https://registry.npmjs.org/foo/-/foo-1.0.0.tgz"
+        }
+    }))
+    .expect("build a package version");
+
+    assert!(package_has_bundled_types(&package));
 }
 
 #[tokio::test]
@@ -106,6 +146,7 @@ async fn add_routes_scoped_packages_to_configured_scoped_registry() {
         lockfile_path: None,
         dependency_groups: Some([DependencyGroup::Prod]),
         package_names: &package_names,
+        save_types: false,
         range_spec_style: RangeSpecStyle::Patch,
         save_catalog_name: None,
         supported_architectures: None,
@@ -244,6 +285,7 @@ async fn add_resolves_package_selectors_concurrently_and_reports_in_selector_ord
         lockfile_path: None,
         dependency_groups: Some([DependencyGroup::Prod]),
         package_names: &package_names,
+        save_types: false,
         range_spec_style: RangeSpecStyle::Patch,
         save_catalog_name: None,
         supported_architectures: None,
@@ -366,6 +408,7 @@ async fn add_reuses_shared_packument_state_for_every_selector_path() {
         lockfile_path: None,
         dependency_groups: Some([DependencyGroup::Prod]),
         package_names: &package_names,
+        save_types: false,
         range_spec_style: RangeSpecStyle::Patch,
         save_catalog_name: None,
         supported_architectures: None,
@@ -441,6 +484,7 @@ async fn add_reports_resolution_errors_in_selector_order() {
         lockfile_path: None,
         dependency_groups: Some([DependencyGroup::Prod]),
         package_names: &package_names,
+        save_types: false,
         range_spec_style: RangeSpecStyle::Patch,
         save_catalog_name: None,
         supported_architectures: None,
@@ -520,6 +564,7 @@ async fn add_does_not_wait_for_a_slower_later_resolution_after_an_error() {
             lockfile_path: None,
             dependency_groups: Some([DependencyGroup::Prod]),
             package_names: &package_names,
+            save_types: false,
             range_spec_style: RangeSpecStyle::Patch,
             save_catalog_name: None,
             supported_architectures: None,
@@ -656,6 +701,7 @@ async fn selected_add_prepares_and_persists_only_selected_projects() {
         None,
         Some(&[DependencyGroup::Prod][..]),
         std::slice::from_ref(&"foo@workspace:*".to_string()),
+        false,
         RangeSpecStyle::Major,
         None,
     )
@@ -703,6 +749,7 @@ async fn selected_add_merges_catalog_updates_in_command_order() {
         None,
         Some(&[DependencyGroup::Prod][..]),
         std::slice::from_ref(&"foo".to_string()),
+        false,
         RangeSpecStyle::Major,
         Some("default"),
     )
