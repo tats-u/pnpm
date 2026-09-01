@@ -54,12 +54,13 @@ fn package_version_json(
     registry_url: &str,
     bundled_types_field: Option<(&str, &str)>,
 ) -> serde_json::Value {
+    let tarball_name = package_name.rsplit('/').next().expect("package name is non-empty");
     let mut version = json!({
         "name": package_name,
         "version": "1.0.0",
         "dist": {
             "integrity": "sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa==",
-            "tarball": format!("{registry_url}{package_name}/-/package-1.0.0.tgz"),
+            "tarball": format!("{registry_url}{package_name}/-/{tarball_name}-1.0.0.tgz"),
         }
     });
     if let Some((field, value)) = bundled_types_field {
