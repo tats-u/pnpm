@@ -76,6 +76,17 @@ fn urls_are_kept_whole() {
 }
 
 #[test]
+fn aliased_local_paths_with_commas_are_kept_whole() {
+    let root = tempfile::tempdir().expect("create temp directory");
+    let package_dir = root.path().join("dir,with,comma");
+    fs::create_dir_all(&package_dir).expect("create local package directory");
+    assert_eq!(
+        split_comma_separated("pkg@file:./dir,with,comma", root.path()),
+        vec!["pkg@file:./dir,with,comma"],
+    );
+}
+
+#[test]
 fn a_virtual_shim_only_yields_to_its_own_package() {
     let root = tempfile::tempdir().expect("create temp directory");
     let bin_dir = root.path().join("bin");

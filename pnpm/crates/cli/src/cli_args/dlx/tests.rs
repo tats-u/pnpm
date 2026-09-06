@@ -51,6 +51,24 @@ fn architecture_flags_accumulate_and_default_empty() {
     assert_eq!(parsed.dlx.command, ["tool"]);
 }
 
+#[test]
+fn allow_build_values_split_commas_but_keep_aliased_local_paths() {
+    let dir = tempdir().expect("temp dir");
+    fs::create_dir(dir.path().join("local,with,comma")).expect("create local package dir");
+    let parsed = DlxArgsWrapper::try_parse_from([
+        "dlx",
+        "--allow-build",
+        "foo,bar",
+        "--allow-build",
+        "local@file:./local,with,comma",
+        "tool",
+    ])
+    .expect("parse dlx args");
+
+    let normalized = parsed.dlx.with_split_allow_build(dir.path());
+    assert_eq!(normalized.allow_build, ["foo", "bar", "local@file:./local,with,comma"]);
+}
+
 fn regs(default: &str) -> BTreeMap<String, String> {
     let mut map = BTreeMap::new();
     map.insert("default".to_string(), default.to_string());

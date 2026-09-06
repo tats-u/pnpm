@@ -2259,6 +2259,9 @@ importers:
       '@pnpm/pkg-manifest.utils':
         specifier: workspace:*
         version: link:../../pkg-manifest/utils
+      '@pnpm/resolving.parse-wanted-dependency':
+        specifier: workspace:*
+        version: link:../../resolving/parse-wanted-dependency
       '@pnpm/types':
         specifier: workspace:*
         version: link:../../core/types

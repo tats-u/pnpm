@@ -2,6 +2,7 @@ use crate::{
     State,
     cli_args::{
         add::add_package, catalogs::configured_catalogs,
+        comma_separated::split_comma_separated_selectors,
         supported_architectures::SupportedArchitecturesArgs,
     },
     engine_pm::{channel::PackageManager, provision::provision},
@@ -57,7 +58,7 @@ pub struct DlxArgs {
     pub package: Vec<String>,
 
     /// Package names allowed to run lifecycle (build) scripts during
-    /// the dlx install. May be repeated.
+    /// the dlx install. May be repeated or comma-separated.
     #[clap(long = "allow-build")]
     pub allow_build: Vec<String>,
 
@@ -153,6 +154,11 @@ impl From<BadPathDir> for DlxError {
 }
 
 impl DlxArgs {
+    fn with_split_allow_build(mut self, base_dir: &Path) -> Self {
+        self.allow_build = split_comma_separated_selectors(&self.allow_build, base_dir);
+        self
+    }
+
     /// Execute the subcommand. The package is installed into a cache
     /// directory under `config.cache_dir`, and the resolved bin runs in
     /// the process working directory (`cwd: process.cwd()`). `dir` is only
@@ -162,7 +168,8 @@ impl DlxArgs {
         dir: &Path,
         config: &'static mut Config,
     ) -> miette::Result<()> {
-        let DlxArgs { command, package, allow_build, shell_mode, cpu, os, libc } = self;
+        let DlxArgs { command, package, allow_build, shell_mode, cpu, os, libc } =
+            self.with_split_allow_build(dir);
         let supported_architectures = SupportedArchitecturesArgs { cpu, os, libc };
         let Some((bin_command, args)) = command.split_first() else {
             return Err(DlxError::MissingCommand.into());

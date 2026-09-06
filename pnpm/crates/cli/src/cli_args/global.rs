@@ -19,6 +19,7 @@ use crate::{
         approve_builds::{
             ApproveBuildsArgs, clear_decided_ignored_builds, write_approval_settings,
         },
+        comma_separated::split_comma_separated,
         global_bin_lock::acquire_global_bin_lock,
         ignored_builds::{IgnoredBuildsScan, get_automatically_ignored_builds},
         rebuild::run_rebuild,
@@ -61,6 +62,9 @@ use std::{
     io::{self, IsTerminal},
     path::{Path, PathBuf},
 };
+
+#[cfg(test)]
+use crate::cli_args::comma_separated::is_windows_drive_path;
 
 /// Errors specific to global package management, carrying the
 /// `ERR_PNPM_`-prefixed codes.
@@ -1478,41 +1482,6 @@ fn split_into_groups(params: &[String], base_dir: &Path) -> Vec<Vec<String>> {
         .collect()
 }
 
-fn split_comma_separated(param: &str, base_dir: &Path) -> Vec<String> {
-    if !param.contains(',') {
-        return vec![param.to_string()];
-    }
-    if param.contains("://") {
-        return vec![param.to_string()];
-    }
-    if refers_to_existing_local_path(param, base_dir) {
-        return vec![param.to_string()];
-    }
-    param.split(',').map(str::trim).filter(|token| !token.is_empty()).map(str::to_string).collect()
-}
-
-fn refers_to_existing_local_path(param: &str, base_dir: &Path) -> bool {
-    let path_part = if let Some(rest) = param.strip_prefix("file:") {
-        rest
-    } else if let Some(rest) = param.strip_prefix("link:") {
-        rest
-    } else if param.starts_with('.')
-        || param.starts_with('/')
-        || param.starts_with('~')
-        || is_windows_drive_path(param)
-    {
-        param
-    } else {
-        return false;
-    };
-    let resolved = if Path::new(path_part).is_absolute() {
-        PathBuf::from(path_part)
-    } else {
-        base_dir.join(path_part)
-    };
-    resolved.exists()
-}
-
 /// Mirror the TypeScript `resolveLocalParam`: rewrite only *dot-relative*
 /// `file:`/`link:` selectors against `base_dir`. Bare names, home-relative
 /// (`~/`), and absolute selectors pass through unchanged so the local
@@ -1568,14 +1537,6 @@ fn infer_local_package_alias(selector: &str) -> miette::Result<String> {
         return Err(GlobalError::InvalidPackageName { name: name.to_string() }.into());
     }
     Ok(format!("{name}@{selector}"))
-}
-
-fn is_windows_drive_path(param: &str) -> bool {
-    let bytes = param.as_bytes();
-    bytes.len() >= 3
-        && bytes[0].is_ascii_alphabetic()
-        && bytes[1] == b':'
-        && (bytes[2] == b'/' || bytes[2] == b'\\')
 }
 
 #[cfg(test)]

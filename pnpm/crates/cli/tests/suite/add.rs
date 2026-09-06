@@ -107,6 +107,62 @@ fn add_accepts_dir_allow_build_and_registry_after_the_subcommand() {
 }
 
 #[test]
+fn add_splits_comma_separated_allow_build_values() {
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
+    let AddMockedRegistry { mock_instance, .. } = npmrc_info;
+    let registry = mock_instance.url();
+
+    pacquet
+        .with_args([
+            "add",
+            "@pnpm.e2e/pre-and-postinstall-scripts-example@1.0.0",
+            "@pnpm.e2e/install-script-example@1.0.0",
+            "--dir",
+            ".",
+            "--allow-build=@pnpm.e2e/pre-and-postinstall-scripts-example,@pnpm.e2e/install-script-example",
+        ])
+        .with_arg(format!("--registry={registry}"))
+        .assert()
+        .success();
+
+    let pkg1_dir = workspace.join(
+        "node_modules/.pnpm/@pnpm.e2e+pre-and-postinstall-scripts-example@1.0.0\
+         /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
+    );
+    assert!(
+        pkg1_dir.join("generated-by-preinstall.js").exists(),
+        "the first allow-build package should have run its preinstall",
+    );
+    assert!(
+        pkg1_dir.join("generated-by-postinstall.js").exists(),
+        "the first allow-build package should have run its postinstall",
+    );
+
+    let pkg2_dir = workspace.join(
+        "node_modules/.pnpm/@pnpm.e2e+install-script-example@1.0.0\
+         /node_modules/@pnpm.e2e/install-script-example",
+    );
+    assert!(
+        pkg2_dir.join("generated-by-install.js").exists(),
+        "the second allow-build package should have run its install script",
+    );
+
+    let yaml = std::fs::read_to_string(workspace.join("pnpm-workspace.yaml"))
+        .expect("pnpm-workspace.yaml present");
+    assert!(
+        yaml.contains("@pnpm.e2e/pre-and-postinstall-scripts-example"),
+        "allowBuilds entry should include the first package, got:\n{yaml}",
+    );
+    assert!(
+        yaml.contains("@pnpm.e2e/install-script-example"),
+        "allowBuilds entry should include the second package, got:\n{yaml}",
+    );
+
+    drop((root, mock_instance));
+}
+
+#[test]
 fn should_install_all_dependencies() {
     let (root, workspace, anchor) =
         exec_pacquet_in_temp_cwd(["add", "@pnpm.e2e/hello-world-js-bin-parent"]);

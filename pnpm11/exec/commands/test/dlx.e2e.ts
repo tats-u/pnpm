@@ -410,6 +410,35 @@ test('dlx builds the packages passed via --allow-build', async () => {
   expect(fs.existsSync(path.join(builtPkg2Path, 'generated-by-install.js'))).toBeTruthy()
 })
 
+test('dlx splits comma-separated allow-build values', async () => {
+  prepareEmpty()
+
+  const allowBuild = ['@pnpm.e2e/pre-and-postinstall-scripts-example,@pnpm.e2e/install-script-example']
+  const normalizedAllowBuild = ['@pnpm.e2e/pre-and-postinstall-scripts-example', '@pnpm.e2e/install-script-example']
+  await dlx.handler({
+    ...DEFAULT_OPTS,
+    enableGlobalVirtualStore: false,
+    allowBuild,
+    dir: path.resolve('project'),
+    storeDir: path.resolve('store'),
+    cacheDir: path.resolve('cache'),
+    dlxCacheMaxAge: Infinity,
+  }, ['@pnpm.e2e/has-bin-and-needs-build'])
+
+  const dlxCacheDir = path.resolve('cache', 'dlx', dlx.createCacheKey({
+    packages: ['@pnpm.e2e/has-bin-and-needs-build@1.0.0'],
+    allowBuild: normalizedAllowBuild,
+    registriesByScope: DEFAULT_OPTS.registriesByScope,
+    supportedArchitectures: DEFAULT_OPTS.supportedArchitectures,
+  }), 'pkg')
+  const builtPkg1Path = path.join(dlxCacheDir, 'node_modules/.pnpm/@pnpm.e2e+pre-and-postinstall-scripts-example@1.0.0/node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example')
+  expect(fs.existsSync(path.join(builtPkg1Path, 'generated-by-preinstall.js'))).toBeTruthy()
+  expect(fs.existsSync(path.join(builtPkg1Path, 'generated-by-postinstall.js'))).toBeTruthy()
+
+  const builtPkg2Path = path.join(dlxCacheDir, 'node_modules/.pnpm/@pnpm.e2e+install-script-example@1.0.0/node_modules/@pnpm.e2e/install-script-example')
+  expect(fs.existsSync(path.join(builtPkg2Path, 'generated-by-install.js'))).toBeTruthy()
+})
+
 // Regression test for https://github.com/pnpm/pnpm/issues/11444.
 //
 // dlx mirrors the global install flow: it overrides `strictDepBuilds`

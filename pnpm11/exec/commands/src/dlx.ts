@@ -10,7 +10,7 @@ import {
 } from '@pnpm/catalogs.resolver'
 import type { CommandHandlerMap } from '@pnpm/cli.command'
 import { OUTPUT_OPTIONS } from '@pnpm/cli.common-cli-options-help'
-import { docsUrl, readProjectManifestOnly } from '@pnpm/cli.utils'
+import { docsUrl, readProjectManifestOnly, splitCommaSeparatedSelectors } from '@pnpm/cli.utils'
 import { type Config, types } from '@pnpm/config.reader'
 import { getPublishedByPolicy } from '@pnpm/config.version-policy'
 import { createShortHash } from '@pnpm/crypto.hash'
@@ -75,7 +75,7 @@ export function help (): string {
             name: '--package',
           },
           {
-            description: 'A list of package names that are allowed to run postinstall scripts during installation',
+            description: 'A comma-separated or repeatable list of package names that are allowed to run postinstall scripts during installation',
             name: '--allow-build',
           },
           {
@@ -158,21 +158,23 @@ export async function handler (
     })
     return resolved.id
   }))
+  const allowBuild = splitCommaSeparatedSelectors(opts.allowBuild, opts.dir)
   const enableGlobalVirtualStore = opts.enableGlobalVirtualStore ?? true
   let { cacheLink, cacheExists, cachedDir } = findCache({
     packages: resolvedPkgs,
     dlxCacheMaxAge: opts.dlxCacheMaxAge,
     cacheDir: opts.cacheDir,
     registriesByScope: opts.registriesByScope,
-    allowBuild: opts.allowBuild,
+    allowBuild,
     supportedArchitectures: opts.supportedArchitectures,
   })
   if (!cacheExists) {
-    const allowBuilds = Object.fromEntries([...resolvedPkgAliases, ...(opts.allowBuild ?? [])].map(pkg => [pkg, true]))
+    const allowBuilds = Object.fromEntries([...resolvedPkgAliases, ...(allowBuild ?? [])].map(pkg => [pkg, true]))
+    const normalizedOpts = { ...opts, allowBuild }
     try {
       fs.mkdirSync(cachedDir, { recursive: true })
       await add.handler({
-        ...opts,
+        ...normalizedOpts,
         // Mirror the global install flow: dlx prompts via `approve-builds`
         // when transitive deps have skipped build scripts, so it must not let
         // strictDepBuilds (the v11 default) turn that into a hard error.
@@ -192,7 +194,7 @@ export async function handler (
         symlink: true,
         workspaceDir: undefined,
       }, resolvedPkgs)
-      await promptApproveDlxBuilds({ cachedDir, allowBuilds, inheritedOpts: opts }, commands)
+      await promptApproveDlxBuilds({ cachedDir, allowBuilds, inheritedOpts: normalizedOpts }, commands)
       try {
         await symlinkDir(cachedDir, cacheLink, { overwrite: true })
       } catch (error) {

@@ -12,6 +12,7 @@ pub mod change;
 pub mod changelog;
 pub mod ci;
 pub mod clean;
+pub(crate) mod comma_separated;
 pub mod completion;
 pub mod config;
 pub(crate) mod config_warnings;

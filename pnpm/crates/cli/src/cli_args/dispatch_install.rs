@@ -38,6 +38,7 @@ use pnpm_reporter::{NdjsonReporter, SilentReporter};
 use std::path::Path;
 
 pub(super) fn add<'a>(ctx: &RunCtx<'a>, args: AddArgs) -> miette::Result<CommandFuture<'a>> {
+    let args = args.with_split_allow_build(ctx.dir);
     if args.global {
         let config = (ctx.global_config)()?;
         args.lockfile_dir.apply_to_global(config)?;

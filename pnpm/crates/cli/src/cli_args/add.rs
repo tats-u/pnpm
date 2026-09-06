@@ -1,8 +1,9 @@
 use crate::{
     State,
     cli_args::{
-        install::resolve_bool_override, lockfile_dir::LockfileDirArg,
-        pipelines::InstallFamilySelection, supported_architectures::SupportedArchitecturesArgs,
+        comma_separated::split_comma_separated_selectors, install::resolve_bool_override,
+        lockfile_dir::LockfileDirArg, pipelines::InstallFamilySelection,
+        supported_architectures::SupportedArchitecturesArgs,
     },
     config_deps,
     engine_pm::{
@@ -146,7 +147,7 @@ pub struct AddArgs {
     #[clap(long = "config")]
     pub config: bool,
     /// Package names allowed to run lifecycle (build) scripts during this
-    /// install, appended to `allowBuilds`. May be repeated.
+    /// install, appended to `allowBuilds`. May be repeated or comma-separated.
     #[clap(long = "allow-build")]
     pub allow_build: Vec<String>,
     /// Dependencies are not downloaded. Only `pnpm-lock.yaml` is updated.
@@ -195,6 +196,11 @@ pub struct AddArgs {
 }
 
 impl AddArgs {
+    pub(crate) fn with_split_allow_build(mut self, base_dir: &Path) -> Self {
+        self.allow_build = split_comma_separated_selectors(&self.allow_build, base_dir);
+        self
+    }
+
     pub(crate) fn check_workspace_root(&self, config: &Config, dir: &Path) -> miette::Result<()> {
         if config.recursive
             || config.workspace_root
