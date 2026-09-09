@@ -253,6 +253,96 @@ test('pnpm add --save-peer', async () => {
   }
 })
 
+test('pnpm add --types saves the matching DefinitelyTyped package to devDependencies', async () => {
+  const project = prepare()
+
+  await add.handler({
+    ...DEFAULT_OPTIONS,
+    dir: process.cwd(),
+    linkWorkspacePackages: false,
+    types: true,
+  }, ['@pnpm.e2e/needs-types@1.0.0'])
+
+  const manifest = await loadJsonFile<ProjectManifest>(path.resolve('package.json'))
+
+  expect(manifest.dependencies).toStrictEqual({ '@pnpm.e2e/needs-types': '1.0.0' })
+  expect(manifest.devDependencies).toStrictEqual({ '@types/pnpm.e2e__needs-types': '^1.0.0' })
+  project.has('@pnpm.e2e/needs-types')
+  project.has('@types/pnpm.e2e__needs-types')
+})
+
+test('pnpm add --types falls back to the latest DefinitelyTyped package when no same-major version exists', async () => {
+  prepare()
+
+  await add.handler({
+    ...DEFAULT_OPTIONS,
+    dir: process.cwd(),
+    linkWorkspacePackages: false,
+    types: true,
+  }, ['@pnpm.e2e/needs-types-fallback@1.0.0'])
+
+  const manifest = await loadJsonFile<ProjectManifest>(path.resolve('package.json'))
+
+  expect(manifest.dependencies).toStrictEqual({ '@pnpm.e2e/needs-types-fallback': '1.0.0' })
+  expect(manifest.devDependencies).toStrictEqual({ '@types/pnpm.e2e__needs-types-fallback': '^2.0.0' })
+})
+
+test('pnpm add --types skips DefinitelyTyped lookup for packages with bundled declarations', async () => {
+  const project = prepare()
+
+  await add.handler({
+    ...DEFAULT_OPTIONS,
+    dir: process.cwd(),
+    linkWorkspacePackages: false,
+    types: true,
+  }, ['@pnpm.e2e/has-types@1.0.0'])
+
+  const manifest = await loadJsonFile<ProjectManifest>(path.resolve('package.json'))
+
+  expect(manifest.dependencies).toStrictEqual({ '@pnpm.e2e/has-types': '1.0.0' })
+  expect(manifest.devDependencies).toBeUndefined()
+  project.has('@pnpm.e2e/has-types')
+})
+
+test('pnpm add --types ignores missing DefinitelyTyped packages', async () => {
+  const project = prepare()
+
+  await add.handler({
+    ...DEFAULT_OPTIONS,
+    dir: process.cwd(),
+    linkWorkspacePackages: false,
+    types: true,
+  }, ['@pnpm.e2e/missing-types@1.0.0'])
+
+  const manifest = await loadJsonFile<ProjectManifest>(path.resolve('package.json'))
+
+  expect(manifest.dependencies).toStrictEqual({ '@pnpm.e2e/missing-types': '1.0.0' })
+  expect(manifest.devDependencies).toBeUndefined()
+  project.has('@pnpm.e2e/missing-types')
+})
+
+test('pnpm add --save-peer --types keeps the main package as a peer and saves its DefinitelyTyped package to devDependencies', async () => {
+  const project = prepare()
+
+  await add.handler({
+    ...DEFAULT_OPTIONS,
+    dir: process.cwd(),
+    linkWorkspacePackages: false,
+    savePeer: true,
+    types: true,
+  }, ['@pnpm.e2e/needs-types@1.0.0'])
+
+  const manifest = await loadJsonFile<ProjectManifest>(path.resolve('package.json'))
+
+  expect(manifest.devDependencies).toStrictEqual({
+    '@pnpm.e2e/needs-types': '1.0.0',
+    '@types/pnpm.e2e__needs-types': '^1.0.0',
+  })
+  expect(manifest.peerDependencies).toStrictEqual({ '@pnpm.e2e/needs-types': '1.0.0' })
+  project.has('@pnpm.e2e/needs-types')
+  project.has('@types/pnpm.e2e__needs-types')
+})
+
 test('pnpm add - with save-prefix set to empty string should save package version without prefix', async () => {
   prepare()
   await add.handler({

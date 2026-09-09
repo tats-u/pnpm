@@ -54,13 +54,22 @@ fn package_version_json(
     registry_url: &str,
     bundled_types_field: Option<(&str, &str)>,
 ) -> serde_json::Value {
+    package_version_json_for_version(package_name, registry_url, "1.0.0", bundled_types_field)
+}
+
+fn package_version_json_for_version(
+    package_name: &str,
+    registry_url: &str,
+    version: &str,
+    bundled_types_field: Option<(&str, &str)>,
+) -> serde_json::Value {
     let tarball_name = package_name.rsplit('/').next().expect("package name is non-empty");
     let mut version = json!({
         "name": package_name,
-        "version": "1.0.0",
+        "version": version,
         "dist": {
             "integrity": "sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa==",
-            "tarball": format!("{registry_url}{package_name}/-/{tarball_name}-1.0.0.tgz"),
+            "tarball": format!("{registry_url}{package_name}/-/{tarball_name}-{version}.tgz"),
         }
     });
     if let Some((field, value)) = bundled_types_field {
@@ -80,18 +89,47 @@ fn package_version_body(
     package_version_json(package_name, registry_url, bundled_types_field).to_string()
 }
 
+fn package_version_body_for_version(
+    package_name: &str,
+    registry_url: &str,
+    version: &str,
+    bundled_types_field: Option<(&str, &str)>,
+) -> String {
+    package_version_json_for_version(package_name, registry_url, version, bundled_types_field).to_string()
+}
+
 fn packument_body(
     package_name: &str,
     registry_url: &str,
     bundled_types_field: Option<(&str, &str)>,
 ) -> String {
-    let version = package_version_json(package_name, registry_url, bundled_types_field);
+    packument_body_for_versions(
+        package_name,
+        registry_url,
+        "1.0.0",
+        &[("1.0.0", bundled_types_field)],
+    )
+}
+
+fn packument_body_for_versions(
+    package_name: &str,
+    registry_url: &str,
+    latest_version: &str,
+    versions: &[(&str, Option<(&str, &str)>)],
+) -> String {
+    let versions = versions
+        .iter()
+        .map(|(version, bundled_types_field)| {
+            (
+                (*version).to_string(),
+                package_version_json_for_version(package_name, registry_url, version, *bundled_types_field),
+            )
+        })
+        .collect::<serde_json::Map<String, serde_json::Value>>();
     json!({
         "name": package_name,
-        "dist-tags": { "latest": "1.0.0" },
-        "versions": {
-            "1.0.0": version,
-        }
+        "dist-tags": { "latest": latest_version },
+        "versions": versions,
     })
     .to_string()
 }
@@ -256,7 +294,7 @@ fn should_add_to_package_json() {
 }
 
 #[test]
-fn add_types_installs_the_matching_definitely_typed_package_into_dev_dependencies() {
+fn add_types_prefers_the_matching_major_definitely_typed_package() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let registry_url = format!("{}/", registry.url());
@@ -278,13 +316,18 @@ fn add_types_installs_the_matching_definitely_typed_package_into_dev_dependencie
         .mock("GET", "/@types%2Fneeds-types/latest")
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(package_version_body("@types/needs-types", &registry_url, None))
+        .with_body(package_version_body_for_version("@types/needs-types", &registry_url, "2.0.0", None))
         .create();
     let _types_packument = registry
         .mock("GET", "/@types%2Fneeds-types")
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(packument_body("@types/needs-types", &registry_url, None))
+        .with_body(packument_body_for_versions(
+            "@types/needs-types",
+            &registry_url,
+            "2.0.0",
+            &[("1.0.0", None), ("2.0.0", None)],
+        ))
         .create();
 
     pacquet.with_args(["add", "needs-types", "--types", "--lockfile-only"]).assert().success();
@@ -299,6 +342,66 @@ fn add_types_installs_the_matching_definitely_typed_package_into_dev_dependencie
         manifest.dependencies([DependencyGroup::Dev]).any(|(name, _)| name == "@types/needs-types"),
         "types dependency should be added to devDependencies",
     );
+    let (_, types_spec) = manifest
+        .dependencies([DependencyGroup::Dev])
+        .find(|(name, _)| *name == "@types/needs-types")
+        .expect("@types dependency should be present");
+    assert_eq!(types_spec, "^1.0.0");
+
+    drop((root, registry));
+}
+
+#[test]
+fn add_types_falls_back_to_latest_when_no_matching_major_definitely_typed_package_exists() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    let mut registry = mockito::Server::new();
+    let registry_url = format!("{}/", registry.url());
+    write_custom_registry_config(&workspace, &registry_url);
+
+    let _pkg_latest = registry
+        .mock("GET", "/types-fallback/latest")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(package_version_body("types-fallback", &registry_url, None))
+        .create();
+    let _pkg_packument = registry
+        .mock("GET", "/types-fallback")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(packument_body("types-fallback", &registry_url, None))
+        .create();
+    let _types_latest = registry
+        .mock("GET", "/@types%2Ftypes-fallback/latest")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(package_version_body_for_version(
+            "@types/types-fallback",
+            &registry_url,
+            "2.0.0",
+            None,
+        ))
+        .create();
+    let _types_packument = registry
+        .mock("GET", "/@types%2Ftypes-fallback")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(packument_body_for_versions(
+            "@types/types-fallback",
+            &registry_url,
+            "2.0.0",
+            &[("2.0.0", None)],
+        ))
+        .create();
+
+    pacquet.with_args(["add", "types-fallback", "--types", "--lockfile-only"]).assert().success();
+
+    let manifest =
+        PackageManifest::from_path(workspace.join("package.json")).expect("read package.json");
+    let (_, types_spec) = manifest
+        .dependencies([DependencyGroup::Dev])
+        .find(|(name, _)| *name == "@types/types-fallback")
+        .expect("@types dependency should be present");
+    assert_eq!(types_spec, "^2.0.0");
 
     drop((root, registry));
 }

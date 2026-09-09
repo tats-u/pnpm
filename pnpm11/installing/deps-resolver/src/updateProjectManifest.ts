@@ -30,13 +30,13 @@ export async function updateProjectManifest (
     }
     specsToUpsert.push({
       alias: rdd.alias,
-      peer: importer.peer,
+      peer: wantedDep.peer ?? importer.peer,
       bareSpecifier: declaredSpecifier == null
         ? getBareSpecifierToSave(wantedDep, rdd, opts.preserveWorkspaceProtocol)
         : wantedDep.bareSpecifier,
       resolvedVersion: rdd.version,
       rangeSpecStyle: importer.rangeSpecStyle,
-      saveType: importer.targetDependenciesField,
+      saveType: wantedDep.saveType ?? importer.targetDependenciesField,
     })
   }
   // Re-save a dependency flagged for update that failed to resolve (e.g. a
@@ -47,8 +47,8 @@ export async function updateProjectManifest (
     if (pkgToInstall.updateSpec && pkgToInstall.alias && !specsToUpsert.some(({ alias }) => alias === pkgToInstall.alias)) {
       specsToUpsert.push({
         alias: pkgToInstall.alias,
-        peer: importer.peer,
-        saveType: importer.targetDependenciesField,
+        peer: pkgToInstall.peer ?? importer.peer,
+        saveType: pkgToInstall.saveType ?? importer.targetDependenciesField,
       })
     }
   }

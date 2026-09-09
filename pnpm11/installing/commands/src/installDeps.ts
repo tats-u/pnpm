@@ -170,6 +170,7 @@ export type InstallDepsOptions = Pick<Config,
   recursive?: boolean
   dedupe?: boolean
   workspace?: boolean
+  types?: boolean
   includeOnlyPackageFiles?: boolean
   pruneLockfileImporters?: boolean
   rebuildHandler?: CommandHandler
@@ -425,6 +426,7 @@ export async function installDeps (
       peer: opts.savePeer,
       rangeSpecStyle: getRangeSpecStyle(opts),
       rootDir: opts.dir as ProjectRootDir,
+      saveTypes: opts.types,
       targetDependenciesField: getSaveType(opts),
     }
     const { updatedCatalogs, updatedProject, ignoredBuilds, newLockfile, resolutionPolicyViolations, dryRunResult } = await mutateModulesInSingleProject(mutatedProject, installOpts)

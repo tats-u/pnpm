@@ -2,6 +2,7 @@ import { filterDependenciesByType } from '@pnpm/pkg-manifest.utils'
 import type {
   Dependencies,
   DependenciesMeta,
+  DependenciesField,
   IncludedDependencies,
   ProjectManifest,
 } from '@pnpm/types'
@@ -13,6 +14,8 @@ export interface WantedDependency {
   bareSpecifier: string // package reference
   dev: boolean
   optional: boolean
+  peer?: boolean
+  saveType?: DependenciesField
   saveCatalogName?: string
   updateSpec?: boolean
   prevSpecifier?: string

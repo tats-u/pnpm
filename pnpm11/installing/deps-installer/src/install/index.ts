@@ -168,6 +168,7 @@ export interface InstallSomeDepsMutation extends InstallMutationOptions {
   peer?: boolean
   pruneDirectDependencies?: boolean
   rangeSpecStyle?: RangeSpecStyle
+  saveTypes?: boolean
   targetDependenciesField?: DependenciesField
 }
 
@@ -736,7 +737,8 @@ export async function mutateModules (
     // the additions the lockfile can answer on its own are staged on copies
     // here, handed to the fast update and its freshness gates below, and
     // committed to the context only once that rewrite succeeds.
-    const installSomeProjects = projects.filter((project) => project.mutation === 'installSome')
+    const hasInstallSomeWithTypes = projects.some((project) => project.mutation === 'installSome' && project.saveTypes === true)
+    const installSomeProjects = projects.filter((project) => project.mutation === 'installSome' && project.saveTypes !== true)
     const addedManifests = installSomeProjects.length === 0
       ? new Map<ProjectRootDir, AddedManifests>()
       : tryAddLockedVersions(ctx.wantedLockfile, {
@@ -825,6 +827,7 @@ export async function mutateModules (
       allChangedFieldsAreComposable
     const canTryFastUpdateLockfile =
       composableDrift &&
+      !hasInstallSomeWithTypes &&
       !frozenLockfile &&
       // `pnpm fetch` installs from the lockfile alone; with its empty
       // manifests every recorded dependency would read as removed.
@@ -953,6 +956,7 @@ export async function mutateModules (
     }
     const outdatedLockfileSettings = outdatedLockfileSettingName != null
     let needsFullResolution = outdatedLockfileSettings ||
+      hasInstallSomeWithTypes ||
       opts.fixLockfile ||
       opts.updateChecksums ||
       !upToDateLockfileMajorVersion ||
@@ -1113,11 +1117,132 @@ export async function mutateModules (
     > & Pick<InstallSomeDepsMutation,
     | 'allowNew'
     | 'dependencySelectors'
+    | 'peer'
+    | 'saveTypes'
     | 'targetDependenciesField'
     | 'update'
     | 'updatePatches'
     | 'updateToLatest'
     >
+    const publishedByPolicy = getPublishedByPolicy(opts)
+
+    async function getTypesDependencySelectors (
+      installProject: InstallSomeProject,
+      directWantedDependencies: WantedDependency[],
+      currentProjectSpecifiers: Record<string, string>
+    ): Promise<string[]> {
+      const selectors: string[] = []
+      const requestedAliases = new Set(directWantedDependencies.map(({ alias }) => alias))
+      for (const wantedDep of directWantedDependencies) {
+        if (wantedDep.alias.startsWith('@types/')) continue
+        const specifier = replaceCatalogProtocolIfNecessary(opts.catalogs, wantedDep)
+        const response = await opts.storeController.requestPackage({
+          alias: wantedDep.alias,
+          bareSpecifier: specifier,
+        }, {
+          alwaysTryWorkspacePackages: opts.linkWorkspacePackagesDepth >= 0,
+          defaultTag: opts.tag,
+          downloadPriority: 0,
+          ignoreScripts: opts.ignoreScripts,
+          lockfileDir: opts.lockfileDir,
+          preferredVersions: opts.preferredVersions ?? Object.create(null),
+          preferWorkspacePackages: opts.preferWorkspacePackages,
+          projectDir: installProject.rootDir,
+          publishedBy: publishedByPolicy.publishedBy,
+          publishedByExclude: publishedByPolicy.publishedByExclude,
+          skipFetch: true,
+          supportedArchitectures: opts.supportedArchitectures,
+          trustPolicy: opts.trustPolicy,
+          trustPolicyExclude: opts.trustPolicyExclude,
+          trustPolicyIgnoreAfter: opts.trustPolicyIgnoreAfter,
+          update: installProject.update === true,
+          workspacePackages: ctx.workspacePackages,
+        })
+        if (
+          response.body.isLocal ||
+          response.body.manifest == null ||
+          response.body.resolvedVia !== 'npm-registry'
+        ) {
+          continue
+        }
+        const packageName = response.body.manifest.name ?? wantedDep.alias
+        if (packageName.startsWith('@types/')) continue
+        if (response.body.manifest.types != null || response.body.manifest.typings != null) continue
+        const typesPackageName = getDefinitelyTypedPackageName(packageName)
+        if (typesPackageName == null || requestedAliases.has(typesPackageName)) continue
+        requestedAliases.add(typesPackageName)
+        if (currentProjectSpecifiers[typesPackageName] != null) {
+          selectors.push(typesPackageName)
+          continue
+        }
+        const preferredMajor = response.body.manifest.version != null && semver.valid(response.body.manifest.version) != null
+          ? semver.major(response.body.manifest.version)
+          : null
+        const preferredSpecifier = preferredMajor == null
+          ? undefined
+          : `^${preferredMajor}.0.0`
+        if (preferredSpecifier != null) {
+          try {
+            const preferredTypes = await opts.storeController.requestPackage({
+              alias: typesPackageName,
+              bareSpecifier: preferredSpecifier,
+            }, {
+              alwaysTryWorkspacePackages: opts.linkWorkspacePackagesDepth >= 0,
+              defaultTag: 'latest',
+              downloadPriority: 0,
+              ignoreScripts: opts.ignoreScripts,
+              lockfileDir: opts.lockfileDir,
+              preferredVersions: opts.preferredVersions ?? Object.create(null),
+              preferWorkspacePackages: opts.preferWorkspacePackages,
+              projectDir: installProject.rootDir,
+              publishedBy: publishedByPolicy.publishedBy,
+              publishedByExclude: publishedByPolicy.publishedByExclude,
+              skipFetch: true,
+              supportedArchitectures: opts.supportedArchitectures,
+              trustPolicy: opts.trustPolicy,
+              trustPolicyExclude: opts.trustPolicyExclude,
+              trustPolicyIgnoreAfter: opts.trustPolicyIgnoreAfter,
+              update: installProject.update === true,
+              workspacePackages: ctx.workspacePackages,
+            })
+            if (preferredTypes.body.isLocal || preferredTypes.body.resolvedVia !== 'npm-registry') continue
+            selectors.push(`${typesPackageName}@${preferredSpecifier}`)
+            continue
+          } catch (error: any) { // eslint-disable-line
+            if (!isSameMajorTypesMiss(error)) throw error
+          }
+        }
+        try {
+          const latestTypes = await opts.storeController.requestPackage({
+            alias: typesPackageName,
+            bareSpecifier: 'latest',
+          }, {
+            alwaysTryWorkspacePackages: opts.linkWorkspacePackagesDepth >= 0,
+            defaultTag: 'latest',
+            downloadPriority: 0,
+            ignoreScripts: opts.ignoreScripts,
+            lockfileDir: opts.lockfileDir,
+            preferredVersions: opts.preferredVersions ?? Object.create(null),
+            preferWorkspacePackages: opts.preferWorkspacePackages,
+            projectDir: installProject.rootDir,
+            publishedBy: publishedByPolicy.publishedBy,
+            publishedByExclude: publishedByPolicy.publishedByExclude,
+            skipFetch: true,
+            supportedArchitectures: opts.supportedArchitectures,
+            trustPolicy: opts.trustPolicy,
+            trustPolicyExclude: opts.trustPolicyExclude,
+            trustPolicyIgnoreAfter: opts.trustPolicyIgnoreAfter,
+            update: installProject.update === true,
+            workspacePackages: ctx.workspacePackages,
+          })
+          if (latestTypes.body.isLocal || latestTypes.body.resolvedVia !== 'npm-registry') continue
+          selectors.push(typesPackageName)
+        } catch (error: any) { // eslint-disable-line
+          if (!isMissingTypesPackageError(error)) throw error
+        }
+      }
+      return selectors
+    }
 
     async function installSome (project: InstallSomeProject) {
       // The manifest keeps its specifiers, so they stay authoritative: whatever resolution settles
@@ -1146,6 +1271,8 @@ export async function mutateModules (
         devDependencies,
         optional: project.targetDependenciesField === 'optionalDependencies',
         optionalDependencies,
+        peer: project.peer,
+        saveType: project.targetDependenciesField,
         updateWorkspaceDependencies: project.update,
         preferredSpecs,
         saveCatalogName: opts.saveCatalogName,
@@ -1153,6 +1280,27 @@ export async function mutateModules (
         defaultCatalog: opts.catalogs?.default,
         readonlyManifest,
       })
+      const typesDependencySelectors = project.saveTypes === true
+        ? await getTypesDependencySelectors(project, wantedDeps, currentBareSpecifiers)
+        : []
+      const { wantedDependencies: typesWantedDeps } = parseWantedDependencies(typesDependencySelectors, {
+        allowNew: true,
+        currentBareSpecifiers,
+        defaultTag: 'latest',
+        dev: true,
+        devDependencies: project.manifest.devDependencies ?? {},
+        optional: false,
+        optionalDependencies: {},
+        peer: false,
+        saveType: 'devDependencies',
+        updateWorkspaceDependencies: project.update,
+        preferredSpecs,
+        saveCatalogName: opts.saveCatalogName,
+        overrides: opts.overrides,
+        defaultCatalog: opts.catalogs?.default,
+        readonlyManifest,
+      })
+      const wantedDependencies = [...wantedDeps, ...typesWantedDeps]
 
       for (const { alias, requested, kept } of outsideKeptRange) {
         logger.warn({
@@ -1693,6 +1841,40 @@ function catalogCovers (catalogSpecifier: string, bareSpecifier: string | undefi
     semver.satisfies(bareSpecifier, catalogSpecifier)
 }
 
+function replaceCatalogProtocolIfNecessary (catalogs: Catalogs | undefined, wantedDependency: WantedDependency) {
+  if (catalogs == null) return wantedDependency.bareSpecifier
+  return matchCatalogResolveResult(resolveFromCatalog(catalogs, wantedDependency), {
+    unused: () => wantedDependency.bareSpecifier,
+    found: (found) => found.resolution.specifier,
+    misconfiguration: (misconfiguration) => {
+      throw misconfiguration.error
+    },
+  })
+}
+
+function getDefinitelyTypedPackageName (packageName: string): string | undefined {
+  if (packageName.startsWith('@types/')) return undefined
+  if (!packageName.startsWith('@')) return `@types/${packageName}`
+  const slashIndex = packageName.indexOf('/')
+  if (slashIndex < 0) return undefined
+  return `@types/${packageName.slice(1).replace('/', '__')}`
+}
+
+function isMissingTypesPackageError (error: unknown): boolean {
+  return typeof error === 'object' &&
+    error != null &&
+    'code' in error &&
+    error.code === 'ERR_PNPM_FETCH_404'
+}
+
+function isSameMajorTypesMiss (error: unknown): boolean {
+  return isMissingTypesPackageError(error) ||
+    (typeof error === 'object' &&
+      error != null &&
+      'code' in error &&
+      error.code === 'ERR_PNPM_NO_MATCHING_VERSION')
+}
+
 /**
  * Determines the catalog name for a dependency during installSome.
  *
@@ -1723,6 +1905,7 @@ export async function addDependenciesToPackage (
     peer?: boolean
     rangeSpecStyle?: RangeSpecStyle
     targetDependenciesField?: DependenciesField
+    types?: boolean
   } & InstallMutationOptions
 ): Promise<InstallResult> {
   const rootDir = (opts.dir ?? process.cwd()) as ProjectRootDir
@@ -1735,6 +1918,7 @@ export async function addDependenciesToPackage (
         peer: opts.peer,
         rangeSpecStyle: opts.rangeSpecStyle,
         rootDir,
+        saveTypes: opts.types,
         targetDependenciesField: opts.targetDependenciesField,
         update: opts.update,
         updatePatches: opts.updatePatches,
@@ -2835,6 +3019,7 @@ function canUsePnprForMutations (
   opts: Pick<MutateModulesOptions, 'allProjects' | 'depth' | 'includeDirect'>
 ): boolean {
   if (projects.length === 0) return false
+  if (projects.some(project => project.mutation === 'installSome' && project.saveTypes === true)) return false
   const refreshesRevisions = projects.some(project =>
     (project.mutation === 'install' || project.mutation === 'installSome') && project.updatePatches === true
   )

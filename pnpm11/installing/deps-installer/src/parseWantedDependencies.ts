@@ -1,7 +1,7 @@
 import type { Catalog } from '@pnpm/catalogs.types'
 import type { WantedDependency } from '@pnpm/installing.deps-resolver'
 import { parseWantedDependency } from '@pnpm/resolving.parse-wanted-dependency'
-import type { Dependencies } from '@pnpm/types'
+import type { Dependencies, DependenciesField } from '@pnpm/types'
 import semver from 'semver'
 
 export interface KeptRangeConflict {
@@ -39,7 +39,9 @@ export function parseWantedDependencies (
     updateWorkspaceDependencies?: boolean
     preferredSpecs?: Record<string, string>
     saveCatalogName?: string
+    saveType?: DependenciesField
     defaultCatalog?: Catalog
+    peer?: boolean
     /**
      * The manifest keeps its specifiers, so a requested version is applied only when it satisfies
      * the declared one — the lockfile importer entry has to keep satisfying its own specifier.
@@ -70,7 +72,9 @@ export function parseWantedDependencies (
         alias,
         dev: Boolean(opts.dev || alias && !!opts.devDependencies[alias]),
         optional: Boolean(opts.optional || alias && !!opts.optionalDependencies[alias]),
+        peer: opts.peer,
         prevSpecifier: alias && opts.currentBareSpecifiers[alias],
+        saveType: opts.saveType,
         saveCatalogName: opts.saveCatalogName,
       } satisfies Partial<WantedDependency>
       if (bareSpecifier) {

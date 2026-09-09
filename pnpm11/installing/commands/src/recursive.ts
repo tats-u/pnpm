@@ -113,6 +113,7 @@ export type RecursiveOptions = CreateStoreControllerOptions & Pick<Config,
   pending?: boolean
   workspace?: boolean
   allowNew?: boolean
+  types?: boolean
   ignoredPackages?: Set<string>
   update?: boolean
   updatePackageManifest?: boolean
@@ -325,6 +326,7 @@ export async function recursive (
               savePrefix: typeof localConfig.savePrefix === 'string' ? localConfig.savePrefix : opts.savePrefix,
             }),
             rootDir,
+            saveTypes: opts.types,
             targetDependenciesField,
             update: opts.update,
             updateMatching: opts.updateMatching,
@@ -480,7 +482,7 @@ export async function recursive (
           default:
             action = currentInput.length === 0
               ? install
-              : async (manifest, opts) => addDependenciesToPackage(manifest, currentInput, opts)
+              : async (manifest, actionOpts) => addDependenciesToPackage(manifest, currentInput, { ...actionOpts, types: opts.types })
             break
         }
 

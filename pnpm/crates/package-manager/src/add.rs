@@ -609,6 +609,7 @@ async fn prepare_selected_manifests<Reporter: self::Reporter>(
     let first_index = *selected_indices.first().expect("selected add requires a project");
     let catalog_ctx = read_catalog_ctx(&projects[first_index].manifest, config)?;
     let mut catalogs = catalog_ctx.catalogs;
+    let types_lookup_specifier = bare_specifier.clone();
     let mut updated_catalogs = Catalogs::new();
     // One picker, packument cache, and fetch locker across every selected
     // project: the picker is created on first use (a selection that resolves
@@ -732,6 +733,7 @@ async fn prepare_manifest<'a, Reporter: self::Reporter>(
         for dependency in &resolved_dependencies {
             type_resolution_futures.push_back(resolve_types_dependency(
                 dependency.types_lookup_package_name.clone(),
+                dependency.types_lookup_specifier.clone(),
                 dependency.has_bundled_types,
                 manifest,
                 config,
@@ -856,6 +858,7 @@ fn persist_manifest<Reporter: self::Reporter>(
 struct ResolvedAddedDependency {
     package_name: String,
     manifest_specifier: String,
+    types_lookup_specifier: String,
     updated_catalogs: Catalogs,
     warning: Option<LogEvent>,
     target_groups: Option<Vec<DependencyGroup>>,
@@ -1012,6 +1015,7 @@ async fn resolve_added_dependency<'a>(
     Ok(ResolvedAddedDependency {
         package_name: package_name.to_string(),
         manifest_specifier,
+        types_lookup_specifier,
         updated_catalogs,
         warning: outcome.warning,
         target_groups: None,
@@ -1026,6 +1030,7 @@ async fn resolve_added_dependency<'a>(
 )]
 async fn resolve_types_dependency<'a>(
     types_lookup_package_name: Option<String>,
+    types_lookup_specifier: String,
     has_bundled_types: Option<bool>,
     manifest: &PackageManifest,
     config: &'static Config,
@@ -1044,9 +1049,21 @@ async fn resolve_types_dependency<'a>(
     let Some(package_name) = types_lookup_package_name else {
         return Ok(None);
     };
-    let has_bundled_types = match has_bundled_types {
-        Some(has_bundled_types) => has_bundled_types,
-        None => {
+    let resolved_package = resolve_registry_package_for_types(
+        &package_name,
+        &types_lookup_specifier,
+        config,
+        http_client,
+        lockfile,
+        manifest,
+        meta_cache,
+        fetch_locker,
+    )
+    .await?;
+    let has_bundled_types = match (resolved_package.as_deref(), has_bundled_types) {
+        (Some(package), _) => package_has_bundled_types(package),
+        (None, Some(has_bundled_types)) => has_bundled_types,
+        (None, None) => {
             let latest = resolve_latest_package(
                 &package_name,
                 latest_picker,
@@ -1064,8 +1081,94 @@ async fn resolve_types_dependency<'a>(
     }
     let types_package_name = definitely_typed_package_name(&package_name)
         .expect("types lookup name never points at an @types package");
-    match resolve_added_dependency(
+    if manifest
+        .dependencies([
+            DependencyGroup::Optional,
+            DependencyGroup::Prod,
+            DependencyGroup::Dev,
+            DependencyGroup::Peer,
+        ])
+        .any(|(name, _)| name == types_package_name)
+    {
+        return resolve_latest_types_dependency(
+            &types_package_name,
+            manifest,
+            config,
+            lockfile,
+            http_client,
+            http_client_arc,
+            latest_picker,
+            range_spec_style,
+            save_catalog_name,
+            catalogs,
+            prefix,
+            meta_cache,
+            fetch_locker,
+            workspace_packages,
+        )
+        .await;
+    }
+    if let Some(preferred_major) = resolved_package.as_deref().and_then(package_version_major) {
+        if let Some(types_dependency) = resolve_same_major_types_dependency(
+            &types_package_name,
+            preferred_major,
+            config,
+            range_spec_style,
+            save_catalog_name,
+            catalogs,
+            prefix,
+            manifest,
+            lockfile,
+            http_client,
+            meta_cache,
+            fetch_locker,
+        )
+        .await?
+        {
+            return Ok(Some(types_dependency));
+        }
+    }
+    resolve_latest_types_dependency(
         &types_package_name,
+        manifest,
+        config,
+        lockfile,
+        http_client,
+        http_client_arc,
+        latest_picker,
+        range_spec_style,
+        save_catalog_name,
+        catalogs,
+        prefix,
+        meta_cache,
+        fetch_locker,
+        workspace_packages,
+    )
+    .await
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "types lookup reuses the add command's shared resolution inputs"
+)]
+async fn resolve_latest_types_dependency<'a>(
+    types_package_name: &str,
+    manifest: &PackageManifest,
+    config: &'static Config,
+    lockfile: Option<&Lockfile>,
+    http_client: &'a ThrottledClient,
+    http_client_arc: &std::sync::Arc<ThrottledClient>,
+    latest_picker: &tokio::sync::OnceCell<LatestPicker<'a>>,
+    range_spec_style: RangeSpecStyle,
+    save_catalog_name: Option<&str>,
+    catalogs: &Catalogs,
+    prefix: &str,
+    meta_cache: &std::sync::Arc<InMemoryPackageMetaCache>,
+    fetch_locker: &PackumentFetchLocker,
+    workspace_packages: Option<&WorkspacePackages>,
+) -> Result<Option<ResolvedAddedDependency>, AddError> {
+    match resolve_added_dependency(
+        types_package_name,
         config,
         manifest,
         lockfile,
@@ -1085,23 +1188,172 @@ async fn resolve_types_dependency<'a>(
         Ok(ResolvedAddedDependency {
             package_name,
             manifest_specifier,
+            types_lookup_specifier: _,
             updated_catalogs,
             warning,
             target_groups: _,
             types_lookup_package_name: _,
             has_bundled_types: _,
-        }) => Ok(Some(ResolvedAddedDependency {
-            package_name,
-            manifest_specifier,
-            updated_catalogs,
-            warning,
-            target_groups: Some(vec![DependencyGroup::Dev]),
-            types_lookup_package_name: None,
-            has_bundled_types: None,
-        })),
+        }) => {
+            let types_lookup_specifier = manifest_specifier.clone();
+            Ok(Some(ResolvedAddedDependency {
+                package_name,
+                manifest_specifier,
+                types_lookup_specifier,
+                updated_catalogs,
+                warning,
+                target_groups: Some(vec![DependencyGroup::Dev]),
+                types_lookup_package_name: None,
+                has_bundled_types: None,
+            }))
+        }
         Err(error) if is_missing_types_package_error(&error) => Ok(None),
         Err(error) => Err(error),
     }
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "types lookup reuses the add command's shared resolution inputs"
+)]
+async fn resolve_same_major_types_dependency(
+    types_package_name: &str,
+    preferred_major: u64,
+    config: &'static Config,
+    range_spec_style: RangeSpecStyle,
+    save_catalog_name: Option<&str>,
+    catalogs: &Catalogs,
+    prefix: &str,
+    manifest: &PackageManifest,
+    lockfile: Option<&Lockfile>,
+    http_client: &ThrottledClient,
+    meta_cache: &std::sync::Arc<InMemoryPackageMetaCache>,
+    fetch_locker: &PackumentFetchLocker,
+) -> Result<Option<ResolvedAddedDependency>, AddError> {
+    let preferred_specifier = format!("^{preferred_major}.0.0");
+    let Some(package) = resolve_registry_package_for_types(
+        types_package_name,
+        &preferred_specifier,
+        config,
+        http_client,
+        lockfile,
+        manifest,
+        meta_cache,
+        fetch_locker,
+    )
+    .await?
+    else {
+        return Ok(None);
+    };
+    build_types_dependency_resolution(
+        types_package_name,
+        calc_version_range(&package.version, None, None, range_spec_style),
+        config,
+        save_catalog_name,
+        catalogs,
+        prefix,
+    )
+    .map(Some)
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a resolve helper threading the install's resolution inputs"
+)]
+async fn resolve_registry_package_for_types(
+    package_name: &str,
+    specifier: &str,
+    config: &Config,
+    http_client: &ThrottledClient,
+    lockfile: Option<&Lockfile>,
+    manifest: &PackageManifest,
+    meta_cache: &InMemoryPackageMetaCache,
+    fetch_locker: &PackumentFetchLocker,
+) -> Result<Option<std::sync::Arc<PackageVersion>>, AddError> {
+    let registries: std::collections::HashMap<String, String> =
+        config.resolved_registries().into_iter().collect();
+    let registry = pick_registry_for_package(&registries, package_name, None);
+    let Some(spec_parsed) = parse_bare_specifier(specifier, Some(package_name), "latest", &registry)
+    else {
+        return Ok(None);
+    };
+    if spec_parsed.normalized_bare_specifier.is_some() || spec_parsed.name != package_name {
+        return Ok(None);
+    }
+    let policy = PickPolicy::from_config(config).map_err(AddError::MinimumReleaseAgeExclude)?;
+    let preferred_versions = get_preferred_versions_from_lockfile_and_manifests(
+        lockfile.and_then(|lockfile| lockfile.snapshots.as_ref()),
+        &[manifest],
+    );
+    let ctx = pick_package_context(http_client, config, &policy, meta_cache, fetch_locker);
+    let opts = PickPackageOptions {
+        registry: &registry,
+        preferred_version_selectors: preferred_versions.get(package_name),
+        published_by: policy.published_by,
+        published_by_exclude: policy.published_by_exclude.as_ref(),
+        pick_lowest_version: policy.pick_lowest_direct,
+        include_latest_tag: false,
+        dry_run: false,
+        optional: false,
+        update_checksums: false,
+        trust_policy: Some(config.trust_policy),
+        blocked_versions: None,
+    };
+    let pick = match pick_package(&ctx, &spec_parsed, &opts).await {
+        Ok(pick) => pick,
+        Err(PickPackageError::Fetch(FetchMetadataError::Network { error, .. }))
+            if error.status().is_some_and(|status| status.as_u16() == 404) =>
+        {
+            return Ok(None);
+        }
+        Err(error) => return Err(AddError::ResolveSpec(Box::new(error))),
+    };
+    Ok(pick.picked_package)
+}
+
+fn build_types_dependency_resolution(
+    package_name: &str,
+    bare_specifier: String,
+    config: &Config,
+    save_catalog_name: Option<&str>,
+    catalogs: &Catalogs,
+    prefix: &str,
+) -> Result<ResolvedAddedDependency, AddError> {
+    let mut updated_catalogs = Catalogs::new();
+    let outcome = decide_catalog_outcome(
+        config.catalog_mode,
+        save_catalog_name,
+        catalogs,
+        &CatalogModeDep { alias: package_name, bare_specifier: &bare_specifier, prev_specifier: None },
+        prefix,
+    )
+    .map_err(AddError::CatalogVersionMismatch)?;
+    let manifest_specifier = match outcome.decision {
+        CatalogDecision::KeepDirect => bare_specifier,
+        CatalogDecision::Catalog { manifest_specifier, updated_entry } => {
+            if let Some(entry) = updated_entry {
+                updated_catalogs
+                    .entry(entry.catalog_name)
+                    .or_default()
+                    .insert(package_name.to_string(), entry.specifier);
+            }
+            manifest_specifier
+        }
+    };
+    Ok(ResolvedAddedDependency {
+        package_name: package_name.to_string(),
+        types_lookup_specifier: manifest_specifier.clone(),
+        manifest_specifier,
+        updated_catalogs,
+        warning: outcome.warning,
+        target_groups: Some(vec![DependencyGroup::Dev]),
+        types_lookup_package_name: None,
+        has_bundled_types: None,
+    })
+}
+
+fn package_version_major(package: &PackageVersion) -> Option<u64> {
+    node_semver::Version::parse(&package.version).ok().map(|version| version.major)
 }
 
 async fn resolve_latest_package<'a>(

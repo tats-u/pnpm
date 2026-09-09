@@ -102,6 +102,7 @@ export function cliOptionsTypes (): Record<string, unknown> {
     save: Boolean,
     workspace: Boolean,
     config: Boolean,
+    types: Boolean,
   }
 }
 
@@ -171,6 +172,10 @@ For options that may be used with `-r`, see "pnpm help recursive"',
             description: 'Save the dependency to configurational dependencies',
             name: '--config',
           },
+          {
+            description: 'Add the matching `@types/*` package to `devDependencies` when the package does not bundle its own declarations',
+            name: '--types',
+          },
           OPTIONS.ignoreScripts,
           OPTIONS.offline,
           OPTIONS.preferOffline,
@@ -214,6 +219,7 @@ export type AddCommandOptions = InstallCommandOptions & {
   useBetaCli?: boolean
   workspaceRoot?: boolean
   config?: boolean
+  types?: boolean
 }
 
 export async function handler (
@@ -226,6 +232,12 @@ export async function handler (
   }
   if (!params || (params.length === 0)) {
     throw new PnpmError('MISSING_PACKAGE_NAME', '`pnpm add` requires the package name')
+  }
+  if (opts.types && opts.config) {
+    throw new PnpmError('OPTION_NOT_SUPPORTED', 'The "add" command currently does not support using --types with --config')
+  }
+  if (opts.types && opts.global) {
+    throw new PnpmError('OPTION_NOT_SUPPORTED', 'The "add" command currently does not support using --types with --global')
   }
   if (opts.config) {
     const store = await createStoreController(opts)

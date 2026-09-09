@@ -1,0 +1,5 @@
+{
+  "name": "@pnpm.e2e/has-types",
+  "version": "1.0.0",
+  "types": "index.d.ts"
+}
