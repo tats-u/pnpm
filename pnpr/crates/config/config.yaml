@@ -108,6 +108,7 @@ registries:
       '@having/*': *default-rules
       '@jsr/*': *default-rules
       '@pnpm.e2e/*': *default-rules
+      '@types/*': *default-rules
       '@private/*': &authenticated
         access: $authenticated
         publish: $authenticated

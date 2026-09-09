@@ -738,7 +738,10 @@ export async function mutateModules (
     // here, handed to the fast update and its freshness gates below, and
     // committed to the context only once that rewrite succeeds.
     const hasInstallSomeWithTypes = projects.some((project) => project.mutation === 'installSome' && project.saveTypes === true)
-    const installSomeProjects = projects.filter((project) => project.mutation === 'installSome' && project.saveTypes !== true)
+    const installSomeProjects = projects.filter(
+      (project): project is Extract<MutatedProject, { mutation: 'installSome' }> =>
+        project.mutation === 'installSome' && project.saveTypes !== true
+    )
     const addedManifests = installSomeProjects.length === 0
       ? new Map<ProjectRootDir, AddedManifests>()
       : tryAddLockedVersions(ctx.wantedLockfile, {
@@ -993,6 +996,10 @@ export async function mutateModules (
     const installedProjectIds = new Set<string>(projects.map((project) => ctx.projects[project.rootDir].id))
 
     let preferredSpecs: Record<string, string> | null = null
+    const publishedByPolicy = getPublishedByPolicy(opts)
+    const typesTrustPolicyExclude = opts.trustPolicyExclude != null
+      ? createPackageVersionPolicyOrThrow(opts.trustPolicyExclude, 'trustPolicyExclude')
+      : undefined
 
     // TODO: make it concurrent
     /* eslint-disable no-await-in-loop */
@@ -1124,7 +1131,6 @@ export async function mutateModules (
     | 'updatePatches'
     | 'updateToLatest'
     >
-    const publishedByPolicy = getPublishedByPolicy(opts)
 
     async function getTypesDependencySelectors (
       installProject: InstallSomeProject,
@@ -1153,15 +1159,15 @@ export async function mutateModules (
           skipFetch: true,
           supportedArchitectures: opts.supportedArchitectures,
           trustPolicy: opts.trustPolicy,
-          trustPolicyExclude: opts.trustPolicyExclude,
+          trustPolicyExclude: typesTrustPolicyExclude,
           trustPolicyIgnoreAfter: opts.trustPolicyIgnoreAfter,
-          update: installProject.update === true,
+          update: installProject.update === true ? 'compatible' : false,
           workspacePackages: ctx.workspacePackages,
         })
         if (
           response.body.isLocal ||
           response.body.manifest == null ||
-          response.body.resolvedVia !== 'npm-registry'
+          (response.body.resolvedVia != null && response.body.resolvedVia !== 'npm-registry')
         ) {
           continue
         }
@@ -1200,12 +1206,15 @@ export async function mutateModules (
               skipFetch: true,
               supportedArchitectures: opts.supportedArchitectures,
               trustPolicy: opts.trustPolicy,
-              trustPolicyExclude: opts.trustPolicyExclude,
+              trustPolicyExclude: typesTrustPolicyExclude,
               trustPolicyIgnoreAfter: opts.trustPolicyIgnoreAfter,
-              update: installProject.update === true,
+              update: installProject.update === true ? 'compatible' : false,
               workspacePackages: ctx.workspacePackages,
             })
-            if (preferredTypes.body.isLocal || preferredTypes.body.resolvedVia !== 'npm-registry') continue
+            if (
+              preferredTypes.body.isLocal ||
+              (preferredTypes.body.resolvedVia != null && preferredTypes.body.resolvedVia !== 'npm-registry')
+            ) continue
             selectors.push(`${typesPackageName}@${preferredSpecifier}`)
             continue
           } catch (error: any) { // eslint-disable-line
@@ -1230,12 +1239,15 @@ export async function mutateModules (
             skipFetch: true,
             supportedArchitectures: opts.supportedArchitectures,
             trustPolicy: opts.trustPolicy,
-            trustPolicyExclude: opts.trustPolicyExclude,
+            trustPolicyExclude: typesTrustPolicyExclude,
             trustPolicyIgnoreAfter: opts.trustPolicyIgnoreAfter,
-            update: installProject.update === true,
+            update: installProject.update === true ? 'compatible' : false,
             workspacePackages: ctx.workspacePackages,
           })
-          if (latestTypes.body.isLocal || latestTypes.body.resolvedVia !== 'npm-registry') continue
+          if (
+            latestTypes.body.isLocal ||
+            (latestTypes.body.resolvedVia != null && latestTypes.body.resolvedVia !== 'npm-registry')
+          ) continue
           selectors.push(typesPackageName)
         } catch (error: any) { // eslint-disable-line
           if (!isMissingTypesPackageError(error)) throw error
@@ -1375,7 +1387,7 @@ export async function mutateModules (
         pruneDirectDependencies: false,
         ...project,
         updateToLatest,
-        wantedDependencies: wantedDeps.map(wantedDep => ({ ...wantedDep, isNew: !currentBareSpecifiers[wantedDep.alias], updateSpec: true })),
+        wantedDependencies: wantedDependencies.map(wantedDep => ({ ...wantedDep, isNew: !currentBareSpecifiers[wantedDep.alias], updateSpec: true })),
       } as ImporterToUpdate)
     }
 

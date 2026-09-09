@@ -1,4 +1,4 @@
-import type { Dependencies, DependenciesMeta, DependencyManifest } from '@pnpm/types'
+import type { Dependencies, DependenciesField, DependenciesMeta, DependencyManifest } from '@pnpm/types'
 import { pickBy } from 'ramda'
 
 import { assertValidDependencyAliases } from './validateDependencyAlias.js'
@@ -9,6 +9,9 @@ export interface WantedDependency {
   dev: boolean
   optional: boolean
   injected?: boolean
+  peer?: boolean
+  prevSpecifier?: string
+  saveType?: DependenciesField
   saveCatalogName?: string
   /** Whether this dependency's spec should be (re)written to the manifest. */
   updateSpec?: boolean

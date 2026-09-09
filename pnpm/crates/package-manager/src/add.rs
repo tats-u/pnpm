@@ -609,7 +609,6 @@ async fn prepare_selected_manifests<Reporter: self::Reporter>(
     let first_index = *selected_indices.first().expect("selected add requires a project");
     let catalog_ctx = read_catalog_ctx(&projects[first_index].manifest, config)?;
     let mut catalogs = catalog_ctx.catalogs;
-    let types_lookup_specifier = bare_specifier.clone();
     let mut updated_catalogs = Catalogs::new();
     // One picker, packument cache, and fetch locker across every selected
     // project: the picker is created on first use (a selection that resolves
@@ -990,6 +989,7 @@ async fn resolve_added_dependency<'a>(
         }
     };
 
+    let types_lookup_specifier = bare_specifier.clone();
     let mut updated_catalogs = Catalogs::new();
     let dep = CatalogModeDep {
         alias: package_name,
@@ -1353,7 +1353,7 @@ fn build_types_dependency_resolution(
 }
 
 fn package_version_major(package: &PackageVersion) -> Option<u64> {
-    node_semver::Version::parse(&package.version).ok().map(|version| version.major)
+    Some(package.version.major)
 }
 
 async fn resolve_latest_package<'a>(
