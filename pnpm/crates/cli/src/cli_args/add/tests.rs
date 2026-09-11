@@ -2,6 +2,7 @@ use super::{AddDependencyOptions, apply_allow_build};
 use pnpm_config::Config;
 use pnpm_package_manifest::DependencyGroup;
 use pretty_assertions::assert_eq;
+use serde_json::json;
 
 #[test]
 fn allow_build_merges_into_config_and_persists_to_workspace_yaml() {
@@ -15,6 +16,43 @@ fn allow_build_merges_into_config_and_persists_to_workspace_yaml() {
     let yaml = std::fs::read_to_string(dir.path().join("pnpm-workspace.yaml"))
         .expect("pnpm-workspace.yaml written");
     assert!(yaml.contains("esbuild"), "allowBuilds entry persisted, got:\n{yaml}");
+}
+
+#[test]
+fn allow_build_syncs_existing_package_json_allow_scripts() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    std::fs::write(
+        dir.path().join("package.json"),
+        serde_json::to_string_pretty(&json!({
+            "allowScripts": {
+                "sharp": false,
+            },
+        }))
+        .unwrap(),
+    )
+    .expect("package.json written");
+    let mut config = Config::default();
+    config.allow_builds.insert("sharp".to_string(), false);
+
+    apply_allow_build(&mut config, &["esbuild".to_string()], dir.path())
+        .expect("allow-build applies");
+
+    let workspace_yaml = std::fs::read_to_string(dir.path().join("pnpm-workspace.yaml")).unwrap();
+    assert!(workspace_yaml.contains("esbuild: true"));
+    assert!(workspace_yaml.contains("sharp: false"));
+
+    let package_json: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.path().join("package.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        package_json,
+        json!({
+            "allowScripts": {
+                "esbuild": true,
+                "sharp": false,
+            },
+        }),
+    );
 }
 
 #[test]

@@ -198,6 +198,35 @@ test('should approve builds with package.json that has no allowBuilds field defi
   })
 })
 
+test('approve-builds syncs decisions to an existing package.json allowScripts object', async () => {
+  prepare({
+    allowScripts: {},
+    dependencies: {
+      '@pnpm.e2e/pre-and-postinstall-scripts-example': '1.0.0',
+      '@pnpm.e2e/install-script-example': '*',
+    },
+  } as any)
+
+  await approveSomeBuilds()
+
+  expect(readYamlFileSync<any>(path.resolve('pnpm-workspace.yaml'))).toStrictEqual({ // eslint-disable-line
+    allowBuilds: {
+      '@pnpm.e2e/install-script-example': false,
+      '@pnpm.e2e/pre-and-postinstall-scripts-example': true,
+    },
+  })
+  expect(JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'))).toStrictEqual({
+    allowScripts: {
+      '@pnpm.e2e/install-script-example': false,
+      '@pnpm.e2e/pre-and-postinstall-scripts-example': true,
+    },
+    dependencies: {
+      '@pnpm.e2e/install-script-example': '*',
+      '@pnpm.e2e/pre-and-postinstall-scripts-example': '1.0.0',
+    },
+  })
+})
+
 test('approve all builds with --all flag', async () => {
   prepare({
     dependencies: {

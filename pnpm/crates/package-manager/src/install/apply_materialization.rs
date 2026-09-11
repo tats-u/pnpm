@@ -657,11 +657,21 @@ fn report_install_completion<Reporter: self::Reporter>(
             .iter()
             .map(|dep_path| crate::allow_build_key_from_ignored_build(dep_path))
             .collect();
+        pnpm_workspace_manifest_writer::set_allow_builds(
+            workspace_manifest_dir,
+            config.allow_builds.iter().map(|(pkg, &value)| (pkg.as_str(), value)),
+        )
+        .map_err(InstallError::ScaffoldAllowBuilds)?;
         pnpm_workspace_manifest_writer::scaffold_allow_builds(
             workspace_manifest_dir,
             allow_build_keys.iter().map(String::as_str),
         )
         .map_err(InstallError::ScaffoldAllowBuilds)?;
+        pnpm_package_manifest::sync_allow_scripts_in_package_json(
+            config.root_project_manifest_dir(workspace_root),
+            config.allow_builds.iter().map(|(pkg, &value)| (pkg.as_str(), value)),
+        )
+        .map_err(InstallError::SyncAllowScripts)?;
     }
 
     // When `strictDepBuilds` is on (the default), an install that

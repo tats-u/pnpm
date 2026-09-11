@@ -2482,6 +2482,9 @@ importers:
 
   pnpm11/config/reader:
     dependencies:
+      '@pnpm/building.policy':
+        specifier: workspace:*
+        version: link:../../building/policy
       '@pnpm/catalogs.config':
         specifier: workspace:*
         version: link:../../catalogs/config
@@ -2646,9 +2649,15 @@ importers:
 
   pnpm11/config/writer:
     dependencies:
+      '@pnpm/building.policy':
+        specifier: workspace:*
+        version: link:../../building/policy
       '@pnpm/types':
         specifier: workspace:*
         version: link:../../core/types
+      '@pnpm/workspace.project-manifest-reader':
+        specifier: workspace:*
+        version: link:../../workspace/project-manifest-reader
       '@pnpm/workspace.workspace-manifest-writer':
         specifier: workspace:*
         version: link:../../workspace/workspace-manifest-writer

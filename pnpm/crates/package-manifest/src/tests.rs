@@ -9,7 +9,7 @@ use super::{
     BundleDependencies, InitAuthor, InitOptions, PackageManifest, PackageManifestError,
     apply_runtime_on_fail_override, convert_dependencies_to_engines_runtime,
     convert_engines_runtime_to_dependencies, extract_license, node_version_from_engines_runtime,
-    parse_manifest_bytes, safe_read_package_json_from_dir,
+    parse_manifest_bytes, safe_read_package_json_from_dir, sync_allow_scripts_in_package_json,
 };
 use crate::DependencyGroup;
 use serde_json::json;
@@ -879,6 +879,75 @@ fn manifest_from_json(value: serde_json::Value) -> (PackageManifest, tempfile::T
     let path = dir.path().join("package.json");
     std::fs::write(&path, value.to_string()).unwrap();
     (PackageManifest::from_path(path).unwrap(), dir)
+}
+
+#[test]
+fn allow_scripts_reads_boolean_entries_only() {
+    let (manifest, _dir) = manifest_from_json(json!({
+        "allowScripts": {
+            "esbuild": true,
+            "sharp": "manual",
+        },
+    }));
+    assert!(manifest.has_allow_scripts_object());
+    assert_eq!(
+        manifest.allow_scripts(),
+        Some(HashMap::from([(String::from("esbuild"), true)])),
+    );
+}
+
+#[test]
+fn sync_allow_scripts_overlays_boolean_entries_without_touching_other_values() {
+    let (mut manifest, _dir) = manifest_from_json(json!({
+        "allowScripts": {
+            "esbuild": false,
+            "sharp": "manual",
+        },
+    }));
+    assert!(manifest.sync_allow_scripts([("esbuild", true), ("rollup", false)]));
+    assert_eq!(
+        manifest.value().get("allowScripts"),
+        Some(&json!({
+            "esbuild": true,
+            "rollup": false,
+            "sharp": "manual",
+        })),
+    );
+}
+
+#[test]
+fn sync_allow_scripts_in_package_json_updates_existing_allow_scripts_objects_only() {
+    let dir = tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("package.json"),
+        serde_json::to_string_pretty(&json!({
+            "allowScripts": {
+                "esbuild": false,
+            },
+            "dependencies": {
+                "foo": "1.0.0",
+            },
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert!(sync_allow_scripts_in_package_json(dir.path(), [("esbuild", true), ("rollup", false)])
+        .expect("sync succeeds"));
+    let saved: serde_json::Value =
+        serde_json::from_str(&read_to_string(dir.path().join("package.json")).unwrap()).unwrap();
+    assert_eq!(
+        saved,
+        json!({
+            "allowScripts": {
+                "esbuild": true,
+                "rollup": false,
+            },
+            "dependencies": {
+                "foo": "1.0.0",
+            },
+        }),
+    );
 }
 
 #[test]

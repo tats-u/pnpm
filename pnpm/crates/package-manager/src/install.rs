@@ -823,6 +823,11 @@ pub enum InstallError {
         #[error(source)] pnpm_workspace_manifest_writer::UpdateWorkspaceManifestError,
     ),
 
+    /// Surfaced when syncing a root `package.json`'s existing `allowScripts`
+    /// object to the current boolean `allowBuilds` view fails.
+    #[diagnostic(transparent)]
+    SyncAllowScripts(#[error(source)] pnpm_package_manifest::PackageManifestError),
+
     /// Surfaces a failure to persist `node_modules/.package-map.json`,
     /// the package-map metadata Node consumes when the user opts into
     /// `--experimental-package-map`.

@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import util, { stripVTControlCharacters } from 'node:util'
 
+import { mergeAllowScriptsIntoAllowBuilds, readAllowScripts } from '@pnpm/building.policy'
 import { getCatalogsFromWorkspaceManifest } from '@pnpm/catalogs.config'
 import { createMatcher } from '@pnpm/config.matcher'
 import { BUILTIN_REGISTRIES_BY_PREFIX, GLOBAL_CONFIG_YAML_FILENAME, GLOBAL_LAYOUT_VERSION } from '@pnpm/constants'
@@ -12,7 +13,7 @@ import { getCurrentBranch } from '@pnpm/network.git-utils'
 import { applyRuntimeOnFailOverride } from '@pnpm/pkg-manifest.utils'
 import { isCamelCase } from '@pnpm/text.naming-cases'
 import type { DevEngines, EngineDependency, ProjectManifest, RemoteSideEffectsCacheSettings, SideEffectsCacheSettings, VirtualStoreType } from '@pnpm/types'
-import { safeReadProjectManifestOnly } from '@pnpm/workspace.project-manifest-reader'
+import { tryReadProjectManifest } from '@pnpm/workspace.project-manifest-reader'
 import { readWorkspaceManifest, type WorkspaceManifest } from '@pnpm/workspace.workspace-manifest-reader'
 import { betterPathResolve } from 'better-path-resolve'
 import camelcase from 'camelcase'
@@ -505,10 +506,15 @@ export async function getConfig (opts: {
   pnpmConfig.packageManager = packageManager
 
   pnpmConfig.rootProjectManifestDir = pnpmConfig.lockfileDir ?? pnpmConfig.workspaceDir ?? pnpmConfig.dir
+  let rootProjectAllowScripts: ReturnType<typeof readAllowScripts> | undefined
   let workspaceManifestRegistries: Record<string, string> | undefined
   if (!opts.ignoreLocalSettings) {
-    pnpmConfig.rootProjectManifest = await safeReadProjectManifestOnly(pnpmConfig.rootProjectManifestDir) ?? undefined
+    const rootProjectManifestResult = await tryReadProjectManifest(pnpmConfig.rootProjectManifestDir)
+    pnpmConfig.rootProjectManifest = rootProjectManifestResult.manifest ?? undefined
     if (pnpmConfig.rootProjectManifest != null) {
+      if (rootProjectManifestResult.fileName === 'package.json') {
+        rootProjectAllowScripts = readAllowScripts((pnpmConfig.rootProjectManifest as ProjectManifest & { allowScripts?: unknown }).allowScripts)
+      }
       if (pnpmConfig.rootProjectManifest.workspaces?.length && !pnpmConfig.workspaceDir) {
         warnings.push('The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.')
       }
@@ -584,6 +590,16 @@ export async function getConfig (opts: {
           workspaceManifestRegistries = pnpmConfig.registriesByScope as Record<string, string> | undefined
         }
       }
+    }
+  }
+  if (rootProjectAllowScripts?.hasObject && !cliOptions['global']) {
+    const { allowBuilds, conflictingEntries } = mergeAllowScriptsIntoAllowBuilds(
+      pnpmConfig.allowBuilds,
+      rootProjectAllowScripts.allowScripts
+    )
+    pnpmConfig.allowBuilds = allowBuilds
+    if (conflictingEntries.length > 0) {
+      warnings.push(`The following entries in package.json "allowScripts" conflict with "allowBuilds" in pnpm-workspace.yaml and were ignored: ${quoteAndJoin(conflictingEntries.map(redactAndSanitize))}. The values from "allowBuilds" were used.`)
     }
   }
 

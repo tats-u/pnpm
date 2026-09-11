@@ -8,6 +8,62 @@ import type { AllowBuild, AllowBuildContext, DepPath } from '@pnpm/types'
  */
 export const UNDECIDED_ALLOW_BUILD = 'set this to true or false'
 
+export interface AllowScripts {
+  [packageName: string]: boolean
+}
+
+export interface ReadAllowScriptsResult {
+  allowScripts: AllowScripts
+  hasObject: boolean
+}
+
+export function readAllowScripts (value: unknown): ReadAllowScriptsResult {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+    return {
+      allowScripts: {},
+      hasObject: false,
+    }
+  }
+  return {
+    allowScripts: Object.fromEntries(
+      Object.entries(value)
+        .filter(([, allowed]) => typeof allowed === 'boolean')
+    ) as AllowScripts,
+    hasObject: true,
+  }
+}
+
+export function mergeAllowScriptsIntoAllowBuilds (
+  allowBuilds: Record<string, boolean | string> | undefined,
+  allowScripts: AllowScripts
+): {
+    allowBuilds: Record<string, boolean | string> | undefined
+    conflictingEntries: string[]
+  } {
+  const conflictingEntries = Object.entries(allowScripts)
+    .filter(([pkg, allowed]) => allowBuilds?.[pkg] != null && allowBuilds[pkg] !== allowed)
+    .map(([pkg]) => pkg)
+  if (allowBuilds == null) {
+    return {
+      allowBuilds: Object.keys(allowScripts).length > 0 ? { ...allowScripts } : undefined,
+      conflictingEntries,
+    }
+  }
+  return {
+    allowBuilds: { ...allowScripts, ...allowBuilds },
+    conflictingEntries,
+  }
+}
+
+export function allowBuildsToAllowScripts (
+  allowBuilds: Record<string, boolean | string>
+): AllowScripts {
+  return Object.fromEntries(
+    Object.entries(allowBuilds)
+      .filter(([, allowed]) => typeof allowed === 'boolean')
+  ) as AllowScripts
+}
+
 export function isBuildExplicitlyDisallowed (depPath: DepPath, allowBuild?: AllowBuild): boolean {
   return allowBuild?.(depPath) === false
 }

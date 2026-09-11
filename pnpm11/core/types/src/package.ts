@@ -384,6 +384,7 @@ export interface RemoteSideEffectsCacheSettings {
 export type VirtualStoreType = 'global' | 'project'
 
 export interface ProjectManifest extends BaseManifest {
+  allowScripts?: Record<string, boolean>
   packageManager?: string
   workspaces?: string[] // TODO: add Record<string, string> to represent npm (to be compatible with @npm/types)
   private?: boolean

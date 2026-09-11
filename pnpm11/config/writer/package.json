@@ -32,7 +32,9 @@
     "compile": "tsgo --build && pn lint --fix"
   },
   "dependencies": {
+    "@pnpm/building.policy": "workspace:*",
     "@pnpm/types": "workspace:*",
+    "@pnpm/workspace.project-manifest-reader": "workspace:*",
     "@pnpm/workspace.workspace-manifest-writer": "workspace:*"
   },
   "devDependencies": {

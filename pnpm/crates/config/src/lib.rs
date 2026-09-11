@@ -28,6 +28,7 @@ use indexmap::IndexMap;
 use pipe_trait::Pipe;
 use pnpm_git_utils::{Host as GitHost, get_current_branch};
 use pnpm_lockfile::{Lockfile, RegistryOptions, WantedLockfileSelection};
+use pnpm_package_manifest::PackageManifest;
 use pnpm_patching::{
     CalcPatchHashError, PatchGroupRecord, PatchInput, ResolvePatchedDependenciesError,
     create_hex_hash_from_file, group_patched_dependencies, resolve_and_group,
@@ -3653,6 +3654,8 @@ impl Config {
                 }
             }
         }
+        let root_project_manifest_dir = self.root_project_manifest_dir(start_dir).to_path_buf();
+        apply_root_allow_scripts(&mut self, &root_project_manifest_dir)?;
 
         // Apply `_auth` routes after workspace yaml (so they win over
         // repo-controlled registries) but before `PNPM_CONFIG_*` (so an
@@ -3838,6 +3841,55 @@ impl Config {
     pub fn leak(self) -> &'static mut Self {
         self.pipe(Box::new).pipe(Box::leak)
     }
+}
+
+fn apply_root_allow_scripts(
+    config: &mut Config,
+    root_project_manifest_dir: &Path,
+) -> Result<(), LoadWorkspaceYamlError> {
+    let manifest = match PackageManifest::from_path(root_project_manifest_dir.join("package.json")) {
+        Ok(manifest) => manifest,
+        Err(pnpm_package_manifest::PackageManifestError::Io(err))
+            if err.kind() == std::io::ErrorKind::NotFound =>
+        {
+            return Ok(());
+        }
+        Err(err) => {
+            return Err(LoadWorkspaceYamlError::ReadRootManifest {
+                source: Box::new(err),
+            });
+        }
+    };
+    let Some(allow_scripts) = manifest.allow_scripts() else {
+        return Ok(());
+    };
+    let conflicting_entries = merge_allow_scripts_into_allow_builds(&mut config.allow_builds, allow_scripts);
+    if !conflicting_entries.is_empty() {
+        tracing::warn!(
+            target: "pacquet::config",
+            entries = %conflicting_entries.join(", "),
+            r#"package.json "allowScripts" entries conflicted with "allowBuilds" in pnpm-workspace.yaml and were ignored; the "allowBuilds" values were used"#
+        );
+    }
+    Ok(())
+}
+
+fn merge_allow_scripts_into_allow_builds(
+    allow_builds: &mut HashMap<String, bool>,
+    allow_scripts: HashMap<String, bool>,
+) -> Vec<String> {
+    let mut conflicting_entries = Vec::new();
+    for (name, allowed) in allow_scripts {
+        match allow_builds.get(&name) {
+            Some(existing) if *existing != allowed => conflicting_entries.push(name),
+            Some(_) => {}
+            None => {
+                allow_builds.insert(name, allowed);
+            }
+        }
+    }
+    conflicting_entries.sort_unstable();
+    conflicting_entries
 }
 
 /// Fold a source's explicitly-set settings into the running record.

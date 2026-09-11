@@ -1,5 +1,11 @@
 import { expect, it } from '@jest/globals'
-import { createAllowBuildFunction, isBuildExplicitlyDisallowed } from '@pnpm/building.policy'
+import {
+  allowBuildsToAllowScripts,
+  createAllowBuildFunction,
+  isBuildExplicitlyDisallowed,
+  mergeAllowScriptsIntoAllowBuilds,
+  readAllowScripts,
+} from '@pnpm/building.policy'
 import type { DepPath } from '@pnpm/types'
 
 function depPath (value: string): DepPath {
@@ -16,6 +22,62 @@ it('should allowBuilds with true value', () => {
   expect(allowBuild!(depPath('qar@1.1.0'))).toBeUndefined()
   expect(allowBuild!(depPath('qar@1.0.0'))).toBe(true)
   expect(allowBuild!(depPath('qar@2.0.0'))).toBe(true)
+})
+
+it('readAllowScripts() keeps only boolean entries from object values', () => {
+  expect(readAllowScripts({
+    bar: 'no',
+    baz: null,
+    foo: true,
+  })).toStrictEqual({
+    allowScripts: {
+      foo: true,
+    },
+    hasObject: true,
+  })
+  expect(readAllowScripts(null)).toStrictEqual({
+    allowScripts: {},
+    hasObject: false,
+  })
+})
+
+it('mergeAllowScriptsIntoAllowBuilds() fills missing packages from allowScripts', () => {
+  expect(mergeAllowScriptsIntoAllowBuilds({
+    sharp: false,
+  }, {
+    esbuild: true,
+  })).toStrictEqual({
+    allowBuilds: {
+      esbuild: true,
+      sharp: false,
+    },
+    conflictingEntries: [],
+  })
+})
+
+it('mergeAllowScriptsIntoAllowBuilds() keeps allowBuilds on conflicts, including placeholders', () => {
+  expect(mergeAllowScriptsIntoAllowBuilds({
+    esbuild: false,
+    sharp: 'set this to true or false',
+  }, {
+    esbuild: true,
+    sharp: true,
+  })).toStrictEqual({
+    allowBuilds: {
+      esbuild: false,
+      sharp: 'set this to true or false',
+    },
+    conflictingEntries: ['esbuild', 'sharp'],
+  })
+})
+
+it('allowBuildsToAllowScripts() drops undecided allowBuilds placeholders', () => {
+  expect(allowBuildsToAllowScripts({
+    esbuild: true,
+    sharp: 'set this to true or false',
+  })).toStrictEqual({
+    esbuild: true,
+  })
 })
 
 it('should allowBuilds with false value', () => {

@@ -73,6 +73,62 @@ pub(crate) fn capture_warnings<Func: FnOnce()>(f: Func) -> Vec<String> {
 }
 
 #[test]
+fn package_json_allow_scripts_are_used_when_allow_builds_are_absent() {
+    fake_env!(load_with_fake_env);
+    let dir = tempdir().unwrap();
+    fs::write(
+        dir.path().join("package.json"),
+        serde_json::to_string_pretty(&serde_json::json!({
+            "allowScripts": {
+                "esbuild": true,
+            },
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let config = load_with_fake_env(dir.path());
+    assert_eq!(config.allow_builds, HashMap::from([(String::from("esbuild"), true)]));
+}
+
+#[test]
+fn workspace_allow_builds_override_package_json_allow_scripts_with_warning() {
+    fake_env!(load_with_fake_env);
+    let dir = tempdir().unwrap();
+    fs::write(
+        dir.path().join("package.json"),
+        serde_json::to_string_pretty(&serde_json::json!({
+            "allowScripts": {
+                "esbuild": false,
+                "sharp": true,
+            },
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join("pnpm-workspace.yaml"),
+        "allowBuilds:\n  esbuild: true\n",
+    )
+    .unwrap();
+
+    let warnings = capture_warnings(|| {
+        let config = load_with_fake_env(dir.path());
+        assert_eq!(
+            config.allow_builds,
+            HashMap::from([
+                (String::from("esbuild"), true),
+                (String::from("sharp"), true),
+            ]),
+        );
+    });
+    assert!(warnings.iter().any(|warning| {
+        warning.contains(r#"package.json "allowScripts" entries conflicted"#)
+            && warning.contains("entries=\"esbuild\"")
+    }));
+}
+
+#[test]
 fn ci_false_disables_github_actions_detection() {
     struct GithubActionsWithCiFalse;
 

@@ -4,10 +4,11 @@ use dialoguer::{Confirm, MultiSelect};
 use miette::{Diagnostic, IntoDiagnostic};
 use pnpm_config::Config;
 use pnpm_modules_yaml::{Host, write_modules_manifest};
+use pnpm_package_manifest::sync_allow_scripts_in_package_json;
 use pnpm_package_manager::allow_build_key_from_ignored_build;
 use pnpm_workspace_manifest_writer::set_allow_builds_clearing_legacy;
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     path::Path,
 };
 
@@ -84,7 +85,12 @@ impl ApproveBuildsArgs {
 
         let settings_dir =
             initial_config.workspace_dir.clone().unwrap_or_else(|| dir.to_path_buf());
-        write_approval_settings(&settings_dir, &decision)?;
+        write_approval_settings(
+            &settings_dir,
+            initial_config.root_project_manifest_dir(dir),
+            &initial_config.allow_builds,
+            &decision,
+        )?;
         clear_decided_ignored_builds(scan.modules_manifest, &scan.modules_dir, &decision)?;
 
         if decision.build_packages.is_empty() {
@@ -144,11 +150,22 @@ impl ApproveBuildsArgs {
 
 pub(crate) fn write_approval_settings(
     settings_dir: &Path,
+    root_project_manifest_dir: &Path,
+    current_allow_builds: &HashMap<String, bool>,
     decision: &ApprovalDecision,
 ) -> miette::Result<()> {
+    let mut merged_allow_builds = current_allow_builds.clone();
+    for (pkg, &value) in &decision.decisions {
+        merged_allow_builds.insert(pkg.clone(), value);
+    }
     set_allow_builds_clearing_legacy(
         settings_dir,
-        decision.decisions.iter().map(|(pkg, &value)| (pkg.as_str(), value)),
+        merged_allow_builds.iter().map(|(pkg, &value)| (pkg.as_str(), value)),
+    )
+    .into_diagnostic()?;
+    sync_allow_scripts_in_package_json(
+        root_project_manifest_dir,
+        merged_allow_builds.iter().map(|(pkg, &value)| (pkg.as_str(), value)),
     )
     .into_diagnostic()
 }

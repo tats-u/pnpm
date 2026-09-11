@@ -4432,6 +4432,57 @@ test('do not return a warning if a package.json has workspaces field and there i
   expect(warnings).toStrictEqual([])
 })
 
+test('package.json allowScripts is used when pnpm-workspace.yaml does not declare allowBuilds', async () => {
+  prepare({
+    allowScripts: {
+      esbuild: true,
+    },
+  } as any)
+
+  const { config, warnings } = await getConfig({
+    cliOptions: {},
+    packageManager: {
+      name: 'pnpm',
+      version: '1.0.0',
+    },
+  })
+
+  expect(config.allowBuilds).toStrictEqual({
+    esbuild: true,
+  })
+  expect(warnings).toStrictEqual([])
+})
+
+test('pnpm-workspace.yaml allowBuilds takes precedence over package.json allowScripts', async () => {
+  prepare({
+    allowScripts: {
+      esbuild: false,
+      sharp: true,
+    },
+  } as any)
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    allowBuilds: {
+      esbuild: true,
+    },
+  })
+
+  const { config, warnings } = await getConfig({
+    cliOptions: {},
+    packageManager: {
+      name: 'pnpm',
+      version: '1.0.0',
+    },
+  })
+
+  expect(config.allowBuilds).toStrictEqual({
+    esbuild: true,
+    sharp: true,
+  })
+  expect(warnings).toEqual(expect.arrayContaining([
+    'The following entries in package.json "allowScripts" conflict with "allowBuilds" in pnpm-workspace.yaml and were ignored: "esbuild". The values from "allowBuilds" were used.',
+  ]))
+})
+
 test('return a warning if a package.json has a legacy "pnpm" field with ignored settings', async () => {
   const prefix = f.find('pkg-with-legacy-pnpm-field')
   const { warnings } = await getConfig({
