@@ -79,6 +79,9 @@ impl ConfigWarnings {
             return Ok(());
         }
         emit_npmrc_warnings(&config.npmrc_warnings);
+        if let Some(warning) = &config.allow_scripts_warning {
+            emit_config_warning(&redact_and_sanitize(warning));
+        }
         report_workspace_key_issues(&config.workspace_key_issues, self.strict(config, dir))
     }
 

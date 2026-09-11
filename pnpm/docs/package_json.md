@@ -18,6 +18,29 @@ pnpm does not read settings from the `pnpm` field of `package.json`. Define sett
 
 :::
 
+## allowScripts
+
+A map of build approval keys to booleans. Only the root `package.json` is read.
+For each key, [`allowBuilds`](./settings/build.md#allowbuilds) and
+[`permissions.build`](./settings/build.md#permissions) in `pnpm-workspace.yaml`
+take priority. Conflicts produce a warning. Non-boolean values are ignored.
+
+```json
+{
+  "allowScripts": {
+    "esbuild": true,
+    "core-js": false
+  }
+}
+```
+
+When `allowScripts` is already an object, including an empty object, writes
+from `pnpm add --allow-build`, `pnpm install --allow-build`, `pnpm approve-builds`,
+and the ignored-build scaffold sync the resolved boolean build decisions into it.
+Its boolean entries are also included in the workspace policy written by these flows.
+Unrelated entries are preserved. pnpm does not create an `allowScripts` field
+when it is absent or replace one that is not an object.
+
 ## engines
 
 You can specify the version of Node and pnpm that your software works on:

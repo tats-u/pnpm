@@ -188,6 +188,9 @@ pub struct Config {
 
     pub npmrc_warnings: Vec<String>,
 
+    /// Conflicting root `allowScripts` entries ignored during config loading.
+    pub allow_scripts_warning: Option<String>,
+
     /// When true, all dependencies are hoisted to `node_modules/.pnpm/node_modules`.
     /// This makes unlisted dependencies accessible to all packages inside `node_modules`.
     #[default = true]

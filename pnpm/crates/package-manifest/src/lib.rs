@@ -1,4 +1,5 @@
 pub mod package_manager_spec;
+pub use allow_scripts::sync_allow_scripts_in_package_json;
 pub use bins::{
     MAX_PRECALCULATED_BINS, MAX_PRECALCULATED_BINS_BYTES, PackageBin, ScriptRuntime,
     declared_bin_entries, extension_program, infer_script_runtime_from_head,
@@ -43,6 +44,7 @@ use serialization::{empty_dependency_fields, normalize_dependency_fields, serial
 use strum::IntoStaticStr;
 #[cfg(not(target_os = "wasi"))]
 use tempfile::NamedTempFile;
+mod allow_scripts;
 mod bins;
 mod blank_lines;
 mod build_triggers;

@@ -64,6 +64,7 @@ pub use workspace_yaml::{
     workspace_root_or,
 };
 
+mod allow_scripts;
 mod api;
 mod boot_config;
 mod cas;
