@@ -293,19 +293,29 @@ pub fn render_dependents_parseable(
             .as_deref()
             .unwrap_or(&tree.name);
         let root_segment = match (&tree.path, opts.long) {
-            (Some(path), true) => {
-                format!("{path}:{}", plain_name_at_version(displayed_name, &tree.version))
-            }
-            _ => plain_name_at_version(displayed_name, &tree.version),
+            (Some(path), true) => ParseableSegment {
+                value: format!("{path}:{}", plain_name_at_version(displayed_name, &tree.version)),
+                requires: None,
+            },
+            _ => ParseableSegment {
+                value: plain_name_at_version(displayed_name, &tree.version),
+                requires: None,
+            },
         };
         collect_paths(&tree.dependents, &[root_segment], &mut lines, 0, opts.depth);
     }
     lines.join("\n")
 }
 
+#[derive(Clone)]
+struct ParseableSegment {
+    value: String,
+    requires: Option<String>,
+}
+
 fn collect_paths(
     dependents: &[DependentNode],
-    current_path: &[String],
+    current_path: &[ParseableSegment],
     lines: &mut Vec<String>,
     current_depth: usize,
     max_depth: Option<usize>,
@@ -316,7 +326,10 @@ fn collect_paths(
             .as_deref()
             .unwrap_or(&dep.name);
         let mut new_path = current_path.to_vec();
-        new_path.push(plain_name_at_version(displayed_name, &dep.version));
+        new_path.push(ParseableSegment {
+            value: plain_name_at_version(displayed_name, &dep.version),
+            requires: dep.requires.clone(),
+        });
         let at_depth_limit = max_depth.is_some_and(|max_depth| current_depth + 1 >= max_depth);
         match &dep.dependents {
             Some(children) if !children.is_empty() && !at_depth_limit => {
@@ -326,10 +339,25 @@ fn collect_paths(
                 // Leaf (importer or depth-limited) — reversed so the
                 // importer comes first.
                 new_path.reverse();
-                lines.push(new_path.join(" > "));
+                lines.push(format_parseable_path(&new_path));
             }
         }
     }
+}
+
+fn format_parseable_path(path: &[ParseableSegment]) -> String {
+    let Some(first) = path.first() else {
+        return String::new();
+    };
+    let mut parts = vec![first.value.clone()];
+    for (parent, child) in path.iter().zip(path.iter().skip(1)) {
+        let mut part = child.value.clone();
+        if let Some(requires) = &parent.requires {
+            part.push_str(&format!(" (by {requires})"));
+        }
+        parts.push(part);
+    }
+    parts.join(" > ")
 }
 
 fn plain_name_at_version(name: &str, version: &str) -> String {
