@@ -11,13 +11,8 @@ use std::{fs, process::Command};
 /// its transitive optional is dropped too.
 #[test]
 fn not_installing_optional_dependencies_when_optional_is_false() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_manifest(
         &workspace,
         &serde_json::json!({
@@ -31,13 +26,22 @@ fn not_installing_optional_dependencies_when_optional_is_false() {
         .assert()
         .success();
 
-    assert!(!workspace.join("node_modules/is-positive").exists());
-    assert!(workspace.join("node_modules/@pnpm.e2e/pkg-with-good-optional/package.json").exists());
-    let good_optional_modules = workspace.join(
-        "node_modules/.pnpm/@pnpm.e2e+pkg-with-good-optional@1.0.0/node_modules/@pnpm.e2e",
+    assert!(
+        !workspace
+            .join("node_modules/is-positive")
+            .exists()
     );
     assert!(
-        good_optional_modules.join("dep-of-pkg-with-1-dep/package.json").exists(),
+        workspace
+            .join("node_modules/@pnpm.e2e/pkg-with-good-optional/package.json")
+            .exists()
+    );
+    let good_optional_modules = workspace
+        .join("node_modules/.pnpm/@pnpm.e2e+pkg-with-good-optional@1.0.0/node_modules/@pnpm.e2e");
+    assert!(
+        good_optional_modules
+            .join("dep-of-pkg-with-1-dep/package.json")
+            .exists(),
         "the regular subdependency must be installed",
     );
     assert!(
@@ -54,13 +58,8 @@ fn not_installing_optional_dependencies_when_optional_is_false() {
 
 #[test]
 fn optional_setting_excludes_optional_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_manifest(
         &workspace,
         &serde_json::json!({
@@ -75,7 +74,11 @@ fn optional_setting_excludes_optional_dependencies() {
         .assert()
         .success();
 
-    assert!(workspace.join("node_modules/is-positive/package.json").exists());
+    assert!(
+        workspace
+            .join("node_modules/is-positive/package.json")
+            .exists()
+    );
     assert!(is_absent(&workspace.join("node_modules/@pnpm.e2e/pkg-with-optional")));
 
     Command::cargo_bin("pnpm")
@@ -84,7 +87,11 @@ fn optional_setting_excludes_optional_dependencies() {
         .with_args(["install", "--optional"])
         .assert()
         .success();
-    assert!(workspace.join("node_modules/@pnpm.e2e/pkg-with-optional/package.json").exists());
+    assert!(
+        workspace
+            .join("node_modules/@pnpm.e2e/pkg-with-optional/package.json")
+            .exists()
+    );
 
     drop((root, npmrc_info));
 }
@@ -96,13 +103,8 @@ fn optional_setting_excludes_optional_dependencies() {
 /// is a direct regular dependency *and* another dependency's optional.
 #[test]
 fn both_optional_and_non_optional_dependency_is_installed_when_optionals_are_skipped() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_manifest(
         &workspace,
         &serde_json::json!({
@@ -119,10 +121,16 @@ fn both_optional_and_non_optional_dependency_is_installed_when_optionals_are_ski
         .success();
 
     assert!(
-        workspace.join("node_modules/.pnpm/is-positive@1.0.0").exists(),
+        workspace
+            .join("node_modules/.pnpm/is-positive@1.0.0")
+            .exists(),
         "a package that is also a regular dependency must be materialized",
     );
-    assert!(workspace.join("node_modules/is-positive/package.json").exists());
+    assert!(
+        workspace
+            .join("node_modules/is-positive/package.json")
+            .exists()
+    );
 
     drop((root, npmrc_info)); // cleanup
 }
@@ -180,13 +188,15 @@ fn check_fresh_resolution_ignores_optional_dependencies(patterns: &str) {
         let importer = &lockfile.importers["."];
         let ignored: PkgName = "is-positive".parse().unwrap();
         assert!(
-            importer.dependencies
+            importer
+                .dependencies
                 .as_ref()
                 .is_none_or(|deps| !deps.contains_key(&ignored)),
             "ignored duplicate regular dependency: {importer:?}",
         );
         assert!(
-            importer.optional_dependencies
+            importer
+                .optional_dependencies
                 .as_ref()
                 .is_some_and(|deps| !deps.contains_key(&ignored)
                     && deps.contains_key(&"is-negative".parse().unwrap())),
@@ -197,9 +207,10 @@ fn check_fresh_resolution_ignores_optional_dependencies(patterns: &str) {
             "ignored direct dependency was linked after {args:?}",
         );
         assert!(
-            is_absent(&workspace.join(
-                "node_modules/@pnpm.e2e/pkg-with-good-optional/node_modules/is-positive"
-            )),
+            is_absent(
+                &workspace
+                    .join("node_modules/@pnpm.e2e/pkg-with-good-optional/node_modules/is-positive")
+            ),
             "ignored transitive dependency was linked after {args:?}",
         );
     }
@@ -211,13 +222,8 @@ fn check_fresh_resolution_ignores_optional_dependencies(patterns: &str) {
 /// drops optional declarations, not the package.
 #[test]
 fn ignored_optional_dependencies_preserve_required_occurrences() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     append_workspace_yaml_key(&workspace, "ignoredOptionalDependencies", "[is-positive]");
     write_manifest(
         &workspace,
@@ -235,19 +241,28 @@ fn ignored_optional_dependencies_preserve_required_occurrences() {
     let lockfile = read_wanted_lockfile(&workspace);
     let name: PkgName = "is-positive".parse().unwrap();
     assert_eq!(
-        lockfile.importers["."].dependencies.as_ref().unwrap()[&name].version.to_string(),
+        lockfile.importers["."]
+            .dependencies
+            .as_ref()
+            .unwrap()[&name]
+            .version
+            .to_string(),
         "1.0.0",
     );
-    let parent = &lockfile.snapshots.as_ref().unwrap()
-        [&"@pnpm.e2e/pkg-with-good-optional@1.0.0".parse().unwrap()];
+    let parent = &lockfile.snapshots.as_ref().unwrap()[&"@pnpm.e2e/pkg-with-good-optional@1.0.0"
+        .parse()
+        .unwrap()];
     assert!(
-        parent.optional_dependencies
+        parent
+            .optional_dependencies
             .as_ref()
             .is_none_or(|deps| !deps.contains_key(&name)),
         "ignored optional edge: {parent:?}",
     );
     assert!(
-        workspace.join("node_modules/is-positive/package.json").exists(),
+        workspace
+            .join("node_modules/is-positive/package.json")
+            .exists(),
         "required occurrence must be installed",
     );
     drop((root, npmrc_info));
@@ -259,13 +274,8 @@ fn ignored_optional_dependencies_preserve_required_occurrences() {
 /// publishes.
 #[test]
 fn ignored_optional_dependencies_apply_after_manifest_hooks() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     append_workspace_yaml_key(&workspace, "ignoredOptionalDependencies", "[is-negative, is-odd]");
     append_workspace_yaml_key(
         &workspace,

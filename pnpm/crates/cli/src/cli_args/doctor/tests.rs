@@ -98,6 +98,8 @@ fn last_line_skips_trailing_blanks() {
 /// has to report the released version that `pnpm --version` prints.
 #[test]
 fn check_versions_reports_the_released_pnpm_version() {
-    let detail = check_versions().detail.expect("versions detail");
+    let detail = check_versions()
+        .detail
+        .expect("versions detail");
     assert!(detail.starts_with(&format!("pnpm {PNPM_VERSION}")), "{detail}");
 }

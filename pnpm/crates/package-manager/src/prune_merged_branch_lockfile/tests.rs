@@ -77,12 +77,30 @@ fn drops_the_reinstated_dependency_and_what_only_it_reached() {
         true,
     )
     .expect("the fold reinstated a dependency the manifest dropped");
-    let packages = pruned.packages.as_ref().expect("packages");
+    let packages = pruned
+        .packages
+        .as_ref()
+        .expect("packages");
     assert_eq!(packages.len(), 1);
-    assert!(packages.contains_key(&"foo@1.1.0".parse().expect("package key")));
-    let snapshots = pruned.snapshots.as_ref().expect("snapshots");
+    assert!(
+        packages.contains_key(
+            &"foo@1.1.0"
+                .parse()
+                .expect("package key")
+        )
+    );
+    let snapshots = pruned
+        .snapshots
+        .as_ref()
+        .expect("snapshots");
     assert_eq!(snapshots.len(), 1);
-    assert!(snapshots.contains_key(&"foo@1.1.0".parse().expect("package key")));
+    assert!(
+        snapshots.contains_key(
+            &"foo@1.1.0"
+                .parse()
+                .expect("package key")
+        )
+    );
 }
 
 #[test]
@@ -164,9 +182,14 @@ snapshots:
         true,
     )
     .expect("the root importer lost a dependency");
-    assert!(pruned.importers["packages/other"].dependencies.is_some());
+    assert!(
+        pruned.importers["packages/other"]
+            .dependencies
+            .is_some()
+    );
     assert_eq!(
-        pruned.packages
+        pruned
+            .packages
             .as_ref()
             .expect("packages")
             .len(),
@@ -216,6 +239,14 @@ snapshots:
         true,
     )
     .expect("the root importer lost a dependency");
-    let snapshots = pruned.snapshots.as_ref().expect("snapshots");
-    assert!(snapshots[&"foo@1.1.0".parse().expect("package key")].optional);
+    let snapshots = pruned
+        .snapshots
+        .as_ref()
+        .expect("snapshots");
+    assert!(
+        snapshots[&"foo@1.1.0"
+            .parse()
+            .expect("package key")]
+            .optional
+    );
 }

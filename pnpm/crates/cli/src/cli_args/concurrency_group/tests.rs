@@ -174,8 +174,16 @@ fn the_held_group_is_added_to_the_spawned_environment() {
     let extra_env: HashMap<String, String> =
         std::iter::once(("NODE_OPTIONS".to_string(), "--flag".to_string())).collect();
     let env = with_held_group(&extra_env, "cargo");
-    assert_eq!(env.get(HELD_CONCURRENCY_GROUPS_ENV).map(String::as_str), Some("cargo"));
-    assert_eq!(env.get("NODE_OPTIONS").map(String::as_str), Some("--flag"));
+    assert_eq!(
+        env.get(HELD_CONCURRENCY_GROUPS_ENV)
+            .map(String::as_str),
+        Some("cargo")
+    );
+    assert_eq!(
+        env.get("NODE_OPTIONS")
+            .map(String::as_str),
+        Some("--flag")
+    );
 }
 
 #[test]
@@ -189,7 +197,9 @@ fn a_nested_task_of_a_held_group_reuses_the_parent_slot() {
 
     assert!(matches!(held_group, SlotOutcome::Ungated), "the parent's slot covers this task");
     assert_eq!(
-        spawned.get(HELD_CONCURRENCY_GROUPS_ENV).map(String::as_str),
+        spawned
+            .get(HELD_CONCURRENCY_GROUPS_ENV)
+            .map(String::as_str),
         Some("node,cargo"),
         "a held group is listed once",
     );

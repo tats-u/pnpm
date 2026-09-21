@@ -15,7 +15,9 @@ fn write_tarball(dir: &TempDir, entries: &[(&str, &str)]) -> String {
         let mut header = tar::Header::new_gnu();
         header.set_size(contents.len() as u64);
         header.set_cksum();
-        builder.append_data(&mut header, name, contents.as_bytes()).unwrap();
+        builder
+            .append_data(&mut header, name, contents.as_bytes())
+            .unwrap();
     }
     builder
         .into_inner()

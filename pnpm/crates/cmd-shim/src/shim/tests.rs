@@ -90,17 +90,17 @@ fn generate_sh_shim_header_carries_the_hardened_helper_line() {
         "a shim that pipes $link through echo must not count as hardened",
     );
     assert!(
-        !is_sh_shim_hardened(&body.replace(
-            SH_SHIM_CYGPATH_LINE,
-            r"    if command -v cygpath > /dev/null 2>&1; then"
-        )),
+        !is_sh_shim_hardened(
+            &body
+                .replace(SH_SHIM_CYGPATH_LINE, r"    if command -v cygpath > /dev/null 2>&1; then")
+        ),
         "a shim that looks up cygpath on PATH must not count as hardened",
     );
     assert!(
-        !is_sh_shim_hardened(&body.replace(
-            SH_SHIM_WSLPATH_LINE,
-            r"    if command -v wslpath > /dev/null 2>&1; then"
-        )),
+        !is_sh_shim_hardened(
+            &body
+                .replace(SH_SHIM_WSLPATH_LINE, r"    if command -v wslpath > /dev/null 2>&1; then")
+        ),
         "a shim that looks up wslpath on PATH must not count as hardened",
     );
 }
@@ -366,7 +366,9 @@ fn search_script_runtime_reads_shebang_from_real_file() {
     let tmp = tempdir().unwrap();
     let path = tmp.path().join("script");
     std::fs::write(&path, "#!/usr/bin/env node\nbody\n").unwrap();
-    let rt = search_script_runtime::<Host>(&path).unwrap().expect("runtime detected");
+    let rt = search_script_runtime::<Host>(&path)
+        .unwrap()
+        .expect("runtime detected");
     assert_eq!(rt.prog.as_deref(), Some("node"));
 }
 
@@ -382,7 +384,9 @@ fn search_script_runtime_falls_back_to_extension() {
     let tmp = tempdir().unwrap();
     let path = tmp.path().join("script.js");
     std::fs::write(&path, "console.log('no shebang')\n").unwrap();
-    let rt = search_script_runtime::<Host>(&path).unwrap().expect("extension fallback");
+    let rt = search_script_runtime::<Host>(&path)
+        .unwrap()
+        .expect("extension fallback");
     assert_eq!(rt.prog.as_deref(), Some("node"));
 }
 
@@ -395,7 +399,9 @@ fn search_script_runtime_falls_back_to_cmd_with_c_switch() {
         let path = tmp.path().join(filename);
         std::fs::write(&path, "echo off\r\n").unwrap();
 
-        let rt = search_script_runtime::<Host>(&path).unwrap().expect("extension fallback");
+        let rt = search_script_runtime::<Host>(&path)
+            .unwrap()
+            .expect("extension fallback");
         assert_eq!(rt.prog.as_deref(), Some("cmd"));
         assert_eq!(rt.args, "/C");
     }
@@ -493,7 +499,9 @@ fn search_script_runtime_reads_zero_bytes_then_falls_through() {
             Ok(0)
         }
     }
-    let rt = search_script_runtime::<EmptyRead>(Path::new("/x.js")).unwrap().expect("ext fallback");
+    let rt = search_script_runtime::<EmptyRead>(Path::new("/x.js"))
+        .unwrap()
+        .expect("ext fallback");
     assert_eq!(rt.prog.as_deref(), Some("node"));
 
     let rt = search_script_runtime::<EmptyRead>(Path::new("/x")).unwrap();
@@ -712,7 +720,9 @@ fn shim_execution_resolves_symlink_chain() {
     let tmp = tempdir().unwrap();
     let tmp_path = tmp.path();
 
-    let bin_dir = tmp_path.join("node_modules").join(".bin");
+    let bin_dir = tmp_path
+        .join("node_modules")
+        .join(".bin");
     let target_dir = tmp_path
         .join("node_modules")
         .join("typescript")
@@ -735,7 +745,9 @@ fn shim_execution_resolves_symlink_chain() {
     let hop2 = hop2_dir.join("tsc");
     symlink("../../symlink_hop_1", &hop2).unwrap();
 
-    let output = Command::new(&hop2).output().expect("execute shim through symlink chain");
+    let output = Command::new(&hop2)
+        .output()
+        .expect("execute shim through symlink chain");
     assert!(
         output.status.success(),
         "Shim execution failed: {:?}",
@@ -765,7 +777,9 @@ fn shim_execution_normalizes_a_bare_name() {
     let tmp = tempfile::tempdir().unwrap();
     let bin_dir = plant_shimmed_tool(tmp.path());
     let mut command = std::process::Command::new("sh");
-    command.arg("tsc-link").current_dir(&bin_dir);
+    command
+        .arg("tsc-link")
+        .current_dir(&bin_dir);
     assert_shim_reaches_its_target(tmp.path(), &mut command);
 }
 
@@ -905,9 +919,13 @@ fn run_platform_branch(
     callers_path: &Path,
 ) -> (String, String) {
     const CASE_HEAD: &str = "case `command -p uname -a` in";
-    let start = body.find(CASE_HEAD).expect("the header must select a platform");
+    let start = body
+        .find(CASE_HEAD)
+        .expect("the header must select a platform");
     let end = start
-        + body[start..].find("\nesac\n").expect("the platform branch must close")
+        + body[start..]
+            .find("\nesac\n")
+            .expect("the platform branch must close")
         + "\nesac\n".len();
     let branch = body[start..end]
         .replace("`command -p uname -a`", r#""$fake_uname""#)

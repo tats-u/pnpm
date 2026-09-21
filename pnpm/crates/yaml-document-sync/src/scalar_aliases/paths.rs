@@ -58,7 +58,8 @@ impl PathCollector {
     fn record_scalar(&mut self, event: &Event<'_>, key: bool) {
         let id = match event {
             Event::Scalar(value, _, id, _) if *id != 0 => {
-                self.scalar_keys.insert(*id, value.to_string());
+                self.scalar_keys
+                    .insert(*id, value.to_string());
                 *id
             }
             Event::Alias(id) if self.scalar_keys.contains_key(id) => *id,
@@ -81,9 +82,11 @@ impl PathCollector {
             Event::Alias(id) if self.scalar_keys.contains_key(id) => self.scalar_keys[id].clone(),
             _ => mapping_key(text, parser, event, span)?,
         };
-        self.path.push(Component::from(key_text.clone()));
+        self.path
+            .push(Component::from(key_text.clone()));
         if self.collect_mapping_paths {
-            self.mapping_paths.push(self.path.clone());
+            self.mapping_paths
+                .push(self.path.clone());
         }
         self.record_scalar(event, true);
         self.path.pop();
@@ -99,10 +102,12 @@ impl PathCollector {
                 push_component(&mut self.containers, &mut self.path);
                 match event {
                     Event::MappingStart(..) => {
-                        self.containers.push(Container::Mapping { key: None });
+                        self.containers
+                            .push(Container::Mapping { key: None });
                     }
                     Event::SequenceStart(..) => {
-                        self.containers.push(Container::Sequence { index: 0 });
+                        self.containers
+                            .push(Container::Sequence { index: 0 });
                     }
                     _ => {
                         self.record_scalar(&event, false);
@@ -122,7 +127,10 @@ impl PathCollector {
 fn push_component(containers: &mut [Container], path: &mut Vec<Component<'static>>) {
     match containers.last_mut() {
         Some(Container::Mapping { key }) => {
-            path.push(Component::from(key.take().expect("mapping key precedes its value")));
+            path.push(Component::from(
+                key.take()
+                    .expect("mapping key precedes its value"),
+            ));
         }
         Some(Container::Sequence { index }) => {
             path.push(Component::Index(*index));

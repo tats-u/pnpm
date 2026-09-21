@@ -93,7 +93,9 @@ pub(super) struct Build {
 /// releases. A mirror lays a release out the way that project does, so
 /// only the host above it differs.
 fn releases_url(config: &Config) -> &str {
-    config.tool_mirror(Tool::Python).unwrap_or(DEFAULT_PYTHON_DOWNLOAD_URL)
+    config
+        .tool_mirror(Tool::Python)
+        .unwrap_or(DEFAULT_PYTHON_DOWNLOAD_URL)
 }
 
 impl Releases {
@@ -162,9 +164,8 @@ pub(super) fn exact_version(
             .map(|specifier| specifier.version().clone())
     });
     required.or_else(|| {
-        requested.filter(|version| {
-            requires_python.is_none_or(|specifiers| specifiers.contains(version))
-        })
+        requested
+            .filter(|version| requires_python.is_none_or(|specifiers| specifiers.contains(version)))
     })
 }
 
@@ -183,7 +184,8 @@ impl Build {
     /// of it already put it. The name is the one pnpm read the build as,
     /// so no index can name a directory of its own.
     fn directory(&self, config: &Config) -> PathBuf {
-        config.store_dir
+        config
+            .store_dir
             .root()
             .join("python")
             .join(format!("cpython-{}+{}-{}", self.version, self.tag, self.triple))
@@ -201,7 +203,10 @@ impl Build {
             unpack(archive.path(), &directory)?;
         }
         let executable = interpreter_in(&directory);
-        let Some(executable) = executable.to_str().filter(|_| executable.is_file()) else {
+        let Some(executable) = executable
+            .to_str()
+            .filter(|_| executable.is_file())
+        else {
             bail!("the Python interpreter pnpm installed has no {}", executable.display());
         };
         Ok(InterpreterCommand::program(executable))
@@ -244,7 +249,8 @@ impl Build {
         let directory = config.store_dir.tmp();
         std::fs::create_dir_all(&directory).into_diagnostic()?;
         let mut file = tempfile::NamedTempFile::new_in(&directory).into_diagnostic()?;
-        file.write_all(&response.body).into_diagnostic()?;
+        file.write_all(&response.body)
+            .into_diagnostic()?;
         Ok(file)
     }
 }
@@ -316,11 +322,18 @@ fn read_build(item: &ShasumsFileItem, triple: &str, suffix: &str) -> Option<Buil
     if item.integrity.len() != SHA256_INTEGRITY_LEN {
         return None;
     }
-    let named = item.file_name.strip_prefix("cpython-")?.strip_suffix(suffix)?;
+    let named = item
+        .file_name
+        .strip_prefix("cpython-")?
+        .strip_suffix(suffix)?;
     let (version, tag) = named.split_once('+')?;
     // A release is named by the day it was built, which is also what
     // keeps the name pnpm installs the build under a name and not a path.
-    if tag.is_empty() || !tag.chars().all(|digit| digit.is_ascii_digit()) {
+    if tag.is_empty()
+        || !tag
+            .chars()
+            .all(|digit| digit.is_ascii_digit())
+    {
         return None;
     }
     Some(Build {
@@ -369,7 +382,9 @@ pub(super) fn host_triple() -> Option<String> {
 /// halfway.
 fn unpack(archive: &Path, directory: &Path) -> Result<()> {
     within(archive, INTERPRETER_BOUNDS)?;
-    let parent = directory.parent().expect("an installed interpreter has a parent directory");
+    let parent = directory
+        .parent()
+        .expect("an installed interpreter has a parent directory");
     std::fs::create_dir_all(parent).into_diagnostic()?;
     let staged = tempfile::TempDir::new_in(parent).into_diagnostic()?;
     let mut unpacked = tar::Archive::new(reader(archive, INTERPRETER_BOUNDS)?);
@@ -429,7 +444,9 @@ fn reader(
     archive: &Path,
     bounds: Bounds,
 ) -> Result<Bounded<flate2::read::GzDecoder<std::fs::File>>> {
-    let file = std::fs::File::open(archive).into_diagnostic().wrap_err(READ)?;
+    let file = std::fs::File::open(archive)
+        .into_diagnostic()
+        .wrap_err(READ)?;
     Ok(Bounded { inner: flate2::read::GzDecoder::new(file), left: bounds.bytes })
 }
 
@@ -443,7 +460,8 @@ struct Bounded<Stream> {
 impl<Stream: std::io::Read> std::io::Read for Bounded<Stream> {
     fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
         let read = self.inner.read(buffer)?;
-        self.left = self.left
+        self.left = self
+            .left
             .checked_sub(read as u64)
             .ok_or_else(|| std::io::Error::other("it unpacks to more than it may"))?;
         Ok(read)

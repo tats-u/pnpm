@@ -22,8 +22,14 @@ fn importing_started_count(records: &[Value]) -> usize {
     records
         .iter()
         .filter(|record| {
-            record.get("name").and_then(Value::as_str) == Some("pnpm:stage")
-                && record.get("stage").and_then(Value::as_str) == Some("importing_started")
+            record
+                .get("name")
+                .and_then(Value::as_str)
+                == Some("pnpm:stage")
+                && record
+                    .get("stage")
+                    .and_then(Value::as_str)
+                    == Some("importing_started")
         })
         .count()
 }
@@ -32,7 +38,10 @@ fn initial_manifest_prefixes(records: &[Value]) -> Vec<String> {
     records
         .iter()
         .filter(|record| {
-            record.get("name").and_then(Value::as_str) == Some("pnpm:package-manifest")
+            record
+                .get("name")
+                .and_then(Value::as_str)
+                == Some("pnpm:package-manifest")
                 && record.get("initial").is_some()
         })
         .filter_map(|record| {
@@ -49,12 +58,16 @@ fn assert_stage_once(records: &[Value]) {
 }
 
 fn reports_up_to_date(records: &[Value]) -> bool {
-    records
-        .iter()
-        .any(|record| {
-            record.get("name").and_then(Value::as_str) == Some("pnpm")
-                && record.get("message").and_then(Value::as_str) == Some("Already up to date")
-        })
+    records.iter().any(|record| {
+        record
+            .get("name")
+            .and_then(Value::as_str)
+            == Some("pnpm")
+            && record
+                .get("message")
+                .and_then(Value::as_str)
+                == Some("Already up to date")
+    })
 }
 
 fn workspace_with_installable_root(
@@ -166,14 +179,23 @@ fn transitive_update_scenario(
     );
     let parents = snapshot_entries(&after, PARENT);
     assert_eq!(parents.len(), 1, "one parent snapshot must have one canonical child set");
-    let child_name: PkgName = DEP.parse().expect("parse child package name");
-    let child = parents[0].1.dependencies
+    let child_name: PkgName = DEP
+        .parse()
+        .expect("parse child package name");
+    let child = parents[0]
+        .1
+        .dependencies
         .as_ref()
         .and_then(|dependencies| dependencies.get(&child_name))
         .expect("parent snapshot has child")
         .to_string();
     assert_eq!(child, "100.1.0");
-    (after.snapshots.expect("snapshots exist"), child)
+    (
+        after
+            .snapshots
+            .expect("snapshots exist"),
+        child,
+    )
 }
 
 fn assert_selected_isolated_closure(
@@ -196,7 +218,8 @@ fn assert_selected_isolated_closure(
     assert!(!has_snapshot(&current, DEP, "100.1.0"));
     let state = fixture.state();
     assert_eq!(
-        state.projects
+        state
+            .projects
             .keys()
             .cloned()
             .collect::<BTreeSet<_>>(),
@@ -302,10 +325,8 @@ fn filtered_frozen_install_checks_only_selected_manifest_specifiers() {
     assert_eq!(snapshot_entries(&after, DEP), prior_child);
 
     replace_dependencies(&selected, &[(NO_DEPS, "1.0.0")]);
-    let output = fixture.command_at(
-        &fixture.workspace,
-        ["--filter", "selected", "install", "--frozen-lockfile"],
-    );
+    let output = fixture
+        .command_at(&fixture.workspace, ["--filter", "selected", "install", "--frozen-lockfile"]);
     assert!(!output.status.success(), "selected manifest mismatch must fail");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -321,7 +342,9 @@ fn map_contains(value: &Value, needle: &str) -> bool {
         Value::Object(object) => object
             .iter()
             .any(|(key, value)| key.contains(needle) || map_contains(value, needle)),
-        Value::Array(array) => array.iter().any(|value| map_contains(value, needle)),
+        Value::Array(array) => array
+            .iter()
+            .any(|value| map_contains(value, needle)),
         Value::String(value) => value.contains(needle),
         Value::Null | Value::Bool(_) | Value::Number(_) => false,
     }
@@ -428,11 +451,17 @@ fn filtered_install_keeps_full_cleanup_for_shared_layout_drift() {
         ManifestDeps { prod: &[(PARENT, "100.0.0")], ..Default::default() },
     );
     fixture.run(["install"]);
-    let root_sentinel = fixture.workspace.join("node_modules/shared-layout-sentinel");
-    let slot_sentinel = fixture.slot(PARENT, "100.0.0").join("layout-sentinel");
+    let root_sentinel = fixture
+        .workspace
+        .join("node_modules/shared-layout-sentinel");
+    let slot_sentinel = fixture
+        .slot(PARENT, "100.0.0")
+        .join("layout-sentinel");
     fs::write(&root_sentinel, "stale").expect("write root sentinel");
     fs::write(&slot_sentinel, "stale").expect("write slot sentinel");
-    let modules_path = fixture.workspace.join("node_modules/.modules.yaml");
+    let modules_path = fixture
+        .workspace
+        .join("node_modules/.modules.yaml");
     let mut raw_modules: Value =
         serde_json::from_str(&fs::read_to_string(&modules_path).expect("read .modules.yaml"))
             .expect("parse .modules.yaml as JSON");
@@ -452,12 +481,14 @@ fn filtered_install_keeps_full_cleanup_for_shared_layout_drift() {
     assert!(!has_snapshot(&current, PARENT, "100.0.0"));
     let modules = fixture.modules();
     assert!(
-        !modules.pending_builds
+        !modules
+            .pending_builds
             .iter()
             .any(|entry| entry.contains(PARENT)),
     );
     assert!(
-        !modules.hoisted_dependencies
+        !modules
+            .hoisted_dependencies
             .keys()
             .any(|entry| entry.contains(PARENT)),
     );
@@ -481,7 +512,8 @@ fn filtered_hoisted_install_materializes_full_shared_graph_but_links_only_select
 
     for dependency in [HELLO, PARENT, DEP] {
         assert!(
-            fixture.workspace
+            fixture
+                .workspace
                 .join("node_modules")
                 .join(dependency)
                 .is_dir(),
@@ -581,7 +613,12 @@ fn filtered_pnp_install_uses_isolated_placeholder_scope() {
     assert!(!fixture.slot(PARENT, "100.0.0").exists());
     assert!(!fixture.slot(DEP, "100.1.0").exists());
     assert_full_wanted(&fixture.wanted(), &["packages/selected", "packages/unselected"]);
-    assert!(!fixture.workspace.join("node_modules/.package-map.json").exists());
+    assert!(
+        !fixture
+            .workspace
+            .join("node_modules/.package-map.json")
+            .exists()
+    );
 }
 
 #[test]
@@ -647,13 +684,19 @@ fn workspace_without_root_manifest_does_not_create_root_importer() {
     );
     fixture.run(["--filter", "selected", "install"]);
 
-    assert!(!fixture.workspace.join("package.json").exists());
+    assert!(
+        !fixture
+            .workspace
+            .join("package.json")
+            .exists()
+    );
     let wanted = fixture.wanted();
     assert_full_wanted(&wanted, &["packages/selected", "packages/unselected"]);
     assert!(!wanted.importers.contains_key("."));
     let state = fixture.state();
     assert_eq!(
-        state.projects
+        state
+            .projects
             .keys()
             .cloned()
             .collect::<BTreeSet<_>>(),
@@ -662,7 +705,11 @@ fn workspace_without_root_manifest_does_not_create_root_importer() {
             .map(|path| canonical_path(&path))
             .collect(),
     );
-    assert!(!state.projects.contains_key(&canonical_path(&fixture.workspace)));
+    assert!(
+        !state
+            .projects
+            .contains_key(&canonical_path(&fixture.workspace))
+    );
 }
 
 #[test]
@@ -686,10 +733,15 @@ fn workspace_non_project_subdirectory_does_not_create_active_importer() {
     assert!(!scratch.join("package.json").exists());
     let wanted = fixture.wanted();
     assert_full_wanted(&wanted, &[".", "packages/selected", "packages/unselected"]);
-    assert!(!wanted.importers.contains_key("tools/scratch"));
+    assert!(
+        !wanted
+            .importers
+            .contains_key("tools/scratch")
+    );
     let state = fixture.state();
     assert_eq!(
-        state.projects
+        state
+            .projects
             .keys()
             .cloned()
             .collect::<BTreeSet<_>>(),
@@ -698,7 +750,11 @@ fn workspace_non_project_subdirectory_does_not_create_active_importer() {
             .map(|path| canonical_path(path))
             .collect(),
     );
-    assert!(!state.projects.contains_key(&canonical_path(&scratch)));
+    assert!(
+        !state
+            .projects
+            .contains_key(&canonical_path(&scratch))
+    );
 }
 
 #[test]
@@ -719,7 +775,8 @@ fn filter_matching_every_real_project_is_not_partial() {
 
     assert!(!state.filtered_install);
     assert_eq!(
-        state.projects
+        state
+            .projects
             .keys()
             .cloned()
             .collect::<BTreeSet<_>>(),
@@ -750,21 +807,22 @@ fn filtered_install_refreshes_unselected_catalog_importers_when_catalog_changes(
         "1.0.0",
     );
 
-    let workspace_yaml_path = fixture.workspace.join("pnpm-workspace.yaml");
+    let workspace_yaml_path = fixture
+        .workspace
+        .join("pnpm-workspace.yaml");
     let workspace_yaml = fs::read_to_string(&workspace_yaml_path).expect("read workspace yaml");
     fs::write(
         &workspace_yaml_path,
-        workspace_yaml.replace(
-            &format!("'{CATALOG_FOO}': 1.0.0"),
-            &format!("'{CATALOG_FOO}': 2.0.0"),
-        ),
+        workspace_yaml
+            .replace(&format!("'{CATALOG_FOO}': 1.0.0"), &format!("'{CATALOG_FOO}': 2.0.0")),
     )
     .expect("update catalog");
 
     fixture.run(["--filter", "app", "install", "--lockfile-only"]);
     let wanted = fixture.wanted();
     assert_eq!(importer_version(&wanted, "packages/catalog-consumer", CATALOG_FOO), "2.0.0");
-    let catalog = wanted.catalogs
+    let catalog = wanted
+        .catalogs
         .as_ref()
         .and_then(|catalogs| catalogs.get("default"))
         .and_then(|entries| entries.get(CATALOG_FOO))
@@ -796,7 +854,12 @@ fn a_filtered_install_outside_the_workspace_patterns_installs_only_that_project(
     assert!(has_link(&local, PARENT));
     assert!(local.join("pnpm-lock.yaml").is_file());
     assert!(!member.join("node_modules").exists());
-    assert!(!fixture.workspace.join("pnpm-lock.yaml").exists());
+    assert!(
+        !fixture
+            .workspace
+            .join("pnpm-lock.yaml")
+            .exists()
+    );
 }
 
 mod mutations;

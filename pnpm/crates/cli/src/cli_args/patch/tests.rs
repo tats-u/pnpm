@@ -197,7 +197,9 @@ fn default_edit_dir_name_sanitizes_bare_specifier_path_chars() {
         bare_specifier: "npm:@scope/pkg@^1.0.0".to_string(),
         apply_to_all: false,
         git_tarball_url: None,
-        package_key: "@scope/pkg@1.0.0".parse().expect("package key"),
+        package_key: "@scope/pkg@1.0.0"
+            .parse()
+            .expect("package key"),
     };
 
     assert_eq!(
@@ -214,7 +216,9 @@ fn default_edit_dir_name_falls_back_to_alias_then_requested_package() {
         bare_specifier: String::new(),
         apply_to_all: false,
         git_tarball_url: None,
-        package_key: "chalk@5.3.0".parse().expect("package key"),
+        package_key: "chalk@5.3.0"
+            .parse()
+            .expect("package key"),
     };
 
     assert_eq!(default_edit_dir_name("chalk", &target), "chalk");

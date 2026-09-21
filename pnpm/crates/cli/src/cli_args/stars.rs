@@ -48,8 +48,10 @@ pub enum StarsError {
 
 impl StarsArgs {
     pub async fn run(&self, config: &Config) -> miette::Result<Option<String>> {
-        let auth_header =
-            config.auth_headers.for_url(&config.registry).ok_or(StarsError::Unauthorized);
+        let auth_header = config
+            .auth_headers
+            .for_url(&config.registry)
+            .ok_or(StarsError::Unauthorized);
         let http_client = build_registry_client(config)?;
         let retry_opts = RetryOpts {
             retries: config.fetch_retries,
@@ -98,12 +100,17 @@ impl StarsRequest<'_> {
     /// per-user endpoint still has to be asked.
     async fn own_stars(&self) -> miette::Result<Option<Value>> {
         let star_url = format!("{}-/user/v1/star", self.registry_url);
-        let (client, response) = self.get(&star_url, "requesting the self stars endpoint").await?;
+        let (client, response) = self
+            .get(&star_url, "requesting the self stars endpoint")
+            .await?;
         if !response.status().is_success() {
             drop(client);
             return Ok(None);
         }
-        let body: Value = response.json().await.into_diagnostic()?;
+        let body: Value = response
+            .json()
+            .await
+            .into_diagnostic()?;
         drop(client);
         Ok((body.is_array() || body.is_object()).then_some(body))
     }
@@ -130,17 +137,23 @@ impl StarsRequest<'_> {
     async fn user_stars(&self, username: &str) -> miette::Result<Value> {
         let encoded_username = encode_uri_component(username);
         let stars_url = format!("{}-/user/{encoded_username}/stars", self.registry_url);
-        let (client, response) = self.get(&stars_url, "requesting the user stars endpoint").await?;
+        let (client, response) = self
+            .get(&stars_url, "requesting the user stars endpoint")
+            .await?;
         if response.status().is_success() {
-            let body = response.json().await.into_diagnostic()?;
+            let body = response
+                .json()
+                .await
+                .into_diagnostic()?;
             drop(client);
             return Ok(body);
         }
         drop(client);
 
         let util_stars_url = format!("{}-/util/user/{encoded_username}/stars", self.registry_url);
-        let (client, response) =
-            self.get(&util_stars_url, "requesting the alt user stars endpoint").await?;
+        let (client, response) = self
+            .get(&util_stars_url, "requesting the alt user stars endpoint")
+            .await?;
         if !response.status().is_success() {
             let status = response.status();
             if status == 404 {
@@ -155,7 +168,10 @@ impl StarsRequest<'_> {
             }
             .into());
         }
-        let body = response.json().await.into_diagnostic()?;
+        let body = response
+            .json()
+            .await
+            .into_diagnostic()?;
         drop(client);
         Ok(body)
     }

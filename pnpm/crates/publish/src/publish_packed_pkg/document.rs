@@ -22,7 +22,11 @@ pub(crate) fn build_publish_document(
     tag: &str,
     dist_hashes: &DistHashes<'_>,
 ) -> Result<Value, PublishPackedPkgError> {
-    if manifest.get("private").and_then(Value::as_bool) == Some(true) {
+    if manifest
+        .get("private")
+        .and_then(Value::as_bool)
+        == Some(true)
+    {
         return Err(PublishPackedPkgError::Private);
     }
     let name = manifest_string(manifest, "name");
@@ -61,7 +65,10 @@ pub(crate) fn build_publish_document(
     let mut root = Map::new();
     root.insert("_id".to_owned(), Value::String(name.clone()));
     root.insert("name".to_owned(), Value::String(name));
-    if let Some(description) = manifest.get("description").filter(|value| value.is_string()) {
+    if let Some(description) = manifest
+        .get("description")
+        .filter(|value| value.is_string())
+    {
         root.insert("description".to_owned(), description.clone());
     }
     root.insert("dist-tags".to_owned(), Value::Object(dist_tags));

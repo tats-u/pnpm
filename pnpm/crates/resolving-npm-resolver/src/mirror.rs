@@ -168,7 +168,9 @@ pub fn scoped_meta_dir(scope: &MetadataCacheScope, base_meta_dir: &str) -> Strin
     match scope {
         MetadataCacheScope::Public => base_meta_dir.to_string(),
         MetadataCacheScope::Private { descriptor_id } => {
-            let suffix = base_meta_dir.strip_prefix("v11/").unwrap_or(base_meta_dir);
+            let suffix = base_meta_dir
+                .strip_prefix("v11/")
+                .unwrap_or(base_meta_dir);
             format!("{PRIVATE_META_ROOT}/{descriptor_id}/{suffix}")
         }
     }
@@ -331,21 +333,20 @@ pub fn clear_meta(meta: &Package) -> Result<Package, EncodeMetaError> {
         pkg.insert("modified".to_string(), Value::String(modified.clone()));
     }
 
-    let mut cleared: Package = serde_json::from_value(Value::Object(pkg)).map_err(EncodeMetaError)?;
+    let mut cleared: Package =
+        serde_json::from_value(Value::Object(pkg)).map_err(EncodeMetaError)?;
     cleared.etag.clone_from(&meta.etag);
     Ok(cleared)
 }
 
 fn meta_modified(meta: &Package) -> Option<String> {
-    meta.modified
-        .clone()
-        .or_else(|| {
-            meta.time
-                .as_ref()
-                .and_then(|time| time.get("modified"))
-                .and_then(Value::as_str)
-                .map(str::to_string)
-        })
+    meta.modified.clone().or_else(|| {
+        meta.time
+            .as_ref()
+            .and_then(|time| time.get("modified"))
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    })
 }
 
 /// One-time, best-effort raise of the process's soft `RLIMIT_NOFILE`
@@ -401,7 +402,9 @@ fn raise_open_file_limit_once() {}
 /// Parse the `pacquet-meta-v1 <headers_len> <index_len>` line.
 /// `None` for anything else, including pnpm's NDJSON format.
 fn parse_mirror_magic(line: &str) -> Option<(usize, usize)> {
-    let rest = line.strip_prefix(MIRROR_MAGIC)?.strip_prefix(' ')?;
+    let rest = line
+        .strip_prefix(MIRROR_MAGIC)?
+        .strip_prefix(' ')?;
     let (headers_len, index_len) = rest.split_once(' ')?;
     Some((headers_len.parse().ok()?, index_len.parse().ok()?))
 }
@@ -514,7 +517,10 @@ pub fn load_meta(pkg_mirror: &Path) -> Option<Package> {
 /// the spawn-blocking dispatch entirely on the no-cache-dir branch.
 pub async fn load_meta_async(pkg_mirror: Option<&Path>) -> Option<Package> {
     let pkg_mirror = pkg_mirror?.to_path_buf();
-    tokio::task::spawn_blocking(move || load_meta(&pkg_mirror)).await.ok().flatten()
+    tokio::task::spawn_blocking(move || load_meta(&pkg_mirror))
+        .await
+        .ok()
+        .flatten()
 }
 
 /// Async sibling of [`load_meta_headers`]. Same rationale as
@@ -525,7 +531,10 @@ pub async fn load_meta_async(pkg_mirror: Option<&Path>) -> Option<Package> {
 /// time is still meaningful with hundreds of packuments.
 pub async fn load_meta_headers_async(pkg_mirror: Option<&Path>) -> Option<MetaHeaders> {
     let pkg_mirror = pkg_mirror?.to_path_buf();
-    tokio::task::spawn_blocking(move || load_meta_headers(&pkg_mirror)).await.ok().flatten()
+    tokio::task::spawn_blocking(move || load_meta_headers(&pkg_mirror))
+        .await
+        .ok()
+        .flatten()
 }
 
 /// Atomic write: serialize to a sibling temp file, then `rename` it
@@ -534,7 +543,9 @@ pub async fn load_meta_headers_async(pkg_mirror: Option<&Path>) -> Option<MetaHe
 /// The rename is the only atomic step; an observer sees either the
 /// old contents or the new ones, never a torn body line.
 pub fn save_meta(pkg_mirror: &Path, contents: &[u8]) -> Result<(), SaveMetaError> {
-    let dir = pkg_mirror.parent().unwrap_or_else(|| Path::new("."));
+    let dir = pkg_mirror
+        .parent()
+        .unwrap_or_else(|| Path::new("."));
     fs::create_dir_all(dir)
         .map_err(|error| SaveMetaError::CreateDir { dir: dir.to_path_buf(), error })?;
     let temp = temp_sibling_path(pkg_mirror);
@@ -547,13 +558,12 @@ pub fn save_meta(pkg_mirror: &Path, contents: &[u8]) -> Result<(), SaveMetaError
         file.write_all(contents)
             .map_err(|error| SaveMetaError::WriteTemp { temp: temp.clone(), error })?;
     }
-    fs::rename(&temp, pkg_mirror)
-        .map_err(|error| {
-            // Best-effort cleanup so a stale temp doesn't accumulate on
-            // a rename failure (e.g. cross-device move on an unusual mount).
-            let _ = fs::remove_file(&temp);
-            SaveMetaError::Rename { temp, target: pkg_mirror.to_path_buf(), error }
-        })?;
+    fs::rename(&temp, pkg_mirror).map_err(|error| {
+        // Best-effort cleanup so a stale temp doesn't accumulate on
+        // a rename failure (e.g. cross-device move on an unusual mount).
+        let _ = fs::remove_file(&temp);
+        SaveMetaError::Rename { temp, target: pkg_mirror.to_path_buf(), error }
+    })?;
     Ok(())
 }
 
@@ -566,7 +576,10 @@ static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 fn temp_sibling_path(target: &Path) -> PathBuf {
     let counter = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     let pid = std::process::id();
-    let mut name = match target.file_name().and_then(|n| n.to_str()) {
+    let mut name = match target
+        .file_name()
+        .and_then(|n| n.to_str())
+    {
         Some(name) => name.to_string(),
         None => "tmp".to_string(),
     };

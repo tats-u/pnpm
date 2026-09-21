@@ -151,10 +151,9 @@ async fn install_emits_pnpm_event_sequence() {
     config.store_dir = dirs.store_dir.clone().into();
     config.modules_dir = dirs.modules_dir.clone();
     config.virtual_store_dir = dirs.virtual_store_dir.clone();
-    config.registries_by_scope.insert(
-        "@private".to_string(),
-        "https://private.example.com/npm/".to_string(),
-    );
+    config
+        .registries_by_scope
+        .insert("@private".to_string(), "https://private.example.com/npm/".to_string());
     let config = config.leak();
 
     // Empty v9 lockfile: `--frozen-lockfile` walks an empty snapshot
@@ -298,12 +297,19 @@ async fn install_emits_pnpm_event_sequence() {
     assert!(!current_lockfile_exists);
     assert_eq!(
         emitted_store_dir,
-        &dirs.store_dir
+        &dirs
+            .store_dir
             .join(STORE_VERSION)
             .display()
             .to_string(),
     );
-    assert_eq!(emitted_virtual_store_dir, &dirs.virtual_store_dir.to_string_lossy().into_owned());
+    assert_eq!(
+        emitted_virtual_store_dir,
+        &dirs
+            .virtual_store_dir
+            .to_string_lossy()
+            .into_owned()
+    );
 
     // Summary's `prefix` must equal the manifest-parent value
     // `Install::run` derives, since pnpm's reporter keys its
@@ -341,7 +347,9 @@ async fn warm_reinstall_emits_broken_modules_when_dir_is_missing() {
     // Manifest must match `PARTIAL_INSTALL_LOCKFILE` — the freshness
     // check (<https://github.com/pnpm/pacquet/issues/447>) rejects any drift between the on-disk manifest and
     // the lockfile importer entry.
-    manifest.add_dependency("placeholder", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("placeholder", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -444,7 +452,9 @@ async fn warm_reinstall_emits_broken_modules_when_dir_is_missing() {
         "expected exactly one pnpm:_broken_node_modules emit; got: {captured:?}",
     );
     assert!(
-        broken[0].missing.contains("placeholder@1.0.0"),
+        broken[0]
+            .missing
+            .contains("placeholder@1.0.0"),
         "broken-modules `missing` path must name the affected slot; got: {missing}",
         missing = broken[0].missing,
     );
@@ -480,7 +490,9 @@ async fn warm_reinstall_reports_added_zero_and_emits_no_imported_events() {
     // Manifest must match `PARTIAL_INSTALL_LOCKFILE` — the freshness
     // check (<https://github.com/pnpm/pacquet/issues/447>) rejects any drift between the on-disk manifest and
     // the lockfile importer entry.
-    manifest.add_dependency("placeholder", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("placeholder", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -564,10 +576,9 @@ async fn warm_reinstall_reports_added_zero_and_emits_no_imported_events() {
         .unwrap()
         .iter()
         .filter_map(|event| match event {
-            LogEvent::Stats(StatsLog {
-                message: StatsMessage::Added { added, .. },
-                ..
-            }) => Some(*added),
+            LogEvent::Stats(StatsLog { message: StatsMessage::Added { added, .. }, .. }) => {
+                Some(*added)
+            }
             _ => None,
         })
         .collect();

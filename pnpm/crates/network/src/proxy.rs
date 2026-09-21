@@ -156,7 +156,11 @@ impl NoProxyMatcher {
                 bypass: false,
                 entries: list
                     .iter()
-                    .map(|entry| reverse_dot_segments(entry).map(str::to_string).collect())
+                    .map(|entry| {
+                        reverse_dot_segments(entry)
+                            .map(str::to_string)
+                            .collect()
+                    })
                     .collect(),
             },
         }
@@ -167,16 +171,14 @@ impl NoProxyMatcher {
             return true;
         }
         let host_rev: Vec<&str> = reverse_dot_segments(host).collect();
-        self.entries
-            .iter()
-            .any(|entry_rev| {
-                !entry_rev.is_empty()
-                    && entry_rev.len() <= host_rev.len()
-                    && entry_rev
-                        .iter()
-                        .zip(host_rev.iter())
-                        .all(|(a, b)| a == b)
-            })
+        self.entries.iter().any(|entry_rev| {
+            !entry_rev.is_empty()
+                && entry_rev.len() <= host_rev.len()
+                && entry_rev
+                    .iter()
+                    .zip(host_rev.iter())
+                    .all(|(a, b)| a == b)
+        })
     }
 
     pub(crate) fn matches_url(&self, url: &Url) -> bool {

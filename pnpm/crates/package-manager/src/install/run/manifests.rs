@@ -66,17 +66,16 @@ pub(super) fn read_package_log<Reporter: self::Reporter>(
     hook: &Arc<dyn pnpm_hooks::PnpmfileHooks>,
     workspace_root: &Path,
 ) -> pnpm_hooks::LogFn {
-    hook.source_path()
-        .map_or_else(
-            || Arc::new(|_| {}) as pnpm_hooks::LogFn,
-            |from| {
-                crate::install_with_fresh_lockfile::hook_log_fn::<Reporter>(
-                    workspace_root,
-                    from,
-                    "readPackage",
-                )
-            },
-        )
+    hook.source_path().map_or_else(
+        || Arc::new(|_| {}) as pnpm_hooks::LogFn,
+        |from| {
+            crate::install_with_fresh_lockfile::hook_log_fn::<Reporter>(
+                workspace_root,
+                from,
+                "readPackage",
+            )
+        },
+    )
 }
 /// The pnpmfile whose checksum the freshness gates compare against a
 /// lockfile's `pnpmfileChecksum`, resolved the way the install that records
@@ -198,7 +197,8 @@ pub(super) fn run_dev_preinstall_hook<Reporter: self::Reporter>(
         return Ok(());
     }
     let normalized_root = pnpm_fs::lexical_normalize(scope.workspace_root);
-    let root_defines_hook = scope.project_manifests
+    let root_defines_hook = scope
+        .project_manifests
         .iter()
         .find(|(project_dir, _)| pnpm_fs::lexical_normalize(project_dir) == normalized_root)
         .is_none_or(|(_, manifest)| {
@@ -219,9 +219,8 @@ pub(super) fn extend_project_manifests(
     config: &Config,
     project_manifests: &[(PathBuf, &PackageManifest)],
 ) -> Result<Vec<(PathBuf, PackageManifest)>, InstallError> {
-    let compat_extender = (!config.ignore_compatibility_db).then(
-        crate::compat_package_extensions::compat_package_extender,
-    );
+    let compat_extender = (!config.ignore_compatibility_db)
+        .then(crate::compat_package_extensions::compat_package_extender);
     let extender = match config.package_extensions.as_ref() {
         Some(extensions) => crate::PackageExtender::new(extensions)
             .map(|extender| (!extender.is_empty()).then_some(extender))
@@ -237,7 +236,10 @@ pub(super) fn extend_project_manifests(
     // A workspace project is rarely named by an extension — pnpm's
     // compatibility set names published packages — so this usually finds
     // nothing and the caller keeps the manifests it read from disk.
-    if !project_manifests.iter().any(|(_, manifest)| selects(manifest)) {
+    if !project_manifests
+        .iter()
+        .any(|(_, manifest)| selects(manifest))
+    {
         return Ok(Vec::new());
     }
     Ok(project_manifests

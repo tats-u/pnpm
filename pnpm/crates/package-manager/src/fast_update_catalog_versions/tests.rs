@@ -21,15 +21,25 @@ impl Resolver for StubResolver {
         wanted_dependency: &'a WantedDependency,
         _opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
-        let name = wanted_dependency.alias.clone().expect("alias");
-        let version = wanted_dependency.bare_specifier.clone().expect("version");
+        let name = wanted_dependency
+            .alias
+            .clone()
+            .expect("alias");
+        let version = wanted_dependency
+            .bare_specifier
+            .clone()
+            .expect("version");
         let manifest = Arc::new(self.manifest.clone());
         Box::pin(async move {
             Ok(Some(ResolveResult {
                 id: PkgResolutionId::from(format!("{name}@{version}")),
                 resolution: LockfileResolution::Tarball(TarballResolution {
                     tarball: "https://registry.npmjs.org/target/-/target-2.0.0.tgz".to_string(),
-                    integrity: Some("sha512-dGFyZ2V0LTI=".parse().expect("integrity")),
+                    integrity: Some(
+                        "sha512-dGFyZ2V0LTI="
+                            .parse()
+                            .expect("integrity"),
+                    ),
                     revision: None,
                     git_hosted: None,
                     path: None,
@@ -39,7 +49,11 @@ impl Resolver for StubResolver {
 
                 policy_violation: None,
                 package: pnpm_resolving_resolver_base::ResolvedPackageInfo {
-                    name_ver: Some(format!("{name}@{version}").parse().expect("name and version")),
+                    name_ver: Some(
+                        format!("{name}@{version}")
+                            .parse()
+                            .expect("name and version"),
+                    ),
                     latest: Some(version),
                     published_at: None,
                     manifest: Some(manifest),
@@ -120,7 +134,8 @@ async fn try_update(lockfile: &Lockfile, catalogs: &Catalogs, manifest: Value) -
 }
 
 fn snapshot_keys(lockfile: &Lockfile) -> Vec<String> {
-    let mut keys: Vec<_> = lockfile.snapshots
+    let mut keys: Vec<_> = lockfile
+        .snapshots
         .as_ref()
         .expect("snapshots")
         .keys()
@@ -140,11 +155,16 @@ async fn replaces_the_catalog_version_when_the_locked_child_still_fits() {
         snapshot_keys(&updated),
         vec!["child@1.1.0".to_string(), "target@2.0.0".to_string()],
     );
-    let entry = &updated.catalogs.as_ref().expect("catalogs")["default"]["target"];
+    let entry = &updated
+        .catalogs
+        .as_ref()
+        .expect("catalogs")["default"]["target"];
     assert_eq!((entry.specifier.as_str(), entry.version.as_str()), ("2.0.0", "2.0.0"));
     assert_eq!(
-        updated.importers["."].dependencies.as_ref().expect("dependencies")
-            [&"target".parse().expect("alias")]
+        updated.importers["."]
+            .dependencies
+            .as_ref()
+            .expect("dependencies")[&"target".parse().expect("alias")]
             .version
             .to_string(),
         "2.0.0",
@@ -184,11 +204,14 @@ async fn falls_back_when_an_importer_depends_on_the_package_directly() {
 #[tokio::test]
 async fn falls_back_when_a_package_depends_on_the_catalog_package() {
     let mut lockfile = lockfile();
-    lockfile.snapshots
+    lockfile
+        .snapshots
         .as_mut()
         .expect("snapshots")
         .insert(
-            "parent@1.0.0".parse().expect("snapshot key"),
+            "parent@1.0.0"
+                .parse()
+                .expect("snapshot key"),
             serde_json::from_value(json!({ "dependencies": { "target": "1.0.0" } }))
                 .expect("snapshot"),
         );
@@ -224,7 +247,8 @@ async fn falls_back_when_a_catalog_reference_has_no_recorded_entry() {
 #[tokio::test]
 async fn falls_back_when_two_catalogs_move_the_same_alias() {
     let mut subject = lockfile();
-    subject.catalogs
+    subject
+        .catalogs
         .as_mut()
         .expect("catalogs")
         .insert(
@@ -250,7 +274,8 @@ async fn falls_back_when_two_catalogs_move_the_same_alias() {
 #[tokio::test]
 async fn absorbs_a_range_only_entry_alongside_an_exact_move() {
     let mut subject = lockfile();
-    subject.catalogs
+    subject
+        .catalogs
         .as_mut()
         .expect("catalogs")
         .get_mut("default")
@@ -272,7 +297,10 @@ async fn absorbs_a_range_only_entry_alongside_an_exact_move() {
         .await
         .expect("the range-only entry rides along with the exact move");
 
-    let recorded = &updated.catalogs.as_ref().expect("catalogs")["default"];
+    let recorded = &updated
+        .catalogs
+        .as_ref()
+        .expect("catalogs")["default"];
     assert_eq!(
         (recorded["child"].specifier.as_str(), recorded["child"].version.as_str()),
         ("^1.1.0", "1.1.0"),

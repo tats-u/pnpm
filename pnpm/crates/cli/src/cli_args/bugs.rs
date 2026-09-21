@@ -50,24 +50,17 @@ impl BugsArgs {
                 .into_iter()
                 .collect();
 
-            let futures = self.packages
-                .iter()
-                .map(|spec| {
-                    let target_registry = self.target_registry(&registries, spec);
+            let futures = self.packages.iter().map(|spec| {
+                let target_registry = self.target_registry(&registries, spec);
 
-                    let http_client = &http_client;
-                    let auth_headers = &config.auth_headers;
-                    async move {
-                        get_bugs_url_from_registry(
-                            spec,
-                            &target_registry,
-                            http_client,
-                            auth_headers,
-                        )
+                let http_client = &http_client;
+                let auth_headers = &config.auth_headers;
+                async move {
+                    get_bugs_url_from_registry(spec, &target_registry, http_client, auth_headers)
                         .await
                         .wrap_err_with(|| format!(r#"look up bugs URL for "{spec}""#))
-                    }
-                });
+                }
+            });
 
             let results: Vec<miette::Result<String>> =
                 futures_util::future::join_all(futures).await;
@@ -122,7 +115,9 @@ async fn get_bugs_url_from_registry(
     let (package_name, tag) = parse_package_spec(spec);
     let package_tag = match tag {
         None => PackageTag::Latest,
-        Some(tag_str) => tag_str.parse::<PackageTag>().unwrap_or(PackageTag::Latest),
+        Some(tag_str) => tag_str
+            .parse::<PackageTag>()
+            .unwrap_or(PackageTag::Latest),
     };
     let package_version = PackageVersion::fetch_from_registry(
         package_name,
@@ -174,7 +169,10 @@ fn pick_bugs_url(manifest: &Value) -> Option<String> {
                 .map(String::from),
             _ => None,
         };
-        if url.as_ref().is_some_and(|url_str| is_http_url(url_str)) {
+        if url
+            .as_ref()
+            .is_some_and(|url_str| is_http_url(url_str))
+        {
             return url;
         }
     }
@@ -208,7 +206,9 @@ fn repository_to_issues_url(raw_url: &str) -> Option<String> {
         return Some(url);
     }
 
-    let cleaned = trimmed.strip_prefix("git+").unwrap_or(trimmed);
+    let cleaned = trimmed
+        .strip_prefix("git+")
+        .unwrap_or(trimmed);
     if let Some(url) = scp_style_issues_url(cleaned) {
         return Some(url);
     }
@@ -224,7 +224,9 @@ fn repository_to_issues_url(raw_url: &str) -> Option<String> {
 fn scp_style_issues_url(cleaned: &str) -> Option<String> {
     let rest = cleaned.strip_prefix("git@")?;
     let (host, path) = rest.split_once(':')?;
-    let path = path.trim_end_matches('/').trim_end_matches(".git");
+    let path = path
+        .trim_end_matches('/')
+        .trim_end_matches(".git");
     if host.is_empty() || path.is_empty() {
         return None;
     }

@@ -18,12 +18,24 @@ use std::{
 fn default_result_is_empty() {
     let actual = LockfileToDepGraphResult::default();
     assert_eq!(actual.graph, DependenciesGraph::new());
-    assert!(actual.direct_dependencies_by_importer_id.is_empty());
+    assert!(
+        actual
+            .direct_dependencies_by_importer_id
+            .is_empty()
+    );
     assert!(actual.hierarchy.is_empty());
     assert!(actual.hoisted_locations.is_empty());
-    assert!(actual.symlinked_direct_dependencies_by_importer_id.is_empty());
+    assert!(
+        actual
+            .symlinked_direct_dependencies_by_importer_id
+            .is_empty()
+    );
     assert!(actual.prev_graph.is_none());
-    assert!(actual.injection_targets_by_dep_path.is_empty());
+    assert!(
+        actual
+            .injection_targets_by_dep_path
+            .is_empty()
+    );
     assert!(actual.skipped.is_empty());
 }
 /// The newtype wrapper exists because Rust doesn't allow recursive type
@@ -41,7 +53,8 @@ fn hierarchy_nests_recursively() {
     root_children.insert(PathBuf::from("/repo/node_modules/accepts"), inner.clone());
     let root = DepHierarchy(root_children);
 
-    let accepts = root.0
+    let accepts = root
+        .0
         .get(&PathBuf::from("/repo/node_modules/accepts"))
         .expect("accepts entry");
     assert_eq!(accepts, &inner);
@@ -55,8 +68,16 @@ fn options_default_is_empty() {
     assert!(opts.skipped.is_empty());
     assert!(!opts.force);
     assert!(!opts.installability.engine_strict);
-    assert!(opts.installability.current_node_version.is_empty());
-    assert!(opts.installability.supported_architectures.is_none());
+    assert!(
+        opts.installability
+            .current_node_version
+            .is_empty()
+    );
+    assert!(
+        opts.installability
+            .supported_architectures
+            .is_none()
+    );
 }
 #[test]
 fn walker_transitive_dep_flattens_under_root() {
@@ -86,14 +107,16 @@ fn walker_transitive_dep_flattens_under_root() {
 
     let modules = lockfile_dir.join("node_modules");
     assert_eq!(
-        result.graph
+        result
+            .graph
             .keys()
             .cloned()
             .collect::<Vec<_>>(),
         vec![modules.join("a"), modules.join("b")],
         "both nodes hoisted to root, sorted by dir",
     );
-    let a_node = result.graph
+    let a_node = result
+        .graph
         .get(&modules.join("a"))
         .expect("a in graph");
     assert_eq!(
@@ -209,7 +232,11 @@ fn walker_records_directory_resolution_as_injection_target() {
 
     assert_eq!(
         result.injection_targets_by_dep_path["a@1.0.0"],
-        vec![lockfile_dir.join("node_modules").join("a")],
+        vec![
+            lockfile_dir
+                .join("node_modules")
+                .join("a")
+        ],
     );
 }
 /// When `force` is off and the package is not installable, the
@@ -342,8 +369,12 @@ fn prev_graph_includes_orphan_even_when_now_incompatible() {
     let result = lockfile_to_hoisted_dep_graph(&wanted_lockfile, Some(&current_lockfile), &opts)
         .expect("walker succeeds");
 
-    let orphan_dir = lockfile_dir.join("node_modules").join("orphan");
-    let prev = result.prev_graph.expect("prev_graph populated");
+    let orphan_dir = lockfile_dir
+        .join("node_modules")
+        .join("orphan");
+    let prev = result
+        .prev_graph
+        .expect("prev_graph populated");
     assert!(
         prev.contains_key(&orphan_dir),
         "force: true emits the orphan even though it would now fail installability",

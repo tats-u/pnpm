@@ -18,13 +18,17 @@ use super::{
 };
 
 fn parse_iso(input: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(input).expect("rfc3339").with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(input)
+        .expect("rfc3339")
+        .with_timezone(&Utc)
 }
 
 fn make_pkg_version(name: &str, version: &str, deprecated: Option<&str>) -> PackageVersion {
     PackageVersion {
         name: name.to_string(),
-        version: version.parse::<Version>().expect("parse semver"),
+        version: version
+            .parse::<Version>()
+            .expect("parse semver"),
         dist: PackageDistribution::default(),
         dependencies: None,
         dev_dependencies: None,
@@ -412,7 +416,12 @@ fn pick_from_meta_tag_spec_reads_dist_tag() {
         &spec("acme", "beta", RegistryPackageSpecType::Tag),
     )
     .expect("ok");
-    assert_eq!(picked.map(|version| version.version.to_string()).as_deref(), Some("2.0.0-beta.1"));
+    assert_eq!(
+        picked
+            .map(|version| version.version.to_string())
+            .as_deref(),
+        Some("2.0.0-beta.1")
+    );
 }
 
 #[test]
@@ -425,7 +434,12 @@ fn pick_from_meta_version_spec_reads_versions() {
         &spec("acme", "1.0.0", RegistryPackageSpecType::Version),
     )
     .expect("ok");
-    assert_eq!(picked.map(|version| version.version.to_string()).as_deref(), Some("1.0.0"));
+    assert_eq!(
+        picked
+            .map(|version| version.version.to_string())
+            .as_deref(),
+        Some("1.0.0")
+    );
 }
 
 #[test]
@@ -510,7 +524,12 @@ fn pick_from_meta_published_by_modified_shortcut() {
         &spec("acme", "^1.0.0", RegistryPackageSpecType::Range),
     )
     .expect("ok");
-    assert_eq!(picked.map(|version| version.version.to_string()).as_deref(), Some("1.0.0"));
+    assert_eq!(
+        picked
+            .map(|version| version.version.to_string())
+            .as_deref(),
+        Some("1.0.0")
+    );
 }
 
 #[test]
@@ -529,7 +548,12 @@ fn pick_from_meta_modified_shortcut_inclusive_at_cutoff() {
         &spec("acme", "^1.0.0", RegistryPackageSpecType::Range),
     )
     .expect("ok");
-    assert_eq!(picked.map(|version| version.version.to_string()).as_deref(), Some("1.0.0"));
+    assert_eq!(
+        picked
+            .map(|version| version.version.to_string())
+            .as_deref(),
+        Some("1.0.0")
+    );
 }
 
 #[test]
@@ -556,7 +580,12 @@ fn pick_from_meta_published_by_filters_immature_versions() {
         &spec("acme", "*", RegistryPackageSpecType::Range),
     )
     .expect("ok");
-    assert_eq!(picked.map(|version| version.version.to_string()).as_deref(), Some("1.1.0"));
+    assert_eq!(
+        picked
+            .map(|version| version.version.to_string())
+            .as_deref(),
+        Some("1.1.0")
+    );
 }
 
 #[test]
@@ -579,7 +608,12 @@ fn pick_from_meta_published_by_bare_name_exclude_skips_filter() {
         &spec("acme", "*", RegistryPackageSpecType::Range),
     )
     .expect("ok");
-    assert_eq!(picked.map(|version| version.version.to_string()).as_deref(), Some("2.0.0"));
+    assert_eq!(
+        picked
+            .map(|version| version.version.to_string())
+            .as_deref(),
+        Some("2.0.0")
+    );
 }
 
 #[test]
@@ -602,7 +636,12 @@ fn pick_from_meta_published_by_trusted_version_passes_filter() {
         &spec("acme", "*", RegistryPackageSpecType::Range),
     )
     .expect("ok");
-    assert_eq!(picked.map(|version| version.version.to_string()).as_deref(), Some("2.0.0"));
+    assert_eq!(
+        picked
+            .map(|version| version.version.to_string())
+            .as_deref(),
+        Some("2.0.0")
+    );
 }
 
 #[test]
@@ -752,7 +791,12 @@ fn lowest_picker_with_published_by_drops_immature_min() {
         &spec("acme", "*", RegistryPackageSpecType::Range),
     )
     .expect("ok");
-    assert_eq!(picked.map(|version| version.version.to_string()).as_deref(), Some("1.1.0"));
+    assert_eq!(
+        picked
+            .map(|version| version.version.to_string())
+            .as_deref(),
+        Some("1.1.0")
+    );
 }
 
 #[test]
@@ -775,7 +819,12 @@ fn pick_from_meta_skips_undecodable_winner_and_retries() {
         &spec("acme", "^1.0.0", RegistryPackageSpecType::Range),
     )
     .expect("ok");
-    assert_eq!(picked.map(|version| version.version.to_string()).as_deref(), Some("1.0.0"));
+    assert_eq!(
+        picked
+            .map(|version| version.version.to_string())
+            .as_deref(),
+        Some("1.0.0")
+    );
 }
 
 #[test]

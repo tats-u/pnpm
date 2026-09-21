@@ -54,7 +54,9 @@ impl LoadedState {
         if self.check_wanted_lockfile_only {
             self.wanted_lockfile.as_ref()
         } else {
-            self.current_lockfile.as_ref().or(self.wanted_lockfile.as_ref())
+            self.current_lockfile
+                .as_ref()
+                .or(self.wanted_lockfile.as_ref())
         }
     }
 
@@ -74,10 +76,12 @@ impl LoadedState {
         Some(PkgInfoEnv {
             registries,
             registry_options_by_url,
-            skipped: self.modules
+            skipped: self
+                .modules
                 .as_ref()
                 .map(|modules| {
-                    modules.skipped
+                    modules
+                        .skipped
                         .iter()
                         .cloned()
                         .collect::<HashSet<_>>()
@@ -105,13 +109,15 @@ impl LoadedState {
             lockfile_dir: lockfile_dir.to_path_buf(),
             modules_dir: self.modules_dir.clone(),
             virtual_store_dir,
-            virtual_store_dir_max_length: self.modules
-                .as_ref()
-                .map_or(virtual_store_dir_max_length, |modules| {
+            virtual_store_dir_max_length: self.modules.as_ref().map_or(
+                virtual_store_dir_max_length,
+                |modules| {
                     usize::try_from(modules.virtual_store_dir_max_length)
                         .unwrap_or(DEFAULT_VIRTUAL_STORE_DIR_MAX_LENGTH as usize)
-                }),
-            store_dir: self.modules
+                },
+            ),
+            store_dir: self
+                .modules
                 .as_ref()
                 .map(|modules| PathBuf::from(&modules.store_dir))
                 .filter(|dir| !dir.as_os_str().is_empty()),

@@ -307,7 +307,9 @@ fn crate_archive_rejects_traversal_and_links() {
         header.set_mode(0o644);
         header.set_entry_type(entry_type);
         if entry_type != tar::EntryType::Regular {
-            header.set_link_name("../../outside").unwrap();
+            header
+                .set_link_name("../../outside")
+                .unwrap();
         }
         header.set_cksum();
         builder
@@ -382,7 +384,9 @@ fn crate_archive_accepts_an_explicit_root_directory() {
         root.set_mode(0o755);
         root.set_cksum();
         let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
-        encoder.write_all(root.as_bytes()).unwrap();
+        encoder
+            .write_all(root.as_bytes())
+            .unwrap();
         std::io::copy(&mut flate2::read::GzDecoder::new(archive.as_slice()), &mut encoder).unwrap();
         let with_root = encoder.finish().unwrap();
         assert_eq!(
@@ -451,7 +455,12 @@ fn a_description_is_cut_to_the_documented_length() {
     assert_eq!(bounded_description(Some("short")).as_deref(), Some("short"));
 
     let long = "d".repeat(MAX_DESCRIPTION_LEN + 1);
-    assert_eq!(bounded_description(Some(&long)).unwrap().len(), MAX_DESCRIPTION_LEN);
+    assert_eq!(
+        bounded_description(Some(&long))
+            .unwrap()
+            .len(),
+        MAX_DESCRIPTION_LEN
+    );
 
     // Cut by character, so a multi-byte description stays valid UTF-8.
     let wide = "é".repeat(MAX_DESCRIPTION_LEN + 1);

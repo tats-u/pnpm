@@ -135,7 +135,9 @@ fn qualification_requires_immutable_build_free_unchanged_content() {
 #[cfg_attr(not(target_os = "macos"), ignore = "Requires macOS directory cloning")]
 fn local_tarball_imports_updated_content_despite_an_existing_canonical() {
     let temp = tempfile::tempdir().expect("tempdir");
-    let key: PackageKey = "foo@file:../foo.tgz".parse().expect("key");
+    let key: PackageKey = "foo@file:../foo.tgz"
+        .parse()
+        .expect("key");
     let snapshots = HashMap::from([(key.clone(), SnapshotEntry::default())]);
     let packages = HashMap::from([(
         key.clone(),
@@ -165,12 +167,15 @@ fn local_tarball_imports_updated_content_despite_an_existing_canonical() {
         "foo",
         "foo@file:../foo.tgz",
         "foo@file:../foo.tgz",
-        temp.path().join("second/node_modules/foo"),
+        temp.path()
+            .join("second/node_modules/foo"),
     );
     let updated = temp.path().join("updated");
     fs::write(&updated, b"updated").expect("updated CAS");
     let cas_index = HashMap::from([(
-        node.package.pkg_id_with_patch_hash.clone(),
+        node.package
+            .pkg_id_with_patch_hash
+            .clone(),
         Arc::new(HashMap::from([("index.js".to_string(), updated)])),
     )]);
     let opts = LinkHoistedModulesOpts {
@@ -220,7 +225,8 @@ fn cloned_hoisted_aliases_reuse_canonical_content_and_remain_independent() {
             "foo",
             package,
             package,
-            temp.path().join("second/node_modules/parent/node_modules/foo"),
+            temp.path()
+                .join("second/node_modules/parent/node_modules/foo"),
         );
         assert!(cache.try_import::<SilentReporter>(&second, import(&logged), &cas));
         assert_eq!(fs::read(second.dir.join("package.json")).expect("second clone"), b"original");
@@ -243,14 +249,24 @@ fn node_guards_decline_patches_bundles_and_present_targets() {
     let flags = HashMap::from([(key, false)]);
     let cache = HoistedDirCloneCache::new(Some(&cache), Some(&packages), None, Some(&flags), false)
         .expect("cache");
-    let mut node =
-        make_node("foo", "foo@1.0.0", "foo@1.0.0", temp.path().join("target/node_modules/foo"));
+    let mut node = make_node(
+        "foo",
+        "foo@1.0.0",
+        "foo@1.0.0",
+        temp.path()
+            .join("target/node_modules/foo"),
+    );
     let logged = AtomicU8::new(0);
     let blob = temp.path().join("manifest");
     fs::write(&blob, b"original").expect("CAS");
     let cas = HashMap::from([("package.json".to_string(), blob.clone())]);
-    let control =
-        make_node("foo", "foo@1.0.0", "foo@1.0.0", temp.path().join("control/node_modules/foo"));
+    let control = make_node(
+        "foo",
+        "foo@1.0.0",
+        "foo@1.0.0",
+        temp.path()
+            .join("control/node_modules/foo"),
+    );
     assert!(cache.try_import::<SilentReporter>(&control, import(&logged), &cas));
     node.present = true;
     assert!(!cache.try_import::<SilentReporter>(&node, import(&logged), &cas));
@@ -279,16 +295,28 @@ fn occupied_hoisted_parent_falls_back_without_losing_nested_dependencies() {
     let flags = HashMap::from([(key, false)]);
     let cache = HoistedDirCloneCache::new(Some(&cache), Some(&packages), None, Some(&flags), false)
         .expect("cache");
-    let node =
-        make_node("foo", "foo@1.0.0", "foo@1.0.0", temp.path().join("project/node_modules/foo"));
+    let node = make_node(
+        "foo",
+        "foo@1.0.0",
+        "foo@1.0.0",
+        temp.path()
+            .join("project/node_modules/foo"),
+    );
     let blob = temp.path().join("manifest");
     fs::write(&blob, b"original").expect("CAS");
     let cas = HashMap::from([("package.json".to_string(), blob)]);
-    let nested = node.dir.join("node_modules/child/index.js");
+    let nested = node
+        .dir
+        .join("node_modules/child/index.js");
     fs::create_dir_all(nested.parent().expect("nested parent")).expect("nested directory");
     fs::write(&nested, b"nested dependency").expect("nested file");
     fs::write(node.dir.join("package.json"), b"stale").expect("stale manifest");
-    let cas_index = HashMap::from([(node.package.pkg_id_with_patch_hash.clone(), Arc::new(cas))]);
+    let cas_index = HashMap::from([(
+        node.package
+            .pkg_id_with_patch_hash
+            .clone(),
+        Arc::new(cas),
+    )]);
     let logged = AtomicU8::new(0);
     let opts = LinkHoistedModulesOpts {
         dir_clone_cache: Some(&cache),

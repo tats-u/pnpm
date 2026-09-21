@@ -8,11 +8,22 @@ pub fn all_patch_keys(patched_dependencies: &PatchGroupRecord) -> impl Iterator<
     patched_dependencies
         .values()
         .flat_map(|group| {
-            group.exact
+            group
+                .exact
                 .values()
                 .map(|info| info.key.as_str())
-                .chain(group.range.iter().map(|item| item.patch.key.as_str()))
-                .chain(group.all.iter().map(|info| info.key.as_str()))
+                .chain(
+                    group
+                        .range
+                        .iter()
+                        .map(|item| item.patch.key.as_str()),
+                )
+                .chain(
+                    group
+                        .all
+                        .iter()
+                        .map(|info| info.key.as_str()),
+                )
         })
 }
 

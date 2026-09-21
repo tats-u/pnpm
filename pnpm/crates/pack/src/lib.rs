@@ -199,7 +199,9 @@ where
     // The size pass must run before `postpack`, which may delete
     // prepack-generated files that were packed. See pnpm/pnpm#12775.
     let unpacked_size = unpacked_size::<Sys>(&files_map, manifest_json.len() as u64)?
-        + opts.output.injected_files
+        + opts
+            .output
+            .injected_files
             .iter()
             .map(|(_, bytes)| bytes.len() as u64)
             .sum::<u64>();
@@ -213,11 +215,8 @@ where
         };
         write_tarball::<Sys>(&opts.output, &source, &packed).await?;
         if !opts.scripts.ignore {
-            opts.scripts.run_if_present::<Reporter>(
-                &opts.dir,
-                &["postpack"],
-                &source.entry_manifest,
-            )?;
+            opts.scripts
+                .run_if_present::<Reporter>(&opts.dir, &["postpack"], &source.entry_manifest)?;
         }
     }
 
@@ -244,11 +243,8 @@ async fn prepare_source<Reporter: self::Reporter>(
     prevent_bundled_dependencies_without_hoisted(opts.manifest.node_linker, &entry_manifest)?;
 
     if !opts.scripts.ignore {
-        opts.scripts.run_if_present::<Reporter>(
-            &opts.dir,
-            &["prepack", "prepare"],
-            &entry_manifest,
-        )?;
+        opts.scripts
+            .run_if_present::<Reporter>(&opts.dir, &["prepack", "prepare"], &entry_manifest)?;
     }
 
     // The publish directory may differ from the project root when
@@ -265,7 +261,10 @@ async fn prepare_source<Reporter: self::Reporter>(
 
     let name = packed_identity(&manifest)?;
 
-    let mut publish_manifest = opts.manifest.export::<Reporter>(&opts.dir, &dir, &manifest).await?;
+    let mut publish_manifest = opts
+        .manifest
+        .export::<Reporter>(&opts.dir, &dir, &manifest)
+        .await?;
 
     let (normalized_name, published_version) = published_identity(&mut publish_manifest, name)?;
     Ok(PackSource {
@@ -456,7 +455,10 @@ fn prevent_bundled_dependencies_without_hoisted(
         return Ok(());
     }
     for field in ["bundledDependencies", "bundleDependencies"] {
-        if manifest.get(field).is_some_and(is_truthy) {
+        if manifest
+            .get(field)
+            .is_some_and(is_truthy)
+        {
             return Err(PackError::BundledDependenciesWithoutHoisted {
                 field,
                 node_linker: node_linker_str(node_linker),

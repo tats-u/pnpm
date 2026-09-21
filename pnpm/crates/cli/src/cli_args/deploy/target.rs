@@ -246,10 +246,12 @@ pub(super) fn copy_project<ReporterT: Reporter>(
 }
 
 pub(super) fn apply_deploy_hook(manifest_path: &Path) -> miette::Result<()> {
-    let mut manifest =
-        PackageManifest::from_path(manifest_path.to_path_buf()).wrap_err("read deployed manifest")?;
+    let mut manifest = PackageManifest::from_path(manifest_path.to_path_buf())
+        .wrap_err("read deployed manifest")?;
     apply_deploy_manifest_hook(manifest.value_mut());
-    manifest.save().wrap_err("write deployed manifest")
+    manifest
+        .save()
+        .wrap_err("write deployed manifest")
 }
 
 pub(super) fn same_path(left: &Path, right: &Path) -> bool {
@@ -312,7 +314,9 @@ fn relative_components_from_child(parent: &Path, child: &Path) -> miette::Result
     let parent = lexical_normalize(parent);
     let child = lexical_normalize(child);
     if !has_path_prefix(&child, &parent) {
-        child.strip_prefix(&parent).into_diagnostic()?;
+        child
+            .strip_prefix(&parent)
+            .into_diagnostic()?;
     }
     Ok(child
         .components()
@@ -323,7 +327,9 @@ fn relative_components_from_child(parent: &Path, child: &Path) -> miette::Result
 
 pub(super) fn relative_path(from: &Path, to: &Path) -> String {
     let relative = pathdiff::diff_paths(to, from).unwrap_or_else(|| to.to_path_buf());
-    relative.to_string_lossy().replace('\\', "/")
+    relative
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
 pub(super) fn write_deploy_files(
@@ -332,7 +338,8 @@ pub(super) fn write_deploy_files(
 ) -> miette::Result<()> {
     let mut manifest = serde_json::to_string_pretty(&deploy_files.manifest).into_diagnostic()?;
     manifest.push('\n');
-    let lockfile = deploy_files.lockfile
+    let lockfile = deploy_files
+        .lockfile
         .to_yaml_string()
         .map_err(miette::Report::new)
         .wrap_err("serialize deployed lockfile")?;
@@ -362,9 +369,11 @@ fn write_atomic(path: &Path, contents: &[u8]) -> io::Result<()> {
     tmp.write_all(contents)?;
     tmp.as_file().sync_all()?;
     if let Ok(metadata) = fs::metadata(path) {
-        tmp.as_file().set_permissions(metadata.permissions())?;
+        tmp.as_file()
+            .set_permissions(metadata.permissions())?;
     }
-    tmp.persist(path).map_err(|error| error.error)?;
+    tmp.persist(path)
+        .map_err(|error| error.error)?;
     Ok(())
 }
 
@@ -372,7 +381,12 @@ fn workspace_manifest_yaml(workspace_manifest: &Value) -> String {
     let mut out = String::new();
     let Some(object) = workspace_manifest.as_object() else { return out };
     for field in ["patchedDependencies", "allowBuilds"] {
-        let Some(values) = object.get(field).and_then(Value::as_object) else { continue };
+        let Some(values) = object
+            .get(field)
+            .and_then(Value::as_object)
+        else {
+            continue;
+        };
         out.push_str(field);
         out.push_str(":\n");
         for (key, value) in values {

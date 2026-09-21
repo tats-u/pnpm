@@ -133,7 +133,10 @@ fn rebuild_items(text: &str, layout: &ItemLayout, current: &[String], items: &[S
     let indent = " ".repeat(layout.indent);
     let mut body = String::new();
     for item in items {
-        if let Some(idx) = unclaimed.get_mut(item.as_str()).and_then(VecDeque::pop_front) {
+        if let Some(idx) = unclaimed
+            .get_mut(item.as_str())
+            .and_then(VecDeque::pop_front)
+        {
             body.push_str(&text[layout.spans[idx].0..layout.spans[idx].1]);
         } else {
             body.push_str(&indent);
@@ -220,7 +223,8 @@ pub(super) fn upsert_sequence_entry(
     let mapping = locate(text, &[block_name]).expect("block exists");
     let rendered = render_block_sequence_entry(mapping.entry_indent, key, items);
 
-    if let Some(entry) = mapping.entries
+    if let Some(entry) = mapping
+        .entries
         .iter()
         .find(|entry| entry.key == key)
     {

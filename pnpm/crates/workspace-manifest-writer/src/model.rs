@@ -177,8 +177,12 @@ impl Manifest {
             .map_err(|error| Box::new(<serde_saphyr::Error as serde::de::Error>::custom(error)))?;
 
         Ok(Manifest {
-            config_dependencies: data.config_dependencies.map(clean_config_dependencies),
-            allow_builds: data.allow_builds.map(clean_allow_builds),
+            config_dependencies: data
+                .config_dependencies
+                .map(clean_config_dependencies),
+            allow_builds: data
+                .allow_builds
+                .map(clean_allow_builds),
             patched_dependencies: data.patched_dependencies,
             overrides,
             non_scalar_overrides,
@@ -190,8 +194,12 @@ impl Manifest {
             },
             catalogs: crate::model::CatalogEntries { default: data.catalog, named: data.catalogs },
             exceptions: crate::model::SecurityExceptions {
-                legacy_audit_ghsas: data.audit_config.and_then(|config| config.ignore_ghsas),
-                audit: data.audit.and_then(|audit| audit.ignore),
+                legacy_audit_ghsas: data
+                    .audit_config
+                    .and_then(|config| config.ignore_ghsas),
+                audit: data
+                    .audit
+                    .and_then(|audit| audit.ignore),
                 release_age: data.minimum_release_age_exclude,
                 trust_policy: data.trust_policy_exclude,
             },

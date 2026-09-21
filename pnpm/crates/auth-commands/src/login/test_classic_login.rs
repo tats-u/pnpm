@@ -55,7 +55,9 @@ async fn should_fall_back_to_classic_login_when_web_login_returns_404() {
     assert_eq!(result, format!("Logged in on {registry}/"));
 
     let writes = login_writes();
-    let (path, _) = writes.first().expect("config.yaml was written");
+    let (path, _) = writes
+        .first()
+        .expect("config.yaml was written");
     assert_eq!(path, &config_dir.join("config.yaml"));
     assert_eq!(
         written_registry_token(&writes, &format!("{registry}/")),
@@ -474,7 +476,8 @@ async fn should_surface_a_non_interrupt_prompt_failure_as_a_prompt_error() {
         Some("ERR_PNPM_AUTH_COMMANDS_LOGIN_PROMPT_FAILED"),
     );
     assert!(
-        err.to_string().starts_with("Failed to read the login prompt:"),
+        err.to_string()
+            .starts_with("Failed to read the login prompt:"),
         "unexpected message: {err}",
     );
 }

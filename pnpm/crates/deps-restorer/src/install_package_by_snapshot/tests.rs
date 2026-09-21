@@ -29,7 +29,9 @@ const DUMMY_SHA512: &str = "sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 fn registry_metadata() -> pnpm_lockfile::PackageMetadata {
     pnpm_lockfile::PackageMetadata {
         resolution: LockfileResolution::Registry(pnpm_lockfile::RegistryResolution {
-            integrity: DUMMY_SHA512.parse().expect("parse integrity"),
+            integrity: DUMMY_SHA512
+                .parse()
+                .expect("parse integrity"),
             revision: None,
         }),
         version: None,
@@ -176,11 +178,15 @@ fn build_runtime_tarball_fixture() -> Vec<u8> {
     tar_builder
         .append_data(&mut header, "node-v22.0.0-fixture/bin/node", &script[..])
         .expect("append the fixture bin entry");
-    let tar_bytes = tar_builder.into_inner().expect("finalize the fixture tar");
+    let tar_bytes = tar_builder
+        .into_inner()
+        .expect("finalize the fixture tar");
 
     let mut gz = GzEncoder::new(Vec::new(), Compression::default());
-    gz.write_all(&tar_bytes).expect("gzip the fixture tar");
-    gz.finish().expect("finish the gzip stream")
+    gz.write_all(&tar_bytes)
+        .expect("gzip the fixture tar");
+    gz.finish()
+        .expect("finish the gzip stream")
 }
 
 fn custom_resolution_metadata(resolution_type: &str) -> pnpm_lockfile::PackageMetadata {

@@ -22,8 +22,18 @@ fn discovers_multiple_manifest_kinds_in_one_inventory() {
     )
     .unwrap();
 
-    assert_eq!(inventory.manifests("package.json").unwrap(), [node.join("package.json")]);
-    assert_eq!(inventory.manifests("Cargo.toml").unwrap(), [rust.join("Cargo.toml")]);
+    assert_eq!(
+        inventory
+            .manifests("package.json")
+            .unwrap(),
+        [node.join("package.json")]
+    );
+    assert_eq!(
+        inventory
+            .manifests("Cargo.toml")
+            .unwrap(),
+        [rust.join("Cargo.toml")]
+    );
     assert!(
         inventory
             .manifests("pyproject.toml")
@@ -37,7 +47,9 @@ fn discovers_multiple_manifest_kinds_in_one_inventory() {
 fn prunes_generated_directories() {
     let workspace = tempfile::tempdir().unwrap();
     let project = workspace.path().join("rust/project");
-    let generated = workspace.path().join("target/generated");
+    let generated = workspace
+        .path()
+        .join("target/generated");
     fs::create_dir_all(&project).unwrap();
     fs::create_dir_all(&generated).unwrap();
     fs::write(project.join("Cargo.toml"), "[workspace]\n").unwrap();
@@ -46,7 +58,12 @@ fn prunes_generated_directories() {
     let inventory =
         find_workspace_inventory(workspace.path(), &["Cargo.toml"], &["target"], &[], &[]).unwrap();
 
-    assert_eq!(inventory.manifests("Cargo.toml").unwrap(), [project.join("Cargo.toml")]);
+    assert_eq!(
+        inventory
+            .manifests("Cargo.toml")
+            .unwrap(),
+        [project.join("Cargo.toml")]
+    );
 }
 
 #[test]
@@ -75,7 +92,12 @@ fn skips_unreadable_unrelated_directories() {
     )
     .unwrap();
 
-    assert_eq!(inventory.manifests("Cargo.toml").unwrap(), [project.join("Cargo.toml")]);
+    assert_eq!(
+        inventory
+            .manifests("Cargo.toml")
+            .unwrap(),
+        [project.join("Cargo.toml")]
+    );
 }
 
 #[test]
@@ -181,9 +203,16 @@ fn prunes_managed_paths_before_opening_without_excluding_matching_project_names(
             },
         )
         .unwrap();
-        assert_eq!(inventory.manifests("Cargo.toml").unwrap(), [project.join("Cargo.toml")]);
         assert_eq!(
-            inventory.manifests("pyproject.toml").unwrap(),
+            inventory
+                .manifests("Cargo.toml")
+                .unwrap(),
+            [project.join("Cargo.toml")]
+        );
+        assert_eq!(
+            inventory
+                .manifests("pyproject.toml")
+                .unwrap(),
             [project.join("pyproject.toml")],
         );
     }
@@ -292,7 +321,10 @@ fn discovers_deep_trees_with_a_small_handle_limit() {
         .args(["--exact", "--nocapture"])
         .arg(format!(
             "{}::discovers_deep_trees_with_a_small_handle_limit",
-            module_path!().split_once("::").unwrap().1,
+            module_path!()
+                .split_once("::")
+                .unwrap()
+                .1,
         ))
         .env(ROOT_ENV, workspace.path())
         .output()
@@ -361,7 +393,12 @@ fn continues_after_a_child_is_moved_to_a_different_parent() {
         |_| Ok(()),
     )
     .unwrap();
-    assert_eq!(inventory.manifests("Cargo.toml").unwrap(), [sibling.join("Cargo.toml")]);
+    assert_eq!(
+        inventory
+            .manifests("Cargo.toml")
+            .unwrap(),
+        [sibling.join("Cargo.toml")]
+    );
 }
 
 #[test]
@@ -447,7 +484,9 @@ fn rejects_intermediate_links_to_directories_inside_the_workspace() {
 fn prunes_negated_package_directories_before_opening() {
     let workspace = tempfile::tempdir().unwrap();
     let selected = workspace.path().join("native/selected");
-    let excluded = workspace.path().join("fixtures/excluded");
+    let excluded = workspace
+        .path()
+        .join("fixtures/excluded");
     for directory in [workspace.path(), &selected, &excluded] {
         fs::create_dir_all(directory).unwrap();
         fs::write(directory.join("Cargo.toml"), "not parsed by discovery").unwrap();

@@ -88,7 +88,12 @@ fn returns_up_to_date_when_a_catalog_dependency_resolves_to_a_registry_range() {
     const WHOLE_SECOND_MS: i64 = 1_700_000_000_000;
     set_mtime_ms(&dir.path().join(Lockfile::FILE_NAME), WHOLE_SECOND_MS);
     set_mtime_ms(manifest.path(), WHOLE_SECOND_MS);
-    set_mtime_ms(&config.modules_dir.join(WORKSPACE_STATE_FILENAME), WHOLE_SECOND_MS);
+    set_mtime_ms(
+        &config
+            .modules_dir
+            .join(WORKSPACE_STATE_FILENAME),
+        WHOLE_SECOND_MS,
+    );
     write_state(dir.path(), backdate_validated_files(dir.path()), settings, projects);
 
     let decision = check_optimistic_repeat_install(&OptimisticRepeatInstallCheck {
@@ -174,7 +179,9 @@ fn returns_outdated_when_workspace_catalog_cache_changes() {
 
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), settings, projects);
@@ -220,7 +227,9 @@ fn returns_outdated_when_single_project_catalog_cache_changes() {
 
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), settings, projects);

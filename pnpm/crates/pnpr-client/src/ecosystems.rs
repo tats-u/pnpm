@@ -122,7 +122,9 @@ impl PnprClient {
             "index": opts.index,
             "requiresPython": opts.requires_python,
         });
-        let frame = self.terminal_frame(&request, opts.authorization.as_deref()).await?;
+        let frame = self
+            .terminal_frame(&request, opts.authorization.as_deref())
+            .await?;
         match parse_pypi_frame(&frame)? {
             PypiFrame::Done { lockfile } => Ok(*lockfile),
             PypiFrame::Error { message } => Err(PnprClientError::Server(message)),
@@ -142,7 +144,9 @@ impl PnprClient {
             "metadata": opts.metadata,
             "registry": opts.registry,
         });
-        let frame = self.terminal_frame(&request, opts.authorization.as_deref()).await?;
+        let frame = self
+            .terminal_frame(&request, opts.authorization.as_deref())
+            .await?;
         match parse_cargo_frame(&frame)? {
             CargoFrame::Done { lockfile } => Ok(lockfile),
             CargoFrame::Error { message } => Err(PnprClientError::Server(message)),
@@ -163,7 +167,8 @@ impl PnprClient {
         request: &serde_json::Value,
         authorization: Option<&str>,
     ) -> Result<Vec<u8>, PnprClientError> {
-        let mut post = self.http
+        let mut post = self
+            .http
             .post(format!("{}-/pnpr/v0/resolve", self.base_url))
             .json(request);
         if let Some(authorization) = authorization {
@@ -204,7 +209,8 @@ impl PnprClient {
     ) -> Result<(), PnprClientError> {
         let request = serde_json::to_value(&opts).expect("verification request serializes to JSON");
 
-        let mut post = self.http
+        let mut post = self
+            .http
             .post(format!("{}-/pnpr/v0/verify-lockfile", self.base_url))
             .json(&request);
         if let Some(authorization) = opts.routing.authorization.as_deref() {
@@ -213,7 +219,10 @@ impl PnprClient {
         let response = post.send().await?;
         if !response.status().is_success() {
             let status = response.status();
-            let body = response.text().await.unwrap_or_default();
+            let body = response
+                .text()
+                .await
+                .unwrap_or_default();
             return Err(PnprClientError::Server(format!(
                 "/-/pnpr/v0/verify-lockfile returned {status}: {body}",
             )));

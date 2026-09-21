@@ -61,7 +61,9 @@ fn mock_packages_yaml(packages: &[(&str, &[&str])]) -> String {
 
 fn load_lockfile(dir: &Path, yaml: &str) -> Lockfile {
     std::fs::write(dir.join("pnpm-lock.yaml"), yaml).unwrap();
-    Lockfile::load_wanted_from_dir(dir).unwrap().unwrap()
+    Lockfile::load_wanted_from_dir(dir)
+        .unwrap()
+        .unwrap()
 }
 
 fn mock_lockfile(dir: &Path, packages: &[(&str, &[&str])]) -> Lockfile {
@@ -183,7 +185,9 @@ fn shape(nodes: &[DependencyNode]) -> String {
 }
 
 fn find<'a>(nodes: &'a [DependencyNode], alias_path: &[&str]) -> &'a DependencyNode {
-    let (first, rest) = alias_path.split_first().expect("alias path must be non-empty");
+    let (first, rest) = alias_path
+        .split_first()
+        .expect("alias path must be non-empty");
     let node = nodes
         .iter()
         .find(|node| node.alias == *first)
@@ -407,7 +411,12 @@ importers:
     let result = tree_with_graph(&env, &TreeNodeId::Importer(".".to_string()), MaxDepth::Unlimited);
 
     assert_eq!(shape(&result), "my-link,regular-dep(transitive)");
-    assert_eq!(find(&result, &["my-link"]).package.version, "link:../external-pkg");
+    assert_eq!(
+        find(&result, &["my-link"])
+            .package
+            .version,
+        "link:../external-pkg"
+    );
 }
 
 // Port of upstream's 'link inside workspace resolves to importer and is traversed' (deps/inspection/tree-builder/test/getTree.test.ts).
@@ -438,7 +447,12 @@ importers:
     let result = tree_with_graph(&env, &TreeNodeId::Importer(".".to_string()), MaxDepth::Unlimited);
 
     assert_eq!(shape(&result), "workspace-pkg(leaf)");
-    assert_eq!(find(&result, &["workspace-pkg"]).package.version, "link:packages/workspace-pkg");
+    assert_eq!(
+        find(&result, &["workspace-pkg"])
+            .package
+            .version,
+        "link:packages/workspace-pkg"
+    );
 }
 
 // Port of upstream's 'deduped subtree containing a search match still appears in output' (deps/inspection/tree-builder/test/getTree.test.ts).
@@ -553,7 +567,11 @@ importers:
     let graph_b = graph_for(&lockfile, std::slice::from_ref(&root_b));
 
     dbg!(multi.nodes.keys().collect::<Vec<_>>());
-    for key in graph_a.nodes.keys().chain(graph_b.nodes.keys()) {
+    for key in graph_a
+        .nodes
+        .keys()
+        .chain(graph_b.nodes.keys())
+    {
         assert!(multi.nodes.contains_key(key), "multi-root graph is missing {key:?}");
     }
     for name in ["unique-to-b", "shared", "deep"] {
@@ -589,7 +607,13 @@ fn second_get_tree_call_for_same_node_returns_deduped_children() {
     let deduped_a = &result2[0];
     dbg!(deduped_a);
     assert!(deduped_a.status.deduped);
-    assert!(deduped_a.status.deduped_dependencies_count.unwrap() > 0);
+    assert!(
+        deduped_a
+            .status
+            .deduped_dependencies_count
+            .unwrap()
+            > 0
+    );
 }
 
 // Port of upstream's 'deduped result preserves search match metadata' (deps/inspection/tree-builder/test/getTree.test.ts).
@@ -657,7 +681,12 @@ fn deduped_dependencies_count_correctly_reflects_subtree_size() {
     dbg!(deduped_a);
     assert!(deduped_a.status.deduped);
     // a's subtree had 2 nodes (b and c).
-    assert_eq!(deduped_a.status.deduped_dependencies_count, Some(2));
+    assert_eq!(
+        deduped_a
+            .status
+            .deduped_dependencies_count,
+        Some(2)
+    );
 }
 
 // Port of upstream's 'different maxDepth values are cached independently' (deps/inspection/tree-builder/test/getTree.test.ts).

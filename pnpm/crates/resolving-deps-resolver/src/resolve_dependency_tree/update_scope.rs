@@ -65,7 +65,8 @@ impl UpdateTargets {
     /// widens the target to every version, and never narrows one already
     /// recorded.
     pub fn insert(&mut self, name: String, line: Option<VersionLine>) {
-        let lines = self.0
+        let lines = self
+            .0
             .entry(name)
             .or_insert_with(|| Some(BTreeSet::new()));
         match line {
@@ -130,7 +131,8 @@ impl UpdateDepth {
     /// Whether an update reaches a node at `depth`.
     #[must_use]
     pub(super) fn reaches(self, depth: i32) -> bool {
-        self.0.is_none_or(|max_depth| depth <= max_depth)
+        self.0
+            .is_none_or(|max_depth| depth <= max_depth)
     }
 
     /// The depth to memoise a subtree-reuse answer under. Beyond the

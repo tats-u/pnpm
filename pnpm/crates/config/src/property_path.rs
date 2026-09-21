@@ -91,7 +91,9 @@ fn parse_token(source: &str) -> Result<(Token, &str), ParsePropertyPathError> {
     // Unexpected: a single (char-boundary-safe) unit.
     let mut indices = source.char_indices();
     indices.next();
-    let split = indices.next().map_or(source.len(), |(i, _)| i);
+    let split = indices
+        .next()
+        .map_or(source.len(), |(i, _)| i);
     let (head, tail) = source.split_at(split);
     Ok((Token::Unexpected(head.to_string()), tail))
 }
@@ -148,7 +150,9 @@ fn parse_numeric_literal(source: &str) -> Result<Option<(Token, &str)>, ParsePro
         }
     }
     let (number_string, rest) = source.split_at(end);
-    let number: f64 = number_string.parse().unwrap_or(f64::NAN);
+    let number: f64 = number_string
+        .parse()
+        .unwrap_or(f64::NAN);
     Ok(Some((Token::NumericLiteral(number), rest)))
 }
 

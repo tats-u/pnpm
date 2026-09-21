@@ -47,7 +47,11 @@ pub(crate) fn resolve_version_references(
     };
     let direct_dependencies: HashMap<&str, &str> = root_manifest
         .as_ref()
-        .map(|manifest| manifest.dependencies(REFERENCEABLE_GROUPS).collect())
+        .map(|manifest| {
+            manifest
+                .dependencies(REFERENCEABLE_GROUPS)
+                .collect()
+        })
         .unwrap_or_default();
     for spec in overrides.values_mut() {
         let Some(dependency_name) = spec.strip_prefix('$') else { continue };

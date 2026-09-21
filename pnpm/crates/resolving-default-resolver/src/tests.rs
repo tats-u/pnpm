@@ -17,7 +17,9 @@ fn fake_resolution() -> LockfileResolution {
 }
 
 fn fake_name_ver() -> PkgNameVer {
-    "lodash@4.17.21".parse().expect("parse fake PkgNameVer")
+    "lodash@4.17.21"
+        .parse()
+        .expect("parse fake PkgNameVer")
 }
 
 /// Resolver that claims any wanted dep whose `bare_specifier` starts
@@ -35,7 +37,10 @@ impl Resolver for PrefixResolver {
         _opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         Box::pin(async move {
-            let bare = wanted_dependency.bare_specifier.as_deref().unwrap_or("");
+            let bare = wanted_dependency
+                .bare_specifier
+                .as_deref()
+                .unwrap_or("");
             if !bare.starts_with(self.prefix) {
                 return Ok(None);
             }
@@ -77,7 +82,10 @@ async fn empty_chain_returns_spec_not_supported_error() {
         ..WantedDependency::default()
     };
 
-    let err = resolver.resolve(&wd, &opts).await.expect_err("empty chain should error");
+    let err = resolver
+        .resolve(&wd, &opts)
+        .await
+        .expect_err("empty chain should error");
     let downcast = err
         .downcast_ref::<SpecNotSupportedByAnyResolverError>()
         .expect("error should be SpecNotSupportedByAnyResolverError");
@@ -98,21 +106,30 @@ async fn first_claiming_resolver_wins() {
         bare_specifier: Some("git+ssh://git@github.com/foo/bar".to_string()),
         ..WantedDependency::default()
     };
-    let outcome = resolver.resolve(&wd_git, &opts).await.expect("git resolves");
+    let outcome = resolver
+        .resolve(&wd_git, &opts)
+        .await
+        .expect("git resolves");
     assert_eq!(outcome.resolved_via, "git", "first matching resolver wins, not the fallback");
 
     let wd_tarball = WantedDependency {
         bare_specifier: Some("https://example.com/foo.tgz".to_string()),
         ..WantedDependency::default()
     };
-    let outcome = resolver.resolve(&wd_tarball, &opts).await.expect("tarball resolves");
+    let outcome = resolver
+        .resolve(&wd_tarball, &opts)
+        .await
+        .expect("tarball resolves");
     assert_eq!(outcome.resolved_via, "tarball");
 
     let wd_other = WantedDependency {
         bare_specifier: Some("1.2.3".to_string()),
         ..WantedDependency::default()
     };
-    let outcome = resolver.resolve(&wd_other, &opts).await.expect("fallback resolves");
+    let outcome = resolver
+        .resolve(&wd_other, &opts)
+        .await
+        .expect("fallback resolves");
     assert_eq!(outcome.resolved_via, "fallback");
 }
 
@@ -156,6 +173,9 @@ async fn resolve_latest_returns_none_when_chain_empty() {
     let opts = ResolveOptions::default();
     let query = LatestQuery { wanted_dependency: WantedDependency::default(), compatible: false };
 
-    let info = resolver.resolve_latest(&query, &opts).await.expect("latest doesn't error");
+    let info = resolver
+        .resolve_latest(&query, &opts)
+        .await
+        .expect("latest doesn't error");
     assert!(info.is_none(), "resolve_latest should fall through to None on an empty chain");
 }

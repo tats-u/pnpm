@@ -30,7 +30,11 @@ fn exceeding_length_replaces_with_hash_suffix() {
     assert_eq!(got.len(), 60);
     assert!(got.contains('_'));
     let hash_part = &got[got.len() - 32..];
-    assert!(hash_part.chars().all(|c| c.is_ascii_hexdigit()));
+    assert!(
+        hash_part
+            .chars()
+            .all(|c| c.is_ascii_hexdigit())
+    );
 }
 
 #[test]

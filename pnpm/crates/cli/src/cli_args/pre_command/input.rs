@@ -101,7 +101,11 @@ impl PinFlags {
 
     fn of_install(args: &InstallArgs) -> Self {
         Self {
-            lockfile_dir: args.lockfile.directory.lockfile_dir.clone(),
+            lockfile_dir: args
+                .lockfile
+                .directory
+                .lockfile_dir
+                .clone(),
             offline: typed_flag(args.network_cache.offline, args.network_cache.no_offline),
             prefer_offline: typed_flag(
                 args.network_cache.prefer_offline,
@@ -183,7 +187,8 @@ pub(super) fn should_skip_command(command: &CliCommand) -> bool {
     // else stays its manager's job and still fails the check.
     if let CliCommand::Add(args) = command
         && !args.package_names.is_empty()
-        && args.package_names
+        && args
+            .package_names
             .iter()
             .all(|request| {
                 crate::engine_pm::pin::declared_package_manager(request.selector()).is_some()
@@ -249,7 +254,9 @@ pub(super) fn should_skip_command_name(command: &str) -> bool {
 }
 
 pub(super) fn package_manager_switch_disabled() -> bool {
-    PACKAGE_MANAGER_SWITCH_ENV_VARS.into_iter().any(env_var_is_false)
+    PACKAGE_MANAGER_SWITCH_ENV_VARS
+        .into_iter()
+        .any(env_var_is_false)
 }
 
 fn env_var_is_false(name: &str) -> bool {
@@ -296,9 +303,16 @@ impl SwitchInput {
             command: Some(command_name(&args.command).to_string()),
             frozen_lockfile: frozen_lockfile_flag(&args.command),
             pin_flags: PinFlags::of(&args.command),
-            color: args.output.presentation.color.or_else(|| {
-                args.output.presentation.no_color.then_some(ColorMode::Never)
-            }),
+            color: args
+                .output
+                .presentation
+                .color
+                .or_else(|| {
+                    args.output
+                        .presentation
+                        .no_color
+                        .then_some(ColorMode::Never)
+                }),
             ignore_workspace: args.paths.ignore_workspace,
         }
     }
@@ -452,7 +466,10 @@ fn long_value<'a>(
 /// alias) added to [`CliArgs`] is accounted for here without a second edit.
 fn consumes_next_token(token: &str, global_options: &ArgTable) -> bool {
     if let Some(name) = token.strip_prefix("--") {
-        return !name.contains('=') && global_options.long_consumes_value(name).unwrap_or(false);
+        return !name.contains('=')
+            && global_options
+                .long_consumes_value(name)
+                .unwrap_or(false);
     }
     let Some(rest) = token
         .strip_prefix('-')
@@ -464,5 +481,8 @@ fn consumes_next_token(token: &str, global_options: &ArgTable) -> bool {
         .chars()
         .next()
         .expect("checked non-empty");
-    rest.chars().count() == 1 && global_options.short_consumes_value(short).unwrap_or(false)
+    rest.chars().count() == 1
+        && global_options
+            .short_consumes_value(short)
+            .unwrap_or(false)
 }

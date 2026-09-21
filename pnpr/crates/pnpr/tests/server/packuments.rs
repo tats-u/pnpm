@@ -253,7 +253,11 @@ async fn osv_filters_vulnerable_versions_from_proxy_and_cache() {
     assert!(body["versions"].get("1.1.0").is_none());
     assert!(body["time"].get("1.1.0").is_none());
     assert_eq!(body["versions"]["1.0.0"]["version"], "1.0.0");
-    assert!(body["dist-tags"].get("latest").is_none());
+    assert!(
+        body["dist-tags"]
+            .get("latest")
+            .is_none()
+    );
     assert_eq!(body["dist-tags"]["stable"], "1.0.0");
 
     let cached = app
@@ -267,9 +271,21 @@ async fn osv_filters_vulnerable_versions_from_proxy_and_cache() {
         .unwrap();
     assert_eq!(cached.status(), StatusCode::OK);
     let cached_body = body_json(cached.into_body()).await;
-    assert!(cached_body["versions"].get("1.1.0").is_none());
-    assert!(cached_body["time"].get("1.1.0").is_none());
-    assert!(cached_body["dist-tags"].get("latest").is_none());
+    assert!(
+        cached_body["versions"]
+            .get("1.1.0")
+            .is_none()
+    );
+    assert!(
+        cached_body["time"]
+            .get("1.1.0")
+            .is_none()
+    );
+    assert!(
+        cached_body["dist-tags"]
+            .get("latest")
+            .is_none()
+    );
     assert_eq!(cached_body["dist-tags"]["stable"], "1.0.0");
 
     let vulnerable_manifest = app
@@ -505,7 +521,9 @@ async fn packument_is_gzipped_for_clients_that_accept_it() {
     // Decoding yields the same rewritten JSON a plain request would return.
     let gzipped = body_bytes(response.into_body()).await;
     let mut decoded = Vec::new();
-    GzDecoder::new(&gzipped[..]).read_to_end(&mut decoded).expect("decode gzip");
+    GzDecoder::new(&gzipped[..])
+        .read_to_end(&mut decoded)
+        .expect("decode gzip");
     let body: Value = serde_json::from_slice(&decoded).unwrap();
     assert_eq!(
         body["versions"]["1.0.0"]["dist"]["tarball"],

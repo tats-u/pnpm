@@ -67,11 +67,18 @@ async fn direct_optional_dep_seeds_resolved_package_optional_true() {
     .unwrap();
 
     assert!(
-        tree.packages.get("opt@1.0.0").expect("opt resolved").optional,
+        tree.packages
+            .get("opt@1.0.0")
+            .expect("opt resolved")
+            .optional,
         "direct optionalDependencies entry marks the resolved package optional",
     );
     assert!(
-        !tree.packages.get("regular@1.0.0").expect("regular resolved").optional,
+        !tree
+            .packages
+            .get("regular@1.0.0")
+            .expect("regular resolved")
+            .optional,
         "direct dependencies entry stays optional: false",
     );
 }
@@ -121,7 +128,10 @@ async fn transitive_dep_under_optional_inherits_optional_true() {
     .unwrap();
 
     assert!(
-        tree.packages.get("transitive@1.0.0").expect("transitive resolved").optional,
+        tree.packages
+            .get("transitive@1.0.0")
+            .expect("transitive resolved")
+            .optional,
         "child of an optional-only parent inherits optional: true",
     );
 }
@@ -180,7 +190,10 @@ async fn shared_dep_via_non_optional_and_optional_paths_keeps_optional_false() {
     .await
     .unwrap();
 
-    let shared = tree.packages.get("shared@1.0.0").expect("shared resolved");
+    let shared = tree
+        .packages
+        .get("shared@1.0.0")
+        .expect("shared resolved");
     assert!(
         !shared.optional,
         "AND-fold: a non-optional path through any consumer wins over an optional one",
@@ -232,11 +245,18 @@ async fn manifest_level_optional_dependencies_edge_propagates_to_child() {
     .unwrap();
 
     assert!(
-        !tree.packages.get("regular@1.0.0").expect("regular resolved").optional,
+        !tree
+            .packages
+            .get("regular@1.0.0")
+            .expect("regular resolved")
+            .optional,
         "regular dep stays non-optional",
     );
     assert!(
-        tree.packages.get("transitive@1.0.0").expect("transitive resolved").optional,
+        tree.packages
+            .get("transitive@1.0.0")
+            .expect("transitive resolved")
+            .optional,
         "child reached only via a parent's optionalDependencies edge is optional",
     );
 }
@@ -288,10 +308,14 @@ async fn dep_listed_in_both_manifest_groups_yields_one_optional_edge() {
     .unwrap();
 
     assert!(
-        tree.packages.get("plat@1.0.0").expect("plat resolved").optional,
+        tree.packages
+            .get("plat@1.0.0")
+            .expect("plat resolved")
+            .optional,
         "the merged edge carries optional: true",
     );
-    let plat_calls = resolver.calls
+    let plat_calls = resolver
+        .calls
         .lock()
         .unwrap()
         .iter()

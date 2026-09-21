@@ -20,7 +20,9 @@ pub fn resolve_pnpmfile_paths(
         return Ok(Vec::new());
     }
     finder::validate_configured_pnpmfiles(pnpm_package_manager::pnpmfile_selection(config))?;
-    let config_modules_dir = root_dir.join("node_modules").join(".pnpm-config");
+    let config_modules_dir = root_dir
+        .join("node_modules")
+        .join(".pnpm-config");
     let mut pnpmfiles: Vec<PathBuf> = match config.config_dependencies.as_ref() {
         Some(deps) => finder::calc_pnpmfile_paths_of_plugin_deps(
             &config_modules_dir,
@@ -46,9 +48,14 @@ pub fn may_update_config(config: &Config, root_dir: &Path) -> bool {
     if config.ignore_pnpmfile {
         return false;
     }
-    let has_config_plugin = config.config_dependencies
+    let has_config_plugin = config
+        .config_dependencies
         .as_ref()
-        .is_some_and(|dependencies| dependencies.keys().any(|name| finder::is_plugin_name(name)));
+        .is_some_and(|dependencies| {
+            dependencies
+                .keys()
+                .any(|name| finder::is_plugin_name(name))
+        });
     has_config_plugin
         || !finder::find_pnpmfiles(root_dir, pnpm_package_manager::pnpmfile_selection(config))
             .is_empty()
@@ -82,7 +89,9 @@ pub async fn prepare_config<Reporter: self::Reporter>(
     config: &mut Config,
     dir: &Path,
 ) -> Result<Vec<Arc<dyn PnpmfileHooks>>> {
-    let config_root = config.root_project_manifest_dir(dir).to_path_buf();
+    let config_root = config
+        .root_project_manifest_dir(dir)
+        .to_path_buf();
     install_config_deps::<Reporter>(config, &config_root, config.frozen_lockfile.unwrap_or(false))
         .await?;
     run_update_config_hooks::<Reporter>(config, &config_root).await
@@ -158,7 +167,9 @@ pub async fn run_update_config_hooks<Reporter: self::Reporter>(
 /// manifest's, else the root.
 fn hook_base_dir(root_dir: &Path) -> Result<PathBuf> {
     Ok(match WorkspaceSettings::find_and_load(root_dir).into_diagnostic()? {
-        Some((path, _)) => path.parent().map_or_else(|| root_dir.to_path_buf(), Path::to_path_buf),
+        Some((path, _)) => path
+            .parent()
+            .map_or_else(|| root_dir.to_path_buf(), Path::to_path_buf),
         None => root_dir.to_path_buf(),
     })
 }
@@ -195,10 +206,8 @@ fn seed_hook_input(
         "extraBinPaths".to_string(),
         serde_json::to_value(&config.extra_bin_paths).into_diagnostic()?,
     );
-    object.insert(
-        "extraEnv".to_string(),
-        serde_json::to_value(&config.extra_env).into_diagnostic()?,
-    );
+    object
+        .insert("extraEnv".to_string(), serde_json::to_value(&config.extra_env).into_diagnostic()?);
     object.append(&mut resolved_config_views(config, root_dir).into_diagnostic()?);
     // The pnpmfiles being run, which is what the setting resolves to and
     // what pnpm reports, rather than only a pinned `pnpmfile` value.
@@ -224,7 +233,11 @@ fn apply_hook_delta(
     // trace in the delta.
     let script_shell_deleted =
         input.get("scriptShell").is_some() && current.get("scriptShell").is_none();
-    if delta.as_object().is_none_or(serde_json::Map::is_empty) && !script_shell_deleted {
+    if delta
+        .as_object()
+        .is_none_or(serde_json::Map::is_empty)
+        && !script_shell_deleted
+    {
         return Ok(());
     }
     let changed_store_dir = delta
@@ -234,10 +247,8 @@ fn apply_hook_delta(
     // `extraBinPaths` / `extraEnv` aren't `WorkspaceSettings` fields, so
     // `from_value(delta)` below ignores them. Pull the hook's values out
     // first and assign them directly.
-    let HookExecutionChanges {
-        changed_extra_bin_paths,
-        changed_extra_env,
-    } = hook_execution_changes(&delta)?;
+    let HookExecutionChanges { changed_extra_bin_paths, changed_extra_env } =
+        hook_execution_changes(&delta)?;
     apply_registry_routing_changes(config, &delta)?;
 
     let delta_settings: WorkspaceSettings = serde_json::from_value(delta.clone())
@@ -373,7 +384,9 @@ fn resolved_config_views(
     // config carries as the `registry` setting. The prefix map reports only
     // the prefixes the project declares, and nothing when it declares none,
     // as pnpm 11 does.
-    let mut registries_by_scope = config.resolved_registry_lookups().registries_by_scope;
+    let mut registries_by_scope = config
+        .resolved_registry_lookups()
+        .registries_by_scope;
     registries_by_scope.insert("default".to_string(), config.registry.clone());
     set("registriesByScope", serde_json::to_value(&registries_by_scope)?);
     if !config.registries_by_prefix.is_empty() {
@@ -385,7 +398,8 @@ fn resolved_config_views(
     // answer the URL the install fetches from rather than whichever
     // `.npmrc` line happened to name one. `pnpm config list` merges them
     // the same way.
-    let mut auth_config: serde_json::Map<String, Value> = config.raw_auth_config
+    let mut auth_config: serde_json::Map<String, Value> = config
+        .raw_auth_config
         .iter()
         .map(|(k, v)| (k.clone(), Value::String(v.clone())))
         .collect();
@@ -478,9 +492,12 @@ fn apply_hook_store_dir(
     if let Some(store_dir) = changed_store_dir {
         apply_store_dir_override::<Host>(config, Path::new(store_dir), base_dir)?;
     } else {
-        let virtual_store_dir_explicit = config.explicit_settings.contains_key("virtualStoreDir");
-        let global_virtual_store_dir_explicit =
-            config.explicit_settings.contains_key("globalVirtualStoreDir");
+        let virtual_store_dir_explicit = config
+            .explicit_settings
+            .contains_key("virtualStoreDir");
+        let global_virtual_store_dir_explicit = config
+            .explicit_settings
+            .contains_key("globalVirtualStoreDir");
         config.apply_global_virtual_store_derivation(
             virtual_store_dir_explicit,
             global_virtual_store_dir_explicit,

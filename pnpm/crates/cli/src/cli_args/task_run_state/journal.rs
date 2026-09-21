@@ -203,7 +203,9 @@ impl TaskRunStateContext {
     ) -> Result<File, StateStorageError> {
         let latest_write = pnpm_fs::write_atomic(
             &self.latest_state_path,
-            serde_json::to_string(header).expect("latest task state serializes").as_bytes(),
+            serde_json::to_string(header)
+                .expect("latest task state serializes")
+                .as_bytes(),
         );
         if let Err(error) = latest_write {
             drop(file);

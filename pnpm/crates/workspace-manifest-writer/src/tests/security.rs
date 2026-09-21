@@ -12,7 +12,9 @@ fn set_allow_builds_replaces_a_symlinked_manifest_without_following_it() {
     // A file outside the manifest that a malicious symlink would target.
     let outside = dir.path().join("outside.txt");
     fs::write(&outside, "").expect("seed outside file");
-    let manifest = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let manifest = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     symlink(&outside, &manifest).expect("symlink the manifest to the outside file");
 
     crate::set_allow_builds(dir.path(), [("esbuild", true)]).expect("update succeeds");

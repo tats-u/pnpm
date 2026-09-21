@@ -79,7 +79,10 @@ pub fn is_workspace_project_dir(
     }
 
     let default_patterns = [".".to_string(), "**".to_string()];
-    let patterns: &[String] = opts.patterns.as_deref().unwrap_or(&default_patterns);
+    let patterns: &[String] = opts
+        .patterns
+        .as_deref()
+        .unwrap_or(&default_patterns);
     let (include_patterns, user_negation_globs) = split_include_and_negation(patterns)?;
     let user_negations = compile_user_negations(&user_negation_globs)?;
 

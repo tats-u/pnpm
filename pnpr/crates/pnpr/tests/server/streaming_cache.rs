@@ -156,20 +156,16 @@ async fn concurrent_tarball_fetches_settle_to_one_cache_file() {
         .unwrap();
     assert_eq!(packument.status(), StatusCode::OK);
 
-    let req1 = app
-        .clone()
-        .oneshot(
-            Request::get("/foo/-/foo-1.0.0.tgz")
-                .body(Body::empty())
-                .unwrap(),
-        );
-    let req2 = app
-        .clone()
-        .oneshot(
-            Request::get("/foo/-/foo-1.0.0.tgz")
-                .body(Body::empty())
-                .unwrap(),
-        );
+    let req1 = app.clone().oneshot(
+        Request::get("/foo/-/foo-1.0.0.tgz")
+            .body(Body::empty())
+            .unwrap(),
+    );
+    let req2 = app.clone().oneshot(
+        Request::get("/foo/-/foo-1.0.0.tgz")
+            .body(Body::empty())
+            .unwrap(),
+    );
     let (r1, r2) = tokio::join!(req1, req2);
     let (r1, r2) = (r1.unwrap(), r2.unwrap());
     assert_eq!(r1.status(), StatusCode::OK);
@@ -268,7 +264,9 @@ async fn upstream_stream_error_clears_cache() {
     // failure surfaces as a body error mid-stream rather than a status code.
     assert_eq!(response.status(), StatusCode::OK);
     assert!(
-        axum::body::to_bytes(response.into_body(), usize::MAX).await.is_err(),
+        axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .is_err(),
         "a truncated upstream body must surface as a body error",
     );
 
@@ -371,8 +369,12 @@ async fn per_upstream_maxage_overrides_global_packument_ttl() {
     // Global TTL stays generous (a minute); the per-upstream maxage of zero
     // is what must take effect and make every read stale.
     config.http.packument_ttl = Duration::from_mins(1);
-    config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream").maxage =
-        Some(Duration::from_millis(0));
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream")
+        .maxage = Some(Duration::from_millis(0));
     let app = router(config);
 
     let r1 = app
@@ -421,7 +423,12 @@ async fn cache_false_upstream_streams_tarball_without_mirroring() {
     let tmp = TempDir::new().unwrap();
     let cache_dir = tmp.path().to_path_buf();
     let mut config = config_for(&upstream.url(), cache_dir.clone());
-    config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream").cache = false;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream")
+        .cache = false;
     let app = router(config);
 
     for _ in 0..2 {

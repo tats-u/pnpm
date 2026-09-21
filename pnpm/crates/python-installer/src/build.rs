@@ -38,13 +38,14 @@ impl PythonPrepare<'_> {
     ) -> Result<BTreeMap<PackageName, Build>> {
         let mut built = BTreeMap::new();
         for project in projects {
-            let wheel = self.build::<Reporter>(Buildable {
-                root: &project.root,
-                manifest: &project.manifest,
-                editable: project.editable,
-                contract: Contract::Manifest,
-            })
-            .await?;
+            let wheel = self
+                .build::<Reporter>(Buildable {
+                    root: &project.root,
+                    manifest: &project.manifest,
+                    editable: project.editable,
+                    contract: Contract::Manifest,
+                })
+                .await?;
             built.insert(project.name.clone(), wheel);
         }
         Ok(built)
@@ -76,11 +77,10 @@ impl PythonPrepare<'_> {
         if !unapproved.is_empty() {
             return Ok(Build::NotApproved(unapproved));
         }
-        let cached = manifest.metadata_wheel
+        let cached = manifest
+            .metadata_wheel
             .as_ref()
-            .filter(|wheel| {
-                !source.editable && wheel.interpreter == self.interpreter.executable
-            });
+            .filter(|wheel| !source.editable && wheel.interpreter == self.interpreter.executable);
         let (built, output) = if let Some(cached) = cached {
             let metadata = host::inspect(&self.interpreter.executable, &cached.wheel.files)
                 .await
@@ -95,13 +95,17 @@ impl PythonPrepare<'_> {
                 "metadata_directory": manifest.metadata_output.as_ref().zip(manifest.metadata.as_ref())
                     .map(|(output, metadata)| output.path().join(&metadata.dist_info)),
             });
-            let environment =
-                match self.build_environment::<Reporter>(root, requires, &request).await? {
-                    BuildEnvironment::Ready(environment) => environment,
-                    BuildEnvironment::NotApproved(names) => return Ok(Build::NotApproved(names)),
-                };
+            let environment = match self
+                .build_environment::<Reporter>(root, requires, &request)
+                .await?
+            {
+                BuildEnvironment::Ready(environment) => environment,
+                BuildEnvironment::NotApproved(names) => return Ok(Build::NotApproved(names)),
+            };
             let output = tempfile::tempdir().into_diagnostic()?;
-            let built = self.run_backend(root, environment, &output, request).await?;
+            let built = self
+                .run_backend(root, environment, &output, request)
+                .await?;
             (built, Arc::new(output))
         };
         self.finish_build(source, built, output)
@@ -166,14 +170,28 @@ impl PythonPrepare<'_> {
                 built.wheel.filename,
             );
         }
-        let Some(declared) = built.metadata.requires_python.as_deref() else { return Ok(()) };
+        let Some(declared) = built
+            .metadata
+            .requires_python
+            .as_deref()
+        else {
+            return Ok(());
+        };
         let specifiers: pep440_rs::VersionSpecifiers = declared.parse().into_diagnostic()?;
-        if !specifiers.contains(self.interpreter.target.environment.python_full_version()) {
+        if !specifiers.contains(
+            self.interpreter
+                .target
+                .environment
+                .python_full_version(),
+        ) {
             bail!(
                 "the Python project at {} built a wheel requiring Python {specifiers}, but {} was \
                  selected",
                 root.display(),
-                self.interpreter.target.environment.python_full_version(),
+                self.interpreter
+                    .target
+                    .environment
+                    .python_full_version(),
             );
         }
         Ok(())
@@ -189,7 +207,8 @@ impl PythonPrepare<'_> {
         let system = manifest.build_system.as_ref();
         let mut requires = system
             .map(|system| {
-                system.requires
+                system
+                    .requires
                     .iter()
                     .map(String::as_str)
                     .collect::<Vec<_>>()
@@ -197,7 +216,10 @@ impl PythonPrepare<'_> {
             .unwrap_or_default();
         // PEP 517 has a project that names no backend built by setuptools'
         // legacy one, whether or not it thought to require it.
-        if system.and_then(|system| system.build_backend.as_ref()).is_none() {
+        if system
+            .and_then(|system| system.build_backend.as_ref())
+            .is_none()
+        {
             requires.extend(DEFAULT_REQUIRES.iter().copied());
         }
         self.usable_build_requirements(root, requires)
@@ -217,7 +239,10 @@ impl PythonPrepare<'_> {
         let mut usable = Vec::new();
         for requirement in requires {
             let requirement = parse_requirement(requirement)?;
-            if !requirement.marker.evaluate(environment, &[]) {
+            if !requirement
+                .marker
+                .evaluate(environment, &[])
+            {
                 continue;
             }
             if members.is_some_and(|members| members.contains(&requirement.name)) {
@@ -247,7 +272,9 @@ impl PythonPrepare<'_> {
         mut requires: Vec<pep508_rs::Requirement>,
         request: &serde_json::Value,
     ) -> Result<BuildEnvironment> {
-        let declared = self.install_requirements::<Reporter>(&requires).await?;
+        let declared = self
+            .install_requirements::<Reporter>(&requires)
+            .await?;
         let extra: Vec<String> =
             host::run(&interpreter(declared.path()), "build_requires", request.clone()).await?;
         if extra.is_empty() {
@@ -262,7 +289,9 @@ impl PythonPrepare<'_> {
             return Ok(BuildEnvironment::NotApproved(unapproved));
         }
         requires.extend(asked);
-        self.install_requirements::<Reporter>(&requires).await.map(BuildEnvironment::Ready)
+        self.install_requirements::<Reporter>(&requires)
+            .await
+            .map(BuildEnvironment::Ready)
     }
 
     /// An environment holding exactly these requirements. Builds share
@@ -280,7 +309,9 @@ impl PythonPrepare<'_> {
             bail!("cyclic Python build requirements: {}", key.1);
         }
         let entry = Arc::clone(
-            self.state.caches.build_environments
+            self.state
+                .caches
+                .build_environments
                 .lock()
                 .await
                 .entry(key.clone())
@@ -293,13 +324,19 @@ impl PythonPrepare<'_> {
             // may need the environment this chain is currently preparing.
             match entry.try_lock() {
                 Ok(environment) => environment,
-                Err(_) => return self.install_nested_requirements::<Reporter>(requires, key).await,
+                Err(_) => {
+                    return self
+                        .install_nested_requirements::<Reporter>(requires, key)
+                        .await;
+                }
             }
         };
         if let Some(root) = environment.as_ref() {
             return Ok(Arc::clone(root));
         }
-        let root = self.install_nested_requirements::<Reporter>(requires, key).await?;
+        let root = self
+            .install_nested_requirements::<Reporter>(requires, key)
+            .await?;
         *environment = Some(Arc::clone(&root));
         Ok(root)
     }
@@ -311,7 +348,9 @@ impl PythonPrepare<'_> {
     ) -> Result<Arc<tempfile::TempDir>> {
         let mut prepare = self.clone();
         prepare.state.building.insert(key);
-        prepare.install_build_requirements::<Reporter>(requires).await
+        prepare
+            .install_build_requirements::<Reporter>(requires)
+            .await
     }
 
     fn build_environment_key(
@@ -328,7 +367,10 @@ impl PythonPrepare<'_> {
             format!(
                 "{} {}",
                 self.interpreter.executable,
-                self.interpreter.target.environment.python_full_version(),
+                self.interpreter
+                    .target
+                    .environment
+                    .python_full_version(),
             ),
             requirements.join(" "),
         )
@@ -349,7 +391,11 @@ impl PythonPrepare<'_> {
             &self.interpreter.executable,
             root.path(),
             wheels,
-            match self.context.config.package_import_method {
+            match self
+                .context
+                .config
+                .package_import_method
+            {
                 pnpm_config::PackageImportMethod::Auto
                 | pnpm_config::PackageImportMethod::Hardlink => {
                     pnpm_config::PackageImportMethod::CloneOrCopy
@@ -441,7 +487,9 @@ fn backend(manifest: &Manifest) -> Backend {
         module: declared
             .and_then(|system| system.build_backend.clone())
             .unwrap_or_else(|| DEFAULT_BACKEND.to_string()),
-        path: declared.map(|system| system.backend_path.clone()).unwrap_or_default(),
+        path: declared
+            .map(|system| system.backend_path.clone())
+            .unwrap_or_default(),
     }
 }
 

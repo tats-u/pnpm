@@ -7,7 +7,9 @@ use pnpm_testing_utils::{
 use std::{fs, path::Path, process::Command};
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn write_project_config(root: &Path, workspace: &Path, registry: &str, credentials: &str) {
@@ -37,7 +39,9 @@ fn assert_authenticated_install(
     let CommandTempCwd { root, workspace, .. } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let registry_url = registry.url();
-    let authority = registry_url.strip_prefix("http://").expect("mock registry is HTTP");
+    let authority = registry_url
+        .strip_prefix("http://")
+        .expect("mock registry is HTTP");
     write_project_config(root.path(), &workspace, &registry_url, &credentials(authority));
 
     let tarball = minimal_tarball(package, "1.0.0");
@@ -317,7 +321,9 @@ fn scoped_registry_auth_env_warns_and_uses_configured_auth_for_frozen_verificati
     let workspace = dunce::canonicalize(&workspace).expect("canonicalize workspace");
     let mut registry = mockito::Server::new();
     let registry_url = format!("{}/api/v4/projects/96/packages/npm", registry.url());
-    let authority = registry_url.strip_prefix("http://").unwrap();
+    let authority = registry_url
+        .strip_prefix("http://")
+        .unwrap();
     let credentials = format!("//{authority}/:_authToken=${{REGISTRY_TOKEN}}\n");
     write_project_config(root.path(), &workspace, &registry.url(), "");
     fs::write(
@@ -367,7 +373,12 @@ snapshots:
         eprintln!("stderr={stderr}");
         assert!(!output.status.success());
         assert!(stderr.contains("ERR_PNPM_META_FETCH_FAIL"), "got {stderr}");
-        assert_eq!(stderr.matches("Ignored project-level auth setting").count(), 1);
+        assert_eq!(
+            stderr
+                .matches("Ignored project-level auth setting")
+                .count(),
+            1
+        );
         let stdout = String::from_utf8_lossy(&output.stdout);
         eprintln!("stdout={stdout}");
         assert!(!stdout.contains("Ignored project-level auth setting"));
@@ -418,7 +429,11 @@ snapshots:
         if uses_project_auth_file {
             assert!(!stderr.contains("Ignored project-level auth setting"), "got {stderr}");
         }
-        assert!(workspace.join("node_modules/@private/foo").exists());
+        assert!(
+            workspace
+                .join("node_modules/@private/foo")
+                .exists()
+        );
         fs::remove_dir_all(workspace.join("node_modules")).unwrap();
         fs::remove_dir_all(root.path().join("store")).unwrap();
         fs::remove_dir_all(root.path().join("cache")).unwrap();

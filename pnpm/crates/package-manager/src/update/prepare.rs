@@ -89,10 +89,12 @@ impl SelectedUpdatePreparation {
                 .extend(selectors);
         }
         if !prepared.bump_targets.is_empty() {
-            self.bump_targets.insert(importer_id.clone(), prepared.bump_targets);
+            self.bump_targets
+                .insert(importer_id.clone(), prepared.bump_targets);
         }
         if let Some(policy) = importer_seed_policy(prepared.seed_policy) {
-            self.seed_policies.insert(importer_id, policy);
+            self.seed_policies
+                .insert(importer_id, policy);
         }
         if prepared.persist_manifest {
             self.persist_indices.push(index);
@@ -101,7 +103,10 @@ impl SelectedUpdatePreparation {
         if let Some(complete_catalogs) = prepared.catalogs_override {
             self.catalogs_override = Some(complete_catalogs);
         }
-        if self.workspace_dir_for_catalogs.is_none() {
+        if self
+            .workspace_dir_for_catalogs
+            .is_none()
+        {
             self.workspace_dir_for_catalogs = prepared.workspace_dir_for_catalogs;
         }
     }
@@ -119,18 +124,16 @@ pub(super) fn update_read_package_hook<Reporter: self::Reporter>(
     else {
         return Ok(None);
     };
-    let log = hook
-        .source_path()
-        .map_or_else(
-            || Arc::new(|_| {}) as pnpm_hooks::LogFn,
-            |from| {
-                crate::install_with_fresh_lockfile::hook_log_fn::<Reporter>(
-                    workspace_root,
-                    from,
-                    "readPackage",
-                )
-            },
-        );
+    let log = hook.source_path().map_or_else(
+        || Arc::new(|_| {}) as pnpm_hooks::LogFn,
+        |from| {
+            crate::install_with_fresh_lockfile::hook_log_fn::<Reporter>(
+                workspace_root,
+                from,
+                "readPackage",
+            )
+        },
+    );
     Ok(Some((hook, log)))
 }
 pub(super) async fn apply_read_package_hook_to_update_manifest(
@@ -252,12 +255,7 @@ pub(super) fn apply_update_decision<Reporter: self::Reporter>(
     update: UpdateOptions<'_>,
     decision: UpdateDecision,
 ) -> Result<UpdatePreparation, UpdateError> {
-    let UpdateDecision {
-        mut plan,
-        seed_policy,
-        direct,
-        mut catalog_ctx,
-    } = decision;
+    let UpdateDecision { mut plan, seed_policy, direct, mut catalog_ctx } = decision;
     // Reconcile only manifest rewrites. Existing `catalog:` references retain
     // their group, and non-manual catalog modes may promote direct versions.
     let mut updated_catalogs = Catalogs::new();
@@ -292,7 +290,9 @@ pub(super) fn apply_rewrites(
     rewrites: &[(String, DependencyGroup, String)],
 ) -> Result<(), UpdateError> {
     for (name, group, specifier) in rewrites {
-        manifest.add_dependency(name, specifier, *group).map_err(UpdateError::UpdateManifest)?;
+        manifest
+            .add_dependency(name, specifier, *group)
+            .map_err(UpdateError::UpdateManifest)?;
     }
     Ok(())
 }
@@ -303,7 +303,9 @@ pub(super) fn merged_catalogs_override(
     updated_catalogs: &Catalogs,
 ) -> Option<Catalogs> {
     (!updated_catalogs.is_empty()).then(|| {
-        let mut merged = catalog_ctx.map(|ctx| ctx.catalogs.clone()).unwrap_or_default();
+        let mut merged = catalog_ctx
+            .map(|ctx| ctx.catalogs.clone())
+            .unwrap_or_default();
         merge_catalogs(&mut merged, updated_catalogs);
         merged
     })

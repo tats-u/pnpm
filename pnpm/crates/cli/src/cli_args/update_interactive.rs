@@ -172,7 +172,10 @@ pub(crate) async fn select_packages<Reporter: self::Reporter>(
             &mut choices,
             root,
             options.latest,
-            config.update_config.github_actions_server.as_deref(),
+            config
+                .update_config
+                .github_actions_server
+                .as_deref(),
         )
         .await?;
     }
@@ -192,9 +195,14 @@ pub(crate) async fn select_packages_for_projects<Reporter: self::Reporter>(
     http_client: &Arc<ThrottledClient>,
     options: InteractiveUpdateOptions<'_>,
 ) -> miette::Result<Option<Vec<String>>> {
-    let projects = selection.projects
+    let projects = selection
+        .projects
         .iter()
-        .filter(|project| selection.selected_dirs.contains(&project.root_dir))
+        .filter(|project| {
+            selection
+                .selected_dirs
+                .contains(&project.root_dir)
+        })
         .map(|project| InteractiveUpdateProject {
             manifest: &project.manifest,
             importer_id: pnpm_workspace::importer_id_from_root_dir(
@@ -217,7 +225,10 @@ pub(crate) async fn select_packages_for_projects<Reporter: self::Reporter>(
             &mut choices,
             root,
             options.latest,
-            config.update_config.github_actions_server.as_deref(),
+            config
+                .update_config
+                .github_actions_server
+                .as_deref(),
         )
         .await?;
     }
@@ -258,19 +269,15 @@ async fn collect_choices(
         full_metadata: false,
     };
     let run = OutdatedRun::new(config, Arc::clone(http_client), &query)?;
-    let choices = futures_util::future::join_all(
-        projects
-            .iter()
-            .map(|project| {
-                collect_outdated_for_importer_in_run(
-                    project.manifest,
-                    lockfile,
-                    &project.importer_id,
-                    &query,
-                    &run,
-                )
-            }),
-    )
+    let choices = futures_util::future::join_all(projects.iter().map(|project| {
+        collect_outdated_for_importer_in_run(
+            project.manifest,
+            lockfile,
+            &project.importer_id,
+            &query,
+            &run,
+        )
+    }))
     .await;
     unique_choices(choices)
 }
@@ -354,7 +361,8 @@ fn flatten_groups(groups: &[choices::ChoiceGroup]) -> Vec<PromptRow> {
         let heading = format!("── {} ──", group.message);
         rows.push(PromptRow::Separator(bold(&heading)));
         rows.extend(
-            group.rows
+            group
+                .rows
                 .iter()
                 .map(|row| match &row.value {
                     None => PromptRow::Separator(format!("  {}", row.label)),
@@ -384,11 +392,13 @@ fn selected_packages(rows: &[PromptRow], indices: &[usize]) -> Vec<String> {
 }
 
 fn bold(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |text| text.bold()).to_string()
+    text.if_supports_color(Stream::Stdout, |text| text.bold())
+        .to_string()
 }
 
 fn cyan(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |text| text.cyan()).to_string()
+    text.if_supports_color(Stream::Stdout, |text| text.cyan())
+        .to_string()
 }
 
 mod choices;

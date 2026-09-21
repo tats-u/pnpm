@@ -32,7 +32,12 @@ impl CliArgs {
     }
 
     pub fn validate_command_scoped_global_options(&self) -> Result<(), clap::Error> {
-        if self.workspace.ordering.resume_from.is_some() {
+        if self
+            .workspace
+            .ordering
+            .resume_from
+            .is_some()
+        {
             self.validate_run_scoped_global_option("--resume-from")?;
         }
         if self.workspace.execution.report_summary {
@@ -65,8 +70,16 @@ impl CliArgs {
     /// the parsed args before dispatch; both the install fast-path bail
     /// and [`Self::run`] then observe the promoted flag.
     pub fn promote_recursive_for_filter(&mut self) {
-        if !self.workspace.selection.filter.is_empty()
-            || !self.workspace.selection.filter_prod.is_empty()
+        if !self
+            .workspace
+            .selection
+            .filter
+            .is_empty()
+            || !self
+                .workspace
+                .selection
+                .filter_prod
+                .is_empty()
         {
             self.workspace.recursive = true;
         }

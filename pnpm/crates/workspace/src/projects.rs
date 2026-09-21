@@ -174,11 +174,12 @@ fn dot_pruning_ignore_template() -> Result<wax::Any<'static>, FindWorkspaceProje
 /// matched against the path each entry has *from the workspace root*
 /// rather than handed to `Walk::not` alongside the built-in ignores.
 fn compile_user_negations(globs: &[String]) -> Result<wax::Any<'_>, FindWorkspaceProjectsError> {
-    wax::any(globs.iter().map(String::as_str))
-        .map_err(|err| FindWorkspaceProjectsError::InvalidGlob {
+    wax::any(globs.iter().map(String::as_str)).map_err(|err| {
+        FindWorkspaceProjectsError::InvalidGlob {
             pattern: "<negated pattern>".to_string(),
             message: err.to_string(),
-        })
+        }
+    })
 }
 
 fn read_projects(
@@ -234,11 +235,10 @@ fn parse_check_walk_patterns(
             let Some((_, normalized)) = split_parent_prefix(workspace_root, &normalized) else {
                 continue;
             };
-            Glob::new(normalized)
-                .map_err(|err| FindWorkspaceProjectsError::InvalidGlob {
-                    pattern: (*source).to_string(),
-                    message: err.to_string(),
-                })?;
+            Glob::new(normalized).map_err(|err| FindWorkspaceProjectsError::InvalidGlob {
+                pattern: (*source).to_string(),
+                message: err.to_string(),
+            })?;
         }
     }
     Ok(())
@@ -256,11 +256,10 @@ fn collect_negation_globs(
         return Ok(());
     };
     for normalized in normalize_manifest_patterns(&directory) {
-        Glob::new(&normalized)
-            .map_err(|err| FindWorkspaceProjectsError::InvalidGlob {
-                pattern: pattern.to_string(),
-                message: err.to_string(),
-            })?;
+        Glob::new(&normalized).map_err(|err| FindWorkspaceProjectsError::InvalidGlob {
+            pattern: pattern.to_string(),
+            message: err.to_string(),
+        })?;
         user_negation_globs.push(normalized);
     }
     Ok(())
@@ -313,7 +312,9 @@ fn merge_pattern_manifests(
     {
         return Err(error);
     }
-    Ok(merged.into_inner().expect("merge lock never poisoned"))
+    Ok(merged
+        .into_inner()
+        .expect("merge lock never poisoned"))
 }
 
 /// Group the manifests by the root directory they belong to, in `rootDir`
@@ -330,8 +331,12 @@ fn group_manifests_by_root(
 ) -> Vec<(PathBuf, Vec<PathBuf>)> {
     let mut sorted: Vec<PathBuf> = manifest_paths.into_iter().collect();
     sorted.sort_by(|left, right| {
-        let dir_left = left.parent().unwrap_or_else(|| Path::new(""));
-        let dir_right = right.parent().unwrap_or_else(|| Path::new(""));
+        let dir_left = left
+            .parent()
+            .unwrap_or_else(|| Path::new(""));
+        let dir_right = right
+            .parent()
+            .unwrap_or_else(|| Path::new(""));
         dir_left.cmp(dir_right)
     });
     let mut root_groups: Vec<(PathBuf, Vec<PathBuf>)> = Vec::new();
@@ -408,8 +413,8 @@ fn collect_glob_manifests(
         if is_literal_pattern(normalized) && !walk_root.join(normalized).is_file() {
             continue;
         }
-        let glob = Glob::new(normalized)
-            .map_err(|err| FindWorkspaceProjectsError::InvalidGlob {
+        let glob =
+            Glob::new(normalized).map_err(|err| FindWorkspaceProjectsError::InvalidGlob {
                 pattern: pattern.source.to_string(),
                 message: err.to_string(),
             })?;

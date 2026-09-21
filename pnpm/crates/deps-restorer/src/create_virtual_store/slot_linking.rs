@@ -41,7 +41,9 @@ pub(super) struct SlotDirGroup<'a> {
 }
 impl SlotDirGroup<'_> {
     pub(super) fn removed_aliases(&self) -> &[PkgName] {
-        self.merged_removed_aliases.as_deref().unwrap_or(self.representative.removed_aliases)
+        self.merged_removed_aliases
+            .as_deref()
+            .unwrap_or(self.representative.removed_aliases)
     }
 }
 /// Group `slots` by [`crate::VirtualStoreLayout::slot_dir`], preserving
@@ -88,9 +90,14 @@ pub(super) fn merge_into_slot_group<'a>(group: &mut SlotDirGroup<'a>, slot: &'a 
     if slot.removed_aliases.is_empty() {
         return;
     }
-    let merged = group.merged_removed_aliases.get_or_insert_with(|| {
-        group.representative.removed_aliases.to_vec()
-    });
+    let merged = group
+        .merged_removed_aliases
+        .get_or_insert_with(|| {
+            group
+                .representative
+                .removed_aliases
+                .to_vec()
+        });
     for alias in slot.removed_aliases {
         if !merged.contains(alias) {
             merged.push(alias.clone());
@@ -124,7 +131,9 @@ pub(super) fn link_cold_chunk<Reporter: self::Reporter>(
                 source: crate::SlotImportSource {
                     is_mutable: capture.source_is_mutable,
                     force: capture.force_import,
-                    build_marker: needs_build.then_some(marker_path).flatten(),
+                    build_marker: needs_build
+                        .then_some(marker_path)
+                        .flatten(),
                 },
                 snapshot_key: capture.snapshot_key,
                 snapshot: capture.snapshot,
@@ -162,8 +171,11 @@ pub(super) fn link_slots_parallel<Reporter: self::Reporter>(
 
     let phase_start = std::time::Instant::now();
     let groups = group_slots_by_dir(opts.slots, opts.link.layout);
-    let link_work =
-        || groups.par_iter().try_for_each(|group| link_slot_group::<Reporter>(group, &opts));
+    let link_work = || {
+        groups
+            .par_iter()
+            .try_for_each(|group| link_slot_group::<Reporter>(group, &opts))
+    };
     // Driving the link pass from inside an `async fn` means the
     // `par_iter` blocks the calling tokio worker for the duration. On
     // the production multi-thread runtime, `block_in_place` migrates

@@ -184,7 +184,8 @@ fn get_subgraph_to_build(
         }
         walked.insert(dep_path.clone());
 
-        let child_paths = ctx.children
+        let child_paths = ctx
+            .children
             .get(dep_path)
             .cloned()
             .unwrap_or_default();
@@ -232,7 +233,9 @@ fn node_builds(dep_path: &PackageKey, ctx: &GetSubgraphCtx<'_>) -> bool {
         .get(dep_path)
         .copied()
         .unwrap_or(false)
-        || ctx.patches.is_some_and(|patches| patches.contains_key(&dep_path.without_peer()))
+        || ctx
+            .patches
+            .is_some_and(|patches| patches.contains_key(&dep_path.without_peer()))
 }
 
 #[cfg(test)]

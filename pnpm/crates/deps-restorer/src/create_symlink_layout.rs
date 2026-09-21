@@ -75,7 +75,9 @@ pub fn create_symlink_layout(
             // otherwise let the symlink target or the symlink itself escape
             // the slot's `node_modules`, so guard each join.
             let symlink_target = safe_join_modules_dir(
-                &layout.slot_dir(&target).join("node_modules"),
+                &layout
+                    .slot_dir(&target)
+                    .join("node_modules"),
                 &target.name.to_string(),
             )
             .map_err(SymlinkPackageError::InvalidAlias)?;

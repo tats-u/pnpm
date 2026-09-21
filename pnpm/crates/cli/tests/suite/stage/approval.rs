@@ -191,7 +191,10 @@ fn approve_skips_a_staged_package_whose_selected_dependency_could_not_be_approve
         &["approve", STAGE_ID, SECOND_STAGE_ID, "--otp", "123456", "--reporter=silent"],
     );
 
-    for mock in described_mocks.iter().chain(&tarball_mocks) {
+    for mock in described_mocks
+        .iter()
+        .chain(&tarball_mocks)
+    {
         mock.assert();
     }
     dependency_mock.assert();
@@ -395,7 +398,10 @@ fn approve_rejects_duplicate_package_versions_before_approving_the_batch() {
         &["approve", STAGE_ID, SECOND_STAGE_ID, "--otp", "123456", "--reporter=silent"],
     );
 
-    for mock in described_mocks.iter().chain(&tarball_mocks) {
+    for mock in described_mocks
+        .iter()
+        .chain(&tarball_mocks)
+    {
         mock.assert();
     }
     approve_mock.assert();

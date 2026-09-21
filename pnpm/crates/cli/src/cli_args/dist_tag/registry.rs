@@ -137,8 +137,9 @@ async fn fetch_dist_tags_once(
     {
         return Err(DistTagsFetchError::BodyTooLarge);
     }
-    let body =
-        read_limited_body(response, DIST_TAGS_BODY_LIMIT).await.map_err(DistTagsFetchError::Body)?;
+    let body = read_limited_body(response, DIST_TAGS_BODY_LIMIT)
+        .await
+        .map_err(DistTagsFetchError::Body)?;
     if body.truncated {
         return Err(DistTagsFetchError::BodyTooLarge);
     }
@@ -151,7 +152,8 @@ async fn write_error_from_response(response: Response, action: String) -> miette
         .canonical_reason()
         .unwrap_or_default()
         .to_string();
-    let body = read_limited_body(response, DIST_TAG_ERROR_BODY_LIMIT).await
+    let body = read_limited_body(response, DIST_TAG_ERROR_BODY_LIMIT)
+        .await
         .map_err(|source| {
             registry_operation_error("reading the registry dist-tag error response", source)
         })?;
@@ -269,7 +271,10 @@ pub(super) fn auth_header_for_registry(
     registry_url: &str,
     package_name: &str,
 ) -> Option<String> {
-    context.config.auth_headers.for_url_with_package(registry_url, Some(package_name))
+    context
+        .config
+        .auth_headers
+        .for_url_with_package(registry_url, Some(package_name))
 }
 
 pub(super) fn build_http_client(config: &Config) -> miette::Result<ThrottledClient> {
@@ -304,7 +309,8 @@ fn dist_tag_url(package_name: &str, registry_url: &str, tag: &str) -> miette::Re
 }
 
 pub(super) fn package_name_for_url(package_name: &str) -> Result<String, DistTagError> {
-    parse_wanted_dependency(package_name).alias
+    parse_wanted_dependency(package_name)
+        .alias
         .ok_or_else(|| DistTagError::InvalidPackageSpec { spec: package_name.to_string() })
 }
 

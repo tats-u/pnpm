@@ -15,14 +15,8 @@ use std::fs;
 #[test]
 #[ignore = "requires metadata cache feature which pacquet doesn't yet have"]
 fn store_usable_by_pnpm_offline() {
-    let CommandTempCwd {
-        pacquet,
-        pnpm,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -51,13 +45,8 @@ fn store_usable_by_pnpm_offline() {
 
 #[test]
 fn same_file_structure() {
-    let CommandTempCwd {
-        pacquet,
-        pnpm,
-        root,
-        workspace,
-        npmrc_info,
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     let modules_dir = workspace.join("node_modules");
@@ -142,13 +131,8 @@ fn same_file_structure() {
 // from msgpackr's, but the post-decode structs compare equal.
 #[test]
 fn same_index_file_contents() {
-    let CommandTempCwd {
-        pacquet,
-        pnpm,
-        root,
-        workspace,
-        npmrc_info,
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     let modules_dir = workspace.join("node_modules");
@@ -224,13 +208,8 @@ fn same_index_file_contents() {
 // rows.
 #[test]
 fn pnpm_reads_pacquet_written_rows() {
-    let CommandTempCwd {
-        pacquet,
-        pnpm,
-        root,
-        workspace,
-        npmrc_info,
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -333,13 +312,8 @@ fn install_then_compare_gvs(
 /// Node.js / OS / arch the test runs on.
 #[test]
 fn same_global_virtual_store_layout_pure_js() {
-    let CommandTempCwd {
-        pacquet,
-        pnpm,
-        root,
-        workspace,
-        npmrc_info,
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     enable_gvs_in_workspace_yaml(&workspace, "");
@@ -401,13 +375,8 @@ fn same_global_virtual_store_layout_pure_js() {
 #[test]
 #[ignore = "depends on a published pnpm version that includes commit 8f05529c11; see test doc comment"]
 fn same_global_virtual_store_layout_with_approved_postinstall() {
-    let CommandTempCwd {
-        pacquet,
-        pnpm,
-        root,
-        workspace,
-        npmrc_info,
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     enable_gvs_in_workspace_yaml(
@@ -451,13 +420,8 @@ fn same_global_virtual_store_layout_with_approved_postinstall() {
 /// install pipeline.
 #[test]
 fn same_global_virtual_store_layout_diamond() {
-    let CommandTempCwd {
-        pacquet,
-        pnpm,
-        root,
-        workspace,
-        npmrc_info,
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     enable_gvs_in_workspace_yaml(&workspace, "");

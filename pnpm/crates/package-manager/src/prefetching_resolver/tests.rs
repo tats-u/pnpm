@@ -208,15 +208,23 @@ fn minimal_tarball(name: &str, version: &str) -> Vec<u8> {
 
     let mut builder = tar::Builder::new(Vec::new());
     let mut header = tar::Header::new_gnu();
-    header.set_path("package/package.json").expect("set tar entry path");
+    header
+        .set_path("package/package.json")
+        .expect("set tar entry path");
     header.set_size(manifest.len() as u64);
     header.set_mode(0o644);
     header.set_cksum();
-    builder.append(&header, manifest).expect("append package.json to tar");
-    let tar_bytes = builder.into_inner().expect("finish tar");
+    builder
+        .append(&header, manifest)
+        .expect("append package.json to tar");
+    let tar_bytes = builder
+        .into_inner()
+        .expect("finish tar");
 
     let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
-    encoder.write_all(&tar_bytes).expect("gzip tar");
+    encoder
+        .write_all(&tar_bytes)
+        .expect("gzip tar");
     encoder.finish().expect("finish gzip")
 }
 
@@ -450,11 +458,17 @@ async fn claims_the_background_download_with_prefetching_on() {
         .expect("resolver returns a result");
 
     assert!(
-        resolver.spawned_downloads.contains(&package_mem_cache_key(
-            tarball_url,
-            Some(&PINNED_INTEGRITY.parse().expect("parse integrity")),
-            false,
-        )),
+        resolver
+            .spawned_downloads
+            .contains(&package_mem_cache_key(
+                tarball_url,
+                Some(
+                    &PINNED_INTEGRITY
+                        .parse()
+                        .expect("parse integrity")
+                ),
+                false,
+            )),
         "the download must be claimed",
     );
 }
@@ -470,15 +484,23 @@ fn tarball_with_a_dependency(name: &str) -> Vec<u8> {
 
     let mut builder = tar::Builder::new(Vec::new());
     let mut header = tar::Header::new_gnu();
-    header.set_path("package/package.json").expect("set tar entry path");
+    header
+        .set_path("package/package.json")
+        .expect("set tar entry path");
     header.set_size(manifest.len() as u64);
     header.set_mode(0o644);
     header.set_cksum();
-    builder.append(&header, manifest).expect("append package.json to tar");
-    let tar_bytes = builder.into_inner().expect("finish tar");
+    builder
+        .append(&header, manifest)
+        .expect("append package.json to tar");
+    let tar_bytes = builder
+        .into_inner()
+        .expect("finish tar");
 
     let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
-    encoder.write_all(&tar_bytes).expect("gzip tar");
+    encoder
+        .write_all(&tar_bytes)
+        .expect("gzip tar");
     encoder.finish().expect("finish gzip")
 }
 
@@ -493,9 +515,17 @@ fn manifestless_tarball_result_with_revision(
 ) -> ResolveResult {
     let mut result = result_without_manifest("pinned");
     result.resolution = LockfileResolution::Tarball(TarballResolution {
-        integrity: Some(integrity.parse().expect("parse integrity")),
+        integrity: Some(
+            integrity
+                .parse()
+                .expect("parse integrity"),
+        ),
         tarball: tarball_url.to_string(),
-        revision: revision.map(|revision| revision.try_into().expect("build revision")),
+        revision: revision.map(|revision| {
+            revision
+                .try_into()
+                .expect("build revision")
+        }),
         git_hosted: None,
         path: None,
     });
@@ -533,17 +563,25 @@ async fn reads_a_revision_addressed_tarball_under_its_own_network_policy() {
         .expect("resolve succeeds")
         .expect("resolver returns a result");
 
-    let manifest = resolved.package.manifest.expect("the bundled manifest fills the gap");
+    let manifest = resolved
+        .package
+        .manifest
+        .expect("the bundled manifest fills the gap");
     assert_eq!(dbg!(&manifest)["dependencies"]["ms"], json!("2.1.2"));
     get_mock.assert_async().await;
     let cache_key =
         package_mem_cache_key(&tarball_url, Some(&integrity.parse().expect("integrity")), true);
     assert!(
-        resolver.ctx.mem_cache.contains_key(&cache_key),
+        resolver
+            .ctx
+            .mem_cache
+            .contains_key(&cache_key),
         "the read publishes under the revision-addressed identity",
     );
     assert!(
-        resolver.spawned_downloads.contains(&cache_key),
+        resolver
+            .spawned_downloads
+            .contains(&cache_key),
         "and claims it, so the prefetch spends no second GET",
     );
 }
@@ -578,19 +616,34 @@ async fn reads_the_manifest_of_a_pinned_tarball_the_resolver_left_without_one() 
         .expect("resolve succeeds")
         .expect("resolver returns a result");
 
-    let manifest = resolved.package.manifest.expect("the bundled manifest fills the gap");
+    let manifest = resolved
+        .package
+        .manifest
+        .expect("the bundled manifest fills the gap");
     assert_eq!(dbg!(&manifest)["dependencies"]["ms"], json!("2.1.2"));
     get_mock.assert_async().await;
     let cache_key = package_mem_cache_key(
         &format!("{}{tarball_path}", server.url()),
-        Some(&integrity.parse().expect("parse integrity")),
+        Some(
+            &integrity
+                .parse()
+                .expect("parse integrity"),
+        ),
         false,
     );
     assert!(
-        resolver.ctx.mem_cache.contains_key(&cache_key),
+        resolver
+            .ctx
+            .mem_cache
+            .contains_key(&cache_key),
         "the read publishes its extraction under the archive's own hash",
     );
-    assert!(resolver.spawned_downloads.contains(&cache_key), "and claims the download");
+    assert!(
+        resolver
+            .spawned_downloads
+            .contains(&cache_key),
+        "and claims the download"
+    );
 }
 
 /// The failing read is also what shows the download is claimed before the
@@ -620,11 +673,17 @@ async fn refuses_a_manifest_read_from_a_tarball_that_fails_its_integrity() {
     assert!(dbg!(error.to_string()).contains("Integrity check failed"), "got: {error}");
     get_mock.assert_async().await;
     assert!(
-        resolver.spawned_downloads.contains(&package_mem_cache_key(
-            &format!("{}{tarball_path}", server.url()),
-            Some(&PINNED_INTEGRITY.parse().expect("parse integrity")),
-            false,
-        )),
+        resolver
+            .spawned_downloads
+            .contains(&package_mem_cache_key(
+                &format!("{}{tarball_path}", server.url()),
+                Some(
+                    &PINNED_INTEGRITY
+                        .parse()
+                        .expect("parse integrity")
+                ),
+                false,
+            )),
         "the download is claimed before the fetch, not after it",
     );
 }
@@ -651,7 +710,9 @@ async fn a_url_spelling_another_url_and_its_integrity_gets_its_own_cache_cell() 
         let LockfileResolution::Tarball(tarball) = &result.resolution else {
             panic!("expected tarball resolution");
         };
-        resolver.tarball_metadata_cache_key(result, tarball, "collider@1.0.0").expect("build key")
+        resolver
+            .tarball_metadata_cache_key(result, tarball, "collider@1.0.0")
+            .expect("build key")
     };
 
     assert_ne!(dbg!(key(&pinned)), dbg!(key(&unpinned)));
@@ -675,7 +736,9 @@ async fn a_revision_addressed_resolution_gets_its_own_cache_cell() {
         let LockfileResolution::Tarball(tarball) = &result.resolution else {
             panic!("expected tarball resolution");
         };
-        resolver.tarball_metadata_cache_key(result, tarball, "pinned@1.0.0").expect("build key")
+        resolver
+            .tarball_metadata_cache_key(result, tarball, "pinned@1.0.0")
+            .expect("build key")
     };
 
     assert_ne!(dbg!(key(&direct)), dbg!(key(&revision)));
@@ -708,7 +771,9 @@ async fn a_manifest_read_reuses_the_prefetch_already_in_flight() {
         .create_async()
         .await;
     let mut with_manifest = integrity_pinned_result(&tarball_url);
-    let pkg_integrity: ssri::Integrity = integrity.parse().expect("parse integrity");
+    let pkg_integrity: ssri::Integrity = integrity
+        .parse()
+        .expect("parse integrity");
     if let LockfileResolution::Tarball(tarball) = &mut with_manifest.resolution {
         tarball.integrity = Some(pkg_integrity.clone());
     }
@@ -745,7 +810,10 @@ async fn a_manifest_read_reuses_the_prefetch_already_in_flight() {
         .expect("resolver returns a result");
 
     assert!(prefetched.package.manifest.is_some(), "the prefetching edge keeps its manifest");
-    let manifest = read.package.manifest.expect("the bundled manifest fills the gap");
+    let manifest = read
+        .package
+        .manifest
+        .expect("the bundled manifest fills the gap");
     assert_eq!(dbg!(&manifest)["dependencies"]["ms"], json!("2.1.2"));
     get_mock.assert_async().await;
 }

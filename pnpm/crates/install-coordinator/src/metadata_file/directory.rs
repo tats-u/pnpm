@@ -20,17 +20,13 @@ impl PinnedDirectory {
             match fs::symlink_metadata(existing) {
                 Ok(_) => break,
                 Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                    let name = existing
-                        .file_name()
-                        .ok_or_else(|| {
-                            miette::miette!("no existing ancestor for {path_display}")
-                        })?;
+                    let name = existing.file_name().ok_or_else(|| {
+                        miette::miette!("no existing ancestor for {path_display}")
+                    })?;
                     remaining.push(name.to_os_string());
-                    existing = existing
-                        .parent()
-                        .ok_or_else(|| {
-                            miette::miette!("no existing ancestor for {path_display}")
-                        })?;
+                    existing = existing.parent().ok_or_else(|| {
+                        miette::miette!("no existing ancestor for {path_display}")
+                    })?;
                 }
                 Err(error) => {
                     return Err(error)
@@ -77,7 +73,8 @@ impl PinnedDirectory {
         #[cfg(windows)]
         let mut directory = Self {
             path: self.path.clone(),
-            handles: self.handles
+            handles: self
+                .handles
                 .iter()
                 .map(fs::File::try_clone)
                 .collect::<io::Result<_>>()?,
@@ -103,7 +100,12 @@ impl PinnedDirectory {
             )
         };
         let handle = file_from_descriptor(descriptor)?;
-        Ok(Self { path: self.path.join(OsStr::from_bytes(name.as_bytes())), handle })
+        Ok(Self {
+            path: self
+                .path
+                .join(OsStr::from_bytes(name.as_bytes())),
+            handle,
+        })
     }
 
     #[cfg(windows)]
@@ -111,7 +113,8 @@ impl PinnedDirectory {
         let path = self.path.join(name);
         let handle = open_windows_directory(&path)?;
         ensure_real_windows_directory_io(&handle, &path)?;
-        let mut handles = self.handles
+        let mut handles = self
+            .handles
             .iter()
             .map(fs::File::try_clone)
             .collect::<io::Result<Vec<_>>>()?;

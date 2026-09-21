@@ -22,7 +22,11 @@ fn global_shims_record_merges_over_the_defaults() {
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert!(config.global_shims.is_enabled("node"), "untouched defaults must survive");
     assert!(!config.global_shims.is_enabled("bun"), "one default can be switched off");
-    assert!(config.global_shims.is_enabled("typescript"));
+    assert!(
+        config
+            .global_shims
+            .is_enabled("typescript")
+    );
 }
 
 #[test]
@@ -55,9 +59,8 @@ fn global_shims_named_policies_parse() {
 fn global_shims_later_layers_win_per_key() {
     let mut shims = GlobalShims::default();
     shims.apply(&serde_saphyr::from_str::<GlobalShimsSetting>("{node: false}").unwrap());
-    shims.apply(
-        &serde_saphyr::from_str::<GlobalShimsSetting>("{node: true, deno: false}").unwrap(),
-    );
+    shims
+        .apply(&serde_saphyr::from_str::<GlobalShimsSetting>("{node: true, deno: false}").unwrap());
     assert!(shims.is_enabled("node"));
     assert!(!shims.is_enabled("deno"));
     assert!(shims.is_enabled("bun"));

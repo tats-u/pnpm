@@ -34,7 +34,10 @@ impl CompilerSession {
     fn command(&self, program: &str) -> Command {
         let mut command = Command::new(program);
         for (name, _) in std::env::vars_os() {
-            if name.to_string_lossy().starts_with("SCCACHE_") {
+            if name
+                .to_string_lossy()
+                .starts_with("SCCACHE_")
+            {
                 command.env_remove(name);
             }
         }
@@ -46,13 +49,28 @@ impl CompilerSession {
             .env("RUSTC_WRAPPER", "sccache")
             .env("CARGO_INCREMENTAL", "0")
             .env("CARGO_PROFILE_DEV_DEBUG", "0")
-            .env("SCCACHE_CONF", self.directory.path().join("sccache.toml"))
-            .env("SCCACHE_CACHED_CONF", self.directory.path().join("cached-config"))
+            .env(
+                "SCCACHE_CONF",
+                self.directory
+                    .path()
+                    .join("sccache.toml"),
+            )
+            .env(
+                "SCCACHE_CACHED_CONF",
+                self.directory
+                    .path()
+                    .join("cached-config"),
+            )
             .env("SCCACHE_DIR", self.directory.path().join("cache"))
             .env("SCCACHE_SERVER_PORT", self.port.to_string())
             .env("SCCACHE_IDLE_TIMEOUT", "60")
             .env("SCCACHE_LOG", "debug")
-            .env("SCCACHE_ERROR_LOG", self.directory.path().join("sccache.log"))
+            .env(
+                "SCCACHE_ERROR_LOG",
+                self.directory
+                    .path()
+                    .join("sccache.log"),
+            )
             .env("SCCACHE_MULTILEVEL_CHAIN", "disk,webdav")
             .env("SCCACHE_MULTILEVEL_WRITE_ERROR_POLICY", "all")
             .env("SCCACHE_WEBDAV_ENDPOINT", &self.endpoint)
@@ -72,7 +90,12 @@ impl CompilerSession {
                 .await
                 .unwrap(),
         );
-        assert!(project.join("target/debug/libcache_fixture.rlib").is_file(), "missing rlib");
+        assert!(
+            project
+                .join("target/debug/libcache_fixture.rlib")
+                .is_file(),
+            "missing rlib"
+        );
     }
 
     async fn stats(&self) -> Value {
@@ -87,7 +110,12 @@ impl CompilerSession {
         if stats["stats"]["cache_write_errors"] != 0 {
             eprintln!(
                 "{}",
-                std::fs::read_to_string(self.directory.path().join("sccache.log")).unwrap(),
+                std::fs::read_to_string(
+                    self.directory
+                        .path()
+                        .join("sccache.log")
+                )
+                .unwrap(),
             );
         }
         stats
@@ -122,11 +150,17 @@ fn project(directory: &Path) {
 async fn cargo_reuses_ci_compilation_with_fresh_checkout_and_backfills_disk() {
     let directory = TempDir::new().unwrap();
     let config = config(&directory);
-    let ci_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let ci_listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let ci_endpoint =
         format!("http://{}/-/pnpr/v0/compiler-cache/acme", ci_listener.local_addr().unwrap());
     let ci_app = app(config.clone(), "ci", false);
-    let ci_server = tokio::spawn(async move { axum::serve(ci_listener, ci_app).await.unwrap() });
+    let ci_server = tokio::spawn(async move {
+        axum::serve(ci_listener, ci_app)
+            .await
+            .unwrap()
+    });
     let ci_project = directory.path().join("checkout");
     project(&ci_project);
     let ci = CompilerSession::start(ci_endpoint, false).await;
@@ -152,18 +186,26 @@ async fn cargo_reuses_ci_compilation_with_fresh_checkout_and_backfills_disk() {
     // need a matching mount path; this fresh checkout models that arrangement.
     std::fs::rename(&ci_project, directory.path().join("ci-checkout")).unwrap();
 
-    let dev_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let dev_listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let dev_endpoint =
         format!("http://{}/-/pnpr/v0/compiler-cache/acme", dev_listener.local_addr().unwrap());
     let dev_app = app(config, "developer", false);
-    let dev_server = tokio::spawn(async move { axum::serve(dev_listener, dev_app).await.unwrap() });
+    let dev_server = tokio::spawn(async move {
+        axum::serve(dev_listener, dev_app)
+            .await
+            .unwrap()
+    });
     let dev_project = directory.path().join("checkout");
     project(&dev_project);
     let developer = CompilerSession::start(dev_endpoint, true).await;
     developer.build(&dev_project, &[]).await;
     let stats = developer.stats().await;
     assert_eq!(stats["stats"]["cache_hits"]["counts"]["Rust"], 1, "{stats}");
-    developer.build(&dev_project, &["--features", "extra"]).await;
+    developer
+        .build(&dev_project, &["--features", "extra"])
+        .await;
     let stats = developer.stats().await;
     assert_eq!(stats["stats"]["cache_misses"]["counts"]["Rust"], 1, "{stats}");
     std::fs::write(dev_project.join("src/lib.rs"), "pub fn answer() -> u32 { 43 }\n").unwrap();

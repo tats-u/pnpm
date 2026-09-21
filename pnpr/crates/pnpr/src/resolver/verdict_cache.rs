@@ -73,7 +73,10 @@ impl VerdictCache {
         hash: &str,
         trusts: impl Fn(&Map<String, Value>) -> bool,
     ) -> bool {
-        let conn = self.conn.lock().expect("verdict cache poisoned");
+        let conn = self
+            .conn
+            .lock()
+            .expect("verdict cache poisoned");
         let policy_json: Option<String> = conn
             .query_row(
                 "SELECT policy FROM lockfile_verdicts WHERE hash = ?1",
@@ -87,10 +90,8 @@ impl VerdictCache {
         let Ok(policy) = serde_json::from_str::<Map<String, Value>>(&policy_json) else {
             // A corrupt policy blob would miss forever; drop the row so
             // the next install re-verifies and re-records a clean one.
-            let _ = conn.execute(
-                "DELETE FROM lockfile_verdicts WHERE hash = ?1",
-                rusqlite::params![hash],
-            );
+            let _ = conn
+                .execute("DELETE FROM lockfile_verdicts WHERE hash = ?1", rusqlite::params![hash]);
             return false;
         };
         trusts(&policy)
@@ -102,7 +103,10 @@ impl VerdictCache {
     pub(crate) fn record(&self, hash: &str, policy: &Map<String, Value>) {
         let policy_json = Value::Object(policy.clone()).to_string();
         let now_ms = now_ms();
-        let conn = self.conn.lock().expect("verdict cache poisoned");
+        let conn = self
+            .conn
+            .lock()
+            .expect("verdict cache poisoned");
         let _ = conn.execute(
             "INSERT INTO lockfile_verdicts (hash, policy, verified_at_ms)
              VALUES (?1, ?2, ?3)

@@ -99,7 +99,9 @@ async fn install_with_drop_all_seed_policy_bumps_dependency_within_range() {
     .await
     .expect("first install should succeed");
     assert!(
-        dirs.virtual_store_dir.join("@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0").exists(),
+        dirs.virtual_store_dir
+            .join("@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0")
+            .exists(),
         "the pinned install should materialize 100.0.0",
     );
 
@@ -170,7 +172,9 @@ async fn install_with_drop_all_seed_policy_bumps_dependency_within_range() {
     .await
     .expect("update install should succeed");
     assert!(
-        dirs.virtual_store_dir.join("@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0").exists(),
+        dirs.virtual_store_dir
+            .join("@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0")
+            .exists(),
         "install with DropAll should bump the dependency to the highest in-range version",
     );
 
@@ -290,9 +294,11 @@ async fn auto_install_peers_does_not_cascade_optional_peers() {
          virtual-store slots: {virtual_store_slots:?}",
     );
     assert!(
-        is_symlink_or_junction(&dirs.project_root.join(
-            "node_modules/@pnpm.e2e/abc-optional-peers"
-        ))
+        is_symlink_or_junction(
+            &dirs
+                .project_root
+                .join("node_modules/@pnpm.e2e/abc-optional-peers")
+        )
         .unwrap(),
         "abc-optional-peers must be symlinked at the importer level",
     );
@@ -439,8 +445,12 @@ async fn root_dependency_does_not_override_peers_of_self_contained_subtree() {
 
     let manifest_path = dirs.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path.clone()).unwrap();
-    manifest.add_dependency("@pnpm.e2e/closure-plugins", "1.0.0", DependencyGroup::Prod).unwrap();
-    manifest.add_dependency("@pnpm.e2e/closure-peer-x", "2.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("@pnpm.e2e/closure-plugins", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
+    manifest
+        .add_dependency("@pnpm.e2e/closure-peer-x", "2.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -527,7 +537,9 @@ async fn root_dependency_does_not_override_peers_of_self_contained_subtree() {
         .as_ref()
         .expect("dependencies map");
     let peer_x_key = pnpm_lockfile::PkgName::parse("@pnpm.e2e/closure-peer-x").unwrap();
-    let root_peer_x = root_deps.get(&peer_x_key).expect("closure-peer-x recorded at root");
+    let root_peer_x = root_deps
+        .get(&peer_x_key)
+        .expect("closure-peer-x recorded at root");
     assert_eq!(root_peer_x.version.to_string(), "2.0.0");
 
     drop((dirs.dir, mock_instance));
@@ -617,10 +629,17 @@ async fn fresh_install_records_user_written_specifier() {
     let content = std::fs::read_to_string(&lockfile_path).expect("read lockfile");
     let lockfile: Lockfile = serde_saphyr::from_str(&content).expect("parse fresh lockfile");
 
-    let importer = lockfile.root_project().expect("root importer");
-    let deps = importer.dependencies.as_ref().expect("prod deps");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let deps = importer
+        .dependencies
+        .as_ref()
+        .expect("prod deps");
     let key = pnpm_lockfile::PkgName::parse("@pnpm.e2e/hello-world-js-bin").unwrap();
-    let entry = deps.get(&key).expect("hello-world-js-bin entry");
+    let entry = deps
+        .get(&key)
+        .expect("hello-world-js-bin entry");
     assert_eq!(entry.specifier, "^1.0.0", "specifier must echo the manifest declaration");
 
     drop((dirs.dir, mock_instance));

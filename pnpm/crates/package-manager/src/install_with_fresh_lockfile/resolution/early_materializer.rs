@@ -18,7 +18,10 @@ pub(in super::super) fn start_early_materialization<Reporter: self::Reporter + '
         lockfile_only: install.execution.lockfile_only,
         materializes_subset: setup.shape.materializes_subset,
         is_hoisted: setup.shape.is_hoisted,
-        has_custom_fetcher: setup.chain.custom_fetcher_session.is_some(),
+        has_custom_fetcher: setup
+            .chain
+            .custom_fetcher_session
+            .is_some(),
     })
     .then(|| {
         Arc::new(crate::early_materializer::EarlyMaterializer::<Reporter>::new(

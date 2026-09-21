@@ -16,8 +16,10 @@ pub(super) async fn time_cutoff<Chain>(
 where
     Chain: Resolver + ?Sized,
 {
-    let maximum_published_by =
-        sorted.opts.first().and_then(|opts| opts.base_opts.policy.published_by);
+    let maximum_published_by = sorted
+        .opts
+        .first()
+        .and_then(|opts| opts.base_opts.policy.published_by);
     if !settings.version.time_based {
         return TimeBasedCutoff { published_by: maximum_published_by, time: BTreeMap::new() };
     }
@@ -59,7 +61,11 @@ where
     Chain: Resolver + ?Sized,
 {
     let mut time = BTreeMap::new();
-    for (importer, opts) in sorted.importers.iter().zip(&sorted.opts) {
+    for (importer, opts) in sorted
+        .importers
+        .iter()
+        .zip(&sorted.opts)
+    {
         record_direct_publish_dates(
             resolver,
             importer,
@@ -108,14 +114,15 @@ pub(super) async fn record_direct_publish_dates<Chain>(
     let mut direct_opts = opts.base_opts.clone();
     direct_opts.version.pick_lowest_version = settings.version.pick_lowest_direct;
     for spec in specs {
-        let Ok(Some(result)) =
-            resolver.resolve(&crate::resolve_dependency_tree::wanted_from_spec(spec), &direct_opts)
-                .await
+        let Ok(Some(result)) = resolver
+            .resolve(&crate::resolve_dependency_tree::wanted_from_spec(spec), &direct_opts)
+            .await
         else {
             continue;
         };
         let published_at = result.package.published_at.or_else(|| {
-            settings.recorded_time
+            settings
+                .recorded_time
                 .as_ref()?
                 .get(result.id.as_str())
                 .cloned()

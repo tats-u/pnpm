@@ -16,7 +16,8 @@ pub(crate) fn detect_ignored_optional_drift(
     lockfile: &Lockfile,
     ignored_optional_dependencies: &[String],
 ) -> Drift<()> {
-    let previous: BTreeSet<_> = lockfile.ignored_optional_dependencies
+    let previous: BTreeSet<_> = lockfile
+        .ignored_optional_dependencies
         .as_deref()
         .unwrap_or_default()
         .iter()
@@ -113,13 +114,19 @@ fn remove_ignored_optional_dependencies<
     if let Some(optional_dependencies) = optional_dependencies.as_mut() {
         optional_dependencies.retain(|name, _| !removed.contains(name));
     }
-    if optional_dependencies.as_ref().is_some_and(HashMap::is_empty) {
+    if optional_dependencies
+        .as_ref()
+        .is_some_and(HashMap::is_empty)
+    {
         *optional_dependencies = None;
     }
     if let Some(dependencies) = dependencies.as_mut() {
         dependencies.retain(|name, _| !removed.contains(name));
     }
-    if dependencies.as_ref().is_some_and(HashMap::is_empty) {
+    if dependencies
+        .as_ref()
+        .is_some_and(HashMap::is_empty)
+    {
         *dependencies = None;
     }
     removed

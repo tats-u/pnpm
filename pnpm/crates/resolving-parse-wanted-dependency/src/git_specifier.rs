@@ -65,7 +65,9 @@ fn normalize_parts(host: &str, path: &str, committish: Option<&str>) -> Option<S
     if !is_valid_repository_path(path) {
         return None;
     }
-    let path = path.strip_suffix(".git").unwrap_or(path);
+    let path = path
+        .strip_suffix(".git")
+        .unwrap_or(path);
     if path.is_empty() || path.ends_with('/') {
         return None;
     }
@@ -95,7 +97,9 @@ fn split_committish(specifier: &str) -> Option<(&str, Option<&str>)> {
 
 fn is_github_shorthand(repository: &str) -> bool {
     !repository.starts_with('.')
-        && !repository.chars().any(char::is_whitespace)
+        && !repository
+            .chars()
+            .any(char::is_whitespace)
         && !repository.contains([':', '@'])
         && repository.split('/').count() == 2
 }

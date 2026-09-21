@@ -178,12 +178,17 @@ impl OutdatedArgs {
         state: State,
     ) -> miette::Result<OutdatedOutcome> {
         if state.config.recursive {
-            return self.run_recursive::<Reporter>(state).await;
+            return self
+                .run_recursive::<Reporter>(state)
+                .await;
         }
 
         let config = state.config;
         let manifest = &state.manifest;
-        let root = config.workspace_dir.as_deref().unwrap_or_else(|| project_dir(manifest));
+        let root = config
+            .workspace_dir
+            .as_deref()
+            .unwrap_or_else(|| project_dir(manifest));
         let importer_id = state.active_importer_id();
         let lockfile = loaded_lockfile(&state)?;
         let package_patterns = self.package_patterns();
@@ -294,7 +299,10 @@ impl OutdatedArgs {
             root,
             self.compatible,
             action_matcher,
-            config.update_config.github_actions_server.as_deref(),
+            config
+                .update_config
+                .github_actions_server
+                .as_deref(),
         )
         .await
     }
@@ -304,7 +312,8 @@ impl OutdatedArgs {
         state: State,
     ) -> miette::Result<OutdatedOutcome> {
         let config = state.config;
-        let workspace_root = config.workspace_dir
+        let workspace_root = config
+            .workspace_dir
             .clone()
             .unwrap_or_else(|| state.lockfile_dir().to_path_buf());
         let (projects, _) = discover_workspace_projects(&workspace_root, config)?;
@@ -370,7 +379,8 @@ impl OutdatedArgs {
     /// treating each install dir's `package.json` as a project, and report
     /// the aggregate.
     pub async fn run_global(self, config: &'static Config) -> miette::Result<OutdatedOutcome> {
-        let global_pkg_dir = config.global_pkg_dir
+        let global_pkg_dir = config
+            .global_pkg_dir
             .clone()
             .ok_or_else(|| {
                 miette::miette!(
@@ -432,7 +442,9 @@ struct OutdatedFilters {
 impl OutdatedFilters {
     fn new(args: &OutdatedArgs, config: &Config, package_patterns: &[String]) -> Self {
         Self {
-            include: args.dependency_options.include(config.optional),
+            include: args
+                .dependency_options
+                .include(config.optional),
             match_names: (!package_patterns.is_empty()).then(|| create_matcher(package_patterns)),
             ignore_names: ignored_dependencies_matcher(config),
             full_metadata: args.output.long,

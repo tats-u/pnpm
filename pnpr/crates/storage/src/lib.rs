@@ -221,7 +221,9 @@ impl Storage {
     /// indexes hosted/static packages only, never the proxy mirror).
     /// Build the filesystem listing index for legacy stores before serving requests.
     pub async fn rebuild_package_index(&self) -> Result<()> {
-        self.hosted.rebuild_package_index().await
+        self.hosted
+            .rebuild_package_index()
+            .await
     }
 
     pub async fn hosted_package_names(&self) -> Result<Vec<String>> {
@@ -230,7 +232,9 @@ impl Storage {
 
     pub async fn read_hosted_revision_refs(&self, digest: &str) -> Result<Vec<Vec<u8>>> {
         validate_revision_digest(digest)?;
-        self.hosted.read_revision_refs(digest).await
+        self.hosted
+            .read_revision_refs(digest)
+            .await
     }
 
     pub async fn write_hosted_revision_ref(
@@ -243,7 +247,9 @@ impl Storage {
         validate_revision_digest(digest)?;
         validate_revision_ref_id(ref_id)?;
         validate_revision_ref_owner(owner)?;
-        self.hosted.write_revision_ref(digest, ref_id, owner, bytes).await
+        self.hosted
+            .write_revision_ref(digest, ref_id, owner, bytes)
+            .await
     }
 
     pub(crate) async fn remove_hosted_revision_ref(
@@ -255,7 +261,9 @@ impl Storage {
         validate_revision_digest(digest)?;
         validate_revision_ref_id(ref_id)?;
         validate_revision_ref_owner(owner)?;
-        self.hosted.remove_revision_ref(digest, ref_id, owner).await
+        self.hosted
+            .remove_revision_ref(digest, ref_id, owner)
+            .await
     }
 
     pub async fn commit_hosted_revision_ref(
@@ -267,7 +275,9 @@ impl Storage {
         validate_revision_digest(digest)?;
         validate_revision_ref_id(ref_id)?;
         validate_revision_ref_owner(owner)?;
-        self.hosted.commit_revision_ref(digest, ref_id, owner).await
+        self.hosted
+            .commit_revision_ref(digest, ref_id, owner)
+            .await
     }
 
     /// A view whose hosted store is namespaced under `org`, so a hosted
@@ -296,7 +306,9 @@ impl Storage {
         &self,
         name: &CanonicalPackageName,
     ) -> Result<Option<HostedDocumentForUpdate>> {
-        self.hosted.read_document_for_update(name).await
+        self.hosted
+            .read_document_for_update(name)
+            .await
     }
 
     pub async fn write_hosted_document_if_current(
@@ -305,7 +317,9 @@ impl Storage {
         bytes: &[u8],
         version: Option<&HostedDocumentVersion>,
     ) -> Result<DocumentWrite> {
-        self.hosted.write_document_if_current(name, bytes, version).await
+        self.hosted
+            .write_document_if_current(name, bytes, version)
+            .await
     }
 
     /// Read the hosted document, transform it, and conditionally write it
@@ -328,7 +342,9 @@ impl Storage {
         Build: FnMut(Option<&[u8]>) -> Result<Option<Vec<u8>>>,
     {
         for attempt in 0..retries {
-            let existing = self.read_hosted_document_for_update(name).await?;
+            let existing = self
+                .read_hosted_document_for_update(name)
+                .await?;
             let (existing_bytes, version) = match existing {
                 Some(document) => (Some(document.bytes), Some(document.version)),
                 None => (None, None),
@@ -336,7 +352,10 @@ impl Storage {
             let Some(new_bytes) = build(existing_bytes.as_deref())? else {
                 return Ok(DocumentUpdate::NotFound);
             };
-            match self.write_hosted_document_if_current(name, &new_bytes, version.as_ref()).await? {
+            match self
+                .write_hosted_document_if_current(name, &new_bytes, version.as_ref())
+                .await?
+            {
                 DocumentWrite::Written => return Ok(DocumentUpdate::Written),
                 DocumentWrite::Conflict => {
                     if attempt + 1 < retries {
@@ -356,7 +375,9 @@ impl Storage {
         name: &CanonicalPackageName,
         filename: &str,
     ) -> Result<Option<(Body, Option<u64>)>> {
-        self.hosted.open_blob(name, filename).await
+        self.hosted
+            .open_blob(name, filename)
+            .await
     }
 
     /// Open only the requested bytes, without reading the preceding content.
@@ -366,7 +387,9 @@ impl Storage {
         filename: &str,
         range: &GetRange,
     ) -> Result<Option<RangedBlob>> {
-        self.hosted.open_blob_range(name, filename, range).await
+        self.hosted
+            .open_blob_range(name, filename, range)
+            .await
     }
 
     /// Reserve a staging slot for a blob this server hosts. The
@@ -378,7 +401,10 @@ impl Storage {
         name: &CanonicalPackageName,
         filename: &str,
     ) -> Result<BlobSlot> {
-        let tmp_path = self.hosted.reserve_blob_tmp(name, filename).await?;
+        let tmp_path = self
+            .hosted
+            .reserve_blob_tmp(name, filename)
+            .await?;
         Ok(BlobSlot { tmp_path, name: name.clone(), filename: filename.to_string() })
     }
 
@@ -388,7 +414,9 @@ impl Storage {
         name: &CanonicalPackageName,
         filename: &str,
     ) -> Result<bool> {
-        self.hosted.remove_blob(name, filename).await
+        self.hosted
+            .remove_blob(name, filename)
+            .await
     }
 
     /// Remove a single blob from both stores. The
@@ -397,8 +425,13 @@ impl Storage {
     /// the proxy cache from serving a stale copy of the just-removed
     /// version.
     pub async fn remove_blob(&self, name: &CanonicalPackageName, filename: &str) -> Result<bool> {
-        let hosted = self.remove_hosted_blob(name, filename).await?;
-        let cached = self.cached.remove_blob(name, filename).await?;
+        let hosted = self
+            .remove_hosted_blob(name, filename)
+            .await?;
+        let cached = self
+            .cached
+            .remove_blob(name, filename)
+            .await?;
         Ok(hosted || cached)
     }
 
@@ -428,7 +461,12 @@ impl Storage {
         name: &CanonicalPackageName,
         ttl: Duration,
     ) -> Result<Option<Vec<u8>>> {
-        match self.cached.namespaced(namespace).read_document_entry(name, ttl).await? {
+        match self
+            .cached
+            .namespaced(namespace)
+            .read_document_entry(name, ttl)
+            .await?
+        {
             Some(CachedDocument::Fresh(bytes)) => Ok(Some(bytes)),
             Some(CachedDocument::Stale) | None => Ok(None),
         }
@@ -446,7 +484,12 @@ impl Storage {
     ) -> Result<Option<Vec<u8>>> {
         // `Duration::MAX` classifies any existing entry as fresh, so its body
         // is returned regardless of age (the stale arm can't be reached here).
-        match self.cached.namespaced(namespace).read_document_entry(name, Duration::MAX).await? {
+        match self
+            .cached
+            .namespaced(namespace)
+            .read_document_entry(name, Duration::MAX)
+            .await?
+        {
             Some(CachedDocument::Fresh(bytes)) => Ok(Some(bytes)),
             Some(CachedDocument::Stale) | None => Ok(None),
         }
@@ -458,7 +501,10 @@ impl Storage {
         name: &CanonicalPackageName,
         bytes: &[u8],
     ) -> Result<()> {
-        self.cached.namespaced(namespace).write_document(name, bytes).await
+        self.cached
+            .namespaced(namespace)
+            .write_document(name, bytes)
+            .await
     }
 
     /// Purge an upstream's cached entry for `name` — the document and any
@@ -471,7 +517,10 @@ impl Storage {
         namespace: &str,
         name: &CanonicalPackageName,
     ) -> Result<bool> {
-        self.cached.namespaced(namespace).remove_package(name).await
+        self.cached
+            .namespaced(namespace)
+            .remove_package(name)
+            .await
     }
 
     pub async fn open_upstream_blob_tmp(
@@ -480,7 +529,10 @@ impl Storage {
         name: &CanonicalPackageName,
         filename: &str,
     ) -> Result<BlobWrite> {
-        self.cached.namespaced(namespace).open_blob_tmp(name, filename).await
+        self.cached
+            .namespaced(namespace)
+            .open_blob_tmp(name, filename)
+            .await
     }
 
     pub async fn open_upstream_blob(
@@ -489,7 +541,10 @@ impl Storage {
         name: &CanonicalPackageName,
         filename: &str,
     ) -> Result<Option<(fs::File, u64)>> {
-        self.cached.namespaced(namespace).open_blob(name, filename).await
+        self.cached
+            .namespaced(namespace)
+            .open_blob(name, filename)
+            .await
     }
 
     pub async fn open_upstream_revision_blob_tmp(
@@ -498,7 +553,10 @@ impl Storage {
         digest: &str,
     ) -> Result<BlobWrite> {
         validate_revision_digest(digest)?;
-        self.cached.namespaced(namespace).open_revision_blob_tmp(digest).await
+        self.cached
+            .namespaced(namespace)
+            .open_revision_blob_tmp(digest)
+            .await
     }
 
     pub async fn open_upstream_revision_blob(
@@ -507,13 +565,18 @@ impl Storage {
         digest: &str,
     ) -> Result<Option<(fs::File, u64)>> {
         validate_revision_digest(digest)?;
-        self.cached.namespaced(namespace).open_revision_blob(digest).await
+        self.cached
+            .namespaced(namespace)
+            .open_revision_blob(digest)
+            .await
     }
 
     /// Promote a tmp blob written by the publish flow to its final
     /// home: a rename on the fs backend, an upload on the S3 backend.
     pub async fn finalize_blob_slot(&self, slot: BlobSlot) -> Result<BlobFinalize> {
-        self.hosted.finalize_blob(&slot.tmp_path, &slot.name, &slot.filename).await
+        self.hosted
+            .finalize_blob(&slot.tmp_path, &slot.name, &slot.filename)
+            .await
     }
 
     /// Where the hosted backend stages locally: the store root on the fs

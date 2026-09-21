@@ -23,7 +23,9 @@ fn allow_all_builds<'a>() -> AllowBuildRef<'a> {
 fn write_to_cas(store_dir: &StoreDir, files: &[(&str, &[u8], bool)]) -> HashMap<String, PathBuf> {
     let mut out = HashMap::new();
     for &(rel, bytes, executable) in files {
-        let (cas_path, _hash) = store_dir.write_cas_file(bytes, executable).unwrap();
+        let (cas_path, _hash) = store_dir
+            .write_cas_file(bytes, executable)
+            .unwrap();
         out.insert(rel.to_string(), cas_path);
     }
     out
@@ -74,9 +76,21 @@ async fn passes_through_package_without_scripts() {
     .unwrap();
 
     assert!(!received.built, "no `prepare` script → not built");
-    assert!(received.cas_paths.contains_key("package.json"));
-    assert!(received.cas_paths.contains_key("index.js"));
-    assert!(received.cas_paths.contains_key("README.md"));
+    assert!(
+        received
+            .cas_paths
+            .contains_key("package.json")
+    );
+    assert!(
+        received
+            .cas_paths
+            .contains_key("index.js")
+    );
+    assert!(
+        received
+            .cas_paths
+            .contains_key("README.md")
+    );
 
     // Hash-dedup: re-importing the same bytes lands at the same CAS
     // path, so the new map's CAS entries point at the same files we
@@ -128,7 +142,8 @@ async fn filters_files_outside_files_field() {
     .await
     .unwrap();
 
-    let keys: Vec<&str> = received.cas_paths
+    let keys: Vec<&str> = received
+        .cas_paths
         .keys()
         .map(String::as_str)
         .collect();
@@ -293,7 +308,8 @@ async fn path_field_packs_only_subdirectory() {
     .await
     .unwrap();
 
-    let keys: Vec<&str> = received.cas_paths
+    let keys: Vec<&str> = received
+        .cas_paths
         .keys()
         .map(String::as_str)
         .collect();
@@ -423,7 +439,8 @@ async fn writes_index_row_when_writer_provided() {
         .expect("row must exist at the git-hosted key");
     assert_eq!(row.algo, "sha512");
     assert_eq!(row.requires_build, Some(received.built));
-    let keys: Vec<&str> = row.files
+    let keys: Vec<&str> = row
+        .files
         .keys()
         .map(String::as_str)
         .collect();
@@ -435,10 +452,15 @@ async fn writes_index_row_when_writer_provided() {
     // verify pass compares `size` against the on-disk file. If any
     // of these drift, a follow-up install would miss the cache and
     // silently fall through to the cold path.
-    let pj = row.files.get("package.json").expect("package.json entry");
+    let pj = row
+        .files
+        .get("package.json")
+        .expect("package.json entry");
     assert!(!pj.digest.is_empty(), "digest must be populated");
     assert!(
-        pj.digest.bytes().all(|b| b.is_ascii_hexdigit()),
+        pj.digest
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit()),
         "digest must be hex: {:?}",
         pj.digest,
     );
@@ -573,7 +595,8 @@ async fn fast_path_queues_synthesized_index_row() {
         .expect("fast path must still queue a row at the final key");
     assert_eq!(row.requires_build, Some(false), "fast path implies no build needed");
     assert_eq!(row.algo, "sha512");
-    let row_keys: Vec<&str> = row.files
+    let row_keys: Vec<&str> = row
+        .files
         .keys()
         .map(String::as_str)
         .collect();
@@ -584,10 +607,14 @@ async fn fast_path_queues_synthesized_index_row() {
     // The synthesized `bin/cli.js` entry must round-trip through
     // `cas_file_path_by_mode` to the same path the input map points
     // at — that's the property a warm prefetch relies on.
-    let bin_entry = row.files.get("bin/cli.js").expect("bin entry must exist");
+    let bin_entry = row
+        .files
+        .get("bin/cli.js")
+        .expect("bin entry must exist");
     assert_eq!(bin_entry.mode & 0o111, 0o111, "executable bit must survive the synthesis");
-    let resolved =
-        store_dir.cas_file_path_by_mode(&bin_entry.digest, bin_entry.mode).expect("valid digest");
+    let resolved = store_dir
+        .cas_file_path_by_mode(&bin_entry.digest, bin_entry.mode)
+        .expect("valid digest");
     assert_eq!(resolved, bin_cas_path, "synthesized digest must round-trip to the input CAS path");
 }
 
@@ -659,7 +686,8 @@ async fn sub_path_never_takes_fast_path() {
     // `packages/sub/` prefix. If the fast path had triggered
     // (returning input `cas_paths` verbatim), the keys would still
     // be the monorepo-prefixed paths.
-    let out_keys: Vec<&str> = received.cas_paths
+    let out_keys: Vec<&str> = received
+        .cas_paths
         .keys()
         .map(String::as_str)
         .collect();
@@ -677,7 +705,8 @@ async fn sub_path_never_takes_fast_path() {
         .get(key)
         .unwrap()
         .expect("sub-path takes slow path and writes a row");
-    let row_keys: Vec<&str> = row.files
+    let row_keys: Vec<&str> = row
+        .files
         .keys()
         .map(String::as_str)
         .collect();

@@ -168,7 +168,10 @@ async fn dispatch(
     Path(params): Path<HashMap<String, String>>,
     incoming: axum::extract::Request,
 ) -> Response {
-    let Some(endpoint) = params.get("path").and_then(|tail| parse_endpoint(tail)) else {
+    let Some(endpoint) = params
+        .get("path")
+        .and_then(|tail| parse_endpoint(tail))
+    else {
         return error(ErrorCode::NameUnknown, "no distribution endpoint at this path");
     };
     let tail = &params["path"];
@@ -199,7 +202,11 @@ async fn dispatch(
         Endpoint::Referrers { name, digest } => request.referrers(&name, &digest).await,
         Endpoint::Catalog => request.catalog().await,
         Endpoint::Tags { name } => request.tags(&name).await,
-        Endpoint::Manifest { name, reference } => request.manifest(&name, &reference, body).await,
+        Endpoint::Manifest { name, reference } => {
+            request
+                .manifest(&name, &reference, body)
+                .await
+        }
         Endpoint::Blob { name, digest } => request.blob(&name, &digest).await,
         Endpoint::StartUpload { name } => request.start_upload(&name, body).await,
         Endpoint::Upload { name, id } => request.upload(&name, &id, body).await,
@@ -283,7 +290,9 @@ impl Request {
 
     async fn read_blob(&self, name: &str, digest: &Digest) -> Response {
         if let Some((key, source)) = self.upstream_source(name) {
-            return self.proxy_blob(&key, &source, digest).await;
+            return self
+                .proxy_blob(&key, &source, digest)
+                .await;
         }
         let repo = match self.hosted_repo(name) {
             Ok(repo) => repo,
@@ -291,9 +300,10 @@ impl Request {
         };
         let etag = format!(r#""{digest}""#);
         if let Some(range) = self.requested_download_range(&etag) {
-            let ranged =
-                repo.storage.open_hosted_blob_range(&repo.key, &digest.blob_filename(), &range)
-                    .await;
+            let ranged = repo
+                .storage
+                .open_hosted_blob_range(&repo.key, &digest.blob_filename(), &range)
+                .await;
             let response = match ranged {
                 Ok(Some(blob)) => ranged_blob_response(blob, digest, &etag),
                 Ok(None) => return error(ErrorCode::BlobUnknown, "no such blob"),
@@ -301,12 +311,15 @@ impl Request {
             };
             return self.caller_scoped(Some(repo.key.as_str()), response);
         }
-        let (body, size) =
-            match repo.storage.open_hosted_blob(&repo.key, &digest.blob_filename()).await {
-                Ok(Some(blob)) => blob,
-                Ok(None) => return error(ErrorCode::BlobUnknown, "no such blob"),
-                Err(err) => return registry_error(err),
-            };
+        let (body, size) = match repo
+            .storage
+            .open_hosted_blob(&repo.key, &digest.blob_filename())
+            .await
+        {
+            Ok(Some(blob)) => blob,
+            Ok(None) => return error(ErrorCode::BlobUnknown, "no such blob"),
+            Err(err) => return registry_error(err),
+        };
         let mut response = Response::builder()
             .status(StatusCode::OK)
             .header(header::ACCEPT_RANGES, "bytes")
@@ -317,7 +330,9 @@ impl Request {
             response = response.header(header::CONTENT_LENGTH, size);
         }
         let body = if self.method == Method::HEAD { Body::empty() } else { body };
-        let response = response.body(body).unwrap_or_else(|_| server_error());
+        let response = response
+            .body(body)
+            .unwrap_or_else(|_| server_error());
         self.caller_scoped(Some(repo.key.as_str()), response)
     }
 
@@ -325,10 +340,12 @@ impl Request {
     /// `If-Range` still matches.
     fn requested_download_range(&self, etag: &str) -> Option<pnpr_storage::GetRange> {
         if self.method != Method::GET
-            || self.headers
+            || self
+                .headers
                 .get(header::IF_RANGE)
                 .is_some_and(|value| value != etag)
-            || self.headers
+            || self
+                .headers
                 .get_all(header::RANGE)
                 .iter()
                 .count()
@@ -369,13 +386,18 @@ impl Request {
         let (key, source) = self.hosted_source(name)?;
         let org = hosted_read_namespace(&self.state, &self.identity, &source, key.as_str())
             .map_err(Refusal::from)?;
-        let storage = self.state.inner.storage.for_hosted(&org);
+        let storage = self
+            .state
+            .inner
+            .storage
+            .for_hosted(&org);
         Ok(HostedRepo { key, source, storage })
     }
 
     /// Whether a bearer token on the request denies pulling `source_key`.
     fn token_forbids_pull(&self, source_key: &str) -> Result<bool, RegistryError> {
-        let Some(raw) = self.headers
+        let Some(raw) = self
+            .headers
             .get(header::AUTHORIZATION)
             .and_then(|value| value.to_str().ok())
             .and_then(super::authentication::token_credentials)
@@ -394,9 +416,12 @@ fn parse_download_range(value: &str) -> Option<pnpr_storage::GetRange> {
     }
     let (start, end) = bounds.split_once('-')?;
     let number = |value: &str| {
-        (!value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()))
-            .then(|| value.parse::<u64>().ok())
-            .flatten()
+        (!value.is_empty()
+            && value
+                .bytes()
+                .all(|byte| byte.is_ascii_digit()))
+        .then(|| value.parse::<u64>().ok())
+        .flatten()
     };
     if start.is_empty() {
         return number(end).map(pnpr_storage::GetRange::Suffix);
@@ -468,12 +493,10 @@ fn api_base(uri_path: &str, tail: &str) -> String {
 
 /// One named parameter of a raw query string.
 fn query_param(query: Option<&str>, key: &str) -> Option<String> {
-    query?
-        .split('&')
-        .find_map(|pair| {
-            let (name, value) = pair.split_once('=')?;
-            (name == key).then(|| percent_decode(value))
-        })
+    query?.split('&').find_map(|pair| {
+        let (name, value) = pair.split_once('=')?;
+        (name == key).then(|| percent_decode(value))
+    })
 }
 
 #[cfg(test)]

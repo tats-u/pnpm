@@ -66,8 +66,9 @@ pub(super) fn sysroot(root: &Path) -> Result<PathBuf> {
         let root = root.display();
         return Err(miette::miette!("find Rust sysroot for {root}: {stderr}"));
     }
-    let path =
-        String::from_utf8(output.stdout).into_diagnostic().wrap_err("decode Rust sysroot")?;
+    let path = String::from_utf8(output.stdout)
+        .into_diagnostic()
+        .wrap_err("decode Rust sysroot")?;
     if path.trim().is_empty() {
         let root = root.display();
         return Err(miette::miette!("rustc returned an empty sysroot for {root}"));

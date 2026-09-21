@@ -371,8 +371,12 @@ fn lockfile_driven_linking_only_visits_selected_snapshots() {
         virtual_dir,
         pnpm_config::default_virtual_store_dir_max_length() as usize,
     );
-    let selected: PackageKey = "selected@1.0.0".parse().expect("parse selected key");
-    let unchanged: PackageKey = "unchanged@1.0.0".parse().expect("parse unchanged key");
+    let selected: PackageKey = "selected@1.0.0"
+        .parse()
+        .expect("parse selected key");
+    let unchanged: PackageKey = "unchanged@1.0.0"
+        .parse()
+        .expect("parse unchanged key");
     let snapshots = HashMap::from([
         (selected.clone(), SnapshotEntry::default()),
         (unchanged.clone(), SnapshotEntry::default()),
@@ -478,7 +482,9 @@ fn link_direct_dep_bins_follows_symlink_to_real_package() {
 
     // The "real" package contents live elsewhere (mimics pacquet's
     // virtual-store layout).
-    let real_pkg = tmp.path().join("virtual/foo@1.0.0/node_modules/foo");
+    let real_pkg = tmp
+        .path()
+        .join("virtual/foo@1.0.0/node_modules/foo");
     create_dir_all(&real_pkg).unwrap();
     write_file(real_pkg.join("package.json"), json!({"name": "foo", "bin": "cli.js"}).to_string())
         .unwrap();
@@ -630,11 +636,21 @@ fn dummy_binary_resolution() -> BinaryResolution {
 /// omit `hasBin` for workspace packages.
 #[test]
 fn build_has_bin_set_includes_resolutions_with_implicit_bin_metadata() {
-    let registry_with_bin: PackageKey = "react@18.0.0".parse().expect("parse react key");
-    let registry_no_bin: PackageKey = "lodash@4.17.0".parse().expect("parse lodash key");
-    let runtime_binary: PackageKey = "node@22.0.0".parse().expect("parse node key");
-    let runtime_variations: PackageKey = "node@20.0.0".parse().expect("parse node@20 key");
-    let directory: PackageKey = "@org/local@1.0.0".parse().expect("parse local key");
+    let registry_with_bin: PackageKey = "react@18.0.0"
+        .parse()
+        .expect("parse react key");
+    let registry_no_bin: PackageKey = "lodash@4.17.0"
+        .parse()
+        .expect("parse lodash key");
+    let runtime_binary: PackageKey = "node@22.0.0"
+        .parse()
+        .expect("parse node key");
+    let runtime_variations: PackageKey = "node@20.0.0"
+        .parse()
+        .expect("parse node@20 key");
+    let directory: PackageKey = "@org/local@1.0.0"
+        .parse()
+        .expect("parse local key");
 
     let mut packages = HashMap::new();
     packages.insert(

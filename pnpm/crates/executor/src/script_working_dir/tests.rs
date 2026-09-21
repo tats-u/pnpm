@@ -57,7 +57,9 @@ fn the_normalized_spelling_comes_first() {
     std::fs::create_dir_all(&slot).expect("create the deep slot");
 
     let spellings = shorter_working_dirs(&slot);
-    let first = spellings.first().expect("a relative storeDir leaves a `..` to drop");
+    let first = spellings
+        .first()
+        .expect("a relative storeDir leaves a `..` to drop");
     assert!(
         !first
             .components()

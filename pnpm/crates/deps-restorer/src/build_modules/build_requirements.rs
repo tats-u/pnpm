@@ -52,13 +52,7 @@ pub(super) struct RequiresBuildInputs<'a> {
 /// Whether each snapshot needs its build scripts run: what the package
 /// published, plus what its configured patch adds.
 pub(super) fn requires_build_by_key(inputs: RequiresBuildInputs<'_>) -> HashMap<PackageKey, bool> {
-    let RequiresBuildInputs {
-        snapshots,
-        skipped,
-        pkg_roots,
-        prefetched,
-        patches,
-    } = inputs;
+    let RequiresBuildInputs { snapshots, skipped, pkg_roots, prefetched, patches } = inputs;
     let published: HashMap<PackageKey, bool> = snapshots
         .keys()
         // Skip snapshots that never landed on disk. `pkg_requires_build`
@@ -149,14 +143,23 @@ pub(super) fn previewed_patch_adds_build(
     key: &PackageKey,
     pkg_roots: PkgRoots<'_>,
 ) -> Option<bool> {
-    let patch_file_path = patches.get(metadata_key)?.patch_file_path.as_deref()?;
+    let patch_file_path = patches
+        .get(metadata_key)?
+        .patch_file_path
+        .as_deref()?;
     let pkg_root = pkg_roots.canonical(key)?;
     let preview = preview_patch(&pkg_root, patch_file_path).ok()?;
     Some(
-        preview.written_paths.iter().any(|path| file_path_requires_build(path))
-            || preview.manifest.is_some_and(|manifest| {
-                parse_manifest(&manifest).is_ok_and(|manifest| manifest_requires_build(&manifest))
-            }),
+        preview
+            .written_paths
+            .iter()
+            .any(|path| file_path_requires_build(path))
+            || preview
+                .manifest
+                .is_some_and(|manifest| {
+                    parse_manifest(&manifest)
+                        .is_ok_and(|manifest| manifest_requires_build(&manifest))
+                }),
     )
 }
 /// The snapshots `--ignore-scripts` kept from building, sorted for a

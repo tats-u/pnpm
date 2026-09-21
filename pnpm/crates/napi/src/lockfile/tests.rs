@@ -84,7 +84,13 @@ fn a_modules_dir_override_relocates_the_current_lockfile() {
 fn an_unknown_lockfile_kind_is_rejected() {
     let error = LockfileKind::parse(Some("previous")).expect_err("unknown kind");
 
-    assert!(error.reason.contains("unknown lockfile kind"), "{}", error.reason);
+    assert!(
+        error
+            .reason
+            .contains("unknown lockfile kind"),
+        "{}",
+        error.reason
+    );
 }
 
 /// The JSON crossing the boundary is the lockfile file's own shape: each
@@ -163,5 +169,11 @@ fn filtering_rejects_a_value_that_is_not_a_lockfile() {
     let error = filter_lockfile_by_importers(json!({ "nope": true }), vec![], None)
         .expect_err("not a lockfile");
 
-    assert!(error.reason.contains("is not a lockfile"), "{}", error.reason);
+    assert!(
+        error
+            .reason
+            .contains("is not a lockfile"),
+        "{}",
+        error.reason
+    );
 }

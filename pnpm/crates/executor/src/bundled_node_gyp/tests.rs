@@ -5,7 +5,9 @@ use std::{fs, path::Path};
 /// Lay out the published payload under `exe_dir` the way the npm
 /// wrapper package ships it.
 fn ship_payload(exe_dir: &Path) {
-    let bin_dir = exe_dir.join("dist").join("node-gyp-bin");
+    let bin_dir = exe_dir
+        .join("dist")
+        .join("node-gyp-bin");
     fs::create_dir_all(&bin_dir).unwrap();
     fs::write(bin_dir.join("node-gyp"), "#!/usr/bin/env sh\n").unwrap();
     fs::write(bin_dir.join("node-gyp.cmd"), "@echo off\n").unwrap();

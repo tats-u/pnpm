@@ -97,7 +97,9 @@ impl CompletionServerArgs {
         let is_zsh = std::env::var_os("SHELL").is_some_and(|shell| shell == "zsh");
         for completion in complete_words(&self.words)? {
             let completion = if is_zsh {
-                completion.replace('\\', r"\\").replace(':', r"\:")
+                completion
+                    .replace('\\', r"\\")
+                    .replace(':', r"\:")
             } else {
                 completion
             };
@@ -182,7 +184,9 @@ impl<'a> CompletionContext<'a> {
         let mut remaining = rest;
         let mut accepts_next = false;
         let consumes_value = short_cluster_consumes_value(rest, |short| {
-            remaining = remaining.strip_prefix(short).expect("scanner visits each short in order");
+            remaining = remaining
+                .strip_prefix(short)
+                .expect("scanner visits each short in order");
             let argument = find_short_option_argument(self.command, short)
                 .or_else(|| find_short_option_argument(self.root, short))?;
             self.workspace_root |= argument.get_id() == "workspace_root";
@@ -207,7 +211,8 @@ impl<'a> CompletionContext<'a> {
         };
         let mut index = 0;
         while let Some(word) = words.get(index) {
-            if let Some(subcommand) = context.command
+            if let Some(subcommand) = context
+                .command
                 .get_subcommands()
                 .find(|subcommand| !subcommand.is_hide_set() && command_matches(subcommand, word))
             {
@@ -235,17 +240,20 @@ fn short_option_value<'a>(
     accepts_next: bool,
 ) -> Option<&'a str> {
     if !attached.is_empty() {
-        return Some(attached.strip_prefix('=').unwrap_or(attached));
+        return Some(
+            attached
+                .strip_prefix('=')
+                .unwrap_or(attached),
+        );
     }
     if accepts_next { next } else { None }
 }
 
 fn option_word_width(context: &CompletionContext<'_>, word: &str, next: Option<&str>) -> usize {
     let takes_separate_value = option_has_separate_value(word)
-        && find_option_argument(context, word)
-            .is_some_and(|argument| {
-                argument_takes_separate_value(argument) && option_value_is_allowed(argument, next)
-            });
+        && find_option_argument(context, word).is_some_and(|argument| {
+            argument_takes_separate_value(argument) && option_value_is_allowed(argument, next)
+        });
     if takes_separate_value { 2 } else { 1 }
 }
 
@@ -404,12 +412,16 @@ fn find_short_option_argument(command: &Command, short: char) -> Option<&Arg> {
 }
 
 fn find_option_argument_in_command<'a>(command: &'a Command, option: &str) -> Option<&'a Arg> {
-    command.get_arguments().find(|argument| argument_matches(argument, option))
+    command
+        .get_arguments()
+        .find(|argument| argument_matches(argument, option))
 }
 
 fn argument_matches(argument: &Arg, option: &str) -> bool {
     if let Some(long) = option.strip_prefix("--") {
-        let long = long.split_once('=').map_or(long, |(name, _)| name);
+        let long = long
+            .split_once('=')
+            .map_or(long, |(name, _)| name);
         return argument.get_long() == Some(long)
             || argument
                 .get_all_aliases()
@@ -431,7 +443,9 @@ fn argument_matches(argument: &Arg, option: &str) -> bool {
 }
 
 fn argument_takes_value(argument: &Arg) -> bool {
-    argument.get_num_args().is_some_and(|range| range.takes_values())
+    argument
+        .get_num_args()
+        .is_some_and(|range| range.takes_values())
         || matches!(argument.get_action(), ArgAction::Set | ArgAction::Append)
 }
 

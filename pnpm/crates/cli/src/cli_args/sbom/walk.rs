@@ -57,7 +57,8 @@ fn collect_importer_components(
     importer: &pnpm_lockfile::ProjectSnapshot,
     walk: &mut ImporterWalk<'_>,
 ) {
-    let parent_purl = walk.ws_purl_by_importer
+    let parent_purl = walk
+        .ws_purl_by_importer
         .get(importer_id)
         .cloned()
         .unwrap_or_else(|| inputs.root_purl.to_owned());
@@ -104,7 +105,11 @@ fn importer_peer_names(inputs: &ImporterComponents<'_>, importer_id: &str) -> Ha
         return HashSet::new();
     }
     confined_importer_dir(inputs.lockfile_dir, importer_id)
-        .and_then(|dir| safe_read_package_json_from_dir(&dir).ok().flatten())
+        .and_then(|dir| {
+            safe_read_package_json_from_dir(&dir)
+                .ok()
+                .flatten()
+        })
         .map(|manifest| peer_names_from_manifest(&manifest))
         .unwrap_or_default()
 }
@@ -123,7 +128,11 @@ fn collect_linked_workspace_component(
 ) -> bool {
     let Some(link_target) = spec.version.as_link_target() else { return false };
     let Some(target_id) = normalize_link_path(importer_id, link_target) else { return false };
-    if !inputs.lockfile.importers.contains_key(target_id.as_str()) {
+    if !inputs
+        .lockfile
+        .importers
+        .contains_key(target_id.as_str())
+    {
         return false;
     }
     let Some(ws_dir) = confined_importer_dir(inputs.lockfile_dir, &target_id) else {
@@ -143,7 +152,8 @@ fn collect_linked_workspace_component(
         .unwrap_or("0.0.0")
         .to_string();
     let ws_purl = build_purl(&ws_name, &ws_version);
-    walk.relationships.push(SbomRelationship { from: parent_purl.to_owned(), to: ws_purl.clone() });
+    walk.relationships
+        .push(SbomRelationship { from: parent_purl.to_owned(), to: ws_purl.clone() });
     // A sibling reached both ways is a production dependency.
     if let Some(existing) = walk.components_map.get_mut(&ws_purl) {
         if !dev_only && existing.dep_type == DepType::DevOnly {
@@ -155,7 +165,8 @@ fn collect_linked_workspace_component(
             workspace_component(&ws_manifest, ws_name, ws_version, dev_only),
         );
     }
-    walk.ws_purl_by_importer.insert(target_id.clone(), ws_purl);
+    walk.ws_purl_by_importer
+        .insert(target_id.clone(), ws_purl);
     walk.queue.push(target_id);
     true
 }
@@ -202,7 +213,9 @@ fn walk_snapshot(
 
     while let Some((key, parent_purl)) = queue.pop() {
         let name = key.name.to_string();
-        let pkg_meta = ctx.packages.and_then(|pkgs| pkgs.get(&key.without_peer()));
+        let pkg_meta = ctx
+            .packages
+            .and_then(|pkgs| pkgs.get(&key.without_peer()));
         let version = pkg_meta
             .and_then(|meta| meta.version.clone())
             .unwrap_or_else(|| key.suffix.version().to_string());
@@ -223,7 +236,10 @@ fn walk_snapshot(
             components_map.insert(purl.clone(), snapshot_component(&key, name, version, ctx));
         }
 
-        let Some(snapshot) = ctx.snapshots.and_then(|snapshots| snapshots.get(&key)) else {
+        let Some(snapshot) = ctx
+            .snapshots
+            .and_then(|snapshots| snapshots.get(&key))
+        else {
             continue;
         };
         queue.extend(snapshot_children(snapshot, ctx).map(|child| (child, purl.clone())));
@@ -244,7 +260,9 @@ fn skipped_optional_package(
         return false;
     }
     let optional = ctx.snapshots.is_some_and(|snapshots| {
-        snapshots.get(key).is_some_and(|snapshot| snapshot.optional)
+        snapshots
+            .get(key)
+            .is_some_and(|snapshot| snapshot.optional)
     });
     platform_incompatible_optional(&key.name.bare, optional, pkg_meta, &ctx.installability)
 }
@@ -257,7 +275,9 @@ fn snapshot_component(
     version: String,
     ctx: &WalkContext<'_>,
 ) -> SbomComponent {
-    let pkg_meta = ctx.packages.and_then(|packages| packages.get(&key.without_peer()));
+    let pkg_meta = ctx
+        .packages
+        .and_then(|packages| packages.get(&key.without_peer()));
     let store_meta = read_pkg_metadata_from_store(key, &name, ctx);
     SbomComponent {
         purl: build_purl(&name, &version),
@@ -267,7 +287,8 @@ fn snapshot_component(
         }),
         name,
         version,
-        dep_type: ctx.dep_types
+        dep_type: ctx
+            .dep_types
             .get(key)
             .copied()
             .unwrap_or(DepType::ProdOnly),
@@ -286,11 +307,18 @@ fn snapshot_children<'a>(
     snapshot: &'a SnapshotEntry,
     ctx: &WalkContext<'_>,
 ) -> impl Iterator<Item = PkgNameVerPeer> + 'a {
-    let optional_iter = ctx.include_optional_transitive
-        .then(|| snapshot.optional_dependencies.iter().flatten())
+    let optional_iter = ctx
+        .include_optional_transitive
+        .then(|| {
+            snapshot
+                .optional_dependencies
+                .iter()
+                .flatten()
+        })
         .into_iter()
         .flatten();
-    snapshot.dependencies
+    snapshot
+        .dependencies
         .iter()
         .flatten()
         .chain(optional_iter)
@@ -306,10 +334,17 @@ pub(super) fn walk_importer_components(inputs: &ImporterComponents<'_>, stores: 
         queue: &mut stores.queue,
     };
     while let Some(importer_id) = walk.queue.pop() {
-        if !stores.visited_importers.insert(importer_id.clone()) {
+        if !stores
+            .visited_importers
+            .insert(importer_id.clone())
+        {
             continue;
         }
-        let Some(importer) = inputs.lockfile.importers.get(importer_id.as_str()) else {
+        let Some(importer) = inputs
+            .lockfile
+            .importers
+            .get(importer_id.as_str())
+        else {
             continue;
         };
         collect_importer_components(inputs, &importer_id, importer, &mut walk);
@@ -329,10 +364,15 @@ pub(super) fn component_walk_context<'a>(
         dep_types,
         default_registry: &state.config.registry,
         virtual_store_dirs,
-        virtual_store_dir_max_length: state.config.virtual_store_dir_max_length as usize,
+        virtual_store_dir_max_length: state
+            .config
+            .virtual_store_dir_max_length as usize,
         include_optional_transitive,
         installability: InstallabilityOptions {
-            supported_architectures: state.config.supported_architectures.as_ref(),
+            supported_architectures: state
+                .config
+                .supported_architectures
+                .as_ref(),
             current_os: pnpm_detect_libc::host_platform(),
             current_cpu: pnpm_detect_libc::host_arch(),
             current_libc: pnpm_graph_hasher::host_libc(),
@@ -344,7 +384,8 @@ pub(super) fn component_walk_context<'a>(
 fn importer_dependency_names(
     importer: &pnpm_lockfile::ProjectSnapshot,
 ) -> (HashSet<String>, HashSet<String>) {
-    let dev_dep_names: HashSet<String> = importer.dev_dependencies
+    let dev_dep_names: HashSet<String> = importer
+        .dev_dependencies
         .as_ref()
         .map(|deps| {
             deps.keys()
@@ -352,7 +393,8 @@ fn importer_dependency_names(
                 .collect()
         })
         .unwrap_or_default();
-    let prod_dep_names: HashSet<String> = importer.dependencies
+    let prod_dep_names: HashSet<String> = importer
+        .dependencies
         .iter()
         .chain(importer.optional_dependencies.iter())
         .flat_map(|deps| deps.keys())
@@ -367,8 +409,17 @@ fn included_importer_dependencies<'a>(
     importer: &'a pnpm_lockfile::ProjectSnapshot,
 ) -> [Option<&'a pnpm_lockfile::ResolvedDependencyMap>; 3] {
     [
-        include.dependencies.then_some(importer.dependencies.as_ref()).flatten(),
-        include.dev_dependencies.then_some(importer.dev_dependencies.as_ref()).flatten(),
-        include.optional_dependencies.then_some(importer.optional_dependencies.as_ref()).flatten(),
+        include
+            .dependencies
+            .then_some(importer.dependencies.as_ref())
+            .flatten(),
+        include
+            .dev_dependencies
+            .then_some(importer.dev_dependencies.as_ref())
+            .flatten(),
+        include
+            .optional_dependencies
+            .then_some(importer.optional_dependencies.as_ref())
+            .flatten(),
     ]
 }

@@ -156,7 +156,12 @@ fn repository(root: &Path) -> (String, String) {
     let commit = git(root, &["rev-parse", "HEAD"]);
     git(root, &["tag", "v1"]);
     git(root, &["tag", "v1#fork"]);
-    (Url::from_directory_path(root).unwrap().to_string(), commit)
+    (
+        Url::from_directory_path(root)
+            .unwrap()
+            .to_string(),
+        commit,
+    )
 }
 
 #[tokio::test]
@@ -200,7 +205,13 @@ async fn git_revisions_and_direct_requirements_pin_commits_and_replay_offline() 
             .assert()
             .success();
         let invocations = fs::read_to_string(&trace).unwrap();
-        assert_eq!(invocations.matches("built-in: git clone").count(), 1, "{invocations}");
+        assert_eq!(
+            invocations
+                .matches("built-in: git clone")
+                .count(),
+            1,
+            "{invocations}"
+        );
         let lock = fs::read_to_string(root.path().join("pylock.toml")).unwrap();
         assert!(lock.contains(&format!(r#"commit-id = "{commit}""#)), "lock: {lock}");
         assert!(!lock.contains("packages.directory"), "git source locked as a directory: {lock}");
@@ -303,8 +314,12 @@ async fn a_git_subdirectory_stays_at_its_locked_commit_when_the_branch_moves() {
     let _backends = serve_backends(&mut server).await;
     let (url, _) = repository(repo.path());
     fs::create_dir(repo.path().join("python")).unwrap();
-    fs::rename(repo.path().join("pyproject.toml"), repo.path().join("python/pyproject.toml"))
-        .unwrap();
+    fs::rename(
+        repo.path().join("pyproject.toml"),
+        repo.path()
+            .join("python/pyproject.toml"),
+    )
+    .unwrap();
     fs::rename(repo.path().join("src"), repo.path().join("python/src")).unwrap();
     git(repo.path(), &["add", "."]);
     git(
@@ -327,7 +342,12 @@ async fn a_git_subdirectory_stays_at_its_locked_commit_when_the_branch_moves() {
         .assert()
         .success();
     let lock = fs::read_to_string(root.path().join("pylock.toml")).unwrap();
-    fs::write(repo.path().join("python/src/fork/__init__.py"), "MARKER = 'moved'\n").unwrap();
+    fs::write(
+        repo.path()
+            .join("python/src/fork/__init__.py"),
+        "MARKER = 'moved'\n",
+    )
+    .unwrap();
     git(repo.path(), &["add", "."]);
     git(
         repo.path(),

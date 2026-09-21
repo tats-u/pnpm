@@ -94,8 +94,13 @@ fn hoisted_specifier(opts: &HoistPeersOptions<'_>, peer_name: &str, range: &str)
     if let Some(spec) = root_bare_specifier {
         return Some(spec.clone());
     }
-    let Some(selectors) = opts.all_preferred_versions.get(peer_name) else {
-        return opts.auto_install_peers.then(|| range.to_string());
+    let Some(selectors) = opts
+        .all_preferred_versions
+        .get(peer_name)
+    else {
+        return opts
+            .auto_install_peers
+            .then(|| range.to_string());
     };
     preferred_version_specifier(opts, selectors, range)
 }
@@ -131,7 +136,9 @@ fn preferred_version_specifier(
         // registry rather than installing a version the peer
         // explicitly rejects. Without auto-install-peers, hoist
         // nothing and leave the peer missing.
-        return opts.auto_install_peers.then(|| range.to_string());
+        return opts
+            .auto_install_peers
+            .then(|| range.to_string());
     }
     let mut parts: Vec<String> = Vec::new();
     if let Some(highest) = max_satisfying_any(&versions) {
@@ -234,7 +241,11 @@ fn max_hoistable_optional_version(
     // fall back to the root's own out-of-range version, so it is dropped.
     let root_range = root_dep
         .and_then(|dep| dep.normalized_bare_specifier.as_deref())
-        .and_then(|spec| get_peer_version_range(spec).parse::<Range>().ok())
+        .and_then(|spec| {
+            get_peer_version_range(spec)
+                .parse::<Range>()
+                .ok()
+        })
         .filter(|root| {
             parsed_ranges
                 .iter()
@@ -310,8 +321,11 @@ fn find_workspace_root_dep<'a>(
     workspace_root_deps: &'a [WorkspaceRootDep],
     peer_name: &str,
 ) -> Option<&'a WorkspaceRootDep> {
-    let candidates =
-        || workspace_root_deps.iter().filter(|dep| dep.normalized_bare_specifier.is_some());
+    let candidates = || {
+        workspace_root_deps
+            .iter()
+            .filter(|dep| dep.normalized_bare_specifier.is_some())
+    };
     candidates()
         .find(|root_dep| root_dep.alias == peer_name)
         .or_else(|| {

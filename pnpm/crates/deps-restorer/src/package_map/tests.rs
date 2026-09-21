@@ -139,8 +139,12 @@ fn lockfile_package_map_uses_global_virtual_store_layout() {
     config.global_virtual_store_dir = cwd.join("store/links");
     config.virtual_store_dir = cwd.join("node_modules/.pnpm");
 
-    let snapshots =
-        HashMap::from([("dep1@1.0.0".parse::<PackageKey>().unwrap(), SnapshotEntry::default())]);
+    let snapshots = HashMap::from([(
+        "dep1@1.0.0"
+            .parse::<PackageKey>()
+            .unwrap(),
+        SnapshotEntry::default(),
+    )]);
     // GVS precomputes a `<name>/<version>/<hash>` slot per snapshot; the
     // package map must read those locations rather than the flat depPath name.
     let layout = VirtualStoreLayout::new(&config, None, Some(&snapshots), None, None, None);
@@ -244,11 +248,12 @@ fn hoisted_package_map_loose_mode_includes_physical_ancestor_dependencies() {
     let root_manifest = manifest("root");
     let project_manifests = vec![(cwd.clone(), &root_manifest)];
     let mut graph = LockfileToDepGraphResult::default();
-    graph.direct_dependencies_by_importer_id.insert(
-        ".".to_string(),
-        BTreeMap::from([("dep1".to_string(), dep1_dir.clone())]),
-    );
-    graph.graph.insert(dep1_dir.clone(), graph_node("dep1", "1.0.0", &dep1_dir));
+    graph
+        .direct_dependencies_by_importer_id
+        .insert(".".to_string(), BTreeMap::from([("dep1".to_string(), dep1_dir.clone())]));
+    graph
+        .graph
+        .insert(dep1_dir.clone(), graph_node("dep1", "1.0.0", &dep1_dir));
     let lockfile = Lockfile {
         importers: HashMap::from([(
             ".".to_string(),
@@ -290,8 +295,12 @@ fn hoisted_package_map_standard_mode_uses_declared_importer_dependencies_only() 
     let root_manifest = manifest("root");
     let project_manifests = vec![(cwd.clone(), &root_manifest)];
     let mut graph = LockfileToDepGraphResult::default();
-    graph.graph.insert(dep1_dir.clone(), graph_node("dep1", "1.0.0", &dep1_dir));
-    graph.graph.insert(dep2_dir.clone(), graph_node("dep2", "1.0.0", &dep2_dir));
+    graph
+        .graph
+        .insert(dep1_dir.clone(), graph_node("dep1", "1.0.0", &dep1_dir));
+    graph
+        .graph
+        .insert(dep2_dir.clone(), graph_node("dep2", "1.0.0", &dep2_dir));
     let lockfile = Lockfile {
         importers: HashMap::from([(
             ".".to_string(),
@@ -486,7 +495,9 @@ fn empty_lockfile() -> Lockfile {
 }
 
 fn graph_node(name: &str, version: &str, dir: &Path) -> DependenciesGraphNode {
-    let key: PackageKey = format!("{name}@{version}").parse().unwrap();
+    let key: PackageKey = format!("{name}@{version}")
+        .parse()
+        .unwrap();
     DependenciesGraphNode {
         package: crate::HoistedPackageMetadata {
             dep_path: DepPath::from(key.to_string()),

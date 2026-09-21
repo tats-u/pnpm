@@ -49,7 +49,10 @@ impl CommandTestExt for Command {
 fn ambient_pnpm_config_vars() -> impl Iterator<Item = OsString> {
     std::env::vars_os()
         .map(|(name, _)| name)
-        .filter(|name| name.to_str().is_some_and(is_pnpm_config_var))
+        .filter(|name| {
+            name.to_str()
+                .is_some_and(is_pnpm_config_var)
+        })
 }
 
 /// Whether `name` steers the pnpm under test: either spelling of the
@@ -64,17 +67,15 @@ fn is_pnpm_config_var(name: &str) -> bool {
 
     name.eq_ignore_ascii_case(SHIM_BYPASS)
         || name.eq_ignore_ascii_case(LIFECYCLE_EVENT)
-        || PREFIXES
-            .iter()
-            .any(|prefix| {
-                // `get`, not a slice: the environment is outside this process's
-                // control, and a name whose prefix-length byte falls inside a
-                // multi-byte character would panic every command construction.
-                name.len() > prefix.len()
-                    && name
-                        .get(..prefix.len())
-                        .is_some_and(|head| head.eq_ignore_ascii_case(prefix))
-            })
+        || PREFIXES.iter().any(|prefix| {
+            // `get`, not a slice: the environment is outside this process's
+            // control, and a name whose prefix-length byte falls inside a
+            // multi-byte character would panic every command construction.
+            name.len() > prefix.len()
+                && name
+                    .get(..prefix.len())
+                    .is_some_and(|head| head.eq_ignore_ascii_case(prefix))
+        })
 }
 
 #[cfg(test)]

@@ -42,7 +42,9 @@ const READ_BUFFER_SIZE: usize = 64 * 1024;
 /// lockfile machinery only ever sees the byte shape pacquet writes.
 #[must_use]
 pub fn normalize_lockfile_content(content: &str) -> Cow<'_, str> {
-    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
+    let content = content
+        .strip_prefix('\u{feff}')
+        .unwrap_or(content);
     if content.contains("\r\n") {
         Cow::Owned(content.replace("\r\n", "\n"))
     } else {

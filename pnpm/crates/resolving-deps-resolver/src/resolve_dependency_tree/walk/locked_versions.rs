@@ -51,7 +51,11 @@ pub(super) fn pin_patched_revision(
     wanted.bare_specifier = exact_registry_specifier_for_revision_refresh(
         specifier,
         version,
-        prior_key.and_then(|key| key.suffix.registry_qualified().map(|(name, _)| name)),
+        prior_key.and_then(|key| {
+            key.suffix
+                .registry_qualified()
+                .map(|(name, _)| name)
+        }),
     )
     .into();
 }
@@ -104,9 +108,13 @@ pub(super) fn pin_locked_version(
     if depth > 0
         && !update_unpins_edge(ctx.update_scope(), wanted, locked_version, depth)
         && let Some(version) = locked_version
-        && wanted.bare_specifier
+        && wanted
+            .bare_specifier
             .as_deref()
-            .is_some_and(|spec| spec.parse::<node_semver::Range>().is_ok())
+            .is_some_and(|spec| {
+                spec.parse::<node_semver::Range>()
+                    .is_ok()
+            })
     {
         wanted.bare_specifier = Some(version.to_string());
     }
@@ -120,7 +128,10 @@ pub(super) fn exact_registry_specifier_for_revision_refresh(
     if has_registry_revision_specifier(specifier) {
         return specifier.to_string();
     }
-    if specifier.parse::<node_semver::Range>().is_ok() {
+    if specifier
+        .parse::<node_semver::Range>()
+        .is_ok()
+    {
         return version.to_string();
     }
     let Some((protocol, body)) = specifier.split_once(':') else {
@@ -129,7 +140,10 @@ pub(super) fn exact_registry_specifier_for_revision_refresh(
     if protocol != "npm" && protocol != "jsr" && named_registry != Some(protocol) {
         return specifier.to_string();
     }
-    if body.parse::<node_semver::Range>().is_ok() {
+    if body
+        .parse::<node_semver::Range>()
+        .is_ok()
+    {
         return format!("{protocol}:{version}");
     }
     let Some(delimiter) = body
@@ -150,7 +164,10 @@ pub(super) fn has_registry_revision_specifier(specifier: &str) -> bool {
         return false;
     }
     let Some((_, revision)) = selector.rsplit_once("+r") else { return false };
-    !revision.is_empty() && revision.bytes().all(|byte| byte.is_ascii_digit())
+    !revision.is_empty()
+        && revision
+            .bytes()
+            .all(|byte| byte.is_ascii_digit())
 }
 
 pub(super) fn registry_revisions_conflict(
@@ -158,8 +175,12 @@ pub(super) fn registry_revisions_conflict(
     incoming: &LockfileResolution,
 ) -> bool {
     let revision = |resolution: &LockfileResolution| match resolution {
-        LockfileResolution::Registry(registry) => registry.revision.map(TarballRevision::get),
-        LockfileResolution::Tarball(tarball) => tarball.revision.map(TarballRevision::get),
+        LockfileResolution::Registry(registry) => registry
+            .revision
+            .map(TarballRevision::get),
+        LockfileResolution::Tarball(tarball) => tarball
+            .revision
+            .map(TarballRevision::get),
         _ => None,
     };
     let existing_revision = revision(existing);
@@ -183,12 +204,17 @@ pub(in super::super) fn node_alias(
     result: &pnpm_resolving_resolver_base::ResolveResult,
     id: &str,
 ) -> String {
-    wanted.alias
+    wanted
+        .alias
         .clone()
         .filter(|alias| !alias.is_empty())
         .or_else(|| result.alias.clone())
         .or_else(|| {
-            result.package.name_ver.as_ref().map(|name_ver| name_ver.name.to_string())
+            result
+                .package
+                .name_ver
+                .as_ref()
+                .map(|name_ver| name_ver.name.to_string())
         })
         .unwrap_or_else(|| id.to_string())
 }
@@ -198,8 +224,11 @@ pub(super) fn ensure_same_registry_revision(
     result: &pnpm_resolving_resolver_base::ResolveResult,
 ) -> Result<(), ResolveDependencyTreeError> {
     if registry_revisions_conflict(&existing.result.resolution, &result.resolution) {
-        let name_ver =
-            result.package.name_ver.as_ref().expect("registry result has name and version");
+        let name_ver = result
+            .package
+            .name_ver
+            .as_ref()
+            .expect("registry result has name and version");
         return Err(ResolveDependencyTreeError::RevisionConflict {
             name: name_ver.name.to_string(),
             version: name_ver.suffix.to_string(),

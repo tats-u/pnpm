@@ -83,7 +83,9 @@ fn ignore_ghsas_empty_removes_the_audit_block_when_ignore_is_its_only_key() {
 #[test]
 fn ignore_ghsas_rejects_control_characters() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
 
     // A newline in the value would splice into a multi-line scalar.
     let err = crate::set_audit_ignore_ghsas(dir.path(), &["GHSA-aaaa\nbreak".to_string()])

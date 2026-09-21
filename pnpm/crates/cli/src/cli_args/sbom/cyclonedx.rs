@@ -34,7 +34,8 @@ pub(super) fn serialize_cyclonedx(opts: &CycloneDxOpts<'_>) -> String {
 
     let root_purl = build_purl(&result.root_name, &result.root_version);
     let root_component = cyclonedx_root_component(result, &root_purl, root_type);
-    let components: Vec<serde_json::Value> = result.components
+    let components: Vec<serde_json::Value> = result
+        .components
         .iter()
         .map(cyclonedx_component)
         .collect();
@@ -79,7 +80,8 @@ fn cyclonedx_metadata(
     });
 
     if !opts.authors.is_empty() {
-        let author_list: Vec<serde_json::Value> = opts.authors
+        let author_list: Vec<serde_json::Value> = opts
+            .authors
             .iter()
             .map(|name| serde_json::json!({ "name": name }))
             .collect();
@@ -195,7 +197,9 @@ fn cyclonedx_dependencies(result: &SbomResult, root_purl: &str) -> Vec<serde_jso
     let mut deps_map: HashMap<&str, Vec<&str>> = HashMap::new();
     deps_map.entry(root_purl).or_default();
     for component in &result.components {
-        deps_map.entry(&component.purl).or_default();
+        deps_map
+            .entry(&component.purl)
+            .or_default();
     }
     for relationship in &result.relationships {
         deps_map

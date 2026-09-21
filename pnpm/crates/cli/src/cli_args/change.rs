@@ -84,7 +84,10 @@ impl ChangeArgs {
         let (projects, _) = discover_workspace_projects(&workspace_dir, config)?;
         let engine_projects = to_engine_projects(&projects);
 
-        if self.run_diagnostic_form(&workspace_dir, &projects, &engine_projects, config).await? {
+        if self
+            .run_diagnostic_form(&workspace_dir, &projects, &engine_projects, config)
+            .await?
+        {
             return Ok(());
         }
 
@@ -93,7 +96,8 @@ impl ChangeArgs {
             return Err(ChangeError::NoPackages.into());
         }
         self.check_params_releasable(&releasable, &engine_projects, &workspace_dir)?;
-        let bump = self.bump
+        let bump = self
+            .bump
             .as_ref()
             .map(|bump| {
                 parse_bump(bump).ok_or_else(|| ChangeError::InvalidBump { bump: bump.clone() })
@@ -294,7 +298,8 @@ fn detect_changed_dirs(
         .iter()
         .map(|project| project.dir.as_str())
         .collect();
-    changed.changed_projects
+    changed
+        .changed_projects
         .iter()
         .map(|root_dir| to_project_dir(workspace_dir, root_dir))
         .filter(|dir| releasable_dirs.contains(dir.as_str()))
@@ -312,7 +317,9 @@ fn detect_base_commit(cwd: &Path) -> Option<String> {
             continue;
         };
         if output.status.success() {
-            let commit = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            let commit = String::from_utf8_lossy(&output.stdout)
+                .trim()
+                .to_string();
             if !commit.is_empty() {
                 return Some(commit);
             }
@@ -381,7 +388,8 @@ pub fn releasable_projects(
     versioning: &VersioningSettings,
 ) -> Vec<ReleasableProject> {
     let refs = index_project_refs(projects, workspace_dir);
-    let ignored_dirs: HashSet<String> = versioning.ignore
+    let ignored_dirs: HashSet<String> = versioning
+        .ignore
         .iter()
         .flat_map(|reference| refs.ref_to_dirs(reference))
         .collect();

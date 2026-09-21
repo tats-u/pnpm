@@ -10,16 +10,27 @@ impl Request {
     /// `HEAD`/`GET`/`PUT`/`DELETE /v2/<name>/manifests/<reference>`.
     pub(super) async fn manifest(&self, name: &str, reference: &str, body: Body) -> Response {
         match self.method {
-            Method::GET | Method::HEAD => self.read_manifest(name, reference).await,
-            Method::PUT => self.write_manifest(name, reference, body).await,
-            Method::DELETE => self.delete_manifest(name, reference).await,
+            Method::GET | Method::HEAD => {
+                self.read_manifest(name, reference)
+                    .await
+            }
+            Method::PUT => {
+                self.write_manifest(name, reference, body)
+                    .await
+            }
+            Method::DELETE => {
+                self.delete_manifest(name, reference)
+                    .await
+            }
             _ => method_not_allowed(),
         }
     }
 
     pub(super) async fn read_manifest(&self, name: &str, reference: &str) -> Response {
         if let Some((key, source)) = self.upstream_source(name) {
-            return self.proxy_manifest(&key, &source, reference).await;
+            return self
+                .proxy_manifest(&key, &source, reference)
+                .await;
         }
         let repo = match self.hosted_repo(name) {
             Ok(repo) => repo,
@@ -46,7 +57,12 @@ impl Request {
             &repo.storage,
             &repo.key,
             &entry.digest.blob_filename(),
-            self.state.inner.config.http.oci.max_manifest_bytes,
+            self.state
+                .inner
+                .config
+                .http
+                .oci
+                .max_manifest_bytes,
         )
         .await
         {
@@ -59,14 +75,23 @@ impl Request {
     }
 
     pub(super) async fn write_manifest(&self, name: &str, reference: &str, body: Body) -> Response {
-        let publication = match self.manifest_publication(name, reference, body).await {
+        let publication = match self
+            .manifest_publication(name, reference, body)
+            .await
+        {
             Ok(publication) => publication,
             Err(refusal) => return refusal.respond(),
         };
         let digest = publication.digest.clone();
         let key = publication.key.clone();
         let subject = publication.subject();
-        let _guard = self.state.inner.locks.packages.lock(key.as_str()).await;
+        let _guard = self
+            .state
+            .inner
+            .locks
+            .packages
+            .lock(key.as_str())
+            .await;
         let staged = match publication.stage(&self.state).await {
             Ok(staged) => staged,
             Err(refusal) => return refusal.respond(),
@@ -101,11 +126,16 @@ impl Request {
         ) {
             return registry_error(err);
         }
-        let _guard = self.state.inner.locks.packages.lock(repo.key.as_str()).await;
-        let outcome = repo.storage.update_hosted_document_with_retry(
-            &repo.key,
-            DOCUMENT_WRITE_RETRIES,
-            |existing| {
+        let _guard = self
+            .state
+            .inner
+            .locks
+            .packages
+            .lock(repo.key.as_str())
+            .await;
+        let outcome = repo
+            .storage
+            .update_hosted_document_with_retry(&repo.key, DOCUMENT_WRITE_RETRIES, |existing| {
                 let Some(bytes) = existing else { return Ok(None) };
                 let mut document = ImageDocument::parse(bytes).map_err(RegistryError::Json)?;
                 let removed = match Digest::parse(reference) {
@@ -113,9 +143,8 @@ impl Request {
                     Err(_) => document.remove_tag(reference),
                 };
                 Ok(removed.then(|| document.to_bytes()))
-            },
-        )
-        .await;
+            })
+            .await;
         match outcome {
             Ok(DocumentUpdate::Written) => no_content(StatusCode::ACCEPTED),
             Ok(_) => error(ErrorCode::ManifestUnknown, "no such manifest or tag"),
@@ -130,16 +159,31 @@ impl Request {
         body: Body,
     ) -> Result<OciPublication, Refusal> {
         let (key, org) = self.publish_target(name)?;
-        let content_type = self.headers
+        let content_type = self
+            .headers
             .get(header::CONTENT_TYPE)
             .and_then(|value| value.to_str().ok());
-        let bytes = collect_body(body, self.state.inner.config.http.oci.max_manifest_bytes).await?;
+        let bytes = collect_body(
+            body,
+            self.state
+                .inner
+                .config
+                .http
+                .oci
+                .max_manifest_bytes,
+        )
+        .await?;
         OciPublication::new(
             (key, org),
             reference.to_string(),
             bytes,
             content_type,
-            self.state.inner.config.http.oci.max_manifest_bytes,
+            self.state
+                .inner
+                .config
+                .http
+                .oci
+                .max_manifest_bytes,
         )
     }
 }

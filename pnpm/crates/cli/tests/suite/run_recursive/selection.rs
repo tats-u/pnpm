@@ -38,14 +38,20 @@ fn filtered_run_keeps_single_script_in_foreground_process_group() {
     let terminal = Terminal::open();
     let mut process =
         terminal.spawn_foreground(pacquet.with_args(["--filter", "project-1", "run", "prompt"]));
-    let status = process.wait().expect("wait for pacquet");
+    let status = process
+        .wait()
+        .expect("wait for pacquet");
     assert!(status.success(), "pacquet should succeed on the terminal");
 
     let groups =
         fs::read_to_string(workspace.join("process-groups.txt")).expect("read process groups");
     let mut fields = groups.split_whitespace();
-    let child_group = fields.next().expect("child process group");
-    let parent_group = fields.next().expect("parent process group");
+    let child_group = fields
+        .next()
+        .expect("child process group");
+    let parent_group = fields
+        .next()
+        .expect("parent process group");
     assert_eq!(
         child_group, parent_group,
         "the child must share pacquet's process group to keep reading the terminal",
@@ -71,7 +77,9 @@ fn recursive_run_finds_workspace_root_bin_on_path() {
             }),
         )],
     );
-    let bin_dir = workspace.join("node_modules").join(".bin");
+    let bin_dir = workspace
+        .join("node_modules")
+        .join(".bin");
     write_node_bin(&bin_dir, "root-tool", "require('fs').writeFileSync('root-tool-ran.txt', '')\n");
 
     pacquet
@@ -122,8 +130,12 @@ fn recursive_run_prefers_project_bin_over_workspace_root_bin() {
         .assert()
         .success();
 
-    let version = fs::read_to_string(workspace.join("project-1").join("version.txt"))
-        .expect("read version.txt");
+    let version = fs::read_to_string(
+        workspace
+            .join("project-1")
+            .join("version.txt"),
+    )
+    .expect("read version.txt");
     assert_eq!(version.trim(), "1.0.0", "the project's own bin must win over the root's");
 
     drop(root);
@@ -372,8 +384,18 @@ fn recursive_run_auto_excludes_workspace_root() {
         .assert()
         .success();
 
-    assert!(workspace.join("packages/project-1/ran.txt").exists(), "project-1 should run");
-    assert!(workspace.join("packages/project-2/ran.txt").exists(), "project-2 should run");
+    assert!(
+        workspace
+            .join("packages/project-1/ran.txt")
+            .exists(),
+        "project-1 should run"
+    );
+    assert!(
+        workspace
+            .join("packages/project-2/ran.txt")
+            .exists(),
+        "project-2 should run"
+    );
     assert!(
         !workspace.join("root-ran.txt").exists(),
         "the workspace root must be auto-excluded from a default recursive run",
@@ -399,8 +421,18 @@ fn include_workspace_root_flag_keeps_the_root_in_a_recursive_run() {
         .success();
 
     assert!(workspace.join("root-ran.txt").exists(), "the root must run under the flag");
-    assert!(workspace.join("packages/project-1/ran.txt").exists(), "project-1 should run");
-    assert!(workspace.join("packages/project-2/ran.txt").exists(), "project-2 should run");
+    assert!(
+        workspace
+            .join("packages/project-1/ran.txt")
+            .exists(),
+        "project-1 should run"
+    );
+    assert!(
+        workspace
+            .join("packages/project-2/ran.txt")
+            .exists(),
+        "project-2 should run"
+    );
 
     drop(root);
 }
@@ -470,9 +502,16 @@ fn recursive_run_all_exclusion_filter_also_drops_root() {
         .assert()
         .success();
 
-    assert!(workspace.join("packages/project-1/ran.txt").exists(), "project-1 should run");
     assert!(
-        !workspace.join("packages/project-2/ran.txt").exists(),
+        workspace
+            .join("packages/project-1/ran.txt")
+            .exists(),
+        "project-1 should run"
+    );
+    assert!(
+        !workspace
+            .join("packages/project-2/ran.txt")
+            .exists(),
         "project-2 is excluded by the !project-2 selector",
     );
     assert!(
@@ -503,8 +542,18 @@ fn recursive_run_from_subdirectory_still_excludes_root() {
         .assert()
         .success();
 
-    assert!(workspace.join("packages/project-1/ran.txt").exists(), "project-1 should run");
-    assert!(workspace.join("packages/project-2/ran.txt").exists(), "project-2 should run");
+    assert!(
+        workspace
+            .join("packages/project-1/ran.txt")
+            .exists(),
+        "project-1 should run"
+    );
+    assert!(
+        workspace
+            .join("packages/project-2/ran.txt")
+            .exists(),
+        "project-2 should run"
+    );
     assert!(
         !workspace.join("root-ran.txt").exists(),
         "the workspace root must stay excluded even when run from a subdirectory",
@@ -533,9 +582,16 @@ fn recursive_run_filter_prod_all_exclusion_also_drops_root() {
         .assert()
         .success();
 
-    assert!(workspace.join("packages/project-1/ran.txt").exists(), "project-1 should run");
     assert!(
-        !workspace.join("packages/project-2/ran.txt").exists(),
+        workspace
+            .join("packages/project-1/ran.txt")
+            .exists(),
+        "project-1 should run"
+    );
+    assert!(
+        !workspace
+            .join("packages/project-2/ran.txt")
+            .exists(),
         "project-2 is excluded by the !project-2 production selector",
     );
     assert!(
@@ -807,7 +863,13 @@ fn recursive_run_diff_selector_selects_changed_projects() {
     git(&["config", "user.name", "xyz"]);
     git(&["add", "."]);
     git(&["commit", "-m", "base", "--no-gpg-sign"]);
-    fs::write(workspace.join("project-1").join("changed.js"), "").expect("write changed file");
+    fs::write(
+        workspace
+            .join("project-1")
+            .join("changed.js"),
+        "",
+    )
+    .expect("write changed file");
     git(&["add", "."]);
     git(&["commit", "-m", "change project-1", "--no-gpg-sign"]);
 

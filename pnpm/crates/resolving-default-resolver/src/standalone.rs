@@ -107,12 +107,7 @@ fn build_npm_resolver(
     opts: &StandaloneChainOptions<'_>,
     retry_opts: RetryOpts,
 ) -> NpmResolver<InMemoryPackageMetaCache> {
-    let &StandaloneChainOptions {
-        config,
-        http_client,
-        full_metadata,
-        filter_metadata,
-    } = opts;
+    let &StandaloneChainOptions { config, http_client, full_metadata, filter_metadata } = opts;
     NpmResolver {
         // `resolved_registries` inserts the `default` route from
         // `config.registry`; `config.registries` alone omits it, which
@@ -121,7 +116,8 @@ fn build_npm_resolver(
             .resolved_registries()
             .into_iter()
             .collect(),
-        registries_by_prefix: config.registries_by_prefix
+        registries_by_prefix: config
+            .registries_by_prefix
             .clone()
             .into_iter()
             .collect(),
@@ -150,8 +146,12 @@ fn build_npm_resolver(
 fn build_node_resolver(config: &Config, http_client: &Arc<ThrottledClient>) -> NodeResolver {
     let mut node_resolver =
         NodeResolver::new_with_auth(Arc::clone(http_client), Arc::clone(&config.auth_headers));
-    node_resolver.node_download_mirrors.clone_from(&config.node_download_mirrors);
-    node_resolver.mirror = config.tool_mirror(Tool::Node).map(ToString::to_string);
+    node_resolver
+        .node_download_mirrors
+        .clone_from(&config.node_download_mirrors);
+    node_resolver.mirror = config
+        .tool_mirror(Tool::Node)
+        .map(ToString::to_string);
     node_resolver.channel_mirrors = config.tool_channel_mirrors(Tool::Node);
     node_resolver.offline = config.offline;
     node_resolver.cache_dir = Some(config.cache_dir.clone());
@@ -166,12 +166,7 @@ fn build_named_registry_resolver(
     opts: &StandaloneChainOptions<'_>,
     retry_opts: RetryOpts,
 ) -> Result<NamedRegistryResolver<InMemoryPackageMetaCache>, MergeNamedRegistriesError> {
-    let &StandaloneChainOptions {
-        config,
-        http_client,
-        full_metadata,
-        filter_metadata,
-    } = opts;
+    let &StandaloneChainOptions { config, http_client, full_metadata, filter_metadata } = opts;
     let user_registries_by_prefix: HashMap<String, String> = config
         .registries_by_prefix
         .iter()

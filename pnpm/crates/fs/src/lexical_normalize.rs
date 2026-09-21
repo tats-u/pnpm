@@ -46,7 +46,9 @@ pub fn lexical_normalize(path: &Path) -> PathBuf {
 /// slash and returning `.` for an empty result. Backslashes remain literal.
 #[must_use]
 pub fn lexical_normalize_posix(path: &str) -> String {
-    let root = path.starts_with('/').then_some(Component::RootDir);
+    let root = path
+        .starts_with('/')
+        .then_some(Component::RootDir);
     let components = path
         .split('/')
         .filter(|part| !part.is_empty())

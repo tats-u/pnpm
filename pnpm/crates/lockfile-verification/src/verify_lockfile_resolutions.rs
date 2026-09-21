@@ -145,8 +145,10 @@ pub async fn verify_lockfile_resolutions<Reporter: self::Reporter>(
 
     let mut hash_once = memoized_lockfile_hash(lockfile);
 
-    let lockfile_path_str =
-        opts.lockfile_path.map(Path::to_string_lossy).map(std::borrow::Cow::into_owned);
+    let lockfile_path_str = opts
+        .lockfile_path
+        .map(Path::to_string_lossy)
+        .map(std::borrow::Cow::into_owned);
 
     let cache_precomputed = match reuse_cached_verdict::<Reporter>(
         cache_inputs,
@@ -245,7 +247,11 @@ struct CachedVerdict<'a> {
 /// lookup never computes it.
 fn memoized_lockfile_hash(lockfile: &Lockfile) -> impl FnMut() -> String + '_ {
     let mut cached_hash: Option<String> = None;
-    move || cached_hash.get_or_insert_with(|| hash_lockfile(lockfile)).clone()
+    move || {
+        cached_hash
+            .get_or_insert_with(|| hash_lockfile(lockfile))
+            .clone()
+    }
 }
 
 /// Reuse a previous verdict for this lockfile, if the cache holds one.
@@ -392,7 +398,8 @@ fn is_registry_shaped_resolution(resolution: &LockfileResolution) -> bool {
                 && tarball.git_hosted != Some(true)
                 && !is_git_hosted_tarball_url(&tarball.tarball)
         }
-        LockfileResolution::Variations(variations) => variations.variants
+        LockfileResolution::Variations(variations) => variations
+            .variants
             .iter()
             .all(|variant| is_registry_shaped_resolution(&variant.resolution)),
         // Custom resolutions are opaque to the npm verifier — they are

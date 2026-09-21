@@ -54,12 +54,15 @@ pub fn plan_add<Reporter: self::Reporter + 'static>(
         let config = context.config;
         // Every member's manifest is read again, not only the edited ones:
         // the discovery above ran before the workspace lock was taken.
-        let members = discovery.workspace
+        let members = discovery
+            .workspace
             .memberships(&selected)
             .into_iter()
             .flat_map(|membership| membership.members)
             .collect();
-        let discovery = discovery.reread(config, &members).await?;
+        let discovery = discovery
+            .reread(config, &members)
+            .await?;
         let mut prepared = prepare::<Reporter>(
             context,
             discovery,
@@ -85,7 +88,8 @@ fn metadata_paths(
         .iter()
         .map(|root| root.join("pyproject.toml"))
         .chain(
-            discovery.workspace
+            discovery
+                .workspace
                 .memberships(selected)
                 .iter()
                 .map(|membership| membership.root.join("pylock.toml")),
@@ -123,7 +127,10 @@ fn save_added(
     options: &AddOptions,
     edited: &BTreeSet<PathBuf>,
 ) -> Result<()> {
-    let prefix = options.prefix.as_deref().unwrap_or(">=");
+    let prefix = options
+        .prefix
+        .as_deref()
+        .unwrap_or(">=");
     for project in prepared {
         let mut lock: Lockfile = toml::from_str(&project.lock).into_diagnostic()?;
         let mut requirements = Vec::new();
@@ -140,7 +147,9 @@ fn save_added(
             }
             recorded.extend(read_requirements(&path, config)?);
         }
-        lock.tool.pnpm.set_requirements(&recorded);
+        lock.tool
+            .pnpm
+            .set_requirements(&recorded);
         project.lock = toml::to_string_pretty(&lock).into_diagnostic()?;
     }
     Ok(())
@@ -169,7 +178,8 @@ fn pin_to_locked_version(
     if !options.exact && requirement.version_or_url.is_some() {
         return Ok(());
     }
-    let Some(package) = lock.packages
+    let Some(package) = lock
+        .packages
         .iter()
         .find(|package| package.name == requirement.name)
     else {
@@ -177,7 +187,9 @@ fn pin_to_locked_version(
     };
     let prefix = if options.exact { "==" } else { prefix };
     requirement.version_or_url = Some(pep508_rs::VersionOrUrl::VersionSpecifier(
-        format!("{prefix}{}", package.version).parse().into_diagnostic()?,
+        format!("{prefix}{}", package.version)
+            .parse()
+            .into_diagnostic()?,
     ));
     Ok(())
 }

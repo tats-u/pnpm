@@ -263,7 +263,11 @@ snapshots:
 ";
 
 fn snapshot_optional(lockfile: &Lockfile, key: &str) -> bool {
-    lockfile.snapshots.as_ref().expect("snapshots")[&key.parse().expect("snapshot key")].optional
+    lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots")[&key.parse().expect("snapshot key")]
+        .optional
 }
 
 /// `foo` and `bar` are prod dependencies (`bar` reaching `child`), `qux`
@@ -517,7 +521,8 @@ snapshots:
 ";
 
 fn sorted_snapshot_keys(lockfile: &Lockfile) -> Vec<String> {
-    let mut keys: Vec<_> = lockfile.snapshots
+    let mut keys: Vec<_> = lockfile
+        .snapshots
         .as_ref()
         .expect("snapshots")
         .keys()
@@ -556,12 +561,34 @@ snapshots:
 /// which end of a range satisfying both is picked becomes observable.
 fn with_a_second_locked_child() -> Lockfile {
     let mut subject = parsed_lockfile(WITH_SHARED_OPTIONAL_CHILD);
-    let packages = subject.packages.as_mut().expect("packages");
-    let metadata = packages[&"child@3.0.0".parse::<PackageKey>().expect("package key")].clone();
-    packages.insert("child@3.1.0".parse().expect("package key"), metadata);
-    let snapshots = subject.snapshots.as_mut().expect("snapshots");
-    let snapshot = snapshots[&"child@3.0.0".parse().expect("snapshot key")].clone();
-    snapshots.insert("child@3.1.0".parse().expect("snapshot key"), snapshot);
+    let packages = subject
+        .packages
+        .as_mut()
+        .expect("packages");
+    let metadata = packages[&"child@3.0.0"
+        .parse::<PackageKey>()
+        .expect("package key")]
+        .clone();
+    packages.insert(
+        "child@3.1.0"
+            .parse()
+            .expect("package key"),
+        metadata,
+    );
+    let snapshots = subject
+        .snapshots
+        .as_mut()
+        .expect("snapshots");
+    let snapshot = snapshots[&"child@3.0.0"
+        .parse()
+        .expect("snapshot key")]
+        .clone();
+    snapshots.insert(
+        "child@3.1.0"
+            .parse()
+            .expect("snapshot key"),
+        snapshot,
+    );
     subject
 }
 
@@ -626,18 +653,36 @@ snapshots:
 /// the version held only as a peer variant.
 fn with_a_lower_peerless_foo() -> Lockfile {
     let mut subject = parsed_lockfile(WITH_ONLY_A_PEER_VARIANT);
-    let packages = subject.packages.as_mut().expect("packages");
-    let metadata = packages[&"foo@1.1.0".parse::<PackageKey>().expect("package key")].clone();
-    packages.insert("foo@1.0.0".parse().expect("package key"), metadata);
-    subject.snapshots
+    let packages = subject
+        .packages
+        .as_mut()
+        .expect("packages");
+    let metadata = packages[&"foo@1.1.0"
+        .parse::<PackageKey>()
+        .expect("package key")]
+        .clone();
+    packages.insert(
+        "foo@1.0.0"
+            .parse()
+            .expect("package key"),
+        metadata,
+    );
+    subject
+        .snapshots
         .as_mut()
         .expect("snapshots")
         .insert(
-            "foo@1.0.0".parse().expect("snapshot key"),
+            "foo@1.0.0"
+                .parse()
+                .expect("snapshot key"),
             pnpm_lockfile::SnapshotEntry::default(),
         );
-    let importer = subject.importers.get_mut(".").expect("importer");
-    importer.dependencies
+    let importer = subject
+        .importers
+        .get_mut(".")
+        .expect("importer");
+    importer
+        .dependencies
         .as_mut()
         .expect("dependencies")
         .insert(
@@ -657,11 +702,14 @@ fn with_a_lower_peerless_foo() -> Lockfile {
 /// leave behind when only one of them provides `bar`.
 fn with_a_bare_snapshot_beside_the_peer_variant() -> Lockfile {
     let mut subject = parsed_lockfile(WITH_ONLY_A_PEER_VARIANT);
-    subject.snapshots
+    subject
+        .snapshots
         .as_mut()
         .expect("snapshots")
         .insert(
-            "foo@1.1.0".parse().expect("snapshot key"),
+            "foo@1.1.0"
+                .parse()
+                .expect("snapshot key"),
             pnpm_lockfile::SnapshotEntry::default(),
         );
     subject
@@ -671,7 +719,8 @@ fn with_a_bare_snapshot_beside_the_peer_variant() -> Lockfile {
 /// directly at `recorded`.
 fn with_a_direct_foo_at(recorded: &str) -> Lockfile {
     let mut subject = parsed_lockfile(WITH_ONLY_A_PEER_VARIANT);
-    subject.importers
+    subject
+        .importers
         .get_mut(".")
         .expect("importer")
         .dependencies

@@ -175,14 +175,17 @@ impl Narrowing {
         if self.extra.is_some() {
             return Some("extra-qualified");
         }
-        self.group.is_some().then_some("group-qualified")
+        self.group
+            .is_some()
+            .then_some("group-qualified")
     }
 }
 
 impl Project {
     fn distribution_requirements(&self, static_only: bool) -> Result<Vec<String>> {
         let mut requirements = if static_only
-            && self.dynamic
+            && self
+                .dynamic
                 .iter()
                 .any(|field| field == "dependencies")
         {
@@ -191,7 +194,8 @@ impl Project {
             self.dependencies.clone()
         };
         if static_only
-            && self.dynamic
+            && self
+                .dynamic
                 .iter()
                 .any(|field| field == "optional-dependencies")
         {
@@ -206,15 +210,9 @@ impl Project {
     }
 
     fn ensure_static_dependencies(&self) -> Result<()> {
-        if self.dynamic
-            .iter()
-            .any(|field| {
-                matches!(
-                    field.as_str(),
-                    "dependencies" | "optional-dependencies" | "requires-python",
-                )
-            })
-        {
+        if self.dynamic.iter().any(|field| {
+            matches!(field.as_str(), "dependencies" | "optional-dependencies" | "requires-python",)
+        }) {
             bail!("pnpm Python integration requires static dependency metadata in pyproject.toml");
         }
         Ok(())
@@ -272,7 +270,8 @@ impl Manifest {
         scope: RequirementScope,
     ) -> Option<BTreeSet<PackageName>> {
         let project = self.project.as_ref()?;
-        if project.dynamic
+        if project
+            .dynamic
             .iter()
             .any(|field| matches!(field.as_str(), "dependencies" | "optional-dependencies"))
         {
@@ -291,9 +290,15 @@ impl Manifest {
             .into_iter()
             .flatten();
         Some(
-            project.dependencies
+            project
+                .dependencies
                 .iter()
-                .chain(project.optional_dependencies.values().flatten())
+                .chain(
+                    project
+                        .optional_dependencies
+                        .values()
+                        .flatten(),
+                )
                 .map(String::as_str)
                 .chain(groups)
                 .filter_map(|requirement| parse_requirement(requirement).ok())
@@ -310,19 +315,27 @@ impl Manifest {
         if self.metadata.is_none() {
             project.ensure_static_dependencies()?;
         }
-        let metadata_requirements = self.metadata
+        let metadata_requirements = self
+            .metadata
             .as_ref()
             .map(|metadata| metadata.requires_dist.as_slice())
             .unwrap_or_default();
-        let groups = self.groups
+        let groups = self
+            .groups
             .values()
             .flatten()
             .filter_map(toml::Value::as_str)
             .map(ToString::to_string)
             .collect::<Vec<_>>();
-        project.dependencies
+        project
+            .dependencies
             .iter()
-            .chain(project.optional_dependencies.values().flatten())
+            .chain(
+                project
+                    .optional_dependencies
+                    .values()
+                    .flatten(),
+            )
             .chain(&groups)
             .chain(metadata_requirements)
             .map(|requirement| Ok(parse_requirement(requirement)?.name))
@@ -366,7 +379,10 @@ impl Manifest {
     /// not ask to be packaged is a place to collect dependencies, not a
     /// distribution.
     pub(super) fn is_packaged(&self) -> bool {
-        self.tool.uv.package.unwrap_or_else(|| self.build_system.is_some())
+        self.tool
+            .uv
+            .package
+            .unwrap_or_else(|| self.build_system.is_some())
     }
 }
 
@@ -402,9 +418,8 @@ pub(crate) fn add(path: &Path, requirements: &[String], development: bool) -> Re
     } else if let Some(table) = table {
         insert_key_into_table(&mut updated, &original, table, (table_name, key), &array)?;
     } else {
-        writeln!(updated, "\n[{table_name}]\n{key} = {array}").expect(
-            "writing to a String cannot fail",
-        );
+        writeln!(updated, "\n[{table_name}]\n{key} = {array}")
+            .expect("writing to a String cannot fail");
     }
     Manifest::parse(&updated)?;
     pnpm_fs::write_atomic(path, updated.as_bytes()).into_diagnostic()
@@ -418,14 +433,12 @@ type TomlTable = toml::Spanned<BTreeMap<String, toml::Spanned<toml::Value>>>;
 fn merge_requirements(entries: &mut Vec<toml::Value>, requirements: &[String]) -> Result<()> {
     for requirement in requirements {
         let parsed = parse_requirement(requirement)?;
-        let existing = entries
-            .iter()
-            .position(|entry| {
-                entry
-                    .as_str()
-                    .and_then(|value| value.parse::<Requirement>().ok())
-                    .is_some_and(|entry| entry.name == parsed.name)
-            });
+        let existing = entries.iter().position(|entry| {
+            entry
+                .as_str()
+                .and_then(|value| value.parse::<Requirement>().ok())
+                .is_some_and(|entry| entry.name == parsed.name)
+        });
         if let Some(index) = existing {
             entries[index] = toml::Value::String(requirement.clone());
         } else {
@@ -445,14 +458,20 @@ fn insert_key_into_table(
     array: &str,
 ) -> Result<()> {
     let span = table.span();
-    if original[span.clone()].trim_start().starts_with('[') {
+    if original[span.clone()]
+        .trim_start()
+        .starts_with('[')
+    {
         let end = original[span.end..]
             .find('\n')
             .map_or(original.len(), |end| span.end + end + 1);
         updated.insert_str(end, &format!("\n{key} = {array}\n"));
         return Ok(());
     }
-    if !original[span.clone()].trim_start().starts_with('{') {
+    if !original[span.clone()]
+        .trim_start()
+        .starts_with('{')
+    {
         bail!("cannot add {table_name}.{key} to this TOML table representation");
     }
     let separator = if table.get_ref().is_empty() { "" } else { "," };

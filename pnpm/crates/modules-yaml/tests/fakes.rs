@@ -218,7 +218,8 @@ fn ignored_builds_dedups_and_preserves_insertion_order() {
         .pipe(read_modules_manifest::<DupIgnored>)
         .expect("read manifest")
         .expect("manifest exists");
-    let ignored: Vec<&str> = manifest.ignored_builds
+    let ignored: Vec<&str> = manifest
+        .ignored_builds
         .as_ref()
         .expect("ignored_builds present")
         .iter()

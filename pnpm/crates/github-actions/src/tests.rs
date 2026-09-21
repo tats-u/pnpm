@@ -30,7 +30,9 @@ fn refs(entries: &[(&str, &str)]) -> HashMap<String, String> {
 
 fn action(original_value: &str) -> ActionReference {
     let (value, comment) = split_uses_value(original_value);
-    let (name, ref_) = value.rsplit_once('@').expect("action reference");
+    let (name, ref_) = value
+        .rsplit_once('@')
+        .expect("action reference");
     ActionReference {
         file: PathBuf::from("workflow.yml"),
         name: name.to_string(),
@@ -185,7 +187,9 @@ async fn updates_workflow_files_without_reformatting_them() {
 async fn follows_self_repository_references_to_local_actions() {
     let root = tempfile::tempdir().expect("temp directory");
     let workflows = root.path().join(".github/workflows");
-    let action_dir = root.path().join(".github/actions/setup");
+    let action_dir = root
+        .path()
+        .join(".github/actions/setup");
     fs::create_dir_all(&workflows).expect("workflow directory");
     fs::create_dir_all(&action_dir).expect("action directory");
     fs::write(
@@ -327,7 +331,11 @@ async fn rejects_workflow_symlinks_outside_the_project() {
         panic!("outside workflow must be rejected");
     };
 
-    assert!(error.to_string().contains("outside the project root"));
+    assert!(
+        error
+            .to_string()
+            .contains("outside the project root")
+    );
     assert_eq!(fs::read_to_string(outside.path().join("ci.yml")).unwrap(), original);
 }
 
@@ -337,8 +345,12 @@ async fn reports_local_action_lookup_errors() {
     use std::os::unix::fs::symlink;
 
     let root = tempfile::tempdir().expect("project directory");
-    let workflow = root.path().join(".github/workflows/ci.yml");
-    let action_dir = root.path().join(".github/actions/setup");
+    let workflow = root
+        .path()
+        .join(".github/workflows/ci.yml");
+    let action_dir = root
+        .path()
+        .join(".github/actions/setup");
     fs::create_dir_all(workflow.parent().unwrap()).expect("workflow directory");
     fs::create_dir_all(&action_dir).expect("action directory");
     fs::write(&workflow, "jobs:\n  test:\n    steps:\n      - uses: ./.github/actions/setup\n")
@@ -357,7 +369,11 @@ async fn reports_local_action_lookup_errors() {
         panic!("local action lookup must fail");
     };
 
-    assert!(error.to_string().contains("Failed to read"));
+    assert!(
+        error
+            .to_string()
+            .contains("Failed to read")
+    );
     assert!(error.to_string().contains("action.yml"));
 }
 
@@ -367,7 +383,9 @@ async fn does_not_mutate_an_external_hardlink_target() {
     let outside = tempfile::tempdir().expect("outside directory");
     let original = "jobs:\n  test:\n    steps:\n      - uses: actions/checkout@v4\n";
     let outside_workflow = outside.path().join("ci.yml");
-    let workflow = root.path().join(".github/workflows/ci.yml");
+    let workflow = root
+        .path()
+        .join(".github/workflows/ci.yml");
     fs::write(&outside_workflow, original).expect("outside workflow");
     fs::create_dir_all(workflow.parent().unwrap()).expect("workflow directory");
     fs::hard_link(&outside_workflow, &workflow).expect("workflow hardlink");
@@ -523,7 +541,11 @@ async fn rejects_a_server_url_that_is_not_http() {
         panic!("non-http server URL must be rejected");
     };
 
-    assert!(error.to_string().contains("must use HTTPS, except for HTTP on loopback hosts"));
+    assert!(
+        error
+            .to_string()
+            .contains("must use HTTPS, except for HTTP on loopback hosts")
+    );
 }
 
 mod concurrent_edits;

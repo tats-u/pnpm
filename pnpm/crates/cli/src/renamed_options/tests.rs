@@ -17,7 +17,11 @@ fn drop_aliases(tokens: &[&str]) -> Vec<String> {
             .collect(),
     )
     .into_iter()
-    .map(|token| token.into_string().expect("test tokens are UTF-8"))
+    .map(|token| {
+        token
+            .into_string()
+            .expect("test tokens are UTF-8")
+    })
     .collect()
 }
 
@@ -82,7 +86,9 @@ fn a_canonical_short_inside_an_attached_value_is_not_the_option() {
         ["pnpm", "-FpkgC", "--prefix", "here", "install"],
     );
     assert_eq!(
-        parse(&["pnpm", "-FpkgC", "--prefix", "here", "install"]).paths.dir,
+        parse(&["pnpm", "-FpkgC", "--prefix", "here", "install"])
+            .paths
+            .dir,
         Path::new("here"),
     );
     // Up to that point the cluster's own options are read: `-r` takes no
@@ -92,7 +98,9 @@ fn a_canonical_short_inside_an_attached_value_is_not_the_option() {
         ["pnpm", "-rCcanonical", "install"],
     );
     assert_eq!(
-        parse(&["pnpm", "-rCcanonical", "--prefix", "here", "install"]).paths.dir,
+        parse(&["pnpm", "-rCcanonical", "--prefix", "here", "install"])
+            .paths
+            .dir,
         Path::new("canonical"),
     );
 }

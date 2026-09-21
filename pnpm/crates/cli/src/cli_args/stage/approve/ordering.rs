@@ -80,17 +80,29 @@ fn approval_order(graph: &ProjectGraph<GraphPkg<'_>>) -> StageApprovalOrder {
     let mut dependency_stage_ids_by_stage_id = HashMap::new();
     let mut order_index_by_stage_id = HashMap::new();
     let mut package_name_by_stage_id = HashMap::new();
-    for (order_index, root_dir) in sequence_graph(graph, graph).order.into_iter().enumerate() {
+    for (order_index, root_dir) in sequence_graph(graph, graph)
+        .order
+        .into_iter()
+        .enumerate()
+    {
         let stage_id = root_dir.to_string_lossy().into_owned();
         order_index_by_stage_id.insert(stage_id.clone(), order_index);
         dependency_stage_ids_by_stage_id.insert(
             stage_id.clone(),
-            graph[&root_dir].dependencies
+            graph[&root_dir]
+                .dependencies
                 .iter()
-                .map(|dependency| dependency.to_string_lossy().into_owned())
+                .map(|dependency| {
+                    dependency
+                        .to_string_lossy()
+                        .into_owned()
+                })
                 .collect(),
         );
-        if let Some(package_name) = graph[&root_dir].package.project.manifest
+        if let Some(package_name) = graph[&root_dir]
+            .package
+            .project
+            .manifest
             .value()
             .get("name")
             .and_then(Value::as_str)
@@ -120,13 +132,15 @@ pub(super) fn unavailable_dependencies(
     unpublished_stage_ids: &HashSet<String>,
     order: &StageApprovalOrder,
 ) -> Vec<String> {
-    order.dependency_stage_ids
+    order
+        .dependency_stage_ids
         .get(&item.id)
         .into_iter()
         .flatten()
         .filter(|stage_id| unpublished_stage_ids.contains(*stage_id))
         .map(|stage_id| {
-            order.package_names
+            order
+                .package_names
                 .get(stage_id)
                 .cloned()
                 .unwrap_or_else(|| stage_id.clone())
@@ -135,7 +149,8 @@ pub(super) fn unavailable_dependencies(
 }
 
 fn order_index_of(item: &StageApprovalItem, order: &StageApprovalOrder) -> usize {
-    order.order_indices
+    order
+        .order_indices
         .get(&item.id)
         .copied()
         .unwrap_or(usize::MAX)
@@ -143,7 +158,10 @@ fn order_index_of(item: &StageApprovalItem, order: &StageApprovalOrder) -> usize
 
 pub(super) fn manifest_for_graph(mut manifest: Value) -> Value {
     for field in ["peerDependencies", "devDependencies", "optionalDependencies", "dependencies"] {
-        let Some(dependencies) = manifest.get(field).and_then(Value::as_object) else {
+        let Some(dependencies) = manifest
+            .get(field)
+            .and_then(Value::as_object)
+        else {
             continue;
         };
         let normalized = dependencies

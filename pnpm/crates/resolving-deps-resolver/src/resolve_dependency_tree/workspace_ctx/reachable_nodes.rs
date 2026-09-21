@@ -26,7 +26,10 @@ pub(super) fn merge_synced_child_spec(
     spec: &Arc<Vec<crate::resolved_tree::ChildEdge>>,
 ) -> bool {
     use std::collections::hash_map::Entry;
-    match tree.children_by_id.entry(Arc::from(pkg_id)) {
+    match tree
+        .children_by_id
+        .entry(Arc::from(pkg_id))
+    {
         Entry::Vacant(entry) => {
             entry.insert(Arc::clone(spec));
         }

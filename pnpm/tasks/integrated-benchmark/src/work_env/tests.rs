@@ -120,11 +120,14 @@ fn peer_heavy_scenario_generates_shared_subgraph_root() {
         .expect("read leaf peer-heavy packument"),
     )
     .expect("parse leaf peer-heavy packument");
-    let registry_package_count =
-        fs::read_dir(registry.join("@pnpmtest")).expect("read peer-heavy registry scope").count();
+    let registry_package_count = fs::read_dir(registry.join("@pnpmtest"))
+        .expect("read peer-heavy registry scope")
+        .count();
     let _ = fs::remove_dir_all(&dir);
 
-    let dependencies = manifest["dependencies"].as_object().expect("generated dependencies");
+    let dependencies = manifest["dependencies"]
+        .as_object()
+        .expect("generated dependencies");
     assert_eq!(dependencies.len(), PEER_HEAVY_WIDTH + 1);
     assert_eq!(dependencies[PEER_HEAVY_PROVIDER], "1.0.0");
     assert!(workspace.contains("packages:") && workspace.contains("- '.'"));
@@ -171,16 +174,17 @@ fn linked_workspace_scenario_generates_a_shared_link_graph() {
     )
     .expect("parse first project");
     let leaf: serde_json::Value = serde_json::from_slice(
-        &fs::read(dir.join(format!(
-            "packages/level-{}-00/package.json",
-            LINKED_WORKSPACE_DEPTH - 1,
-        )))
+        &fs::read(
+            dir.join(format!("packages/level-{}-00/package.json", LINKED_WORKSPACE_DEPTH - 1,)),
+        )
         .expect("read leaf project"),
     )
     .expect("parse leaf project");
     let workspace =
         fs::read_to_string(dir.join("pnpm-workspace.yaml")).expect("read generated workspace");
-    let project_count = fs::read_dir(dir.join("packages")).expect("read projects").count();
+    let project_count = fs::read_dir(dir.join("packages"))
+        .expect("read projects")
+        .count();
     let _ = fs::remove_dir_all(&dir);
 
     assert_eq!(project_count, LINKED_WORKSPACE_DEPTH * LINKED_WORKSPACE_WIDTH + 1);
@@ -287,7 +291,9 @@ fn phase_summary_reports_partition_and_means() {
     ];
 
     let summary = summarize_phase_events(&events);
-    let partition = summary.partition.expect("partition summary");
+    let partition = summary
+        .partition
+        .expect("partition summary");
     assert_eq!(partition.warm, 1);
     assert_eq!(partition.cold, 9);
     assert_eq!(summary.create_virtual_store_mean_ms, Some(150.0));

@@ -54,19 +54,23 @@ pub fn mixed_router_config(
         upstream.0.to_string(),
         UpstreamConfig::with_defaults(upstream.1.to_string(), HeaderMap::new()),
     );
-    let claimed = hosted.packages
+    let claimed = hosted
+        .packages
         .iter()
         .map(|name| {
             PackagePattern::parse(name, ecosystem).expect("package name is a valid pattern")
         })
         .collect();
-    let mut graph: indexmap::IndexMap<String, Registry> = config.routing
+    let mut graph: indexmap::IndexMap<String, Registry> = config
+        .routing
         .registries
         .names()
         .map(|name| {
             (
                 name.to_string(),
-                config.routing.registries
+                config
+                    .routing
+                    .registries
                     .get(name)
                     .unwrap()
                     .clone(),
@@ -78,13 +82,17 @@ pub fn mixed_router_config(
     graph.insert(
         "main".to_string(),
         Registry::Router {
-            sources: ["local", "npmjs", hosted.name, upstream.0].map(str::to_string).to_vec(),
+            sources: ["local", "npmjs", hosted.name, upstream.0]
+                .map(str::to_string)
+                .to_vec(),
         },
     );
     let registries = Registries::new(graph, Some("main".to_string()))
         .with_ecosystem(hosted.name, ecosystem)
         .with_ecosystem(upstream.0, ecosystem);
-    registries.validate().expect("mixed graph is valid");
+    registries
+        .validate()
+        .expect("mixed graph is valid");
     config.routing.registries = registries;
     config
 }
@@ -94,7 +102,10 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 }
 
 pub async fn body_bytes(body: Body) -> Vec<u8> {
-    to_bytes(body, usize::MAX).await.expect("read body").to_vec()
+    to_bytes(body, usize::MAX)
+        .await
+        .expect("read body")
+        .to_vec()
 }
 
 /// The first file named `filename` under `root`, at any depth.

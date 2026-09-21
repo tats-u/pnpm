@@ -35,7 +35,9 @@ async fn falls_through_when_cafs_path_is_a_symlink() {
     // file elsewhere. `metadata()` would have followed it and the
     // check would have (incorrectly) succeeded; `symlink_metadata()`
     // must reject the link itself.
-    let target = store_dir.path().join("outside-the-cafs.txt");
+    let target = store_dir
+        .path()
+        .join("outside-the-cafs.txt");
     std::fs::write(&target, b"evil").unwrap();
     std::os::unix::fs::symlink(&target, &cafs_path).unwrap();
 

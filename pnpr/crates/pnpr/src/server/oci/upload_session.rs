@@ -32,21 +32,42 @@ impl Request {
             ) => return Ok(None),
             Err(err) => return Err(err),
         };
-        let source_storage = self.state.inner.storage.for_hosted(&source_org);
-        let Some((body, _)) =
-            source_storage.open_hosted_blob(&source_key, &digest.blob_filename()).await?
+        let source_storage = self
+            .state
+            .inner
+            .storage
+            .for_hosted(&source_org);
+        let Some((body, _)) = source_storage
+            .open_hosted_blob(&source_key, &digest.blob_filename())
+            .await?
         else {
             return Ok(None);
         };
-        let upload = destination.begin_blob_upload(key).await?;
-        if let Err(refusal) =
-            append_body(destination, &upload, body, self.state.inner.config.http.oci.max_blob_bytes)
-                .await
+        let upload = destination
+            .begin_blob_upload(key)
+            .await?;
+        if let Err(refusal) = append_body(
+            destination,
+            &upload,
+            body,
+            self.state
+                .inner
+                .config
+                .http
+                .oci
+                .max_blob_bytes,
+        )
+        .await
         {
-            destination.abort_blob_upload(upload.id()).await?;
+            destination
+                .abort_blob_upload(upload.id())
+                .await?;
             return Ok(Some(refusal.respond()));
         }
-        Ok(Some(self.finish_upload(destination, upload, key, mount).await))
+        Ok(Some(
+            self.finish_upload(destination, upload, key, mount)
+                .await,
+        ))
     }
 
     /// `POST /v2/<name>/blobs/uploads/` — start an upload, or complete one in
@@ -59,11 +80,18 @@ impl Request {
             Ok(target) => target,
             Err(refusal) => return refusal.respond(),
         };
-        let storage = self.state.inner.storage.for_hosted(&org);
+        let storage = self
+            .state
+            .inner
+            .storage
+            .for_hosted(&org);
         if let (Some(mount), Some(from)) =
             (query_param(Some(&self.query), "mount"), query_param(Some(&self.query), "from"))
         {
-            match self.mount_blob(&storage, &key, &mount, &from).await {
+            match self
+                .mount_blob(&storage, &key, &mount, &from)
+                .await
+            {
                 Ok(Some(response)) => return response,
                 Ok(None) => {}
                 Err(err) => return registry_error(err),
@@ -73,16 +101,33 @@ impl Request {
             Ok(upload) => upload,
             Err(err) => return registry_error(err),
         };
-        if let Err(refusal) =
-            append_body(&storage, &upload, body, self.state.inner.config.http.oci.max_blob_bytes)
-                .await
+        if let Err(refusal) = append_body(
+            &storage,
+            &upload,
+            body,
+            self.state
+                .inner
+                .config
+                .http
+                .oci
+                .max_blob_bytes,
+        )
+        .await
         {
-            let _ = storage.abort_blob_upload(upload.id()).await;
+            let _ = storage
+                .abort_blob_upload(upload.id())
+                .await;
             return refusal.respond();
         }
         match self.digest.as_deref() {
-            Some(digest) => self.finish_upload(&storage, upload, &key, digest).await,
-            None => self.upload_progress(&key, &upload).await,
+            Some(digest) => {
+                self.finish_upload(&storage, upload, &key, digest)
+                    .await
+            }
+            None => {
+                self.upload_progress(&key, &upload)
+                    .await
+            }
         }
     }
 
@@ -96,18 +141,40 @@ impl Request {
         // two chunks appending at once, or a chunk landing between the hash
         // and the promotion, would store bytes that are not the digest they
         // are stored under.
-        let _guard = self.state.inner.locks.packages.lock(&upload_lock_key(id)).await;
-        let storage = self.state.inner.storage.for_hosted(&org);
+        let _guard = self
+            .state
+            .inner
+            .locks
+            .packages
+            .lock(&upload_lock_key(id))
+            .await;
+        let storage = self
+            .state
+            .inner
+            .storage
+            .for_hosted(&org);
         let upload = match storage.open_blob_upload(&key, id).await {
             Ok(Some(upload)) => upload,
             Ok(None) => return error(ErrorCode::BlobUploadUnknown, "no such upload"),
             Err(err) => return registry_error(err),
         };
         match self.method {
-            Method::PATCH => self.append_chunk(&storage, &key, &upload, body).await,
-            Method::PUT => self.complete_upload(&storage, key, upload, body).await,
-            Method::GET => self.upload_progress(&key, &upload).await,
-            Method::DELETE => match storage.abort_blob_upload(upload.id()).await {
+            Method::PATCH => {
+                self.append_chunk(&storage, &key, &upload, body)
+                    .await
+            }
+            Method::PUT => {
+                self.complete_upload(&storage, key, upload, body)
+                    .await
+            }
+            Method::GET => {
+                self.upload_progress(&key, &upload)
+                    .await
+            }
+            Method::DELETE => match storage
+                .abort_blob_upload(upload.id())
+                .await
+            {
                 Ok(_) => no_content(StatusCode::NO_CONTENT),
                 Err(err) => registry_error(err),
             },
@@ -123,12 +190,24 @@ impl Request {
         upload: &BlobUpload,
         body: Body,
     ) -> Response {
-        if let Err(response) = self.check_chunk_start(key, upload).await {
+        if let Err(response) = self
+            .check_chunk_start(key, upload)
+            .await
+        {
             return response;
         }
-        let appended =
-            append_body(storage, upload, body, self.state.inner.config.http.oci.max_blob_bytes)
-                .await;
+        let appended = append_body(
+            storage,
+            upload,
+            body,
+            self.state
+                .inner
+                .config
+                .http
+                .oci
+                .max_blob_bytes,
+        )
+        .await;
         match appended {
             Ok(()) => self.upload_progress(key, upload).await,
             Err(refusal) => refusal.respond(),
@@ -147,13 +226,23 @@ impl Request {
         let Some(digest) = self.digest.as_deref() else {
             return error(ErrorCode::DigestInvalid, "a completed upload must name its digest");
         };
-        let appended =
-            append_body(storage, &upload, body, self.state.inner.config.http.oci.max_blob_bytes)
-                .await;
+        let appended = append_body(
+            storage,
+            &upload,
+            body,
+            self.state
+                .inner
+                .config
+                .http
+                .oci
+                .max_blob_bytes,
+        )
+        .await;
         if let Err(refusal) = appended {
             return refusal.respond();
         }
-        self.finish_upload(storage, upload, &key, digest).await
+        self.finish_upload(storage, upload, &key, digest)
+            .await
     }
 
     /// Refuse a chunk that does not continue where the upload left off, so a
@@ -185,7 +274,13 @@ impl Request {
         else {
             return Err(error(ErrorCode::BlobUploadInvalid, "Content-Range is not a real span"));
         };
-        let limit = self.state.inner.config.http.oci.max_blob_bytes;
+        let limit = self
+            .state
+            .inner
+            .config
+            .http
+            .oci
+            .max_blob_bytes;
         if span > limit {
             return Err(error(
                 ErrorCode::SizeInvalid,
@@ -200,7 +295,10 @@ impl Request {
                 "Content-Length disagrees with Content-Range",
             ));
         }
-        let offset = upload.offset().await.map_err(registry_error)?;
+        let offset = upload
+            .offset()
+            .await
+            .map_err(registry_error)?;
         if start == offset {
             return Ok(());
         }
@@ -240,18 +338,25 @@ impl Request {
         digest: &str,
     ) -> Response {
         let Ok(digest) = Digest::parse(digest) else {
-            let _ = storage.abort_blob_upload(upload.id()).await;
+            let _ = storage
+                .abort_blob_upload(upload.id())
+                .await;
             return error(ErrorCode::DigestInvalid, "not a supported digest");
         };
         match hash_upload(&upload).await {
             Ok(actual) if actual == digest => {}
             Ok(_) => {
-                let _ = storage.abort_blob_upload(upload.id()).await;
+                let _ = storage
+                    .abort_blob_upload(upload.id())
+                    .await;
                 return error(ErrorCode::DigestInvalid, "uploaded bytes do not match the digest");
             }
             Err(err) => return registry_error(err),
         }
-        match storage.finalize_uploaded_blob(upload, key, &digest.blob_filename()).await {
+        match storage
+            .finalize_uploaded_blob(upload, key, &digest.blob_filename())
+            .await
+        {
             Ok(pnpr_storage::BlobFinalize::Conflict) => {
                 error(ErrorCode::DigestInvalid, "stored blob conflicts with the uploaded content")
             }

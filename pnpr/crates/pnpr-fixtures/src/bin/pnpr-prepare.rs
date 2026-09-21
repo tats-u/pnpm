@@ -25,7 +25,8 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let substitutions = args.substitutions
+    let substitutions = args
+        .substitutions
         .iter()
         .map(|(from, to)| (from.as_str(), to.as_str()))
         .collect::<Vec<_>>();

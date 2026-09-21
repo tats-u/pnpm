@@ -35,10 +35,8 @@ fn peer_suffixed_dep_path_splits_into_distinct_snapshot_and_package_keys() {
     let mut react_dom_children = BTreeMap::new();
     react_dom_children.insert("react".to_string(), DepPath::from("react@17.0.2".to_string()));
     let mut react_dom_peers = BTreeMap::new();
-    react_dom_peers.insert(
-        "react".to_string(),
-        PeerDep { version: "17.0.2".to_string(), optional: false },
-    );
+    react_dom_peers
+        .insert("react".to_string(), PeerDep { version: "17.0.2".to_string(), optional: false });
     let react_dom_dep_path = DepPath::from("react-dom@17.0.2(react@17.0.2)".to_string());
     let react_dom = DependenciesGraphNode {
         dep_path: react_dom_dep_path.clone(),
@@ -77,16 +75,27 @@ fn peer_suffixed_dep_path_splits_into_distinct_snapshot_and_package_keys() {
         &manifest, &graph, direct, true, false, None, None,
     ));
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots");
-    let snap_key: PackageKey = "react-dom@17.0.2(react@17.0.2)".parse().unwrap();
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots");
+    let snap_key: PackageKey = "react-dom@17.0.2(react@17.0.2)"
+        .parse()
+        .unwrap();
     assert!(snapshots.contains_key(&snap_key), "snapshot keyed by peer-suffixed depPath");
     let pkg_key: PackageKey = "react-dom@17.0.2".parse().unwrap();
-    let packages = lockfile.packages.as_ref().expect("packages");
-    let metadata = packages.get(&pkg_key).expect("package metadata for peer-stripped key");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages");
+    let metadata = packages
+        .get(&pkg_key)
+        .expect("package metadata for peer-stripped key");
     assert!(metadata.peer_dependencies.is_some(), "peer_deps on packages metadata");
 
     let importer = lockfile.root_project().unwrap();
-    let dom = importer.dependencies
+    let dom = importer
+        .dependencies
         .as_ref()
         .unwrap()
         .get(&PkgName::parse("react-dom").unwrap())
@@ -183,7 +192,10 @@ fn snapshot_preserves_optional_child_edges_from_resolved_tree() {
     let outer_key: PackageKey = "outer@1.0.0".parse().unwrap();
     let outer_snap = &snapshots[&outer_key];
     assert!(outer_snap.dependencies.is_none(), "optional child must not be written as regular");
-    let opt = outer_snap.optional_dependencies.as_ref().expect("opt deps map");
+    let opt = outer_snap
+        .optional_dependencies
+        .as_ref()
+        .expect("opt deps map");
     assert!(opt.contains_key(&PkgName::parse("inner").unwrap()));
 
     let inner_key: PackageKey = "inner@1.0.0".parse().unwrap();
@@ -220,7 +232,8 @@ fn snapshot_records_transitive_peer_dependencies_sorted() {
 
     let snapshots = lockfile.snapshots.as_ref().unwrap();
     let outer_key: PackageKey = "outer@1.0.0".parse().unwrap();
-    let recorded = snapshots[&outer_key].transitive_peer_dependencies
+    let recorded = snapshots[&outer_key]
+        .transitive_peer_dependencies
         .as_ref()
         .expect("transitive peers recorded");
     assert_eq!(recorded.as_slice(), ["a-peer".to_string(), "z-peer".to_string()].as_slice());
@@ -271,7 +284,10 @@ fn auto_installed_peer_not_declared_in_manifest_is_skipped_from_pruner_seeds() {
         &manifest, &graph, direct, true, false, None, None,
     ));
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
     let parent_key: PackageKey = "parent@1.0.0".parse().unwrap();
     let peer_x_key: PackageKey = "peer-x@1.0.0".parse().unwrap();
     assert!(snapshots[&parent_key].optional, "parent is the importer's optional direct dep");
@@ -306,9 +322,14 @@ fn an_unresolvable_alias_keeps_the_tarball_url() {
         &manifest, &graph, direct, true, false, None, None,
     ));
 
-    let packages = lockfile.packages.as_ref().expect("packages map");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages map");
     let key: PackageKey = "foo@work:1.0.0".parse().unwrap();
-    let metadata = packages.get(&key).expect("registry-qualified entry");
+    let metadata = packages
+        .get(&key)
+        .expect("registry-qualified entry");
     match &metadata.resolution {
         LockfileResolution::Tarball(resolution) => assert_eq!(resolution.tarball, tarball),
         other => panic!("an unresolvable alias must keep its tarball URL, got {other:?}"),

@@ -11,7 +11,8 @@ async fn errors_when_config_dir_is_unavailable() {
         .await
         .expect_err("missing config dir should error");
     assert!(
-        err.to_string().contains("Could not determine the pnpm config directory"),
+        err.to_string()
+            .contains("Could not determine the pnpm config directory"),
         "unexpected error: {err}",
     );
 }

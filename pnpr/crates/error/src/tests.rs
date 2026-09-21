@@ -12,7 +12,9 @@ use super::RegistryError;
 /// it, and check the error round-trips through `status_code()`.
 #[tokio::test]
 async fn timeout_error_maps_to_gateway_timeout() {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let addr = listener.local_addr().unwrap();
     // Keep accepted sockets alive for the duration of the test so
     // the client really hangs on read instead of seeing FIN.
@@ -61,7 +63,10 @@ fn public_message_hides_server_error_details() {
     });
     assert_eq!(err.status_code(), StatusCode::BAD_GATEWAY);
     assert_eq!(err.public_message(), "Bad Gateway");
-    assert!(err.to_string().contains("internal-hostname"));
+    assert!(
+        err.to_string()
+            .contains("internal-hostname")
+    );
 }
 
 #[test]
@@ -220,7 +225,9 @@ fn is_transient_upstream_error_only_for_availability_failures() {
 async fn not_found_renders_as_a_bare_404() {
     let response = RegistryError::NotFound.into_response();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
-    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     assert_eq!(body.as_ref(), b"Not Found");
 }
 

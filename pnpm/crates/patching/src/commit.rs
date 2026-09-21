@@ -123,8 +123,9 @@ fn prepare_pkg_files_for_diff_with_fs(
         let relative_path = safe_package_file_path(&file)?;
         let source_path = src.join(&relative_path);
         let target = temp_dir.join(&relative_path);
-        let parent =
-            target.parent().expect("filtered package file target should have a parent directory");
+        let parent = target
+            .parent()
+            .expect("filtered package file target should have a parent directory");
         fs_ops
             .create_dir_all(parent)
             .map_err(|source| PatchCommitError::CreateTempDir {
@@ -147,12 +148,14 @@ pub fn diff_folders(folder_a: &Path, folder_b: &Path) -> Result<String, PatchCom
         .arg(&folder_a_slash)
         .arg(&folder_b_slash)
         .stdout(
-            stdout.writer
+            stdout
+                .writer
                 .try_clone()
                 .map_err(|source| PatchCommitError::DiffSpawn { source })?,
         )
         .stderr(
-            stderr.writer
+            stderr
+                .writer
                 .try_clone()
                 .map_err(|source| PatchCommitError::DiffSpawn { source })?,
         )
@@ -253,22 +256,21 @@ fn temporary_filtered_dir(src: &Path) -> PathBuf {
 }
 
 fn slash_path(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
+    path.to_string_lossy()
+        .replace('\\', "/")
 }
 
 fn safe_package_file_path(path: &str) -> Result<PathBuf, PatchCommitError> {
     let path = path_from_forward_slash(path);
     if path.is_absolute()
-        || path
-            .components()
-            .any(|component| {
-                matches!(
-                    component,
-                    std::path::Component::ParentDir
-                        | std::path::Component::RootDir
-                        | std::path::Component::Prefix(_),
-                )
-            })
+        || path.components().any(|component| {
+            matches!(
+                component,
+                std::path::Component::ParentDir
+                    | std::path::Component::RootDir
+                    | std::path::Component::Prefix(_),
+            )
+        })
     {
         return Err(PatchCommitError::InvalidPackageFilePath {
             path: path.to_string_lossy().into_owned(),

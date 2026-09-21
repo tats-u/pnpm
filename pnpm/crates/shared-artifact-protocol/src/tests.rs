@@ -112,17 +112,25 @@ fn verifies_the_exact_signed_payload_bytes() {
         payload: BASE64.encode(&payload_bytes),
         signature: BASE64.encode(signature.to_der().as_bytes()),
     };
-    let public_key =
-        p256::PublicKey::from(private_key.verifying_key()).to_public_key_der().unwrap();
+    let public_key = p256::PublicKey::from(private_key.verifying_key())
+        .to_public_key_der()
+        .unwrap();
 
-    let verified = envelope.verify(public_key.as_bytes()).unwrap();
+    let verified = envelope
+        .verify(public_key.as_bytes())
+        .unwrap();
     assert_eq!(verified.owner, OwnerScope::organization("acme"));
     assert_eq!(envelope.digest().unwrap().len(), 64);
 
     let other_private_key = SigningKey::from_slice(&[8; 32]).unwrap();
-    let other_public_key =
-        p256::PublicKey::from(other_private_key.verifying_key()).to_public_key_der().unwrap();
-    assert!(envelope.verify(other_public_key.as_bytes()).is_err());
+    let other_public_key = p256::PublicKey::from(other_private_key.verifying_key())
+        .to_public_key_der()
+        .unwrap();
+    assert!(
+        envelope
+            .verify(other_public_key.as_bytes())
+            .is_err()
+    );
 }
 
 #[test]
@@ -138,11 +146,21 @@ fn verifies_signature_before_rejecting_a_trusted_invalid_payload() {
         payload: BASE64.encode(&payload_bytes),
         signature: BASE64.encode(signature.to_der().as_bytes()),
     };
-    let public_key =
-        p256::PublicKey::from(private_key.verifying_key()).to_public_key_der().unwrap();
+    let public_key = p256::PublicKey::from(private_key.verifying_key())
+        .to_public_key_der()
+        .unwrap();
 
-    assert_eq!(envelope.verify_signature(public_key.as_bytes()).unwrap(), invalid);
-    assert!(envelope.verify(public_key.as_bytes()).is_err());
+    assert_eq!(
+        envelope
+            .verify_signature(public_key.as_bytes())
+            .unwrap(),
+        invalid
+    );
+    assert!(
+        envelope
+            .verify(public_key.as_bytes())
+            .is_err()
+    );
     assert_eq!(envelope.digest().unwrap().len(), 64);
 }
 
@@ -157,11 +175,21 @@ fn verifies_signature_before_deserializing_a_trusted_malformed_payload() {
         payload: BASE64.encode(payload_bytes),
         signature: BASE64.encode(signature.to_der().as_bytes()),
     };
-    let public_key =
-        p256::PublicKey::from(private_key.verifying_key()).to_public_key_der().unwrap();
+    let public_key = p256::PublicKey::from(private_key.verifying_key())
+        .to_public_key_der()
+        .unwrap();
 
-    assert_eq!(envelope.verify_signature_bytes(public_key.as_bytes()).unwrap(), payload_bytes);
-    assert!(envelope.verify_signature(public_key.as_bytes()).is_err());
+    assert_eq!(
+        envelope
+            .verify_signature_bytes(public_key.as_bytes())
+            .unwrap(),
+        payload_bytes
+    );
+    assert!(
+        envelope
+            .verify_signature(public_key.as_bytes())
+            .is_err()
+    );
     assert_eq!(envelope.digest().unwrap().len(), 64);
 }
 
@@ -200,14 +228,20 @@ fn signs_a_payload_that_the_verifier_accepts() {
     let secret_key = SecretKey::from_slice(&[7; 32]).unwrap();
     let private_key_der = secret_key.to_pkcs8_der().unwrap();
     let private_key = SigningKey::from(secret_key);
-    let public_key =
-        p256::PublicKey::from(private_key.verifying_key()).to_public_key_der().unwrap();
+    let public_key = p256::PublicKey::from(private_key.verifying_key())
+        .to_public_key_der()
+        .unwrap();
     let expected = payload(integrity(b"addon"));
 
     let envelope =
         SignedArtifactEnvelope::sign(&expected, "acme-2026", private_key_der.as_bytes()).unwrap();
 
-    assert_eq!(envelope.verify(public_key.as_bytes()).unwrap(), expected);
+    assert_eq!(
+        envelope
+            .verify(public_key.as_bytes())
+            .unwrap(),
+        expected
+    );
 }
 
 #[test]
@@ -260,7 +294,10 @@ fn rejects_paths_before_the_importer_can_see_them() {
 fn rejects_duplicate_and_case_colliding_paths() {
     let file_integrity = integrity(b"addon");
     let mut artifact = payload(file_integrity);
-    artifact.manifest.deleted.push("BUILD/addon.node".to_string());
+    artifact
+        .manifest
+        .deleted
+        .push("BUILD/addon.node".to_string());
     assert!(artifact.validate().is_err());
 }
 
@@ -268,12 +305,15 @@ fn rejects_duplicate_and_case_colliding_paths() {
 fn rejects_inconsistent_sizes_for_one_blob() {
     let file_integrity = integrity(b"addon");
     let mut artifact = payload(file_integrity.clone());
-    artifact.manifest.added.push(ArtifactFile {
-        path: "build/addon-copy.node".to_string(),
-        integrity: file_integrity,
-        mode: 0o755,
-        size: 6,
-    });
+    artifact
+        .manifest
+        .added
+        .push(ArtifactFile {
+            path: "build/addon-copy.node".to_string(),
+            integrity: file_integrity,
+            mode: 0o755,
+            size: 6,
+        });
     assert!(artifact.validate().is_err());
 }
 
@@ -298,7 +338,9 @@ fn validates_publication_blobs_before_transport() {
     assert_eq!(validated.blobs[&file_integrity], b"addon");
 
     let mut duplicate = request.clone();
-    duplicate.blobs.push(duplicate.blobs[0].clone());
+    duplicate
+        .blobs
+        .push(duplicate.blobs[0].clone());
     assert!(duplicate.validate().is_err());
 
     let mut unreferenced = request;
@@ -313,7 +355,10 @@ fn verifies_blob_bytes_and_derives_a_path_safe_id() {
     assert!(verify_blob(&file_integrity, b"poison").is_err());
     let id = blob_id(&file_integrity).unwrap();
     assert_eq!(id.len(), 128);
-    assert!(id.bytes().all(|byte| byte.is_ascii_hexdigit()));
+    assert!(
+        id.bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    );
 }
 
 #[test]

@@ -24,7 +24,13 @@ pub(crate) struct EnvironmentStore {
 
 impl EnvironmentStore {
     pub(crate) fn new(config: &pnpm_config::Config) -> Self {
-        Self { root: config.store_dir.root().join("python-envs"), frozen: config.frozen_store }
+        Self {
+            root: config
+                .store_dir
+                .root()
+                .join("python-envs"),
+            frozen: config.frozen_store,
+        }
     }
 
     /// A fresh generation for the project at `root`, which publication
@@ -62,7 +68,9 @@ impl EnvironmentStore {
         let root = dunce::canonicalize(root)
             .into_diagnostic()
             .wrap_err_with(|| format!("resolve Python project directory {}", root.display()))?;
-        Ok(self.root.join(pnpm_crypto_hash::create_short_hash(&root.to_string_lossy())))
+        Ok(self
+            .root
+            .join(pnpm_crypto_hash::create_short_hash(&root.to_string_lossy())))
     }
 
     /// The generation the project's `.venv` currently links to, or `None`
@@ -112,7 +120,10 @@ impl EnvironmentStore {
                     });
             }
         };
-        Ok(generation.parent().and_then(Path::parent) == Some(root.as_path()))
+        Ok(generation
+            .parent()
+            .and_then(Path::parent)
+            == Some(root.as_path()))
     }
 }
 

@@ -31,7 +31,8 @@ impl PreferenceEntry {
 /// Ports
 /// <https://github.com/yarnpkg/berry/blob/4287909fa6a0a1ec976a55776bff606864b31990/packages/yarnpkg-nm/sources/hoist.ts>.
 pub(super) fn build_hoist_ident_map(root: &Rc<HoisterResult>) -> HashMap<String, VecDeque<String>> {
-    let root_children: Vec<Rc<HoisterResult>> = root.dependencies
+    let root_children: Vec<Rc<HoisterResult>> = root
+        .dependencies
         .borrow()
         .iter()
         .map(|dep| Rc::clone(&dep.0))
@@ -123,7 +124,8 @@ fn add_dependent(
         .insert(dependent_ident.to_string());
 
     if seen.insert(Rc::as_ptr(node)) {
-        let children: Vec<Rc<HoisterResult>> = node.dependencies
+        let children: Vec<Rc<HoisterResult>> = node
+            .dependencies
             .borrow()
             .iter()
             .map(|dep| Rc::clone(&dep.0))
@@ -157,7 +159,8 @@ pub(super) fn is_preferred_ident(
     let Some(preferred) = idents.front() else {
         return true;
     };
-    child.references
+    child
+        .references
         .borrow()
         .iter()
         .next()

@@ -12,7 +12,9 @@ async fn verify_short_circuits_non_semver_version() {
     let verifier = create_npm_resolution_verifier(opts);
     let resolution = registry_resolution();
     let name: PkgName = "acme".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, "not-semver")).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, "not-semver"))
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -65,7 +67,8 @@ async fn registry_supports_time_field_reads_version_time_from_abbreviated_meta()
         .await;
     let mut opts = default_opts(&registry);
     opts.release_age.minimum_minutes = Some(60 * 24); // 24h
-    opts.metadata.registry_supports_time_field = true;
+    opts.metadata
+        .registry_supports_time_field = true;
     let verifier = create_npm_resolution_verifier(opts);
     let resolution = LockfileResolution::Tarball(TarballResolution {
         tarball: format!("{server_url}/aged-pkg/-/aged-pkg-1.0.0.tgz"),
@@ -75,7 +78,9 @@ async fn registry_supports_time_field_reads_version_time_from_abbreviated_meta()
         path: None,
     });
     let name: PkgName = "aged-pkg".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
     meta_mock.assert_async().await;
 }

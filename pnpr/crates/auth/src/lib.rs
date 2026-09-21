@@ -139,7 +139,9 @@ pub struct AuthState {
 
 impl std::fmt::Debug for AuthState {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.debug_struct("AuthState").finish_non_exhaustive()
+        formatter
+            .debug_struct("AuthState")
+            .finish_non_exhaustive()
     }
 }
 
@@ -299,7 +301,8 @@ pub trait TokenBackend: Send + Sync {
     /// revoked); `Err` only for a backing-store failure, never conflated
     /// with "no such token".
     async fn lookup_record(&self, raw: &str) -> Result<Option<TokenRecord>> {
-        self.find_by_key(&sha256_hex(raw.as_bytes())).await
+        self.find_by_key(&sha256_hex(raw.as_bytes()))
+            .await
     }
 
     /// Snapshot the record for a token by its key (SHA-256 hex). Used
@@ -319,7 +322,8 @@ pub trait TokenBackend: Send + Sync {
     /// (npm logout) path puts the bearer token verbatim in the URL, so
     /// this hashes first and defers to [`Self::revoke_by_key`].
     async fn revoke_by_raw(&self, raw: &str) -> Result<Option<TokenRecord>> {
-        self.revoke_by_key(&sha256_hex(raw.as_bytes())).await
+        self.revoke_by_key(&sha256_hex(raw.as_bytes()))
+            .await
     }
 }
 
@@ -374,11 +378,9 @@ impl UserStore {
     /// by tests that want sub-100ms hashing.
     pub fn open_with_cost(path: PathBuf, max_users: MaxUsers, bcrypt_cost: u32) -> Result<Self> {
         let users = match std::fs::read_to_string(&path) {
-            Ok(raw) => parse_htpasswd(&raw)
-                .map_err(|reason| RegistryError::InvalidHtpasswdFile {
-                    path: path.display().to_string(),
-                    reason,
-                })?,
+            Ok(raw) => parse_htpasswd(&raw).map_err(|reason| {
+                RegistryError::InvalidHtpasswdFile { path: path.display().to_string(), reason }
+            })?,
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => HashMap::new(),
             Err(err) => return Err(err.into()),
         };
@@ -390,7 +392,8 @@ impl UserStore {
         match self.max_users {
             MaxUsers::Disabled => return Err(RegistryError::RegistrationDisabled),
             MaxUsers::Limited(max) => {
-                let current = self.users
+                let current = self
+                    .users
                     .lock()
                     .expect("UserStore mutex poisoned")
                     .len() as u64;
@@ -428,7 +431,10 @@ impl UserBackend for UserStore {
         validate_username(username)?;
 
         let existing_hash = {
-            let users = self.users.lock().expect("UserStore mutex poisoned");
+            let users = self
+                .users
+                .lock()
+                .expect("UserStore mutex poisoned");
             users.get(username).cloned()
         };
         if let Some(stored) = existing_hash {
@@ -443,7 +449,10 @@ impl UserBackend for UserStore {
             VerifyExisting(String),
         }
         let next_step = {
-            let mut users = self.users.lock().expect("UserStore mutex poisoned");
+            let mut users = self
+                .users
+                .lock()
+                .expect("UserStore mutex poisoned");
             match (users.get(username).cloned(), self.max_users) {
                 (Some(stored), _) => NextStep::VerifyExisting(stored),
                 // Re-check under the lock because another registration may

@@ -176,12 +176,16 @@ impl StageArgs {
     ) -> miette::Result<Option<String>> {
         match self.params.first().map(String::as_str) {
             Some("publish") => {
-                self.stage_publish::<Reporter>(dir, config, recursive, before_packing_hooks).await
+                self.stage_publish::<Reporter>(dir, config, recursive, before_packing_hooks)
+                    .await
             }
             Some("list") => self.stage_list(config).await,
             Some("view") => self.stage_view(config).await,
             Some("approve") => approve::stage_approve::<Reporter>(&self, config).await,
-            Some("reject") => self.stage_reject::<Reporter>(config).await,
+            Some("reject") => {
+                self.stage_reject::<Reporter>(config)
+                    .await
+            }
             Some("download") => self.stage_download(dir, config).await,
             None => Err(StageError::SubcommandRequired.into()),
             Some(other) => {
@@ -204,14 +208,15 @@ impl StageArgs {
         let json = flags.output.json;
         let dry_run = flags.dry_run;
         let publish = PublishArgs { package: params.get(1).cloned(), flags };
-        let published = publish.publish_packages::<Reporter>(
-            dir,
-            config,
-            recursive,
-            /* stage */ true,
-            before_packing_hooks,
-        )
-        .await?;
+        let published = publish
+            .publish_packages::<Reporter>(
+                dir,
+                config,
+                recursive,
+                /* stage */ true,
+                before_packing_hooks,
+            )
+            .await?;
         let summaries = published.summaries();
         if json {
             let keyed = key_by_package_name(summaries);
@@ -344,7 +349,9 @@ impl StageArgs {
                 .unwrap_or_default(),
         };
         let registry = if registry.ends_with('/') { registry } else { format!("{registry}/") };
-        let auth_header = config.auth_headers.for_url_with_package(&registry, package_name);
+        let auth_header = config
+            .auth_headers
+            .for_url_with_package(&registry, package_name);
         Ok(StageContext {
             registry,
             auth_header,

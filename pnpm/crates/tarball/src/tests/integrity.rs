@@ -96,7 +96,9 @@ async fn prefetch_cas_paths_omits_failed_integrity_entries() {
     .await;
 
     assert!(
-        !prefetched.cas_paths.contains_key(&index_key),
+        !prefetched
+            .cas_paths
+            .contains_key(&index_key),
         "row that fails integrity must not appear in prefetch result",
     );
     drop(store_dir);
@@ -182,13 +184,26 @@ async fn read_local_tarball_metadata_reads_integrity_and_bundled_manifest() {
     let tarball_path = local_dir.path().join("pkg.tgz");
     std::fs::write(&tarball_path, FASTIFY_ERROR_TARBALL).unwrap();
 
-    let metadata = read_local_tarball_metadata(&tarball_path).await
+    let metadata = read_local_tarball_metadata(&tarball_path)
+        .await
         .expect("read the local tarball's metadata");
 
     assert_eq!(metadata.integrity.to_string(), FASTIFY_ERROR_INTEGRITY);
-    let manifest = metadata.manifest.expect("bundled manifest");
-    assert_eq!(manifest.get("name").and_then(serde_json::Value::as_str), Some("@fastify/error"));
-    assert_eq!(manifest.get("version").and_then(serde_json::Value::as_str), Some("3.3.0"));
+    let manifest = metadata
+        .manifest
+        .expect("bundled manifest");
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("@fastify/error")
+    );
+    assert_eq!(
+        manifest
+            .get("version")
+            .and_then(serde_json::Value::as_str),
+        Some("3.3.0")
+    );
 }
 
 #[tokio::test]
@@ -244,14 +259,23 @@ async fn fetch_and_extract_records_expected_or_computed_integrity() {
         .expect("local tarballs should be read from disk without network access");
 
         assert_eq!(&result.integrity, expected);
-        let manifest = result.manifest.expect("bundled manifest");
+        let manifest = result
+            .manifest
+            .expect("bundled manifest");
         assert_eq!(manifest["name"], "@fastify/error");
         assert_eq!(manifest["version"], "3.3.0");
         assert!(!result.requires_build, "fixture has no install script");
-        assert!(result.files_map.contains_key("package.json"));
+        assert!(
+            result
+                .files_map
+                .contains_key("package.json")
+        );
 
         drop(writer);
-        writer_task.await.expect("writer task").expect("writer flushed");
+        writer_task
+            .await
+            .expect("writer task")
+            .expect("writer flushed");
         let index = StoreIndex::open_in(store_path).expect("open store index");
         let key = store_index_key(&expected.to_string(), package_id);
         assert_eq!(index.keys().expect("read index keys"), vec![key.clone()]);

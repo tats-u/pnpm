@@ -39,7 +39,11 @@ pub(super) async fn run_prepared_selected_update<Reporter: self::Reporter + 'sta
     if update.version.save {
         write_workspace_catalogs_selected(
             update.config,
-            site.catalogs_dir(prepared.workspace_dir_for_catalogs.as_deref()),
+            site.catalogs_dir(
+                prepared
+                    .workspace_dir_for_catalogs
+                    .as_deref(),
+            ),
             &prepared.updated_catalogs,
             selected.projects,
         )
@@ -89,7 +93,9 @@ pub(super) async fn run_prepared_update<Reporter: self::Reporter + 'static>(
     if update.version.save {
         write_workspace_catalogs(
             update.config,
-            prepared.workspace_dir_for_catalogs.as_deref(),
+            prepared
+                .workspace_dir_for_catalogs
+                .as_deref(),
             &prepared.updated_catalogs,
             manifest,
         )
@@ -217,14 +223,19 @@ where
 {
     match unsaved.lockfile_specifiers {
         Some(manifests) => {
-            install.run_with_lockfile_specifier_project_manifests::<Reporter>(
-                manifests,
-                unsaved.hooked_paths,
-            )
-            .await
+            install
+                .run_with_lockfile_specifier_project_manifests::<Reporter>(
+                    manifests,
+                    unsaved.hooked_paths,
+                )
+                .await
         }
         None => match bumps {
-            Some(bumps) => install.run_with_manifest_spec_bumps::<Reporter>(bumps).await,
+            Some(bumps) => {
+                install
+                    .run_with_manifest_spec_bumps::<Reporter>(bumps)
+                    .await
+            }
             None => install.run::<Reporter>().await,
         },
     }
@@ -262,18 +273,25 @@ where
 {
     match unsaved.lockfile_specifiers {
         Some(manifests) => {
-            install.run_selected_with_lockfile_specifier_project_manifests::<Reporter>(
-                selection,
-                manifests,
-                unsaved.hooked_paths,
-            )
-            .await
+            install
+                .run_selected_with_lockfile_specifier_project_manifests::<Reporter>(
+                    selection,
+                    manifests,
+                    unsaved.hooked_paths,
+                )
+                .await
         }
         None => match bumps {
             Some(bumps) => {
-                install.run_selected_with_manifest_spec_bumps::<Reporter>(selection, bumps).await
+                install
+                    .run_selected_with_manifest_spec_bumps::<Reporter>(selection, bumps)
+                    .await
             }
-            None => install.run_selected::<Reporter>(selection).await,
+            None => {
+                install
+                    .run_selected::<Reporter>(selection)
+                    .await
+            }
         },
     }
     .pipe(defer_ignored_builds)

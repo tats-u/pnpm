@@ -21,7 +21,9 @@ fn for_installs_falls_back_to_bundled_roots_without_a_system_trust_store() {
     env.set("NODE_EXTRA_CA_CERTS", "");
 
     assert!(
-        reqwest::Client::builder().build().is_err(),
+        reqwest::Client::builder()
+            .build()
+            .is_err(),
         "precondition: the platform verifier must fail without a system trust store",
     );
 

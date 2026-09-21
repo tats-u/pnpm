@@ -122,7 +122,12 @@ fn pre_command_plan_from_input(
     config_overrides: &ConfigOverrides,
     process_state: SwitchProcessState,
 ) -> miette::Result<Option<PreCommandPlan>> {
-    if input.switch.command.as_deref().is_some_and(should_skip_command_name) {
+    if input
+        .switch
+        .command
+        .as_deref()
+        .is_some_and(should_skip_command_name)
+    {
         return Ok(None);
     }
     let dir = dunce::canonicalize(&input.switch.paths.dir)
@@ -133,12 +138,19 @@ fn pre_command_plan_from_input(
     let config = load_pre_command_config(&input.switch, config_overrides, &dir)?;
 
     let roots = PinRoots {
-        manifest: config.workspace_dir.clone().unwrap_or_else(|| dir.clone()),
-        env: config.root_project_manifest_dir(&dir).to_path_buf(),
+        manifest: config
+            .workspace_dir
+            .clone()
+            .unwrap_or_else(|| dir.clone()),
+        env: config
+            .root_project_manifest_dir(&dir)
+            .to_path_buf(),
     };
     let manifest = read_manifest_json(&roots.manifest.join("package.json"))?;
 
-    let wanted_pm = manifest.as_ref().and_then(wanted_package_manager);
+    let wanted_pm = manifest
+        .as_ref()
+        .and_then(wanted_package_manager);
     let running_matches_pin = pin_matches_running(wanted_pm.as_ref());
     let package_manager_to_sync = match resolve_input_pin(
         input,
@@ -163,16 +175,18 @@ fn pre_command_plan_from_input(
     {
         check_runtimes(manifest, &config, input.emit)?;
     }
-    Ok(package_manager_to_sync.map(|package_manager| {
-        env_lockfile_sync_plan(input, config, roots.env, package_manager)
-    }))
+    Ok(package_manager_to_sync
+        .map(|package_manager| env_lockfile_sync_plan(input, config, roots.env, package_manager)))
 }
 
 /// Whether the manifest's pin names the pnpm that is running.
 fn pin_matches_running(wanted_pm: Option<&WantedPackageManager>) -> bool {
     wanted_pm.is_some_and(|pm| {
         pm.name == "pnpm"
-            && pm.version.as_deref().is_some_and(|version| version_satisfies(PNPM_VERSION, version))
+            && pm
+                .version
+                .as_deref()
+                .is_some_and(|version| version_satisfies(PNPM_VERSION, version))
     })
 }
 
@@ -224,7 +238,9 @@ fn load_pre_command_config(
     // `--offline` governs how that record is resolved. Both are
     // install-family flags, and the record below is made for every
     // command.
-    switch.pin_flags.apply_to(&mut config, dir);
+    switch
+        .pin_flags
+        .apply_to(&mut config, dir);
     Ok(config)
 }
 
@@ -237,7 +253,10 @@ fn switch_or_sync(
     on_fail: PmOnFail,
 ) -> miette::Result<PinOutcome> {
     let PinResolution { config, roots, switch, .. } = *resolution;
-    let frozen_lockfile = switch.frozen_lockfile.or(config.frozen_lockfile).unwrap_or(false);
+    let frozen_lockfile = switch
+        .frozen_lockfile
+        .or(config.frozen_lockfile)
+        .unwrap_or(false);
     let Some(target) = switch_target(config, roots, frozen_lockfile)? else {
         return Ok(PinOutcome::Sync(None));
     };

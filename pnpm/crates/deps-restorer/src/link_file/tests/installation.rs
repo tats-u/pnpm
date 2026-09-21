@@ -441,7 +441,9 @@ fn eacces_downgrade_still_surfaces_a_failed_copy() {
     let state = AtomicU8::new(AUTO_FIRST_TIER);
     let tmp = tempdir().unwrap();
     let src = write_source(tmp.path(), "src.txt", b"unreachable target");
-    let dst = tmp.path().join("missing-parent/dst.txt");
+    let dst = tmp
+        .path()
+        .join("missing-parent/dst.txt");
 
     let err = auto_link::<SilentReporter, EaccesLinks>(&AtomicU8::new(0), &state, &src, &dst)
         .expect_err("copy cannot create a file under a missing directory");
@@ -459,7 +461,9 @@ fn eperm_downgrade_still_surfaces_a_failed_copy() {
     let state = AtomicU8::new(LINK_STATE_HARDLINK);
     let tmp = tempdir().unwrap();
     let src = write_source(tmp.path(), "src.txt", b"unreachable target");
-    let dst = tmp.path().join("missing-parent/dst.txt");
+    let dst = tmp
+        .path()
+        .join("missing-parent/dst.txt");
 
     let err = auto_link::<SilentReporter, EpermLinks>(&AtomicU8::new(0), &state, &src, &dst)
         .expect_err("the copy tier cannot create a file under a missing directory");

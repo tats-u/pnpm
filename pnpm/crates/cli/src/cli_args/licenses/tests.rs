@@ -49,7 +49,9 @@ async fn test_empty_lockfile() {
     };
 
     // An empty directory has no lockfile, so it should just print "{}" and exit ok
-    let res = args.run(&config, dir.path(), false).await;
+    let res = args
+        .run(&config, dir.path(), false)
+        .await;
     assert!(res.is_ok());
 }
 
@@ -69,7 +71,10 @@ async fn test_no_subcommand_matches_pnpm_error_code() {
         params: vec![],
     };
 
-    let err = args.run(&config, dir.path(), false).await.unwrap_err();
+    let err = args
+        .run(&config, dir.path(), false)
+        .await
+        .unwrap_err();
     assert!(format!("{err:?}").contains("ERR_PNPM_LICENCES_NO_SUBCOMMAND"));
 }
 

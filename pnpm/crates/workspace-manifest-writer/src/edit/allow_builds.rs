@@ -25,7 +25,8 @@ pub(crate) fn add_allow_build(manifest: &mut Manifest, name: &str, value: bool) 
     };
     // Keep the decoded view in sync so later upserts in the same write see
     // this entry (for both no-op detection and block-presence checks).
-    manifest.allow_builds
+    manifest
+        .allow_builds
         .get_or_insert_with(IndexMap::new)
         .insert(name.to_string(), AllowBuildValue::Bool(value));
     changed
@@ -49,7 +50,8 @@ fn write_allow_build(
         manifest.document.set_text(new_text);
         return Some(true);
     }
-    if manifest.allow_builds
+    if manifest
+        .allow_builds
         .as_ref()
         .and_then(|builds| builds.get(name))
         == Some(&AllowBuildValue::Bool(value))
@@ -97,7 +99,8 @@ pub(crate) fn add_undecided_allow_build(
         manifest.document.keys =
             render::target_order(&manifest.document.keys, &[BLOCK.to_string()]);
     }
-    manifest.allow_builds
+    manifest
+        .allow_builds
         .get_or_insert_with(IndexMap::new)
         .insert(name.to_string(), AllowBuildValue::String(placeholder.to_string()));
     true
@@ -135,9 +138,14 @@ pub(crate) fn prune_allow_builds(
         .iter()
         .all(|key| prunable.contains(key))
     {
-        manifest.document.set_text(remove_top_level_block(manifest.document.text(), BLOCK));
+        manifest
+            .document
+            .set_text(remove_top_level_block(manifest.document.text(), BLOCK));
         manifest.allow_builds = None;
-        manifest.document.keys.retain(|key| key != BLOCK);
+        manifest
+            .document
+            .keys
+            .retain(|key| key != BLOCK);
         return true;
     }
 

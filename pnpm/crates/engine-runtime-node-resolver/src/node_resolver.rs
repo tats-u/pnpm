@@ -171,12 +171,16 @@ impl NodeResolver {
             .pick_node_version(version_spec)
             .await
             .map_err(|err| Box::new(err) as ResolveError)?;
-        let variants = self.read_picked_assets(&picked, version_spec).await?;
+        let variants = self
+            .read_picked_assets(&picked, version_spec)
+            .await?;
         let PickedNodeVersion { version, .. } = picked;
         let range = normalize_node_runtime_version_specifier(
             version_spec,
             &version,
-            wanted_dependency.prev_specifier.as_deref(),
+            wanted_dependency
+                .prev_specifier
+                .as_deref(),
         );
         let resolution = LockfileResolution::Variations(VariationsResolution { variants });
         let manifest = serde_json::json!({
@@ -208,7 +212,9 @@ impl NodeResolver {
         picked: &PickedNodeVersion,
         version_spec: &str,
     ) -> Result<Vec<PlatformAssetResolution>, ResolveError> {
-        match self.read_node_assets(&picked.mirror, &picked.version, &picked.release_channel).await
+        match self
+            .read_node_assets(&picked.mirror, &picked.version, &picked.release_channel)
+            .await
         {
             Ok(variants) => Ok(variants),
             Err(error) if picked.resolved_without_index => {
@@ -250,7 +256,9 @@ impl NodeResolver {
             parse_node_specifier(version_spec).map_err(NodeResolverError::InvalidReleaseChannel)?;
         let mirror = get_node_mirror(
             self.mirror.as_deref(),
-            self.channel_mirrors.get(&parsed.release_channel).map(String::as_str),
+            self.channel_mirrors
+                .get(&parsed.release_channel)
+                .map(String::as_str),
             Some(&self.node_download_mirrors),
             &parsed.release_channel,
         );
@@ -300,7 +308,9 @@ impl NodeResolver {
         if let Some(version) = exact_release_version(&parsed) {
             return Ok(format!("{BARE_SPEC_PREFIX}{version}"));
         }
-        let picked = self.pick_node_version(version_spec).await?;
+        let picked = self
+            .pick_node_version(version_spec)
+            .await?;
         let range =
             normalize_node_runtime_version_specifier(version_spec, &picked.version, prev_specifier);
         Ok(format!("{BARE_SPEC_PREFIX}{range}"))
@@ -321,13 +331,14 @@ impl NodeResolver {
             spec_owned = "latest";
             spec_owned
         };
-        let parsed = parse_node_specifier(version_spec)
-            .map_err(|err| {
-                Box::new(NodeResolverError::InvalidReleaseChannel(err)) as ResolveError
-            })?;
+        let parsed = parse_node_specifier(version_spec).map_err(|err| {
+            Box::new(NodeResolverError::InvalidReleaseChannel(err)) as ResolveError
+        })?;
         let mirror = get_node_mirror(
             self.mirror.as_deref(),
-            self.channel_mirrors.get(&parsed.release_channel).map(String::as_str),
+            self.channel_mirrors
+                .get(&parsed.release_channel)
+                .map(String::as_str),
             Some(&self.node_download_mirrors),
             &parsed.release_channel,
         );
@@ -426,7 +437,8 @@ fn bare_runtime_spec<'a>(wanted: &'a WantedDependency, expected_alias: &str) -> 
     if wanted.alias.as_deref() != Some(expected_alias) {
         return None;
     }
-    wanted.bare_specifier
+    wanted
+        .bare_specifier
         .as_deref()
         .and_then(|spec| spec.strip_prefix(BARE_SPEC_PREFIX))
 }
@@ -456,7 +468,9 @@ pub fn normalize_node_runtime_version_specifier(
     let source = prev_specifier
         .and_then(|specifier| specifier.strip_prefix(BARE_SPEC_PREFIX))
         .unwrap_or(version_spec);
-    let spec = source.split_once('/').map_or(source, |(_, spec)| spec);
+    let spec = source
+        .split_once('/')
+        .map_or(source, |(_, spec)| spec);
     let prefix = if spec.starts_with('^') {
         "^"
     } else if spec.starts_with('~') {

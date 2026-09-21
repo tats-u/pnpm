@@ -97,7 +97,9 @@ async fn frozen_store_skips_side_effects_upload() {
             pnpm_lockfile::PackageMetadata {
                 resolution: pnpm_lockfile::LockfileResolution::Registry(
                     pnpm_lockfile::RegistryResolution {
-                        integrity: integrity_str.parse().expect("parse integrity"),
+                        integrity: integrity_str
+                            .parse()
+                            .expect("parse integrity"),
                         revision: None,
                     },
                 ),
@@ -184,7 +186,10 @@ async fn frozen_store_skips_side_effects_upload() {
     .expect("build modules must complete cleanly");
 
     drop(writer);
-    writer_task.await.expect("await writer").expect("disabled writer succeeds");
+    writer_task
+        .await
+        .expect("await writer")
+        .expect("disabled writer succeeds");
 
     let generated_file = pkg_dir.join("generated.txt");
     let generated_file_exists = generated_file.exists();

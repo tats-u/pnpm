@@ -117,10 +117,18 @@ impl OwnerArgs {
         let context = self.context(config)?;
 
         match subcommand {
-            Some("ls" | "list") => owner_ls(&context, &self.params[1..]).await.map(Some),
-            Some("add") => owner_add(&context, &self.params[1..]).await.map(Some),
-            Some("rm") => owner_rm(&context, &self.params[1..]).await.map(Some),
-            _ => owner_ls(&context, &self.params).await.map(Some),
+            Some("ls" | "list") => owner_ls(&context, &self.params[1..])
+                .await
+                .map(Some),
+            Some("add") => owner_add(&context, &self.params[1..])
+                .await
+                .map(Some),
+            Some("rm") => owner_rm(&context, &self.params[1..])
+                .await
+                .map(Some),
+            _ => owner_ls(&context, &self.params)
+                .await
+                .map(Some),
         }
     }
 
@@ -136,27 +144,25 @@ impl OwnerArgs {
         // origins so a cross-host redirect cannot forward the `npm-otp` header to
         // another host — reqwest only strips standard auth headers, not custom
         // ones, on cross-host redirects. Mirrors the `team`/`access` guard.
-        let redirect_guard = self.otp
-            .as_ref()
-            .map(|_| {
-                let origins: Vec<(String, String, Option<u16>)> = registries
-                    .values()
-                    .filter_map(|registry| {
-                        let url = reqwest::Url::parse(registry).ok()?;
-                        Some((url.scheme().to_string(), url.host_str()?.to_string(), url.port()))
+        let redirect_guard = self.otp.as_ref().map(|_| {
+            let origins: Vec<(String, String, Option<u16>)> = registries
+                .values()
+                .filter_map(|registry| {
+                    let url = reqwest::Url::parse(registry).ok()?;
+                    Some((url.scheme().to_string(), url.host_str()?.to_string(), url.port()))
+                })
+                .collect();
+            let guard: RedirectGuard = Arc::new(move |target: &reqwest::Url| -> bool {
+                origins
+                    .iter()
+                    .any(|(scheme, host, port)| {
+                        target.scheme() == scheme
+                            && target.host_str() == Some(host.as_str())
+                            && target.port() == *port
                     })
-                    .collect();
-                let guard: RedirectGuard = Arc::new(move |target: &reqwest::Url| -> bool {
-                    origins
-                        .iter()
-                        .any(|(scheme, host, port)| {
-                            target.scheme() == scheme
-                                && target.host_str() == Some(host.as_str())
-                                && target.port() == *port
-                        })
-                });
-                guard
             });
+            guard
+        });
         Ok(OwnerContext {
             config,
             http_client: build_http_client(config, redirect_guard.as_ref())?,
@@ -173,7 +179,9 @@ impl OwnerArgs {
 }
 
 async fn owner_ls(context: &OwnerContext<'_>, params: &[String]) -> miette::Result<String> {
-    let package_name = params.first().ok_or(OwnerError::LsPackageRequired)?;
+    let package_name = params
+        .first()
+        .ok_or(OwnerError::LsPackageRequired)?;
     let endpoint = owners_endpoint(context, package_name);
 
     let (_guard, response) =
@@ -194,7 +202,8 @@ async fn owner_ls(context: &OwnerContext<'_>, params: &[String]) -> miette::Resu
         return Err(write_error_from_response(response, "fetch owners of".to_string()).await);
     }
 
-    let body = read_limited_body(response, OWNER_BODY_LIMIT).await
+    let body = read_limited_body(response, OWNER_BODY_LIMIT)
+        .await
         .map_err(|source| registry_operation_error("reading owners response", source))?;
     let owners: Vec<OwnerEntry> = serde_json::from_slice(&body.bytes)
         .into_diagnostic()
@@ -278,8 +287,10 @@ struct OwnersEndpoint {
 
 fn owners_endpoint(context: &OwnerContext<'_>, package_name: &str) -> OwnersEndpoint {
     let registry_url = pick_registry_for_package(&context.registries, package_name, None);
-    let auth_header =
-        context.config.auth_headers.for_url_with_package(&registry_url, Some(package_name));
+    let auth_header = context
+        .config
+        .auth_headers
+        .for_url_with_package(&registry_url, Some(package_name));
     let escaped = encode_package_name(package_name);
     OwnersEndpoint { url: format!("{registry_url}-/package/{escaped}/owners"), auth_header }
 }

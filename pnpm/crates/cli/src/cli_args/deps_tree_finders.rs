@@ -149,7 +149,10 @@ fn edge_candidate<'a>(
             ))
         }
         None => {
-            let link_target = edge.link_target.clone().unwrap_or_default();
+            let link_target = edge
+                .link_target
+                .clone()
+                .unwrap_or_default();
             Some((
                 None,
                 ManifestSource {
@@ -171,7 +174,9 @@ pub(crate) async fn evaluate_finders(
     finders: &[FinderHandle],
     candidates: Vec<(String, Option<TreeNodeId>, ManifestSource)>,
 ) -> miette::Result<HashMap<(String, Option<TreeNodeId>), SearchMatch>> {
-    let store_index = env.layout.store_dir
+    let store_index = env
+        .layout
+        .store_dir
         .as_ref()
         .and_then(|store_dir| StoreIndex::open_readonly(store_dir).ok());
 
@@ -200,7 +205,8 @@ async fn finder_verdicts(
     let mut messages: Vec<String> = Vec::new();
     let mut found = false;
     for finder in finders {
-        let verdict = finder.hooks
+        let verdict = finder
+            .hooks
             .run_finder(&finder.name, ctx.clone())
             .await
             .map_err(|err| miette::miette!("running finder {}: {err}", finder.name))?;

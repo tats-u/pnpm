@@ -2,7 +2,9 @@ use crate::{Lockfile, PackageKey, PkgName, merge_lockfile_changes};
 use std::path::Path;
 
 fn parse(yaml: &str) -> Lockfile {
-    Lockfile::parse(yaml, Path::new("pnpm-lock.yaml")).unwrap().unwrap()
+    Lockfile::parse(yaml, Path::new("pnpm-lock.yaml"))
+        .unwrap()
+        .unwrap()
 }
 
 fn merged(ours: &str, theirs: &str) -> Lockfile {
@@ -56,8 +58,14 @@ snapshots:
 #[test]
 fn the_higher_version_wins_and_the_specifier_follows_the_change() {
     let merged = merged(OURS, THEIRS);
-    let root = merged.importers.get(".").expect("the root importer survives the merge");
-    let dependencies = root.dependencies.as_ref().expect("the root has dependencies");
+    let root = merged
+        .importers
+        .get(".")
+        .expect("the root importer survives the merge");
+    let dependencies = root
+        .dependencies
+        .as_ref()
+        .expect("the root has dependencies");
     let is_positive = &dependencies[&PkgName::parse("is-positive").unwrap()];
     assert_eq!(is_positive.version.to_string(), "3.1.0");
     assert_eq!(is_positive.specifier, "^3.1.0");
@@ -68,7 +76,10 @@ fn the_higher_version_wins_and_the_specifier_follows_the_change() {
 #[test]
 fn a_lower_incoming_version_loses() {
     let merged = merged(THEIRS, OURS);
-    let dependencies = merged.importers["."].dependencies.as_ref().unwrap();
+    let dependencies = merged.importers["."]
+        .dependencies
+        .as_ref()
+        .unwrap();
     let is_positive = &dependencies[&PkgName::parse("is-positive").unwrap()];
     assert_eq!(is_positive.version.to_string(), "3.1.0");
 }
@@ -76,9 +87,16 @@ fn a_lower_incoming_version_loses() {
 #[test]
 fn entries_only_one_side_records_all_survive() {
     let merged = merged(OURS, THEIRS);
-    let dependencies = merged.importers["."].dependencies.as_ref().unwrap();
+    let dependencies = merged.importers["."]
+        .dependencies
+        .as_ref()
+        .unwrap();
     assert!(dependencies.contains_key(&PkgName::parse("only-ours").unwrap()));
-    assert!(merged.importers.contains_key("packages/theirs"));
+    assert!(
+        merged
+            .importers
+            .contains_key("packages/theirs")
+    );
 
     let packages = merged.packages.as_ref().unwrap();
     let mut names: Vec<String> = packages
@@ -128,7 +146,9 @@ snapshots:
     let snapshot = &merged.snapshots.as_ref().unwrap()[&key];
     assert!(snapshot.optional, "ours survives what theirs omits");
     assert_eq!(
-        snapshot.transitive_peer_dependencies.as_deref(),
+        snapshot
+            .transitive_peer_dependencies
+            .as_deref(),
         Some(["react".to_string()].as_slice()),
     );
 }
@@ -160,7 +180,9 @@ pnpmfileChecksum: theirs
     assert!(merged.overrides.is_none());
     assert_eq!(merged.pnpmfile_checksum.as_deref(), Some("ours"));
     assert_eq!(
-        merged.ignored_optional_dependencies.as_deref(),
+        merged
+            .ignored_optional_dependencies
+            .as_deref(),
         Some(["fsevents".to_string(), "node-gyp".to_string()].as_slice()),
     );
 }
@@ -171,10 +193,15 @@ pnpmfileChecksum: theirs
 #[test]
 fn merging_unions_the_foreign_top_level_keys() {
     let mut ours = parse("lockfileVersion: '9.0'\n");
-    ours.extra.insert("bit".to_string(), serde_json::json!({ "depsRequiringBuild": ["ours"] }));
+    ours.extra
+        .insert("bit".to_string(), serde_json::json!({ "depsRequiringBuild": ["ours"] }));
     let mut theirs = parse("lockfileVersion: '9.0'\n");
-    theirs.extra.insert("bit".to_string(), serde_json::json!({ "depsRequiringBuild": ["theirs"] }));
-    theirs.extra.insert("other-tool".to_string(), serde_json::json!(true));
+    theirs
+        .extra
+        .insert("bit".to_string(), serde_json::json!({ "depsRequiringBuild": ["theirs"] }));
+    theirs
+        .extra
+        .insert("other-tool".to_string(), serde_json::json!(true));
 
     let merged = merge_lockfile_changes(&ours, &theirs);
 

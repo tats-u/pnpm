@@ -55,7 +55,12 @@ async fn search_paginates_across_hosted_and_upstream_sources() {
     let tmp = TempDir::new().unwrap();
     seed_hosted(tmp.path(), "ajv");
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let app = router(config);
 
     let first_page = app
@@ -113,7 +118,12 @@ async fn search_truncates_a_huge_upstream_instead_of_refusing() {
         .await;
     let tmp = TempDir::new().unwrap();
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let app = router(config);
 
     let response = app
@@ -166,8 +176,18 @@ async fn starved_upstream_still_counts_toward_the_search_total() {
         .await;
     let tmp = TempDir::new().unwrap();
     let mut config = router_config(&npmjs.url(), &corp.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("corp").unwrap().search = true;
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("corp")
+        .unwrap()
+        .search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let app = router(config);
 
     let response = app
@@ -201,14 +221,23 @@ async fn registry_addressed_surface_serves_dist_tags_unpublish_whoami_search_and
 
     let tmp = TempDir::new().unwrap();
     let mut config = config_for("http://127.0.0.1:1", tmp.path().to_path_buf());
-    config.routing.hosted.insert("acme".to_string(), hosted_with_access("acme", "$authenticated"));
+    config
+        .routing
+        .hosted
+        .insert("acme".to_string(), hosted_with_access("acme", "$authenticated"));
     // No default target: the registry is addressable only at `/~acme/`.
     config.routing.registries = Registries::new(
-        vec![("acme".to_string(), Registry::Hosted { patterns: vec![] })].into_iter().collect(),
+        vec![("acme".to_string(), Registry::Hosted { patterns: vec![] })]
+            .into_iter()
+            .collect(),
         None,
     );
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
     let authed = |request: axum::http::request::Builder| {
         request.header(header::AUTHORIZATION, format!("Bearer {token}"))
@@ -401,13 +430,22 @@ async fn pathless_private_registry_responses_carry_private_cache_headers() {
     seed_hosted(&tmp.path().join("acme"), "@acme/widget");
 
     let mut config = config_for("http://127.0.0.1:1", tmp.path().to_path_buf());
-    config.routing.hosted.insert("acme".to_string(), hosted_with_access("acme", "alice"));
+    config
+        .routing
+        .hosted
+        .insert("acme".to_string(), hosted_with_access("acme", "alice"));
     config.routing.registries = Registries::new(
-        vec![("acme".to_string(), Registry::Hosted { patterns: vec![] })].into_iter().collect(),
+        vec![("acme".to_string(), Registry::Hosted { patterns: vec![] })]
+            .into_iter()
+            .collect(),
         Some("acme".to_string()),
     );
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
 
     for path in ["/@acme/widget", "/@acme%2Fwidget/1.0.0", "/-/package/@acme%2Fwidget/dist-tags"] {
@@ -444,9 +482,14 @@ async fn pathless_private_registry_responses_carry_private_cache_headers() {
     let tmp_public = TempDir::new().unwrap();
     seed_hosted(&tmp_public.path().join("acme"), "@acme/widget");
     let mut config = config_for("http://127.0.0.1:1", tmp_public.path().to_path_buf());
-    config.routing.hosted.insert("acme".to_string(), hosted_with_access("acme", "$all"));
+    config
+        .routing
+        .hosted
+        .insert("acme".to_string(), hosted_with_access("acme", "$all"));
     config.routing.registries = Registries::new(
-        vec![("acme".to_string(), Registry::Hosted { patterns: vec![] })].into_iter().collect(),
+        vec![("acme".to_string(), Registry::Hosted { patterns: vec![] })]
+            .into_iter()
+            .collect(),
         Some("acme".to_string()),
     );
     let app = router_with_auth(config, AuthState::in_memory());
@@ -478,18 +521,29 @@ async fn pathless_acl_gated_package_carries_private_cache_headers() {
     seed_hosted(&tmp.path().join("acme"), "@acme/widget");
 
     let mut config = config_for("http://127.0.0.1:1", tmp.path().to_path_buf());
-    config.routing.hosted.insert("acme".to_string(), hosted_with_access("acme", "$all"));
+    config
+        .routing
+        .hosted
+        .insert("acme".to_string(), hosted_with_access("acme", "$all"));
     config.routing.registries = Registries::new(
-        vec![("acme".to_string(), Registry::Hosted { patterns: vec![] })].into_iter().collect(),
+        vec![("acme".to_string(), Registry::Hosted { patterns: vec![] })]
+            .into_iter()
+            .collect(),
         Some("acme".to_string()),
     );
-    config.routing.hosted
+    config
+        .routing
+        .hosted
         .get_mut("acme")
         .expect("hosted acme")
         .rules
         .push_rule(access_rule("@acme/widget", "$authenticated"));
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -549,13 +603,21 @@ async fn browse_paginates_hosted_packages_without_contacting_upstreams() {
         .create_async()
         .await;
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let mut hosted = hosted_with_access("", "$all");
     hosted.rules = PackageRules::new(
         vec![access_rule("hidden", "alice")],
         Some(AccessList::from_tokens(["$all"])),
     );
-    config.routing.hosted.insert("local".to_string(), hosted);
+    config
+        .routing
+        .hosted
+        .insert("local".to_string(), hosted);
     config.routing.registries = Registries::new(
         [
             (
@@ -621,8 +683,14 @@ async fn browse_paginates_hosted_packages_without_contacting_upstreams() {
 async fn registry_directory_filters_private_registries_and_routing_details() {
     let tmp = TempDir::new().unwrap();
     let mut config = config_for("http://example.invalid/secret-upstream", tmp.path().to_path_buf());
-    config.routing.hosted.insert("private".to_string(), hosted_with_access("private", "alice"));
-    config.routing.hosted.insert("crates".to_string(), hosted_with_access("crates", "$all"));
+    config
+        .routing
+        .hosted
+        .insert("private".to_string(), hosted_with_access("private", "alice"));
+    config
+        .routing
+        .hosted
+        .insert("crates".to_string(), hosted_with_access("crates", "$all"));
     config.routing.registries = Registries::new(
         [
             (
@@ -644,7 +712,11 @@ async fn registry_directory_filters_private_registries_and_routing_details() {
     )
     .with_ecosystem("crates", Ecosystem::Cargo);
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
     for authenticated in [false, true] {
         let mut request = Request::builder().uri("/-/pnpr/v0/registries");
@@ -658,7 +730,9 @@ async fn registry_directory_filters_private_registries_and_routing_details() {
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(response.headers()[header::CACHE_CONTROL], "private, no-store");
-        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let body: Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(body["defaultRegistries"], json!({"npm": "main", "cargo": "main"}));
         assert_eq!(body["ecosystems"]["cargo"], json!({"available": true, "prefixed": true}));

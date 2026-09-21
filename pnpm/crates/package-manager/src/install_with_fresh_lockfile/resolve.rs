@@ -37,8 +37,9 @@ pub(super) async fn run_pre_resolution_hook<Reporter: pnpm_reporter::Reporter>(
         || serde_json::json!({}),
         |lf| serde_json::to_value(lf).unwrap_or_else(|_| serde_json::json!({})),
     );
-    let current_lockfile =
-        Lockfile::load_current_from_virtual_store_dir(&config.virtual_store_dir).ok().flatten();
+    let current_lockfile = Lockfile::load_current_from_virtual_store_dir(&config.virtual_store_dir)
+        .ok()
+        .flatten();
     let exists_current_lockfile = current_lockfile.is_some();
     let current_lockfile_json = current_lockfile.map_or_else(
         || serde_json::json!({}),
@@ -50,8 +51,14 @@ pub(super) async fn run_pre_resolution_hook<Reporter: pnpm_reporter::Reporter>(
         exists_current_lockfile,
         exists_non_empty_wanted_lockfile: wanted_lockfile
             .as_ref()
-            .is_some_and(|lf| !lf.snapshots.as_ref().is_none_or(HashMap::is_empty)),
-        lockfile_dir: lockfile_dir.to_string_lossy().to_string(),
+            .is_some_and(|lf| {
+                !lf.snapshots
+                    .as_ref()
+                    .is_none_or(HashMap::is_empty)
+            }),
+        lockfile_dir: lockfile_dir
+            .to_string_lossy()
+            .to_string(),
         store_dir: config.store_dir.display().to_string(),
         registries: serde_json::json!(config.resolved_registries()),
     };
@@ -109,7 +116,10 @@ impl SharedResolveOptions<'_> {
                 trust_policy: self.policy.trust_policy,
                 trust_policy_exclude: self.policy.trust_policy_exclude.clone(),
                 trust_policy_ignore_after: self.config.trust_policy_ignore_after,
-                package_version_guard: self.policy.package_version_guard.clone(),
+                package_version_guard: self
+                    .policy
+                    .package_version_guard
+                    .clone(),
                 block_exotic_subdeps: self.config.block_exotic_subdeps,
             },
             ..ResolveOptions::default()
@@ -211,23 +221,26 @@ impl ImporterInputs<'_> {
         modules_basename: &std::ffi::OsStr,
     ) -> ResolveImporterOptions {
         let preferred_versions = self.versions.for_importer(&importer.id);
-        let project_dir = importer.manifest
+        let project_dir = importer
+            .manifest
             .path()
             .parent()
             .expect("manifest path always has a parent dir")
             .to_path_buf();
         let modules_dir = Some(project_dir.join(modules_basename));
         ResolveImporterOptions {
-            base_opts: self.shared_resolve_options.build(
-                project_dir,
-                Arc::clone(preferred_versions),
-            ),
+            base_opts: self
+                .shared_resolve_options
+                .build(project_dir, Arc::clone(preferred_versions)),
             peers_suffix_max_length: self.peers_suffix_max_length(),
             peers: pnpm_resolving_deps_resolver::ImporterPeerOptions {
                 auto_install_peers: self.config.auto_install_peers,
-                auto_install_peers_from_highest_match: self.config
+                auto_install_peers_from_highest_match: self
+                    .config
                     .auto_install_peers_from_highest_match,
-                resolve_peers_from_workspace_root: self.config.resolve_peers_from_workspace_root,
+                resolve_peers_from_workspace_root: self
+                    .config
+                    .resolve_peers_from_workspace_root,
                 dedupe_peers: self.config.dedupe_peers,
                 dedupe_peer_dependents: self.config.dedupe_peer_dependents,
             },
@@ -267,7 +280,9 @@ impl WorkspaceWalk {
                 registry_options_by_url: config.registry_options_by_url.clone(),
             },
             share_workspace_resolutions: self.share_workspace_resolutions,
-            allowed_deprecated_versions: config.allowed_deprecated_versions.clone(),
+            allowed_deprecated_versions: config
+                .allowed_deprecated_versions
+                .clone(),
             peers: pnpm_resolving_deps_resolver::WorkspacePeerResolutionOptions {
                 dedupe_peers: config.dedupe_peers,
                 dedupe_injected_deps: config.dedupe_injected_deps,
@@ -309,13 +324,8 @@ impl WorkspaceWalk {
 pub(super) async fn run_resolve_pass<Reporter: pnpm_reporter::Reporter>(
     inputs: ResolvePassInputs<'_>,
 ) -> Result<pnpm_resolving_deps_resolver::ResolveWorkspaceResult, InstallWithFreshLockfileError> {
-    let ResolvePassInputs {
-        resolver,
-        importer_manifests,
-        dependency_groups,
-        walk,
-        per_importer,
-    } = inputs;
+    let ResolvePassInputs { resolver, importer_manifests, dependency_groups, walk, per_importer } =
+        inputs;
     let workspace_importers: Vec<pnpm_resolving_deps_resolver::WorkspaceImporter<'_>> =
         importer_manifests
             .iter()
@@ -324,7 +334,9 @@ pub(super) async fn run_resolve_pass<Reporter: pnpm_reporter::Reporter>(
                 manifest,
             })
             .collect();
-    let modules_basename = per_importer.config.modules_dir
+    let modules_basename = per_importer
+        .config
+        .modules_dir
         .file_name()
         .map_or_else(|| std::ffi::OsString::from("node_modules"), std::ffi::OsStr::to_os_string);
     pnpm_resolving_deps_resolver::resolve_workspace(

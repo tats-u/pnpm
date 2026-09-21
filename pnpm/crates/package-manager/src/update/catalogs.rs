@@ -44,7 +44,10 @@ pub(super) fn reconcile_catalog_rewrites<Reporter: self::Reporter>(
         }
     }
     *rewrites = reconciled;
-    Ok(ctx.workspace_dir_opt.clone().or_else(|| Some(ctx.manifest_dir.clone())))
+    Ok(ctx
+        .workspace_dir_opt
+        .clone()
+        .or_else(|| Some(ctx.manifest_dir.clone())))
 }
 /// The specifier one rewrite records in the manifest, or `None` when the
 /// catalog mode moved it into a catalog instead.
@@ -91,7 +94,9 @@ pub(super) fn reconcile_rewrite<Reporter: self::Reporter>(
 }
 pub(super) fn merge_catalogs(target: &mut Catalogs, updates: &Catalogs) {
     for (catalog_name, entries) in updates {
-        let catalog = target.entry(catalog_name.clone()).or_default();
+        let catalog = target
+            .entry(catalog_name.clone())
+            .or_default();
         for (dependency, specifier) in entries {
             catalog.insert(dependency.clone(), specifier.clone());
         }
@@ -129,7 +134,8 @@ pub(super) fn effective_specifier(
 ) -> Result<String, UpdateError> {
     if let Some(catalog_name) = parse_catalog_protocol(prev) {
         let ctx = ensure_catalog_ctx(catalog_ctx, manifest, config)?;
-        if let Some(spec) = ctx.catalogs
+        if let Some(spec) = ctx
+            .catalogs
             .get(catalog_name)
             .and_then(|catalog| catalog.get(name))
         {

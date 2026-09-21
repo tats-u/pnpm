@@ -185,7 +185,8 @@ async fn concurrent_chunks_of_one_upload_neither_lose_nor_duplicate_bytes() {
                 .header(header::AUTHORIZATION, &auth)
                 .body(Body::from(chunk))
                 .unwrap();
-            app.oneshot(request).await
+            app.oneshot(request)
+                .await
                 .unwrap()
                 .status()
         }
@@ -232,7 +233,9 @@ async fn deleting_a_referenced_blob_is_refused() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     assert_eq!(
-        get(&app, &format!("/v2/acme/app/blobs/{}", digest_of(b"layer"))).await.status(),
+        get(&app, &format!("/v2/acme/app/blobs/{}", digest_of(b"layer")))
+            .await
+            .status(),
         StatusCode::OK,
     );
 }
@@ -477,7 +480,12 @@ async fn mounts_and_discovery_respect_source_read_permissions() {
     push_image(&setup, &auth, "acme/secret", "latest").await;
     push_image(&setup, &auth, "acme/public", "latest").await;
     let mut config = oci_config(tmp.path().to_path_buf(), "$all");
-    config.routing.hosted.get_mut("images").unwrap().rules = PackageRules::new(
+    config
+        .routing
+        .hosted
+        .get_mut("images")
+        .unwrap()
+        .rules = PackageRules::new(
         vec![PackageRule {
             pattern: PackagePattern::parse("acme/secret", Ecosystem::Oci).unwrap(),
             access: Some(AccessList::from_tokens(["bob"])),
@@ -501,7 +509,9 @@ async fn mounts_and_discovery_respect_source_read_permissions() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::ACCEPTED);
     assert_eq!(
-        get(&app, &format!("/v2/acme/public/blobs/{digest}")).await.status(),
+        get(&app, &format!("/v2/acme/public/blobs/{digest}"))
+            .await
+            .status(),
         StatusCode::NOT_FOUND,
     );
     let response = app
@@ -535,7 +545,11 @@ async fn mounts_and_discovery_respect_source_read_permissions() {
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
     let response = get(&app, "/v2/_catalog?n=1").await;
-    assert!(!response.headers().contains_key(header::LINK));
+    assert!(
+        !response
+            .headers()
+            .contains_key(header::LINK)
+    );
     assert_eq!(response.headers()[header::CACHE_CONTROL], "private, no-store");
     let payload: Value = serde_json::from_slice(&body_bytes(response.into_body()).await).unwrap();
     assert_eq!(payload["repositories"], json!(["acme/public"]));
@@ -559,11 +573,18 @@ async fn unreferenced_blobs_can_be_deleted_and_uploaded_again() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::ACCEPTED);
     assert_eq!(
-        get(&app, &format!("/v2/acme/app/blobs/{digest}")).await.status(),
+        get(&app, &format!("/v2/acme/app/blobs/{digest}"))
+            .await
+            .status(),
         StatusCode::NOT_FOUND,
     );
     push_image(&app, &auth, "acme/app", "after-delete").await;
-    assert_eq!(get(&app, "/v2/acme/app/manifests/after-delete").await.status(), StatusCode::OK);
+    assert_eq!(
+        get(&app, "/v2/acme/app/manifests/after-delete")
+            .await
+            .status(),
+        StatusCode::OK
+    );
 }
 
 #[tokio::test]
@@ -643,7 +664,12 @@ async fn proxy_verifies_and_caches_manifest_and_blob_content() {
         .await;
     let tmp = TempDir::new().unwrap();
     let mut config = oci_config(tmp.path().to_path_buf(), "$all");
-    config.routing.upstreams.get_mut("dockerhub").unwrap().url = format!("{}/", upstream.url());
+    config
+        .routing
+        .upstreams
+        .get_mut("dockerhub")
+        .unwrap()
+        .url = format!("{}/", upstream.url());
     let app = router_with_auth(config, AuthState::in_memory());
     for _ in 0..2 {
         let response = get(&app, "/v2/other/app/manifests/latest").await;
@@ -666,7 +692,11 @@ async fn proxy_verifies_and_caches_manifest_and_blob_content() {
     assert_eq!(response.headers()[header::CONTENT_LENGTH], manifest.len().to_string());
     assert_eq!(response.headers()[header::CONTENT_TYPE], pnpr_oci::media_type::OCI_IMAGE_MANIFEST);
     assert_eq!(response.headers()["docker-content-digest"], digest_of(&manifest));
-    assert!(body_bytes(response.into_body()).await.is_empty());
+    assert!(
+        body_bytes(response.into_body())
+            .await
+            .is_empty()
+    );
     manifest_mock.assert_async().await;
     blob_mock.assert_async().await;
 }
@@ -680,7 +710,11 @@ async fn blob_deletion_fences_a_manifest_commit_on_another_replica() {
         store: std::sync::Arc::clone(&objects) as std::sync::Arc<dyn object_store::ObjectStore>,
         prefix: "fenced/".into(),
     };
-    let hosted = config.routing.hosted.get_mut("images").unwrap();
+    let hosted = config
+        .routing
+        .hosted
+        .get_mut("images")
+        .unwrap();
     hosted.rules = std::mem::take(&mut hosted.rules)
         .with_default_unpublish(AccessList::from_tokens(["$authenticated"]));
     let auth_state = AuthState::in_memory();
@@ -714,7 +748,12 @@ async fn blob_deletion_fences_a_manifest_commit_on_another_replica() {
     assert_eq!(deleted.status(), StatusCode::ACCEPTED);
     objects.resume.notify_one();
     assert_eq!(publish.await.unwrap().unwrap().status(), StatusCode::CONFLICT);
-    assert_eq!(get(&second, "/v2/acme/app/manifests/latest").await.status(), StatusCode::NOT_FOUND);
+    assert_eq!(
+        get(&second, "/v2/acme/app/manifests/latest")
+            .await
+            .status(),
+        StatusCode::NOT_FOUND
+    );
     push_image(&second, &auth, "acme/app", "retry").await;
 }
 
@@ -744,7 +783,12 @@ async fn proxy_does_not_cache_corrupt_content_or_download_blob_bodies_for_head()
         .await;
     let tmp = TempDir::new().unwrap();
     let mut config = oci_config(tmp.path().to_path_buf(), "$all");
-    config.routing.upstreams.get_mut("dockerhub").unwrap().url = format!("{}/", upstream.url());
+    config
+        .routing
+        .upstreams
+        .get_mut("dockerhub")
+        .unwrap()
+        .url = format!("{}/", upstream.url());
     let app = router_with_auth(config, AuthState::in_memory());
     let response = app
         .clone()
@@ -757,17 +801,25 @@ async fn proxy_does_not_cache_corrupt_content_or_download_blob_bodies_for_head()
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(response.headers()[header::CONTENT_LENGTH], "6");
-    assert!(body_bytes(response.into_body()).await.is_empty());
+    assert!(
+        body_bytes(response.into_body())
+            .await
+            .is_empty()
+    );
     for _ in 0..2 {
         assert_eq!(
-            get(&app, "/v2/other/app/manifests/latest").await.status(),
+            get(&app, "/v2/other/app/manifests/latest")
+                .await
+                .status(),
             StatusCode::BAD_REQUEST,
         );
         let response = get(&app, &path).await;
         let mut stream = response.into_body().into_data_stream();
         let mut bytes = Vec::new();
-        while let Ok(chunk) =
-            stream.next().await.expect("corrupt content must terminate with an integrity error")
+        while let Ok(chunk) = stream
+            .next()
+            .await
+            .expect("corrupt content must terminate with an integrity error")
         {
             bytes.extend_from_slice(&chunk);
         }
@@ -826,7 +878,9 @@ async fn scoped_mount_without_source_pull_permission_falls_back_to_upload() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::ACCEPTED);
     assert_eq!(
-        get(&app, &format!("/v2/acme/dest/blobs/{digest}")).await.status(),
+        get(&app, &format!("/v2/acme/dest/blobs/{digest}"))
+            .await
+            .status(),
         StatusCode::NOT_FOUND,
     );
 }

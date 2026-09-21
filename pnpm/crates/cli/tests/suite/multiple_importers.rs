@@ -91,12 +91,19 @@ fn stale_current_lockfile_importers_are_retained_on_subset_install() {
     );
     fixture.run(["install"]);
     let before = fixture.current();
-    assert!(before.importers.contains_key("packages/project-3"));
+    assert!(
+        before
+            .importers
+            .contains_key("packages/project-3")
+    );
 
     fs::remove_file(project_3.join("package.json")).expect("drop project-3 from the workspace");
     fixture.run(["install", "--lockfile-only", "--no-prefer-frozen-lockfile"]);
     assert!(
-        !fixture.wanted().importers.contains_key("packages/project-3"),
+        !fixture
+            .wanted()
+            .importers
+            .contains_key("packages/project-3"),
         "the wanted lockfile must drop the removed importer",
     );
 
@@ -104,7 +111,9 @@ fn stale_current_lockfile_importers_are_retained_on_subset_install() {
 
     let current = fixture.current();
     assert!(
-        current.importers.contains_key("packages/project-3"),
+        current
+            .importers
+            .contains_key("packages/project-3"),
         "the still-materialized stale importer must stay in the current lockfile",
     );
     assert!(has_snapshot(&current, FOOBAR, "100.0.0"));
@@ -130,7 +139,8 @@ fn current_lockfile_contains_only_installed_dependencies() {
     fixture.run(["--filter", "project-2", "install"]);
 
     let current = fixture.current();
-    let package_keys: Vec<String> = current.packages
+    let package_keys: Vec<String> = current
+        .packages
         .iter()
         .flatten()
         .map(|(key, _)| key.to_string())
@@ -226,11 +236,19 @@ fn headless_install_is_used_when_packages_are_not_linked_from_the_workspace() {
     let records = fixture.run(["install"]);
 
     assert!(has_up_to_date_log(&records), "the install must go headless: {records:#?}");
-    let foo_qar = fs::canonicalize(foo_project.join("node_modules").join(QAR))
-        .expect("foo's workspace-range dependency is linked");
+    let foo_qar = fs::canonicalize(
+        foo_project
+            .join("node_modules")
+            .join(QAR),
+    )
+    .expect("foo's workspace-range dependency is linked");
     assert_eq!(foo_qar, fs::canonicalize(&qar_project).expect("canonicalize the qar project"));
-    let bar_qar = fs::canonicalize(bar_project.join("node_modules").join(QAR))
-        .expect("bar's registry dependency is materialized");
+    let bar_qar = fs::canonicalize(
+        bar_project
+            .join("node_modules")
+            .join(QAR),
+    )
+    .expect("bar's registry dependency is materialized");
     assert!(
         bar_qar.starts_with(fs::canonicalize(fixture.slot(QAR, "100.0.0")).expect("qar slot")),
         "a plain semver range must resolve from the registry when linking is off, got {bar_qar:?}",
@@ -315,7 +333,9 @@ fn workspace_linking_respects_dependency_depth() {
             assert_eq!(importer_version(&wanted, "packages/project", DEP), direct);
             let parent_snapshots = snapshot_entries(&wanted, PARENT);
             assert_eq!(parent_snapshots.len(), 1);
-            let subdependency = parent_snapshots[0].1.dependencies
+            let subdependency = parent_snapshots[0]
+                .1
+                .dependencies
                 .as_ref()
                 .and_then(|dependencies| {
                     dependencies.get(&DEP.parse().expect("parse package name"))
@@ -351,7 +371,9 @@ fn resolve_a_subdependency_from_the_workspace() {
     let wanted = fixture.wanted();
     let parent_snapshots = snapshot_entries(&wanted, PARENT);
     assert_eq!(parent_snapshots.len(), 1);
-    let subdependency = parent_snapshots[0].1.dependencies
+    let subdependency = parent_snapshots[0]
+        .1
+        .dependencies
         .as_ref()
         .and_then(|dependencies| dependencies.get(&DEP.parse().expect("parse package name")))
         .expect("parent snapshot records the subdependency")
@@ -384,7 +406,9 @@ fn resolve_a_subdependency_from_the_workspace_via_workspace_protocol_override() 
     let wanted = fixture.wanted();
     let parent_snapshots = snapshot_entries(&wanted, PARENT);
     assert_eq!(parent_snapshots.len(), 1);
-    let subdependency = parent_snapshots[0].1.dependencies
+    let subdependency = parent_snapshots[0]
+        .1
+        .dependencies
         .as_ref()
         .and_then(|dependencies| dependencies.get(&DEP.parse().expect("parse package name")))
         .expect("parent snapshot records the subdependency")
@@ -571,7 +595,9 @@ fn symlink_local_package_from_publish_config_directory() {
     fixture.run(["install"]);
     assert_publish_dir_is_linked();
     assert_eq!(
-        fixture.wanted().importers["packages/project-1"].publish_directory.as_deref(),
+        fixture.wanted().importers["packages/project-1"]
+            .publish_directory
+            .as_deref(),
         Some("dist"),
     );
     assert_eq!(fixture.wanted().importers["packages/project-1"].link_directory, None);
@@ -680,7 +706,11 @@ fn link_bin_of_workspace_project_created_by_lifecycle_script() {
     .expect("write deferred bin");
 
     fixture.run(["install"]);
-    assert!(consumer.join("created-by-prepare").exists());
+    assert!(
+        consumer
+            .join("created-by-prepare")
+            .exists()
+    );
 
     fs::remove_file(consumer.join("created-by-prepare")).expect("remove lifecycle marker");
     fs::rename(provider.join("bin.js"), provider.join("__bin.js")).expect("reset deferred bin");
@@ -694,7 +724,11 @@ fn link_bin_of_workspace_project_created_by_lifecycle_script() {
         }
     }
     fixture.run(["install", "--frozen-lockfile"]);
-    assert!(consumer.join("created-by-prepare").exists());
+    assert!(
+        consumer
+            .join("created-by-prepare")
+            .exists()
+    );
 }
 
 /// TS: `dependencies of workspace projects are built during headless
@@ -724,7 +758,10 @@ fn workspace_project_dependencies_built_during_headless_install_with_dedicated_l
         "each project must get its own dedicated lockfile",
     );
     assert!(
-        fixture.workspace.join("pnpm-lock.yaml").exists(),
+        fixture
+            .workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "the workspace root project must get its own dedicated lockfile",
     );
 
@@ -748,9 +785,8 @@ fn workspace_project_dependencies_built_during_headless_install_with_dedicated_l
 #[test]
 fn custom_virtual_store_directory_with_dedicated_lockfiles() {
     let fixture = WorkspaceFixture::new();
-    fixture.append_workspace_yaml(
-        "virtualStoreDir: virtual-store\nsharedWorkspaceLockfile: false\n",
-    );
+    fixture
+        .append_workspace_yaml("virtualStoreDir: virtual-store\nsharedWorkspaceLockfile: false\n");
     let project = fixture.project(
         "project-1",
         "project-1",

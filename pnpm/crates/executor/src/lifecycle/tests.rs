@@ -123,7 +123,9 @@ fn lifecycle_emits_script_stdio_and_exit_in_order() {
     let captured = EVENTS.lock().expect("lock").clone();
     dbg!(&captured);
 
-    let first = captured.first().expect("at least one event");
+    let first = captured
+        .first()
+        .expect("at least one event");
     let LogEvent::Lifecycle(first) = first else {
         panic!("first event must be Lifecycle, got {first:?}");
     };
@@ -139,7 +141,9 @@ fn lifecycle_emits_script_stdio_and_exit_in_order() {
         "first event must be Script(postinstall): {first:?}",
     );
 
-    let last = captured.last().expect("at least one event");
+    let last = captured
+        .last()
+        .expect("at least one event");
     let LogEvent::Lifecycle(last) = last else {
         panic!("last event must be Lifecycle, got {last:?}");
     };
@@ -324,7 +328,9 @@ fn lifecycle_emits_exit_with_nonzero_code_on_failure() {
     let captured = EVENTS.lock().expect("lock").clone();
     dbg!(&captured);
 
-    let last = captured.last().expect("at least one event");
+    let last = captured
+        .last()
+        .expect("at least one event");
     let LogEvent::Lifecycle(last) = last else {
         panic!("last event must be Lifecycle, got {last:?}");
     };
@@ -559,8 +565,7 @@ fn malformed_manifest_propagates_error() {
     let err = run_postinstall_hooks::<SilentReporter>(&opts).expect_err("malformed JSON must fail");
     eprintln!("ERR: {err}");
     let LifecycleScriptError::ReadManifest {
-        source: PackageManifestError::Parse { path, .. },
-        ..
+        source: PackageManifestError::Parse { path, .. }, ..
     } = &err
     else {
         panic!("expected ReadManifest(Parse), got {err:?}")
@@ -638,7 +643,9 @@ fn shell_emulator_lifecycle_emits_stdio_and_a_failing_exit() {
     let captured = EVENTS.lock().expect("lock").clone();
     dbg!(&captured);
 
-    let last = captured.last().expect("at least one event");
+    let last = captured
+        .last()
+        .expect("at least one event");
     let LogEvent::Lifecycle(last) = last else {
         panic!("last event must be Lifecycle, got {last:?}");
     };

@@ -41,20 +41,22 @@ impl Candidate {
         match (self, source) {
             (Self::Wheel(candidate), Source::Wheel { url, sha256 }) => {
                 candidate.wheel.url == url.as_str()
-                    && sha256
-                        .as_ref()
-                        .is_none_or(|expected| {
-                            candidate.wheel.hashes
-                                .get("sha256")
-                                .is_some_and(|digest| digest.eq_ignore_ascii_case(expected))
-                        })
+                    && sha256.as_ref().is_none_or(|expected| {
+                        candidate
+                            .wheel
+                            .hashes
+                            .get("sha256")
+                            .is_some_and(|digest| digest.eq_ignore_ascii_case(expected))
+                    })
             }
             (Self::Vcs(vcs), Source::Git(expected)) => {
                 vcs.url == expected.url
                     && vcs.requested_revision == expected.requested_revision
                     && vcs.subdirectory == expected.subdirectory
                     && (expected.commit_id.is_empty()
-                        || vcs.commit_id.eq_ignore_ascii_case(&expected.commit_id))
+                        || vcs
+                            .commit_id
+                            .eq_ignore_ascii_case(&expected.commit_id))
             }
             _ => false,
         }
@@ -165,7 +167,8 @@ impl Packages {
             name.clone(),
             BTreeMap::from([(version.clone(), Candidate::Directory(directory))]),
         );
-        self.metadata.insert((name, version), metadata);
+        self.metadata
+            .insert((name, version), metadata);
     }
 }
 

@@ -48,7 +48,9 @@ fn existing_target_with_wrong_content_is_overwritten_atomically() {
 #[test]
 fn missing_parent_dir_errors() {
     let tmp = tempdir().unwrap();
-    let path = tmp.path().join("nested/does/not/exist/file.txt");
+    let path = tmp
+        .path()
+        .join("nested/does/not/exist/file.txt");
 
     let err = ensure_file(&path, b"x", None).expect_err("missing parent should fail");
     match err {
@@ -128,7 +130,9 @@ fn create_exclusive_temp_file_yields_distinct_open_files() {
 
     assert_ne!(path_a, path_b);
     assert_eq!(path_a.parent().unwrap(), tmp.path());
-    file_a.write_all(b"payload").expect("write through the returned handle");
+    file_a
+        .write_all(b"payload")
+        .expect("write through the returned handle");
     drop(file_a);
     assert_eq!(fs::read(&path_a).unwrap(), b"payload");
 }
@@ -281,7 +285,9 @@ fn concurrent_writers_of_same_path_do_not_swap_the_inode() {
         .collect();
 
     for handle in handles {
-        handle.join().expect("writer thread should not panic");
+        handle
+            .join()
+            .expect("writer thread should not panic");
     }
 
     let final_meta = fs::metadata(&*path).unwrap();

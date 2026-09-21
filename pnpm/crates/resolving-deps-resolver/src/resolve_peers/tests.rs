@@ -134,7 +134,9 @@ fn cyclic_alias_peer_tree(direct_aliases: [&str; 3]) -> ResolvedTree {
 fn assert_cyclic_alias_peer_graph_is_closed(result: &ResolvePeersResult) {
     let vite_core = &result.direct_dependencies_by_alias["vite"];
     let vite_plus_path = &result.direct_dependencies_by_alias["vite-plus"];
-    let nested_core = &result.graph[vite_plus_path].edges.children["core"];
+    let nested_core = &result.graph[vite_plus_path]
+        .edges
+        .children["core"];
 
     assert_eq!(nested_core, vite_core);
     assert_eq!(vite_core, &DepPath::from("core@1.0.0(@vitejs/devtools@1.0.0)"));
@@ -188,11 +190,17 @@ mod locked_peer_provider_preferences {
     /// binding `peer` to `peer@2.0.0`.
     fn locked_provider_tree(ids: &LockedTreeIds, peer_range: &str) -> ResolvedTree {
         let mut current_peer_node = tree_node("peer@1.0.0", BTreeMap::new(), 0);
-        current_peer_node.locked_mut().previous_dep_path = Some(DepPath::from("peer@1.0.0"));
+        current_peer_node
+            .locked_mut()
+            .previous_dep_path = Some(DepPath::from("peer@1.0.0"));
         let mut retained_peer_node = tree_node("peer@2.0.0", BTreeMap::new(), 1);
-        retained_peer_node.locked_mut().previous_dep_path = Some(DepPath::from("peer@2.0.0"));
+        retained_peer_node
+            .locked_mut()
+            .previous_dep_path = Some(DepPath::from("peer@2.0.0"));
         let mut consumer_node = tree_node("consumer@1.0.0", BTreeMap::new(), 1);
-        consumer_node.locked_mut().locked_peer_context =
+        consumer_node
+            .locked_mut()
+            .locked_peer_context =
             Some(BTreeMap::from([("peer".to_string(), DepPath::from("peer@2.0.0"))]));
         ResolvedTree {
             direct: vec![
@@ -272,7 +280,9 @@ mod locked_peer_provider_preferences {
             },
         );
         assert!(
-            initial.graph.contains_key(&DepPath::from("consumer@1.0.0(peer@1.0.0)")),
+            initial
+                .graph
+                .contains_key(&DepPath::from("consumer@1.0.0(peer@1.0.0)")),
             "the first pass binds the current provider; graph keys: {:#?}",
             initial.graph.keys().collect::<Vec<_>>(),
         );
@@ -288,9 +298,14 @@ mod locked_peer_provider_preferences {
             },
         );
         assert!(
-            preferred.graph.contains_key(&DepPath::from("consumer@1.0.0(peer@2.0.0)")),
+            preferred
+                .graph
+                .contains_key(&DepPath::from("consumer@1.0.0(peer@2.0.0)")),
             "the second pass re-pins the locked provider; graph keys: {:#?}",
-            preferred.graph.keys().collect::<Vec<_>>(),
+            preferred
+                .graph
+                .keys()
+                .collect::<Vec<_>>(),
         );
     }
 
@@ -322,14 +337,24 @@ mod locked_peer_provider_preferences {
             },
         );
         assert!(
-            preferred.graph.contains_key(&DepPath::from("consumer@1.0.0(peer@1.0.0)")),
+            preferred
+                .graph
+                .contains_key(&DepPath::from("consumer@1.0.0(peer@1.0.0)")),
             "the current in-range provider stays bound; graph keys: {:#?}",
-            preferred.graph.keys().collect::<Vec<_>>(),
+            preferred
+                .graph
+                .keys()
+                .collect::<Vec<_>>(),
         );
         assert!(
-            !preferred.graph.contains_key(&DepPath::from("consumer@1.0.0(peer@2.0.0)")),
+            !preferred
+                .graph
+                .contains_key(&DepPath::from("consumer@1.0.0(peer@2.0.0)")),
             "the out-of-range locked provider must not be re-pinned; graph keys: {:#?}",
-            preferred.graph.keys().collect::<Vec<_>>(),
+            preferred
+                .graph
+                .keys()
+                .collect::<Vec<_>>(),
         );
     }
 }
@@ -410,10 +435,8 @@ fn peer_cycle_fixture(entries: &[(&str, usize, &str)], shape: &PeerCycleShape) -
         let edges = ring_member_edges(index, shape, &mut packages, &mut children_by_id);
         children_by_id.insert(Arc::from(ring_id(index)), Arc::new(edges));
     }
-    packages.insert(
-        Arc::from("wc@1.0.0"),
-        package("wc", "1.0.0", &[("w", shape.wc_w_range)], false),
-    );
+    packages
+        .insert(Arc::from("wc@1.0.0"), package("wc", "1.0.0", &[("w", shape.wc_w_range)], false));
     packages.insert(Arc::from("p@1.0.0"), package("p", "1.0.0", &[], true));
 
     let mut dependencies_tree = HashMap::default();
@@ -538,7 +561,8 @@ fn push_ring_fanout_edges(
 fn peer_cycle_graph_keys(entries: &[(&str, usize, &str)], shape: &PeerCycleShape) -> Vec<String> {
     let mut tree = peer_cycle_fixture(entries, shape);
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
-    let mut keys: Vec<String> = result.graph
+    let mut keys: Vec<String> = result
+        .graph
         .keys()
         .map(|path| path.as_str().to_string())
         .collect();

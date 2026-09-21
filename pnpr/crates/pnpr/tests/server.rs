@@ -72,8 +72,12 @@ use tower::ServiceExt;
 fn config_for(upstream: &str, storage: PathBuf) -> Config {
     let listen = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 4873));
     let mut config = Config::proxy(listen, storage);
-    config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream").url =
-        upstream.to_string();
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream")
+        .url = upstream.to_string();
     config.http.public_url = "http://example.test".to_string();
     config.http.packument_ttl = Duration::from_mins(1);
     config
@@ -107,7 +111,9 @@ fn access_rule(pattern: &str, access: &str) -> PackageRule {
 /// resolves the per-package cache dir under it. When nothing is cached yet it
 /// returns a path that does not exist, so existence assertions read naturally.
 fn public_cache_pkg(cache_root: &Path, pkg: &str) -> PathBuf {
-    let public = cache_root.join(".pnpr-cache").join("~public");
+    let public = cache_root
+        .join(".pnpr-cache")
+        .join("~public");
     // The public cache holds one digest directory per public registry. These tests
     // configure exactly one, so require at most one *directory* (ignoring stray
     // files and `read_dir` order) instead of trusting the first entry.
@@ -115,7 +121,11 @@ fn public_cache_pkg(cache_root: &Path, pkg: &str) -> PathBuf {
         .into_iter()
         .flatten()
         .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
+        .filter(|entry| {
+            entry
+                .file_type()
+                .is_ok_and(|kind| kind.is_dir())
+        })
         .map(|entry| entry.path())
         .collect();
     digest_dirs.sort();
@@ -131,7 +141,10 @@ fn public_cache_pkg(cache_root: &Path, pkg: &str) -> PathBuf {
 }
 
 async fn body_bytes(body: Body) -> Vec<u8> {
-    to_bytes(body, usize::MAX).await.expect("read body").to_vec()
+    to_bytes(body, usize::MAX)
+        .await
+        .expect("read body")
+        .to_vec()
 }
 
 fn git_resolve_request(repo_url: &str, authorization: Option<&str>) -> Request<Body> {
@@ -207,7 +220,9 @@ async fn drain_resolve_response(response: axum::response::Response) -> (StatusCo
 }
 
 async fn spawn_git_probe() -> (String, Arc<AtomicUsize>) {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let addr = listener.local_addr().unwrap();
     let request_count = Arc::new(AtomicUsize::new(0));
     let probe_count = Arc::clone(&request_count);
@@ -217,13 +232,14 @@ async fn spawn_git_probe() -> (String, Arc<AtomicUsize>) {
             tokio::spawn(async move {
                 let mut buf = vec![0u8; 4096];
                 let _ = socket.read(&mut buf).await;
-                let _ = socket.write_all(
-                    b"HTTP/1.1 500 Internal Server Error\r\n\
+                let _ = socket
+                    .write_all(
+                        b"HTTP/1.1 500 Internal Server Error\r\n\
                           Content-Length: 0\r\n\
                           Connection: close\r\n\
                           \r\n",
-                )
-                .await;
+                    )
+                    .await;
             });
         }
     });
@@ -357,15 +373,21 @@ async fn mock_packument_for_tarball(
 fn upstream_endpoint_config(upstream_url: &str, storage: PathBuf, access: &str) -> Config {
     let mut config = config_for(upstream_url, storage);
     config.http.public_url = "http://example.test".to_string();
-    config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream").access =
-        Some(AccessList::from_tokens([access]));
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream")
+        .access = Some(AccessList::from_tokens([access]));
     config
 }
 
 /// Spawn a TCP listener that serves a valid packument but truncates the
 /// matching tarball body. Mockito cannot simulate a mid-body disconnect.
 async fn spawn_truncated_upstream(expected_integrity: String) -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let addr = listener.local_addr().unwrap();
     let packument = json!({
         "name": "foo",
@@ -398,23 +420,27 @@ async fn spawn_truncated_upstream(expected_integrity: String) -> SocketAddr {
                          {packument}",
                         packument.len(),
                     );
-                    let _ = socket.write_all(response.as_bytes()).await;
+                    let _ = socket
+                        .write_all(response.as_bytes())
+                        .await;
                     return;
                 }
                 if request.starts_with("GET /foo/-/foo-1.0.0.tgz HTTP/") {
-                    let _ = socket.write_all(
-                        b"HTTP/1.1 200 OK\r\n\
+                    let _ = socket
+                        .write_all(
+                            b"HTTP/1.1 200 OK\r\n\
                           Content-Length: 1048576\r\n\
                           Content-Type: application/octet-stream\r\n\
                           Connection: close\r\n\
                           \r\n",
-                    )
-                    .await;
+                        )
+                        .await;
                     let _ = socket.write_all(&[0xAA; 100]).await;
                     return;
                 }
-                let _ =
-                    socket.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n").await;
+                let _ = socket
+                    .write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n")
+                    .await;
             });
         }
     });
@@ -514,12 +540,17 @@ async fn mock_package(server: &mut mockito::Server, pkg: &str, marker: &str) -> 
 /// aliased by the path-less base.
 fn router_config(npmjs_url: &str, corp_url: &str, storage: PathBuf) -> Config {
     let mut config = config_for(npmjs_url, storage);
-    let mut corp = config.routing.upstreams
+    let mut corp = config
+        .routing
+        .upstreams
         .get("npmjs")
         .expect("default `npmjs` upstream")
         .clone();
     corp.url = corp_url.to_string();
-    config.routing.upstreams.insert("corp".to_string(), corp);
+    config
+        .routing
+        .upstreams
+        .insert("corp".to_string(), corp);
     let graph = vec![
         ("npmjs".to_string(), Registry::Upstream { patterns: vec![] }),
         (
@@ -534,7 +565,9 @@ fn router_config(npmjs_url: &str, corp_url: &str, storage: PathBuf) -> Config {
         ),
     ];
     let registries = Registries::new(graph.into_iter().collect(), Some("main".to_string()));
-    registries.validate().expect("router config is valid");
+    registries
+        .validate()
+        .expect("router config is valid");
     config.routing.registries = registries;
     config
 }

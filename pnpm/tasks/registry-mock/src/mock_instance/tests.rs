@@ -68,14 +68,17 @@ impl Drop for ChildCleanup {
 /// therefore suspended with a live registry child, which is the state both
 /// cleanup paths have to recover from.
 async fn pending_startup() -> (JoinHandle<MockInstance>, TcpStream, ChildCleanup) {
-    let proxy = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let proxy = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let client = Client::builder()
         .proxy(Proxy::http(format!("http://{}", proxy.local_addr().unwrap())).unwrap())
         .build()
         .unwrap();
     let port = pick_unused_port().unwrap();
     let startup = tokio::spawn(async move { options(&client, port).spawn().await });
-    let (connection, _) = timeout(Duration::from_secs(10), proxy.accept()).await
+    let (connection, _) = timeout(Duration::from_secs(10), proxy.accept())
+        .await
         .expect("startup must reach its readiness request")
         .unwrap();
     let system = processes();
@@ -109,7 +112,8 @@ async fn failed_readiness_check_reaps_child() {
     drop(connection);
     // Generous because a platform that reports the closed connection as a
     // connect error sends startup around its whole retry budget first.
-    let error = timeout(Duration::from_secs(30), startup).await
+    let error = timeout(Duration::from_secs(30), startup)
+        .await
         .expect("closed connection must fail the readiness check")
         .unwrap_err();
     assert!(error.is_panic(), "readiness failures panic: {error}");
@@ -125,7 +129,13 @@ async fn successful_startup_retains_owner_and_reuse_does_not_stop_registry() {
     let registry = options(&client, pick_unused_port().unwrap());
     let instance = registry.spawn().await;
     let child = ChildCleanup(Some(Pid::from_u32(instance.process.id())));
-    assert!(registry.spawn_if_necessary().await.is_none(), "a ready registry is not respawned");
+    assert!(
+        registry
+            .spawn_if_necessary()
+            .await
+            .is_none(),
+        "a ready registry is not respawned"
+    );
     assert!(registry.is_registry_ready().await, "reuse must leave the registry serving");
     drop(instance);
     child.assert_reaped().await;

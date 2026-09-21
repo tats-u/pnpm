@@ -28,7 +28,8 @@ pub fn sequence_tasks(
     let included: Vec<TaskKey> = graph.keys().cloned().collect();
     let result = graph_sequencer(&edges, &included);
     if !result.cycles.is_empty() {
-        let cycles = result.cycles
+        let cycles = result
+            .cycles
             .iter()
             .map(|cycle| {
                 cycle
@@ -48,7 +49,10 @@ pub fn sequence_tasks(
             message: format!(
                 "The tasks form a dependency cycle and run in an arbitrary order relative to each other because ignoreWorkspaceCycles is set: {cycles}",
             ),
-            prefix: options.workspace_dir.to_string_lossy().into_owned(),
+            prefix: options
+                .workspace_dir
+                .to_string_lossy()
+                .into_owned(),
         }));
         drop_cyclic_dependencies(graph, &result.order);
     }
@@ -93,12 +97,16 @@ fn relative_project_dir(project: &Path, workspace_dir: &Path) -> String {
     if relative == project {
         // The two could not be related (a different drive); the absolute
         // path is the only faithful rendering.
-        return relative.to_string_lossy().replace(std::path::MAIN_SEPARATOR, "/");
+        return relative
+            .to_string_lossy()
+            .replace(std::path::MAIN_SEPARATOR, "/");
     }
     if relative.as_os_str().is_empty() {
         return ".".to_string();
     }
-    relative.to_string_lossy().replace(std::path::MAIN_SEPARATOR, "/")
+    relative
+        .to_string_lossy()
+        .replace(std::path::MAIN_SEPARATOR, "/")
 }
 
 /// The same graph with every edge turned around: dependents run before
@@ -111,7 +119,9 @@ pub fn reverse_task_graph(graph: &TaskGraph) -> TaskGraph {
         .collect();
     for (key, node) in graph {
         for dependency in &node.dependencies {
-            reversed[dependency].dependencies.push(key.clone());
+            reversed[dependency]
+                .dependencies
+                .push(key.clone());
         }
     }
     reversed
@@ -149,7 +159,8 @@ pub fn resume_task_graph_from(
         .into_iter()
         .filter(|(key, _)| !dropped.contains(key))
         .map(|(key, mut node)| {
-            node.dependencies.retain(|dependency| !dropped.contains(dependency));
+            node.dependencies
+                .retain(|dependency| !dropped.contains(dependency));
             (key, node)
         })
         .collect()
@@ -191,7 +202,8 @@ pub fn is_serial_task_graph(graph: &TaskGraph, sequenced_tasks: &[TaskKey]) -> b
     let mut longest_chain = 0_usize;
     for key in sequenced_tasks {
         let node = &graph[key];
-        let via_dependencies = node.dependencies
+        let via_dependencies = node
+            .dependencies
             .iter()
             .map(|dependency| {
                 chain_length
@@ -202,7 +214,13 @@ pub fn is_serial_task_graph(graph: &TaskGraph, sequenced_tasks: &[TaskKey]) -> b
             .max()
             .unwrap_or(0);
         let length = via_dependencies + node.scripts.len();
-        chain_length.insert(graph.get_key_value(key).expect("sequenced key is in graph").0, length);
+        chain_length.insert(
+            graph
+                .get_key_value(key)
+                .expect("sequenced key is in graph")
+                .0,
+            length,
+        );
         longest_chain = longest_chain.max(length);
     }
     longest_chain == script_task_count
@@ -218,7 +236,11 @@ fn serialized_by_one_task_limit(graph: &TaskGraph) -> bool {
         .filter(|node| !node.scripts.is_empty())
     {
         // `schedule_tasks` floors the declared limit at 1.
-        if node.concurrency.map(|limit| limit.max(1)) != Some(1) {
+        if node
+            .concurrency
+            .map(|limit| limit.max(1))
+            != Some(1)
+        {
             return false;
         }
         let group = limited_group.get_or_insert(node.task_name.as_str());
@@ -236,7 +258,9 @@ fn serialized_by_one_task_limit(graph: &TaskGraph) -> bool {
 #[must_use]
 pub fn task_summary_key(node: &TaskNode) -> String {
     if node.requested {
-        node.project.to_string_lossy().into_owned()
+        node.project
+            .to_string_lossy()
+            .into_owned()
     } else {
         format!("{}#{}", node.project.to_string_lossy(), node.task_name)
     }
@@ -274,7 +298,8 @@ pub fn task_graph_to_json(graph: &TaskGraph, workspace_dir: &Path) -> DryRunDocu
     let mut tasks: Vec<DryRunTask> = graph
         .values()
         .map(|node| {
-            let mut depends_on: Vec<DryRunTaskDependency> = node.dependencies
+            let mut depends_on: Vec<DryRunTaskDependency> = node
+                .dependencies
                 .iter()
                 .map(|dependency| DryRunTaskDependency {
                     project: relative_project_dir(&dependency.project, workspace_dir),

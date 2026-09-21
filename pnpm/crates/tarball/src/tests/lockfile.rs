@@ -48,7 +48,10 @@ async fn fetch_for_resolution_writes_no_index_row_for_a_subdirectory_package() {
     .expect("subdirectory fetch should succeed");
 
     drop(writer);
-    writer_task.await.expect("writer task").expect("writer flushed");
+    writer_task
+        .await
+        .expect("writer task")
+        .expect("writer flushed");
 
     // The key the row *would* have taken, had one been written.
     let key = store_index_key(&resolved.integrity.to_string(), "foo@1.2.3");

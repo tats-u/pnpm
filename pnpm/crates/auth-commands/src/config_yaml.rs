@@ -158,7 +158,10 @@ fn auth_with_token(root: &Map<String, Value>, registry: &str, scope: &str, token
 /// config would fail to load it at all.
 fn registries_with_route(root: &Map<String, Value>, registry: &str, scope: &str) -> Value {
     let mut registries = object_at(root, REGISTRIES_KEY).unwrap_or_default();
-    if registries.values().any(Value::is_string) {
+    if registries
+        .values()
+        .any(Value::is_string)
+    {
         registries.insert(scope.to_owned(), Value::String(registry.to_owned()));
         return Value::Object(registries);
     }
@@ -199,7 +202,10 @@ fn unroute_scope(entry: &mut Value, scope: &str) {
     let Some(declaration) = entry.as_object_mut() else {
         return;
     };
-    let Some(scopes) = declaration.get_mut("scopes").and_then(Value::as_array_mut) else {
+    let Some(scopes) = declaration
+        .get_mut("scopes")
+        .and_then(Value::as_array_mut)
+    else {
         return;
     };
     scopes.retain(|existing| existing.as_str() != Some(scope));

@@ -19,7 +19,9 @@ pub(super) fn workspace_targets(
     selectors: &[ParsedSelector],
     direct: &[(String, DependencyGroup, String)],
 ) -> Result<Vec<WorkspaceLinkTarget>, UpdateError> {
-    Ok(update.selection.workspace_packages
+    Ok(update
+        .selection
+        .workspace_packages
         .map(|packages| workspace_link_targets(selectors, direct, packages, update.config))
         .transpose()?
         .unwrap_or_default())
@@ -95,7 +97,11 @@ pub(super) fn all_workspace_link_targets(
     workspace_packages: &WorkspacePackages,
     config: &Config,
 ) -> Vec<WorkspaceLinkTarget> {
-    let ignore_patterns = config.update_config.ignore_dependencies.as_deref().unwrap_or_default();
+    let ignore_patterns = config
+        .update_config
+        .ignore_dependencies
+        .as_deref()
+        .unwrap_or_default();
     let ignore_matcher = (!ignore_patterns.is_empty()).then(|| create_matcher(ignore_patterns));
     direct
         .iter()

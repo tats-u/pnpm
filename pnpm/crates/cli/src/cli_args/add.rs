@@ -163,10 +163,22 @@ impl AddDependencyOptions {
     /// which selects which target group to save to.
     fn dependency_groups(&self) -> impl Iterator<Item = DependencyGroup> {
         std::iter::empty()
-            .chain(self.save_prod().then_some(DependencyGroup::Prod))
-            .chain(self.save_dev().then_some(DependencyGroup::Dev))
-            .chain(self.save_optional().then_some(DependencyGroup::Optional))
-            .chain(self.save_peer().then_some(DependencyGroup::Peer))
+            .chain(
+                self.save_prod()
+                    .then_some(DependencyGroup::Prod),
+            )
+            .chain(
+                self.save_dev()
+                    .then_some(DependencyGroup::Dev),
+            )
+            .chain(
+                self.save_optional()
+                    .then_some(DependencyGroup::Optional),
+            )
+            .chain(
+                self.save_peer()
+                    .then_some(DependencyGroup::Peer),
+            )
     }
 
     /// The save target for the install layer: `Some` when a `--save-*`
@@ -182,9 +194,8 @@ impl AddDependencyOptions {
             save_peer,
             no_save_peer: _,
         } = self;
-        (save_prod || save_dev || save_optional || save_build || save_peer).then(|| {
-            self.dependency_groups().collect()
-        })
+        (save_prod || save_dev || save_optional || save_build || save_peer)
+            .then(|| self.dependency_groups().collect())
     }
 }
 
@@ -218,7 +229,8 @@ impl AddArgs {
             || config.workspace_root
             || resolve_bool_override(
                 self.target.ignore_workspace_root_check,
-                self.target.no_ignore_workspace_root_check,
+                self.target
+                    .no_ignore_workspace_root_check,
                 config.ignore_workspace_root_check,
             )
             || config.workspace_dir.as_deref() != Some(dir)
@@ -241,7 +253,8 @@ impl AddArgs {
         self.scripts.apply(config);
         config.ignore_workspace_root_check = resolve_bool_override(
             self.target.ignore_workspace_root_check,
-            self.target.no_ignore_workspace_root_check,
+            self.target
+                .no_ignore_workspace_root_check,
             config.ignore_workspace_root_check,
         );
         config.optional =
@@ -280,7 +293,9 @@ impl AddArgs {
                     "'{selector}' is not a valid package name for a configuration dependency",
                 ));
             };
-            let specifier = parsed.bare_specifier.unwrap_or_else(|| "latest".to_string());
+            let specifier = parsed
+                .bare_specifier
+                .unwrap_or_else(|| "latest".to_string());
             added.insert(name, specifier);
         }
         Ok(Some(added))
@@ -292,7 +307,12 @@ impl AddArgs {
     fn range_spec_style(&self, config: &Config) -> RangeSpecStyle {
         let cli_save_prefix = (!self.save.exact)
             .then_some(())
-            .and_then(|()| self.save.tilde.then_some("~").or(self.save.prefix.as_deref()));
+            .and_then(|()| {
+                self.save
+                    .tilde
+                    .then_some("~")
+                    .or(self.save.prefix.as_deref())
+            });
         RangeSpecStyle::from_save_options(
             self.save.exact || (cli_save_prefix.is_none() && config.save_exact),
             cli_save_prefix.or(config.save_prefix.as_deref()),
@@ -308,10 +328,11 @@ impl AddArgs {
     ) -> miette::Result<Option<WorkspacePackages>> {
         workspace_link_root(self.target.workspace, config.workspace_dir.as_deref())?
             .map(|workspace_root| {
-                recursive::discover_workspace_projects(workspace_root, config)
-                    .map(|(projects, _)| {
+                recursive::discover_workspace_projects(workspace_root, config).map(
+                    |(projects, _)| {
                         build_workspace_packages_map(Some(&projects)).unwrap_or_default()
-                    })
+                    },
+                )
             })
             .transpose()
     }
@@ -385,7 +406,9 @@ pub(crate) fn apply_allow_build(
     }
     set_allow_builds(settings_dir, allow_build_map.iter().copied()).into_diagnostic()?;
     for (name, is_allow) in allow_build_map {
-        config.allow_builds.insert(name.to_string(), is_allow);
+        config
+            .allow_builds
+            .insert(name.to_string(), is_allow);
     }
     Ok(())
 }

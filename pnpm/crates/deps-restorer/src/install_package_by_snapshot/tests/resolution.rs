@@ -18,7 +18,9 @@ fn tarball_resolution_without_integrity_resolves_to_an_unverified_download() {
         git_hosted: Some(true),
         path: None,
     });
-    let package_key: PackageKey = format!("ci-info@{tarball}").parse().expect("parse package key");
+    let package_key: PackageKey = format!("ci-info@{tarball}")
+        .parse()
+        .expect("parse package key");
 
     let (tarball_url, integrity) = tarball_url_and_integrity(&resolution, &package_key, &config)
         .expect("a git-host archive is fetchable without an integrity");

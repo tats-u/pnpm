@@ -149,7 +149,11 @@ pub fn assemble_release_plan(
             return Ok(plan);
         };
         let before = selected.len();
-        selected.extend(plan.releases.iter().map(|release| release.dir.clone()));
+        selected.extend(
+            plan.releases
+                .iter()
+                .map(|release| release.dir.clone()),
+        );
         if selected.len() == before {
             return Ok(plan);
         }
@@ -255,7 +259,11 @@ fn push_fixed_group_violations(
     versioning: Option<&VersioningSettings>,
     violations: &mut Vec<VersioningInvariantViolation>,
 ) {
-    for (index, group) in workspace.fixed_groups.iter().enumerate() {
+    for (index, group) in workspace
+        .fixed_groups
+        .iter()
+        .enumerate()
+    {
         let distinct: BTreeSet<&str> = group
             .iter()
             .map(|dir| workspace.participants[dir.as_str()].current_version)

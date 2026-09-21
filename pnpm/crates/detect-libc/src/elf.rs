@@ -20,19 +20,23 @@ fn read_elf_interpreter(file: &mut (impl Read + Seek)) -> Option<String> {
     let mut header = [0_u8; ELF_HEADER_SIZE];
     file.read_exact(&mut header).ok()?;
     let layout = elf_layout(&header)?;
-    let table_size = layout.phentsize.checked_mul(layout.phnum)?;
+    let table_size = layout
+        .phentsize
+        .checked_mul(layout.phnum)?;
     if table_size > MAX_PROGRAM_HEADERS_SIZE {
         return None;
     }
     file.seek(SeekFrom::Start(layout.phoff))
         .ok()?;
     let mut program_headers = vec![0_u8; table_size];
-    file.read_exact(&mut program_headers).ok()?;
+    file.read_exact(&mut program_headers)
+        .ok()?;
     let (offset, size) = interpreter_location(&program_headers, layout.phentsize)?;
     if size > MAX_INTERPRETER_SIZE {
         return None;
     }
-    file.seek(SeekFrom::Start(offset)).ok()?;
+    file.seek(SeekFrom::Start(offset))
+        .ok()?;
     let mut interpreter = vec![0_u8; size];
     file.read_exact(&mut interpreter).ok()?;
     decode_interpreter(&interpreter).map(str::to_string)
@@ -76,8 +80,9 @@ fn interpreter_location(program_headers: &[u8], phentsize: usize) -> Option<(u64
         let p_type = u32::from_le_bytes(program_header[0..4].try_into().ok()?);
         if p_type == 3 {
             let offset = u64::from_le_bytes(program_header[8..16].try_into().ok()?);
-            let size =
-                u64::from_le_bytes(program_header[32..40].try_into().ok()?).try_into().ok()?;
+            let size = u64::from_le_bytes(program_header[32..40].try_into().ok()?)
+                .try_into()
+                .ok()?;
             return Some((offset, size));
         }
     }
@@ -85,7 +90,9 @@ fn interpreter_location(program_headers: &[u8], phentsize: usize) -> Option<(u64
 }
 
 fn decode_interpreter(bytes: &[u8]) -> Option<&str> {
-    let interpreter = std::str::from_utf8(bytes).ok()?.trim_end_matches('\0');
+    let interpreter = std::str::from_utf8(bytes)
+        .ok()?
+        .trim_end_matches('\0');
     (!interpreter.is_empty()).then_some(interpreter)
 }
 

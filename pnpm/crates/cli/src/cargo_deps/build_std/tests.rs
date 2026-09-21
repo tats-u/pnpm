@@ -35,7 +35,9 @@ fn a_nested_workspace_inherits_the_build_std_request() {
 fn a_symlinked_configuration_in_an_ancestor_enables_build_std() {
     let parent = TempDir::new().unwrap();
     fs::create_dir(parent.path().join(".cargo")).unwrap();
-    let elsewhere = parent.path().join("dotfiles-config.toml");
+    let elsewhere = parent
+        .path()
+        .join("dotfiles-config.toml");
     fs::write(&elsewhere, "[unstable]\nbuild-std = [\"std\"]\n").unwrap();
     std::os::unix::fs::symlink(&elsewhere, parent.path().join(".cargo/config.toml")).unwrap();
     let child = parent.path().join("child");
@@ -49,7 +51,9 @@ fn a_symlinked_configuration_in_an_ancestor_enables_build_std() {
 #[test]
 fn build_std_dependencies_share_identical_locked_project_crates() {
     let sysroot = TempDir::new().unwrap();
-    let library = sysroot.path().join("lib/rustlib/src/rust/library");
+    let library = sysroot
+        .path()
+        .join("lib/rustlib/src/rust/library");
     fs::create_dir_all(&library).unwrap();
     let checksum = format!("{:x}", Sha256::digest(b"crate source"));
     fs::write(library.join("Cargo.lock"), format!(
@@ -87,13 +91,19 @@ fn conflicting_project_and_standard_library_crates_are_rejected() {
     let error = project.merge(library).unwrap_err();
 
     eprintln!("A conflicting checksum must fail: {error:?}");
-    assert!(error.to_string().contains("conflicting registry package cfg-if-1.0.4"));
+    assert!(
+        error
+            .to_string()
+            .contains("conflicting registry package cfg-if-1.0.4")
+    );
 }
 
 #[test]
 fn standard_library_sources_are_independent_of_the_project_registry() {
     let sysroot = TempDir::new().unwrap();
-    let library = sysroot.path().join("lib/rustlib/src/rust/library");
+    let library = sysroot
+        .path()
+        .join("lib/rustlib/src/rust/library");
     fs::create_dir_all(&library).unwrap();
     let checksum = format!("{:x}", Sha256::digest(b"crate source"));
     let package = format!(

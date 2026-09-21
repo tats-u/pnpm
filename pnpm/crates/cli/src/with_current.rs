@@ -127,7 +127,9 @@ fn long_option_consumes_value(token: &str) -> bool {
     if name.starts_with("no-") {
         return false;
     }
-    top_level_arity().long_consumes_value(name).unwrap_or(true)
+    top_level_arity()
+        .long_consumes_value(name)
+        .unwrap_or(true)
 }
 
 fn top_level_arity() -> &'static ArgTable {

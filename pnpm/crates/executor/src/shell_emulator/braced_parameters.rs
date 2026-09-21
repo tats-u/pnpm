@@ -18,7 +18,11 @@ use std::{cell::Cell, collections::HashMap};
 /// reference can stand in for, `${NAME:=word}` and `${#NAME}` among them, are
 /// left verbatim rather than guessed at.
 pub(super) fn expand(script: &str, env: &HashMap<String, String>) -> String {
-    let allowance = Cell::new(script.len().saturating_mul(WASTED_SCAN_ALLOWANCE));
+    let allowance = Cell::new(
+        script
+            .len()
+            .saturating_mul(WASTED_SCAN_ALLOWANCE),
+    );
     expand_braced_parameters(script, Rewrite::of_the_script(env, &allowance))
 }
 
@@ -334,7 +338,8 @@ fn expand_parameter(body: &str, rewrite: Rewrite<'_>) -> Option<String> {
         None => (operator, false),
     };
     let word = operator.get(1..)?;
-    let has_value = rewrite.env
+    let has_value = rewrite
+        .env
         .get(name)
         .is_some_and(|value| !empty_counts_as_unset || !value.is_empty());
 

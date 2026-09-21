@@ -469,7 +469,12 @@ async fn calculates_prefixed_specifier_for_named_registry_update_latest() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("gh:^2.1.0"));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("gh:^2.1.0")
+    );
 }
 
 #[tokio::test]
@@ -507,7 +512,12 @@ async fn calculated_specifier_keeps_the_operator_the_previous_specifier_declared
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("gh:~2.1.0"));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("gh:~2.1.0")
+    );
 }
 
 #[tokio::test]
@@ -544,7 +554,12 @@ async fn calculates_prefixed_specifier_for_aliased_named_registry() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("gh:@acme/private@^1.0.0"));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("gh:@acme/private@^1.0.0")
+    );
 }
 
 #[tokio::test]
@@ -572,7 +587,11 @@ async fn latest_is_suppressed_when_published_by_holds_back_raw_latest() {
     };
     let opts = ResolveOptions {
         policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
-            published_by: Some(chrono::Utc.with_ymd_and_hms(2024, 7, 1, 0, 0, 0).unwrap()),
+            published_by: Some(
+                chrono::Utc
+                    .with_ymd_and_hms(2024, 7, 1, 0, 0, 0)
+                    .unwrap(),
+            ),
             ..Default::default()
         },
         ..ResolveOptions::default()
@@ -619,7 +638,9 @@ async fn resolves_registry_qualified_id() {
     // `name_ver` keeps the bare `name@version` shape for display / peer
     // resolution.
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .map(ToString::to_string)
             .as_deref(),

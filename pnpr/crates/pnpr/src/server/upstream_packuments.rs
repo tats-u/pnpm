@@ -29,7 +29,12 @@ pub(super) async fn read_source_packument(
         }
         RegistrySource::Hosted(source) => {
             let org = hosted_read_namespace(state, identity, source, name.as_str())?;
-            state.inner.storage.for_hosted(&org).read_hosted_document(name).await
+            state
+                .inner
+                .storage
+                .for_hosted(&org)
+                .read_hosted_document(name)
+                .await
         }
         RegistrySource::Unclaimed | RegistrySource::NotFound => Ok(None),
     }
@@ -50,7 +55,10 @@ pub(super) async fn load_upstream_packument(
         && let Some(bytes) = timed(
             "packument:cache_read",
             name.as_str(),
-            state.inner.storage.read_upstream_document(namespace, name, ttl),
+            state
+                .inner
+                .storage
+                .read_upstream_document(namespace, name, ttl),
         )
         .await?
     {
@@ -81,9 +89,11 @@ pub(super) async fn cache_upstream_packument(
     match fetched {
         PackumentFetch::Modified(fetched) => {
             if upstream.caches()
-                && let Err(err) =
-                    state.inner.storage.write_upstream_document(namespace, name, &fetched.bytes)
-                        .await
+                && let Err(err) = state
+                    .inner
+                    .storage
+                    .write_upstream_document(namespace, name, &fetched.bytes)
+                    .await
             {
                 tracing::warn!(?err, package = %name.as_str(), "upstream packument cache write failed");
             }
@@ -95,7 +105,11 @@ pub(super) async fn cache_upstream_packument(
             // outlive every TTL and a later transient outage could resurrect
             // the unpublished package through the stale-if-error fallback.
             if upstream.caches()
-                && let Err(err) = state.inner.storage.remove_upstream_package(namespace, name).await
+                && let Err(err) = state
+                    .inner
+                    .storage
+                    .remove_upstream_package(namespace, name)
+                    .await
             {
                 tracing::warn!(
                     ?err,
@@ -112,7 +126,11 @@ pub(super) async fn cache_upstream_packument(
         // body is current, so serve it (fresh or stale) rather than a spurious
         // 404 that a client could cache as "package gone".
         PackumentFetch::NotModified => {
-            state.inner.storage.read_upstream_document_any(namespace, name).await
+            state
+                .inner
+                .storage
+                .read_upstream_document_any(namespace, name)
+                .await
         }
     }
 }
@@ -131,7 +149,12 @@ pub(super) async fn recover_stale_upstream_packument(
     if !err.is_transient_upstream_error() || !upstream.caches() {
         return Err(err);
     }
-    let Some(bytes) = state.inner.storage.read_upstream_document_any(namespace, name).await? else {
+    let Some(bytes) = state
+        .inner
+        .storage
+        .read_upstream_document_any(namespace, name)
+        .await?
+    else {
         return Err(err);
     };
     // The upstream error may embed credentials in its request URL, so only its
@@ -156,7 +179,9 @@ pub(super) async fn load_upstream_packument_for(
 ) -> Result<Option<Vec<u8>>, RegistryError> {
     let namespace = upstream_cache_namespace(state, upstream);
     let upstream = authorized_upstream(state, identity, upstream)?;
-    let ttl = upstream.maxage().unwrap_or(state.inner.config.http.packument_ttl);
+    let ttl = upstream
+        .maxage()
+        .unwrap_or(state.inner.config.http.packument_ttl);
     load_upstream_packument(state, &namespace, upstream, name, ttl).await
 }
 
@@ -196,7 +221,12 @@ pub(super) async fn load_packument_for_read(
                 HostedGate::MaskNotFound => return Ok(None),
                 HostedGate::Denied(err) => return Err(err),
             };
-            state.inner.storage.for_hosted(&org).read_hosted_document(name).await
+            state
+                .inner
+                .storage
+                .for_hosted(&org)
+                .read_hosted_document(name)
+                .await
         }
         RegistrySource::Unclaimed | RegistrySource::NotFound => Ok(None),
     }

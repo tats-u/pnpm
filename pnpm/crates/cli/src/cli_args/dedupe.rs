@@ -76,13 +76,16 @@ impl DedupeArgs {
                 DependencyGroup::Dev,
                 DependencyGroup::Optional,
             ]);
-            base_install.lockfile_policy.prefer_frozen = Some(false);
+            base_install
+                .lockfile_policy
+                .prefer_frozen = Some(false);
             base_install.lockfile_policy.excludes =
                 if self.check { PolicyExcludes::Skip } else { PolicyExcludes::Persist };
             base_install.execution.skip_runtimes = false;
             base_install.execution.lockfile_only = self.lockfile_only || self.check;
-            base_install.resolution.update_seed_policy =
-                pnpm_package_manager::UpdateSeedPolicy::KeepAllResolveAll;
+            base_install
+                .resolution
+                .update_seed_policy = pnpm_package_manager::UpdateSeedPolicy::KeepAllResolveAll;
             base_install.resolution.observer =
                 Some(Arc::new(DedupeResolutionReporter::<Reporter>::new(&state, lockfile_path)?));
             base_install.context.lockfile_path = Some(lockfile_path);
@@ -90,9 +93,13 @@ impl DedupeArgs {
         };
         let selection = selection.map(workspace_install_selection);
         if self.check {
-            install.run_lockfile_check::<Reporter>(selection).await
+            install
+                .run_lockfile_check::<Reporter>(selection)
+                .await
         } else if let Some(selection) = selection {
-            install.run_selected::<Reporter>(selection).await
+            install
+                .run_selected::<Reporter>(selection)
+                .await
         } else {
             install.run::<Reporter>().await
         }
@@ -141,7 +148,9 @@ fn reusable_skipped_package_ids(
     let modules_manifest = read_modules_manifest::<Host>(&config.modules_dir).into_diagnostic()?;
     let mut installability_host =
         InstallabilityHost::detect_with(config.engine_strict, config.node_version.clone());
-    installability_host.supported_architectures.clone_from(&config.supported_architectures);
+    installability_host
+        .supported_architectures
+        .clone_from(&config.supported_architectures);
     Ok(modules_manifest
         .into_iter()
         .flat_map(|modules| modules.skipped)
@@ -155,7 +164,9 @@ fn reusable_skipped_package_ids(
                 &package_key,
                 metadata,
                 &installability_host,
-                config.ignored_optional_dependencies.as_deref(),
+                config
+                    .ignored_optional_dependencies
+                    .as_deref(),
             ))
         })
         .collect::<miette::Result<Vec<_>>>()?
@@ -174,7 +185,8 @@ struct DedupeResolutionReporter<Reporter> {
 impl<Reporter> DedupeResolutionReporter<Reporter> {
     fn new(state: &State, lockfile_path: &Path) -> miette::Result<Self> {
         let config = state.config;
-        let lockfile_packages = state.lockfile
+        let lockfile_packages = state
+            .lockfile
             .get()
             .into_diagnostic()?
             .and_then(|lockfile| lockfile.packages.as_ref());
@@ -202,8 +214,11 @@ impl<Reporter: self::Reporter> ResolutionObserver for DedupeResolutionReporter<R
             },
         }));
         let package_key = store_index_key(hint.integrity, hint.identity.id);
-        let found_in_store = self.reusable_skipped_package_ids.contains(hint.identity.id)
-            || self.store_index
+        let found_in_store = self
+            .reusable_skipped_package_ids
+            .contains(hint.identity.id)
+            || self
+                .store_index
                 .as_ref()
                 .is_some_and(|store_index| {
                     store_index
@@ -230,9 +245,9 @@ fn reusable_skipped_package_id(
     installability_host: &InstallabilityHost,
     ignored_optional_dependencies: Option<&[String]>,
 ) -> miette::Result<Option<String>> {
-    if ignored_optional_dependencies.is_some_and(|ignored| {
-        ignored.contains(&package_key.name.to_string())
-    }) {
+    if ignored_optional_dependencies
+        .is_some_and(|ignored| ignored.contains(&package_key.name.to_string()))
+    {
         return Ok(None);
     }
     Ok(package_metadata_is_installable(package_key, metadata, installability_host)
@@ -257,7 +272,11 @@ fn emit_dedupe_check_error<Reporter: self::Reporter>(diff: &LockfileDiff) {
 /// parse error: the run already knows the lockfile would change, and only
 /// the detail of the report is lost.
 fn parse_snapshot(content: Option<&str>, lockfile_path: &Path) -> Option<Lockfile> {
-    content.and_then(|content| Lockfile::parse(content, lockfile_path).ok().flatten())
+    content.and_then(|content| {
+        Lockfile::parse(content, lockfile_path)
+            .ok()
+            .flatten()
+    })
 }
 
 /// Render what `pnpm dedupe` would rewrite, mirroring pnpm's
@@ -316,18 +335,21 @@ fn snapshots_changes_json(updated: &[SnapshotDiff], added: &[String], removed: &
     let updated = updated
         .iter()
         .map(|snapshot| {
-            let changes = snapshot.added
+            let changes = snapshot
+                .added
                 .iter()
                 .map(|(alias, next)| (alias.clone(), json!({ "type": "added", "next": next })))
                 .chain(
-                    snapshot.removed
+                    snapshot
+                        .removed
                         .iter()
                         .map(|(alias, prev)| {
                             (alias.clone(), json!({ "type": "removed", "prev": prev }))
                         }),
                 )
                 .chain(
-                    snapshot.updated
+                    snapshot
+                        .updated
                         .iter()
                         .map(|(alias, prev, next)| {
                             (
@@ -374,13 +396,16 @@ fn render_section(
 }
 
 fn render_snapshot_diff(diff: &SnapshotDiff) -> String {
-    let added = diff.added
+    let added = diff
+        .added
         .iter()
         .map(|(alias, next)| format!("{} {} {}", green("+"), plain(alias), gray(next)));
-    let removed = diff.removed
+    let removed = diff
+        .removed
         .iter()
         .map(|(alias, prev)| format!("{} {} {}", red("-"), plain(alias), gray(prev)));
-    let updated = diff.updated
+    let updated = diff
+        .updated
         .iter()
         .map(|(alias, prev, next)| {
             format!("{} {} {} {}", plain(alias), red(prev), gray("→"), green(next))
@@ -399,7 +424,9 @@ pub(crate) fn read_lockfile_snapshot(lockfile_path: &Path) -> miette::Result<Opt
     match std::fs::read_to_string(lockfile_path) {
         Ok(content) => Ok(Some(content)),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(e).into_diagnostic().wrap_err("reading lockfile"),
+        Err(e) => Err(e)
+            .into_diagnostic()
+            .wrap_err("reading lockfile"),
     }
 }
 

@@ -81,18 +81,15 @@ pub fn validate_manifest_path(path: &str) -> Result<(), ArtifactProtocolError> {
     if path.chars().any(char::is_control) {
         return Err(invalid_path(path, "control characters are not allowed"));
     }
-    if path
-        .split('/')
-        .any(|segment| {
-            segment.is_empty()
-                || segment == "."
-                || segment == ".."
-                || segment.contains(':')
-                || is_windows_reserved_name(segment)
-                || segment.ends_with('.')
-                || segment.ends_with(' ')
-        })
-    {
+    if path.split('/').any(|segment| {
+        segment.is_empty()
+            || segment == "."
+            || segment == ".."
+            || segment.contains(':')
+            || is_windows_reserved_name(segment)
+            || segment.ends_with('.')
+            || segment.ends_with(' ')
+    }) {
         return Err(invalid_path(
             path,
             "empty, dot, parent, and Windows-normalized segments are not allowed",
@@ -108,18 +105,16 @@ fn is_windows_reserved_name(segment: &str) -> bool {
         .unwrap_or(segment)
         .to_ascii_lowercase();
     matches!(basename.as_str(), "con" | "prn" | "aux" | "nul")
-        || ["com", "lpt"]
-            .iter()
-            .any(|prefix| {
-                basename
-                    .strip_prefix(prefix)
-                    .is_some_and(|suffix| {
-                        matches!(
-                            suffix,
-                            "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "¹" | "²" | "³",
-                        )
-                    })
-            })
+        || ["com", "lpt"].iter().any(|prefix| {
+            basename
+                .strip_prefix(prefix)
+                .is_some_and(|suffix| {
+                    matches!(
+                        suffix,
+                        "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "¹" | "²" | "³",
+                    )
+                })
+        })
 }
 
 pub fn blob_id(integrity: &str) -> Result<String, ArtifactProtocolError> {
@@ -133,13 +128,9 @@ pub fn blob_id(integrity: &str) -> Result<String, ArtifactProtocolError> {
             "sha512 integrity is malformed".to_string(),
         ));
     }
-    let digest = BASE64
-        .decode(encoded)
-        .map_err(|_| {
-            ArtifactProtocolError::InvalidBlobIntegrity(
-                "sha512 digest is not valid base64".to_string(),
-            )
-        })?;
+    let digest = BASE64.decode(encoded).map_err(|_| {
+        ArtifactProtocolError::InvalidBlobIntegrity("sha512 digest is not valid base64".to_string())
+    })?;
     if digest.len() != 64 {
         return Err(ArtifactProtocolError::InvalidBlobIntegrity(format!(
             "sha512 digest is {} bytes instead of 64",
@@ -247,7 +238,9 @@ impl PublishArtifactRequest {
                 "signed input key does not match the publication key".to_string(),
             ));
         }
-        let required: BTreeMap<&str, u64> = payload.manifest.added
+        let required: BTreeMap<&str, u64> = payload
+            .manifest
+            .added
             .iter()
             .map(|file| (file.integrity.as_str(), file.size))
             .collect();
@@ -297,14 +290,19 @@ impl PublishArtifactRequest {
 
 impl ArtifactPayload {
     pub fn validate(&self) -> Result<(), ArtifactProtocolError> {
-        let (artifact_kind, input_key_prefix) = self.subject.artifact_kind_and_input_key_prefix();
+        let (artifact_kind, input_key_prefix) = self
+            .subject
+            .artifact_kind_and_input_key_prefix();
         if self.kind != artifact_kind {
             return Err(ArtifactProtocolError::InvalidEnvelope(format!(
                 "unsupported artifact kind {:?}",
                 self.kind,
             )));
         }
-        if !self.input_key.starts_with(input_key_prefix) {
+        if !self
+            .input_key
+            .starts_with(input_key_prefix)
+        {
             return Err(ArtifactProtocolError::InvalidEnvelope(format!(
                 "input key must start with {input_key_prefix:?}",
             )));
@@ -321,7 +319,9 @@ impl ArtifactPayload {
 
 impl ArtifactCandidate {
     pub fn validate(&self) -> Result<(), ArtifactProtocolError> {
-        let (_, input_key_prefix) = self.subject.artifact_kind_and_input_key_prefix();
+        let (_, input_key_prefix) = self
+            .subject
+            .artifact_kind_and_input_key_prefix();
         if !self.key.starts_with(input_key_prefix) {
             return Err(ArtifactProtocolError::InvalidEnvelope(format!(
                 "input key must start with {input_key_prefix:?}",
@@ -372,7 +372,10 @@ impl ArtifactBlobRequest {
 
 impl ArtifactManifest {
     pub fn validate(&self) -> Result<(), ArtifactProtocolError> {
-        let file_count = self.added.len().saturating_add(self.deleted.len());
+        let file_count = self
+            .added
+            .len()
+            .saturating_add(self.deleted.len());
         if file_count > MAX_MANIFEST_FILES {
             return Err(ArtifactProtocolError::InvalidManifest(format!(
                 "manifest contains {file_count} paths; limit is {MAX_MANIFEST_FILES}",

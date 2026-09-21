@@ -28,14 +28,25 @@ pub(super) async fn resolve_override(
     override_entry: &FastOverride,
 ) -> Option<(PkgName, ResolvedOverride)> {
     let name = override_entry.name.to_string();
-    let version = override_entry.new_version.as_ref()?.to_string();
+    let version = override_entry
+        .new_version
+        .as_ref()?
+        .to_string();
     let wanted = WantedDependency {
         alias: Some(name.clone()),
         bare_specifier: Some(version.clone()),
         ..WantedDependency::default()
     };
-    let result = context.resolver.resolve(&wanted, context.resolve_options).await.ok()??;
-    let manifest = result.package.manifest.as_ref().map(Arc::clone)?;
+    let result = context
+        .resolver
+        .resolve(&wanted, context.resolve_options)
+        .await
+        .ok()??;
+    let manifest = result
+        .package
+        .manifest
+        .as_ref()
+        .map(Arc::clone)?;
     let manifest = match context.manifest_hook {
         Some(hook) => hook(manifest),
         None => manifest,
@@ -89,7 +100,10 @@ pub(super) fn fast_override(
     new_value: &str,
     old_value: Option<&String>,
 ) -> Option<FastOverride> {
-    if parsed.target_pkg.bare_specifier.is_some()
+    if parsed
+        .target_pkg
+        .bare_specifier
+        .is_some()
         || parsed.converge
         || parsed_overrides
             .iter()
@@ -214,7 +228,8 @@ pub(super) fn override_replacement(
         return None;
     }
     let old_snapshot = lockfile.snapshots.as_ref()?.get(key)?;
-    let old_metadata = lockfile.packages
+    let old_metadata = lockfile
+        .packages
         .as_ref()?
         .get(&key.without_peer())?;
     let safe_resolution = matches!(old_metadata.resolution, LockfileResolution::Registry(_))
@@ -227,12 +242,15 @@ pub(super) fn override_replacement(
         || old_snapshot.patched == Some(true)
         || old_snapshot.id.is_some()
         || old_metadata.peer_dependencies.is_some()
-        || old_metadata.peer_dependencies_meta.is_some()
+        || old_metadata
+            .peer_dependencies_meta
+            .is_some()
         || !safe_resolution
     {
         return None;
     }
-    let new_suffix: PkgVerPeer = override_entry.new_version
+    let new_suffix: PkgVerPeer = override_entry
+        .new_version
         .as_ref()?
         .to_string()
         .parse()
@@ -241,32 +259,42 @@ pub(super) fn override_replacement(
 }
 pub(super) fn get_peer_names(lockfile: &Lockfile) -> HashSet<PkgName> {
     let mut result = HashSet::new();
-    for metadata in lockfile.packages
+    for metadata in lockfile
+        .packages
         .as_ref()
         .into_iter()
         .flat_map(|map| map.values())
     {
         insert_parsed_names(
             &mut result,
-            metadata.peer_dependencies
+            metadata
+                .peer_dependencies
                 .as_ref()
                 .into_iter()
                 .flat_map(|map| map.keys()),
         );
         insert_parsed_names(
             &mut result,
-            metadata.peer_dependencies_meta
+            metadata
+                .peer_dependencies_meta
                 .as_ref()
                 .into_iter()
                 .flat_map(|map| map.keys()),
         );
     }
-    for snapshot in lockfile.snapshots
+    for snapshot in lockfile
+        .snapshots
         .as_ref()
         .into_iter()
         .flat_map(|map| map.values())
     {
-        insert_parsed_names(&mut result, snapshot.transitive_peer_dependencies.iter().flatten());
+        insert_parsed_names(
+            &mut result,
+            snapshot
+                .transitive_peer_dependencies
+                .iter()
+                .flatten(),
+        );
     }
     result
 }
@@ -283,7 +311,8 @@ pub(super) fn insert_parsed_names<'a>(
     }
 }
 pub(super) fn all_dependency_keys(lockfile: &Lockfile) -> Vec<(&PkgName, Option<PackageKey>)> {
-    let importer_keys = lockfile.importers
+    let importer_keys = lockfile
+        .importers
         .values()
         .flat_map(|importer| {
             [
@@ -296,7 +325,8 @@ pub(super) fn all_dependency_keys(lockfile: &Lockfile) -> Vec<(&PkgName, Option<
             .flatten()
             .map(|(alias, spec)| (alias, spec.version.resolved_key(alias)))
         });
-    let snapshot_keys = lockfile.snapshots
+    let snapshot_keys = lockfile
+        .snapshots
         .as_ref()
         .into_iter()
         .flat_map(|map| map.values())
@@ -307,7 +337,9 @@ pub(super) fn all_dependency_keys(lockfile: &Lockfile) -> Vec<(&PkgName, Option<
                 .flatten()
                 .map(|(alias, dep_ref)| (alias, dep_ref.resolve(alias)))
         });
-    importer_keys.chain(snapshot_keys).collect()
+    importer_keys
+        .chain(snapshot_keys)
+        .collect()
 }
 pub(super) fn is_safe_registry_result(
     result: &ResolveResult,
@@ -317,22 +349,42 @@ pub(super) fn is_safe_registry_result(
 ) -> bool {
     result.resolved_via == "npm-registry"
         && result.policy_violation.is_none()
-        && result.package.name_ver
+        && result
+            .package
+            .name_ver
             .as_ref()
             .is_some_and(|name_ver| {
                 name_ver.name.to_string() == name && name_ver.suffix.to_string() == version
             })
-        && manifest.get("name").and_then(Value::as_str) == Some(name)
-        && manifest.get("version").and_then(Value::as_str) == Some(version)
+        && manifest
+            .get("name")
+            .and_then(Value::as_str)
+            == Some(name)
+        && manifest
+            .get("version")
+            .and_then(Value::as_str)
+            == Some(version)
         && manifest
             .get("peerDependencies")
-            .is_none_or(|value| value.as_object().is_some_and(serde_json::Map::is_empty))
+            .is_none_or(|value| {
+                value
+                    .as_object()
+                    .is_some_and(serde_json::Map::is_empty)
+            })
         && manifest
             .get("peerDependenciesMeta")
-            .is_none_or(|value| value.as_object().is_some_and(serde_json::Map::is_empty))
+            .is_none_or(|value| {
+                value
+                    .as_object()
+                    .is_some_and(serde_json::Map::is_empty)
+            })
         && manifest.get("deprecated").is_none()
-        && manifest.get("bundledDependencies").is_none()
-        && manifest.get("bundleDependencies").is_none()
+        && manifest
+            .get("bundledDependencies")
+            .is_none()
+        && manifest
+            .get("bundleDependencies")
+            .is_none()
         && manifest
             .get("engines")
             .is_none_or(|value| {

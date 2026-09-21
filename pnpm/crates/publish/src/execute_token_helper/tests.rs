@@ -29,7 +29,10 @@ fn errors_when_helper_exits_non_zero() {
         }
     }
     let err = execute_token_helper::<Failing, SilentReporter>(&["helper".to_owned()]).unwrap_err();
-    assert!(err.to_string().contains("auth backend unreachable"));
+    assert!(
+        err.to_string()
+            .contains("auth backend unreachable")
+    );
 }
 
 #[test]

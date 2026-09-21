@@ -240,7 +240,9 @@ fn scope_parses_from_env() {
         }
     }
     assert_eq!(
-        WorkspaceSettings::from_pnpm_config_env::<EnvScope>().scope.as_deref(),
+        WorkspaceSettings::from_pnpm_config_env::<EnvScope>()
+            .scope
+            .as_deref(),
         Some("@my-org"),
     );
 }
@@ -326,5 +328,11 @@ sideEffectsCache:
 
     assert!(!config.side_effects_cache_read());
     assert!(!config.side_effects_cache_write());
-    assert_eq!(config.remote_side_effects_cache.expect("shared cache config").org, "acme");
+    assert_eq!(
+        config
+            .remote_side_effects_cache
+            .expect("shared cache config")
+            .org,
+        "acme"
+    );
 }

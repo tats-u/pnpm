@@ -92,7 +92,11 @@ fn cleanup_after_activation_preserves_current_state_and_external_install() {
     .expect("clean up replaced installs after activation");
     assert!(leftover.is_none());
 
-    assert!(global_bin_dir.join("activated").exists());
+    assert!(
+        global_bin_dir
+            .join("activated")
+            .exists()
+    );
     assert!(global_bin_dir.join("survivor").exists());
     assert!(!global_bin_dir.join("obsolete").exists());
     assert_eq!(
@@ -137,7 +141,9 @@ fn replacing_a_group_with_a_different_package_set_keeps_its_relinked_bins() {
     assert!(global_bin_dir.join("shared").exists());
     assert!(!global_bin_dir.join("dropped").exists());
     assert_eq!(
-        fs::symlink_metadata(&old_hash_link).expect_err("the old hash link is gone").kind(),
+        fs::symlink_metadata(&old_hash_link)
+            .expect_err("the old hash link is gone")
+            .kind(),
         io::ErrorKind::NotFound,
     );
     assert!(!old_install_dir.exists());
@@ -165,7 +171,11 @@ fn cleanup_failure_preserves_every_bin_and_the_group() {
     .expect_err("a directory cannot be removed as a bin file");
 
     let blocked_bin = global_bin_dir.join("blocked");
-    assert!(error.to_string().contains("Cannot replace global bin slot"));
+    assert!(
+        error
+            .to_string()
+            .contains("Cannot replace global bin slot")
+    );
     assert!(
         error
             .to_string()
@@ -249,7 +259,9 @@ fn replacing_a_package_that_drops_a_bin_restores_its_recorded_shim() {
 
     assert!(leftover.is_none());
     assert_eq!(
-        virtual_shim_owner(&global_bin_dir.join("node")).expect("inspect restored shim").as_deref(),
+        virtual_shim_owner(&global_bin_dir.join("node"))
+            .expect("inspect restored shim")
+            .as_deref(),
         Some("node"),
     );
     assert_eq!(resolved_hash_target(&old_hash_link), canonical(&fresh_install_dir));
@@ -321,7 +333,11 @@ fn global_removal_reports_cleanup_failure_and_keeps_the_group() {
     let error = remove_global_install_entries::<Host>(&transaction)
         .expect_err("a directory cannot be removed as a bin file");
 
-    assert!(error.to_string().contains("remove global bin"));
+    assert!(
+        error
+            .to_string()
+            .contains("remove global bin")
+    );
     assert!(global_bin_dir.join("blocked").is_dir());
     assert!(!global_bin_dir.join("stale").exists());
     assert!(hash_link.exists());
@@ -359,7 +375,14 @@ fn rollback_failure_keeps_recovery_artifacts() {
         Some("ERR_PNPM_GLOBAL_BIN_ROLLBACK_FAILED".to_string()),
     );
     assert!(message.contains(&backup_dirs[0].display().to_string()));
-    assert!(message.contains(&fixture.fresh_install_dir.display().to_string()));
+    assert!(
+        message.contains(
+            &fixture
+                .fresh_install_dir
+                .display()
+                .to_string()
+        )
+    );
     assert!(format!("{error:?}").contains("injected hash swap failure"));
     assert!(format!("{error:?}").contains("injected backup rename failure"));
     let activation_source =
@@ -504,19 +527,31 @@ fn artifact_probe_failure_is_related_and_not_reported_as_a_confirmed_path() {
         .expect("cleanup failures must be related diagnostics")
         .collect::<Vec<_>>();
     assert_eq!(related.len(), 2);
-    assert!(related[0].to_string().contains("remove global bin backup directory"));
+    assert!(
+        related[0]
+            .to_string()
+            .contains("remove global bin backup directory")
+    );
     assert!(
         related[0]
             .to_string()
             .contains(&backup_dirs[0].display().to_string()),
     );
-    assert!(related[1].to_string().contains("inspect remaining rollback artifact"));
+    assert!(
+        related[1]
+            .to_string()
+            .contains("inspect remaining rollback artifact")
+    );
     assert!(
         related[1]
             .to_string()
             .contains(&backup_dirs[0].display().to_string()),
     );
-    assert!(related[1].to_string().contains("injected rollback artifact probe failure"));
+    assert!(
+        related[1]
+            .to_string()
+            .contains("injected rollback artifact probe failure")
+    );
 }
 
 #[test]
@@ -573,7 +608,11 @@ fn both_cleanup_failures_report_both_errors_and_remaining_artifacts() {
         .collect::<Vec<_>>();
     assert_eq!(related.len(), 2);
     let backup_error = std::error::Error::source(related[0]).expect("backup cleanup error source");
-    assert!(related[0].to_string().contains("remove global bin backup directory"));
+    assert!(
+        related[0]
+            .to_string()
+            .contains("remove global bin backup directory")
+    );
     assert!(
         related[0]
             .to_string()
@@ -585,7 +624,11 @@ fn both_cleanup_failures_report_both_errors_and_remaining_artifacts() {
             .contains(&backup_error.to_string()),
     );
     let fresh_error = std::error::Error::source(related[1]).expect("fresh cleanup error source");
-    assert!(related[1].to_string().contains("remove fresh global install directory"));
+    assert!(
+        related[1]
+            .to_string()
+            .contains("remove fresh global install directory")
+    );
     assert!(
         related[1]
             .to_string()

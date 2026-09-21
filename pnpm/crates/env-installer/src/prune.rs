@@ -24,20 +24,35 @@ pub fn prune_env_lockfile(env: &mut EnvLockfile) {
         pending.extend(snapshot_keys(snapshot));
     }
 
-    env.packages.retain(|key, _| reachable.contains(key));
-    env.snapshots.retain(|key, _| reachable.contains(key));
+    env.packages
+        .retain(|key, _| reachable.contains(key));
+    env.snapshots
+        .retain(|key, _| reachable.contains(key));
 }
 
 /// The package keys the root importer depends on directly. A specifier that
 /// does not parse as a key names nothing in `snapshots:`, so it is dropped.
 fn direct_keys(env: &EnvLockfile) -> Vec<PackageKey> {
-    let Some(importer) = env.importers.get(EnvLockfile::ROOT_IMPORTER_KEY) else {
+    let Some(importer) = env
+        .importers
+        .get(EnvLockfile::ROOT_IMPORTER_KEY)
+    else {
         return Vec::new();
     };
-    importer.config_dependencies
+    importer
+        .config_dependencies
         .iter()
-        .chain(importer.package_manager_dependencies.iter().flatten())
-        .filter_map(|(name, spec)| format!("{name}@{}", spec.version).parse::<PackageKey>().ok())
+        .chain(
+            importer
+                .package_manager_dependencies
+                .iter()
+                .flatten(),
+        )
+        .filter_map(|(name, spec)| {
+            format!("{name}@{}", spec.version)
+                .parse::<PackageKey>()
+                .ok()
+        })
         .collect()
 }
 

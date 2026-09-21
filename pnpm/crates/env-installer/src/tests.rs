@@ -198,7 +198,8 @@ impl FixtureResolver {
             .as_str()
             .expect("fixture package version")
             .to_string();
-        self.packages.insert((name, version), manifest);
+        self.packages
+            .insert((name, version), manifest);
         self
     }
 
@@ -218,10 +219,14 @@ impl Resolver for FixtureResolver {
             let Some(alias) = wanted_dependency.alias.as_deref() else {
                 return Ok(None);
             };
-            let Some(specifier) = wanted_dependency.bare_specifier.as_deref() else {
+            let Some(specifier) = wanted_dependency
+                .bare_specifier
+                .as_deref()
+            else {
                 return Ok(None);
             };
-            let Some(manifest) = self.packages
+            let Some(manifest) = self
+                .packages
                 .get(&(alias.to_string(), specifier.to_string()))
                 .cloned()
             else {
@@ -259,7 +264,10 @@ impl Resolver for FixtureResolver {
                 alias: Some(alias.to_string()),
                 policy_violation: None,
                 package: pnpm_resolving_resolver_base::ResolvedPackageInfo {
-                    name_ver: Some(id.parse().expect("fixture name/version parses")),
+                    name_ver: Some(
+                        id.parse()
+                            .expect("fixture name/version parses"),
+                    ),
                     latest: Some(version),
                     published_at: None,
                     manifest: Some(Arc::new(manifest)),
@@ -288,7 +296,9 @@ fn contains_entry_named(dir: &Path, name: &str) -> bool {
         if entry.file_name() == name {
             return true;
         }
-        if entry.file_type().is_ok_and(|file_type| file_type.is_dir())
+        if entry
+            .file_type()
+            .is_ok_and(|file_type| file_type.is_dir())
             && contains_entry_named(&entry.path(), name)
         {
             return true;

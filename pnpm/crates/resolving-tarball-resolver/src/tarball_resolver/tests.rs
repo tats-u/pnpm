@@ -67,7 +67,12 @@ async fn mutable_response_stores_normalized_request_url() {
         .expect("claim");
 
     assert_eq!(result.id.to_string(), url);
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some(url.as_str()));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some(url.as_str())
+    );
     assert_eq!(tarball_url(&result.resolution), url);
     assert_eq!(result.resolved_via, "url");
 }
@@ -130,7 +135,12 @@ async fn immutable_response_after_redirect_records_the_final_url() {
         .expect("claim");
 
     assert_eq!(result.id.to_string(), requested_url);
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some(requested_url.as_str()));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some(requested_url.as_str())
+    );
     assert_eq!(tarball_url(&result.resolution), final_url);
 }
 

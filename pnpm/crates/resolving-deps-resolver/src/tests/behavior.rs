@@ -26,7 +26,10 @@ async fn children_follow_the_shallowest_occurrence_however_late_it_resolves() {
         resolve_settlement_tree(&resolver, serde_json::json!({ "deep": "1.0.0", "slow": "1.0.0" }))
             .await;
 
-    let shared_children = tree.children_by_id.get("shared@1.0.0").expect("shared children");
+    let shared_children = tree
+        .children_by_id
+        .get("shared@1.0.0")
+        .expect("shared children");
     assert_eq!(shared_children.len(), 1);
     assert_eq!(&*shared_children[0].pkg_id, "pin@1.0.0");
 }
@@ -56,7 +59,10 @@ async fn same_depth_occurrences_are_settled_by_parent_path() {
     )
     .await;
 
-    let shared_children = tree.children_by_id.get("shared@1.0.0").expect("shared children");
+    let shared_children = tree
+        .children_by_id
+        .get("shared@1.0.0")
+        .expect("shared children");
     assert_eq!(shared_children.len(), 1);
     assert_eq!(&*shared_children[0].pkg_id, "pin@1.0.0");
 }
@@ -113,13 +119,20 @@ async fn walks_dependencies_and_builds_flat_tree() {
     assert_eq!(tree.packages.len(), 2);
     assert!(tree.packages.contains_key("foo@1.2.0"));
     let foo_node_id = &tree.direct[0].node_id;
-    let foo_tree_node = tree.dependencies_tree.get(foo_node_id).unwrap();
+    let foo_tree_node = tree
+        .dependencies_tree
+        .get(foo_node_id)
+        .unwrap();
     assert_eq!(foo_tree_node.children.realized().len(), 1);
-    let bar_node_id = foo_tree_node.children
+    let bar_node_id = foo_tree_node
+        .children
         .realized()
         .get("bar")
         .unwrap();
-    let bar_tree_node = tree.dependencies_tree.get(bar_node_id).unwrap();
+    let bar_tree_node = tree
+        .dependencies_tree
+        .get(bar_node_id)
+        .unwrap();
     assert_eq!(&*bar_tree_node.resolved_package_id, "bar@2.3.0");
     assert!(tree.policy_violations.is_empty());
 }
@@ -198,7 +211,10 @@ async fn shallower_revisit_takes_over_shared_children_context() {
     .await
     .unwrap();
 
-    let shared_children = tree.children_by_id.get("shared@1.0.0").expect("shared children");
+    let shared_children = tree
+        .children_by_id
+        .get("shared@1.0.0")
+        .expect("shared children");
     assert_eq!(shared_children.len(), 1);
     assert_eq!(shared_children[0].alias, "cycle");
     assert_eq!(&*shared_children[0].pkg_id, "cycle@1.0.0");

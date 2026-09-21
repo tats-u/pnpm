@@ -302,7 +302,8 @@ impl<'de> Deserialize<'de> for ImporterDepVersion {
         De: serde::Deserializer<'de>,
     {
         let raw = Cow::<'de, str>::deserialize(deserializer)?;
-        raw.parse().map_err(serde::de::Error::custom)
+        raw.parse()
+            .map_err(serde::de::Error::custom)
     }
 }
 

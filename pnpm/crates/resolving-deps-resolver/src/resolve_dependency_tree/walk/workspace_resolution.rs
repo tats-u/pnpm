@@ -64,7 +64,11 @@ pub(super) fn render_workspace_resolution(
     else {
         unreachable!("the shared workspace cache contains only directory resolutions")
     };
-    if canonical.id.as_str().starts_with("file:") {
+    if canonical
+        .id
+        .as_str()
+        .starts_with("file:")
+    {
         return rendered;
     }
 
@@ -107,7 +111,9 @@ pub(super) fn shared_workspace_key(
     }
     #[cfg(debug_assertions)]
     {
-        let importer_key_covers_edge = ctx.workspace_resolution_options_key.matches_options(opts);
+        let importer_key_covers_edge = ctx
+            .workspace_resolution_options_key
+            .matches_options(opts);
         debug_assert!(
             importer_key_covers_edge,
             "the importer-wide workspace-resolution key must describe every edge's options",
@@ -145,8 +151,9 @@ pub(super) async fn resolve_wanted_cached<Chain>(
 where
     Chain: Resolver + ?Sized,
 {
-    let cached =
-        lock_recoverable(&ctx.workspace.cache.resolved_by_wanted).get(&cache_key).map(Arc::clone);
+    let cached = lock_recoverable(&ctx.workspace.cache.resolved_by_wanted)
+        .get(&cache_key)
+        .map(Arc::clone);
     if let Some(result) = cached {
         return Ok(result);
     }
@@ -166,10 +173,13 @@ where
     let workspace_final_key =
         workspace_result_key(shared_workspace_key, canonical_workspace.as_deref(), &result.id);
     if let Some(key) = workspace_final_key.as_ref()
-        && let Some(cached) =
-            lock_recoverable(&ctx.workspace.cache.resolved_workspace_final_by_wanted)
-                .get(key)
-                .map(Arc::clone)
+        && let Some(cached) = lock_recoverable(
+            &ctx.workspace
+                .cache
+                .resolved_workspace_final_by_wanted,
+        )
+        .get(key)
+        .map(Arc::clone)
     {
         // Both return paths record the project-scoped entry, so the lookup at
         // the top of this function stays authoritative: a repeat of this edge
@@ -198,16 +208,29 @@ pub(super) async fn apply_manifest_hooks(
     ctx: &TreeCtx,
     result: &mut pnpm_resolving_resolver_base::ResolveResult,
 ) -> Result<(), ResolveDependencyTreeError> {
-    if let Some(hook) = ctx.workspace.hooks.manifests.manifest_hook.as_ref()
+    if let Some(hook) = ctx
+        .workspace
+        .hooks
+        .manifests
+        .manifest_hook
+        .as_ref()
         && let Some(manifest) = result.package.manifest.take()
     {
         result.package.manifest = Some(hook(manifest));
     }
 
-    if let Some(pnpmfile_hook) = ctx.workspace.hooks.manifests.pnpmfile_hook.as_ref()
+    if let Some(pnpmfile_hook) = ctx
+        .workspace
+        .hooks
+        .manifests
+        .pnpmfile_hook
+        .as_ref()
         && let Some(manifest) = result.package.manifest.take()
     {
-        let log = ctx.workspace.hooks.read_package_log
+        let log = ctx
+            .workspace
+            .hooks
+            .read_package_log
             .clone()
             .unwrap_or_else(|| Arc::new(|_| {}));
         // Directory resolutions carry their directory so the hook can tell a
@@ -228,7 +251,12 @@ pub(super) async fn apply_manifest_hooks(
         result.package.manifest = Some(updated);
     }
 
-    if let Some(hook) = ctx.workspace.hooks.manifests.overrides_hook.as_ref()
+    if let Some(hook) = ctx
+        .workspace
+        .hooks
+        .manifests
+        .overrides_hook
+        .as_ref()
         && let Some(manifest) = result.package.manifest.take()
     {
         result.package.manifest = Some(hook(manifest));
@@ -271,7 +299,10 @@ where
             &opts.project.lockfile_dir,
         ));
     }
-    let result = resolver.resolve(wanted, opts).await.map_err(map_resolve_error)?;
+    let result = resolver
+        .resolve(wanted, opts)
+        .await
+        .map_err(map_resolve_error)?;
     let Some(result) = result else {
         return Err(ResolveDependencyTreeError::SpecNotSupported {
             specifier: render_specifier(wanted),
@@ -286,9 +317,13 @@ where
     {
         let canonical = Arc::new(canonical);
         *canonical_workspace = Some(Arc::clone(
-            lock_recoverable(&ctx.workspace.cache.resolved_workspace_by_wanted)
-                .entry(shared_workspace_key.clone())
-                .or_insert(canonical),
+            lock_recoverable(
+                &ctx.workspace
+                    .cache
+                    .resolved_workspace_by_wanted,
+            )
+            .entry(shared_workspace_key.clone())
+            .or_insert(canonical),
         ));
     }
     Ok(result)
@@ -336,16 +371,19 @@ pub(super) fn fallback_manifest(
     current_pkg: Option<&CurrentPkg>,
 ) -> pnpm_resolving_resolver_base::DependencyManifest {
     if let Some(current) = current_pkg
-        && let Some(name) = current.name
+        && let Some(name) = current
+            .name
             .as_deref()
             .filter(|name| !name.is_empty())
-        && let Some(version) = current.version
+        && let Some(version) = current
+            .version
             .as_deref()
             .filter(|version| !version.is_empty())
     {
         return serde_json::json!({ "name": name, "version": version });
     }
-    let name = match wanted.alias
+    let name = match wanted
+        .alias
         .as_deref()
         .filter(|alias| !alias.is_empty())
     {
@@ -353,7 +391,8 @@ pub(super) fn fallback_manifest(
         // A specifier's last path segment is the closest thing to a name
         // an unaliased dep carries: `file:./no-manifest-1.0.0.tgz` and
         // `https://host/no-manifest-1.0.0.tgz` both name the archive.
-        None => wanted.bare_specifier
+        None => wanted
+            .bare_specifier
             .as_deref()
             .unwrap_or_default()
             .rsplit('/')
@@ -394,9 +433,13 @@ pub(super) fn cache_resolved_wanted(
 ) -> Arc<pnpm_resolving_resolver_base::ResolveResult> {
     let result = Arc::new(result);
     if let Some(key) = workspace_final_key {
-        lock_recoverable(&ctx.workspace.cache.resolved_workspace_final_by_wanted)
-            .entry(key)
-            .or_insert_with(|| Arc::clone(&result));
+        lock_recoverable(
+            &ctx.workspace
+                .cache
+                .resolved_workspace_final_by_wanted,
+        )
+        .entry(key)
+        .or_insert_with(|| Arc::clone(&result));
     }
     lock_recoverable(&ctx.workspace.cache.resolved_by_wanted)
         .entry(cache_key)
@@ -409,7 +452,13 @@ pub(super) fn cached_workspace_result(
     key: Option<&SharedWorkspaceWantedKey>,
 ) -> Option<Arc<pnpm_resolving_resolver_base::ResolveResult>> {
     key.and_then(|key| {
-        lock_recoverable(&ctx.workspace.cache.resolved_workspace_by_wanted).get(key).map(Arc::clone)
+        lock_recoverable(
+            &ctx.workspace
+                .cache
+                .resolved_workspace_by_wanted,
+        )
+        .get(key)
+        .map(Arc::clone)
     })
 }
 
@@ -419,7 +468,9 @@ fn shared_workspace_cache_key(
     wanted: &WantedDependency,
     opts: &ResolveOptions,
 ) -> Option<SharedWorkspaceWantedKey> {
-    ctx.workspace.cache.share_workspace_resolutions
+    ctx.workspace
+        .cache
+        .share_workspace_resolutions
         .then(|| shared_workspace_key(ctx, cache_key, wanted, opts))
         .flatten()
 }

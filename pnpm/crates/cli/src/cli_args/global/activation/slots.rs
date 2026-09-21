@@ -289,7 +289,9 @@ fn bin_slot_kind(metadata: &fs::Metadata) -> Option<BinSlotKind> {
 
 #[cfg(not(any(unix, windows)))]
 fn bin_slot_kind(metadata: &fs::Metadata) -> Option<BinSlotKind> {
-    metadata.is_file().then_some(BinSlotKind::RegularFile)
+    metadata
+        .is_file()
+        .then_some(BinSlotKind::RegularFile)
 }
 
 #[cfg(unix)]

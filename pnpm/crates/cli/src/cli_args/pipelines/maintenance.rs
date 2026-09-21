@@ -20,14 +20,18 @@ pub(crate) struct DedupePipeline {
 
 impl DedupePipeline {
     pub(crate) async fn run<Reporter: self::Reporter + 'static>(self) -> miette::Result<()> {
-        let lockfile_path = self.config_root.join(self.cfg.wanted_lockfile_name());
+        let lockfile_path = self
+            .config_root
+            .join(self.cfg.wanted_lockfile_name());
 
         // Snapshot before any config-dep writes so --check detects lockfile
         // changes made by config-dependency syncing as well.
         let existing =
             if self.args.check { dedupe::read_lockfile_snapshot(&lockfile_path)? } else { None };
-        let guard =
-            self.args.check.then(|| dedupe::LockfileGuard::new(existing.clone(), &lockfile_path));
+        let guard = self
+            .args
+            .check
+            .then(|| dedupe::LockfileGuard::new(existing.clone(), &lockfile_path));
 
         let root_config = (&*self.manifest_path, &mut *self.cfg, &*self.config_root);
         prepare_root_config::<Reporter>(root_config, (false, RuntimePolicy::Always)).await?;
@@ -39,7 +43,8 @@ impl DedupePipeline {
             false,
             false,
         )?;
-        self.run_plan::<Reporter>(plan, lockfile_path, existing, guard).await
+        self.run_plan::<Reporter>(plan, lockfile_path, existing, guard)
+            .await
     }
 
     pub(super) async fn run_plan<Reporter: self::Reporter + 'static>(
@@ -80,8 +85,11 @@ impl DedupePipeline {
             InstallFamilyPlan::Single => {
                 let state =
                     State::init(self.manifest_path, cfg, false).wrap_err("initialize the state")?;
-                Box::pin(self.args.run::<Reporter>(state, existing, guard, &lockfile_path, None))
-                    .await
+                Box::pin(
+                    self.args
+                        .run::<Reporter>(state, existing, guard, &lockfile_path, None),
+                )
+                .await
             }
         }
     }
@@ -93,7 +101,9 @@ async fn dedupe_dedicated_project<Reporter: self::Reporter + 'static>(
     root_lockfile_path: &Path,
     root_existing: Option<&str>,
 ) -> miette::Result<()> {
-    let lockfile_path = state.lockfile_dir().join(state.config.wanted_lockfile_name());
+    let lockfile_path = state
+        .lockfile_dir()
+        .join(state.config.wanted_lockfile_name());
     let existing = if args.check {
         if lockfile_path == root_lockfile_path {
             root_existing.map(str::to_string)
@@ -103,7 +113,9 @@ async fn dedupe_dedicated_project<Reporter: self::Reporter + 'static>(
     } else {
         None
     };
-    let guard = args.check.then(|| dedupe::LockfileGuard::new(existing.clone(), &lockfile_path));
+    let guard = args
+        .check
+        .then(|| dedupe::LockfileGuard::new(existing.clone(), &lockfile_path));
     Box::pin(args.run::<Reporter>(state, existing, guard, &lockfile_path, None)).await
 }
 
@@ -124,12 +136,7 @@ pub(crate) struct PrunePipeline {
 
 impl PrunePipeline {
     pub(crate) async fn run<Reporter: self::Reporter + 'static>(self) -> miette::Result<()> {
-        let PrunePipeline {
-            args,
-            cfg,
-            config_root,
-            manifest_path,
-        } = self;
+        let PrunePipeline { args, cfg, config_root, manifest_path } = self;
 
         let root_config = (&*manifest_path, &mut *cfg, &*config_root);
         prepare_root_config::<Reporter>(root_config, (false, RuntimePolicy::Always)).await?;
@@ -144,7 +151,10 @@ impl PrunePipeline {
         // `config_root` is `cfg.workspace_dir` when present, or the
         // canonicalized `--dir` otherwise — a meaningful containment
         // boundary in both cases.
-        if !cfg.modules_dir.starts_with(&config_root) {
+        if !cfg
+            .modules_dir
+            .starts_with(&config_root)
+        {
             let modules_dir = cfg.modules_dir.display();
             let cr = config_root.display();
             return Err(miette::miette!(

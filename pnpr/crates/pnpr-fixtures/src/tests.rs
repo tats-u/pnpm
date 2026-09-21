@@ -31,9 +31,8 @@ fn tarball_package_manifest(tarball: &Path) -> serde_json::Value {
         .expect("read tar entries")
         .find_map(|entry| {
             let entry = entry.expect("read tar entry");
-            (entry.path().expect("tar entry path") == Path::new("package/package.json")).then_some(
-                entry,
-            )
+            (entry.path().expect("tar entry path") == Path::new("package/package.json"))
+                .then_some(entry)
         })
         .expect("package.json entry");
     serde_json::from_reader(&mut entry).expect("parse package.json entry")
@@ -48,9 +47,21 @@ fn latest_version_uses_semver_prerelease_order() {
 #[test]
 fn ensure_storage_generates_packuments_and_tarballs() {
     let storage = ensure_storage();
-    assert!(packages_dir().join("@pnpm.e2e/abc/1.0.0/package.json").exists());
-    assert!(storage.join("@pnpm.e2e/abc/package.json").exists());
-    assert!(storage.join("@pnpm.e2e/abc/abc-1.0.0.tgz").exists());
+    assert!(
+        packages_dir()
+            .join("@pnpm.e2e/abc/1.0.0/package.json")
+            .exists()
+    );
+    assert!(
+        storage
+            .join("@pnpm.e2e/abc/package.json")
+            .exists()
+    );
+    assert!(
+        storage
+            .join("@pnpm.e2e/abc/abc-1.0.0.tgz")
+            .exists()
+    );
 }
 
 #[test]
@@ -64,7 +75,9 @@ fn per_run_substitutions_update_packuments_and_tarballs() {
             "git+file:///tmp/hi#main",
         )],
     );
-    let package_dir = out.path().join("@pnpm.e2e/has-aliased-git-dependency");
+    let package_dir = out
+        .path()
+        .join("@pnpm.e2e/has-aliased-git-dependency");
     let packument: serde_json::Value = serde_json::from_slice(
         &std::fs::read(package_dir.join("package.json")).expect("read substituted packument"),
     )
@@ -93,9 +106,10 @@ fn case_colliding_files_are_composed_in_memory() {
 #[test]
 fn bundle_dependencies_embed_node_modules() {
     let storage = ensure_storage();
-    let bundled = tarball_entries(&storage.join(
-        "@pnpm.e2e/pkg-with-bundle-dependencies/pkg-with-bundle-dependencies-1.0.0.tgz",
-    ));
+    let bundled = tarball_entries(
+        &storage
+            .join("@pnpm.e2e/pkg-with-bundle-dependencies/pkg-with-bundle-dependencies-1.0.0.tgz"),
+    );
     assert!(
         bundled.contains("package/node_modules/@pnpm.e2e/hello-world-js-bin/package.json"),
         "{bundled:?}",
@@ -120,9 +134,10 @@ fn root_license_is_injected_except_for_self_contained_workspaces() {
     let abc = tarball_entries(&storage.join("@pnpm.e2e/abc/abc-1.0.0.tgz"));
     assert!(abc.contains("package/LICENSE"), "{abc:?}");
 
-    let bundled = tarball_entries(&storage.join(
-        "@pnpm.e2e/pkg-with-bundled-dependencies/pkg-with-bundled-dependencies-1.0.0.tgz",
-    ));
+    let bundled =
+        tarball_entries(&storage.join(
+            "@pnpm.e2e/pkg-with-bundled-dependencies/pkg-with-bundled-dependencies-1.0.0.tgz",
+        ));
     assert!(!bundled.contains("package/LICENSE"), "{bundled:?}");
 }
 
@@ -130,7 +145,9 @@ fn root_license_is_injected_except_for_self_contained_workspaces() {
 fn publish_replaces_a_storage_tree_that_lost_its_marker() {
     let root = TempDir::new().expect("create temp dir");
     let generated = root.path();
-    let storage = generated.join("storage").join("fingerprint");
+    let storage = generated
+        .join("storage")
+        .join("fingerprint");
     fs::create_dir_all(&storage).expect("create storage dir");
     fs::write(storage.join("leftover"), "stale").expect("write leftover file");
 
@@ -154,7 +171,9 @@ fn publish_replaces_a_storage_tree_that_lost_its_marker() {
 fn publish_yields_to_a_tree_that_already_carries_the_marker() {
     let root = TempDir::new().expect("create temp dir");
     let generated = root.path();
-    let storage = generated.join("storage").join("fingerprint");
+    let storage = generated
+        .join("storage")
+        .join("fingerprint");
     fs::create_dir_all(&storage).expect("create storage dir");
     fs::write(storage.join("packument"), "winner").expect("write winner file");
     fs::write(storage.join(COMPLETE_FILE), "").expect("write completion marker");
@@ -181,7 +200,9 @@ fn publish_yields_to_a_tree_that_already_carries_the_marker() {
 fn discarding_leaves_a_tree_that_completed_after_the_claim_was_decided() {
     let root = TempDir::new().expect("create temp dir");
     let generated = root.path();
-    let storage = generated.join("storage").join("fingerprint");
+    let storage = generated
+        .join("storage")
+        .join("fingerprint");
     fs::create_dir_all(&storage).expect("create storage dir");
     fs::write(storage.join("packument"), "winner").expect("write winner file");
     fs::write(storage.join(COMPLETE_FILE), "").expect("write completion marker");
@@ -202,7 +223,9 @@ fn discarding_leaves_a_tree_that_completed_after_the_claim_was_decided() {
 fn restoring_yields_to_a_publisher_that_took_the_freed_path() {
     let root = TempDir::new().expect("create temp dir");
     let generated = root.path();
-    let storage = generated.join("storage").join("fingerprint");
+    let storage = generated
+        .join("storage")
+        .join("fingerprint");
     fs::create_dir_all(&storage).expect("create storage dir");
     fs::write(storage.join("packument"), "publisher").expect("write publisher file");
     fs::write(storage.join(COMPLETE_FILE), "").expect("write completion marker");
@@ -227,7 +250,9 @@ fn restoring_yields_to_a_publisher_that_took_the_freed_path() {
 fn discarding_does_nothing_when_the_path_is_already_free() {
     let root = TempDir::new().expect("create temp dir");
     let generated = root.path();
-    let storage = generated.join("storage").join("fingerprint");
+    let storage = generated
+        .join("storage")
+        .join("fingerprint");
 
     discard_unusable_storage(generated, &storage);
 
@@ -239,7 +264,9 @@ fn discarding_does_nothing_when_the_path_is_already_free() {
 fn a_moved_dist_tag_replaces_the_highest_published_version() {
     let out = tempfile::tempdir().expect("create output directory");
     build_storage_at(&packages_dir(), out.path());
-    let packument_path = out.path().join("@pnpm.e2e/foo/package.json");
+    let packument_path = out
+        .path()
+        .join("@pnpm.e2e/foo/package.json");
     let read = || -> serde_json::Value {
         serde_json::from_slice(&fs::read(&packument_path).expect("read packument"))
             .expect("parse packument")

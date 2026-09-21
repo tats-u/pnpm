@@ -293,7 +293,8 @@ pub fn lockfile_to_hoisted_dep_graph(
         // `prev_graph: None` so the API contract is unambiguous
         // and the empty case skips the (no-op) second walk.
         Some(current)
-            if current.packages
+            if current
+                .packages
                 .as_ref()
                 .is_some_and(|packages| !packages.is_empty()) =>
         {
@@ -325,7 +326,10 @@ fn build_dep_graph<'a>(
         auto_install_peers: opts.placement.auto_install_peers,
         hoist_workspace_packages: opts.placement.hoist_workspace_packages,
         hoisting_limits: opts.placement.hoisting_limits.clone(),
-        external_dependencies: opts.placement.external_dependencies.clone(),
+        external_dependencies: opts
+            .placement
+            .external_dependencies
+            .clone(),
     };
     let hoister_result = hoist(lockfile, &hoist_opts)?;
 

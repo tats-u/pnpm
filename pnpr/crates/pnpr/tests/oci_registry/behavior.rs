@@ -49,7 +49,12 @@ async fn a_challenged_ping_does_not_stop_an_anonymous_pull() {
     push_image(&app, &auth, "acme/app", "1.0").await;
 
     assert_eq!(get(&app, "/v2/").await.status(), StatusCode::UNAUTHORIZED);
-    assert_eq!(get(&app, "/v2/acme/app/manifests/1.0").await.status(), StatusCode::OK);
+    assert_eq!(
+        get(&app, "/v2/acme/app/manifests/1.0")
+            .await
+            .status(),
+        StatusCode::OK
+    );
 }
 
 #[tokio::test]
@@ -104,9 +109,24 @@ async fn a_head_request_carries_the_headers_without_the_body() {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK, "{path}");
-        assert!(response.headers().contains_key("docker-content-digest"), "{path}");
-        assert!(response.headers().contains_key(header::CONTENT_LENGTH), "{path}");
-        assert!(body_bytes(response.into_body()).await.is_empty(), "{path}");
+        assert!(
+            response
+                .headers()
+                .contains_key("docker-content-digest"),
+            "{path}"
+        );
+        assert!(
+            response
+                .headers()
+                .contains_key(header::CONTENT_LENGTH),
+            "{path}"
+        );
+        assert!(
+            body_bytes(response.into_body())
+                .await
+                .is_empty(),
+            "{path}"
+        );
     }
 }
 
@@ -226,7 +246,12 @@ async fn an_index_over_pushed_children_publishes() {
             .status(),
         StatusCode::CREATED,
     );
-    assert_eq!(get(&app, "/v2/acme/app/manifests/multi").await.status(), StatusCode::OK);
+    assert_eq!(
+        get(&app, "/v2/acme/app/manifests/multi")
+            .await
+            .status(),
+        StatusCode::OK
+    );
 }
 
 #[tokio::test]
@@ -400,7 +425,11 @@ async fn protocol_surface_on_object_store() {
         store: std::sync::Arc::new(object_store::memory::InMemory::new()),
         prefix: "protocol/".into(),
     };
-    let hosted = config.routing.hosted.get_mut("images").unwrap();
+    let hosted = config
+        .routing
+        .hosted
+        .get_mut("images")
+        .unwrap();
     hosted.rules = std::mem::take(&mut hosted.rules)
         .with_default_unpublish(AccessList::from_tokens(["$authenticated"]));
     check_protocol_surface(router_with_auth(config, AuthState::in_memory())).await;
@@ -457,7 +486,8 @@ async fn scoped_bearer_credentials_cannot_write_escape_repository_or_survive_rev
             .unwrap();
         assert_eq!(response.status(), expected, "{method} {path}");
     }
-    auth_state.tokens
+    auth_state
+        .tokens
         .revoke_by_key(&sha256_hex(parent.as_bytes()))
         .await
         .unwrap();

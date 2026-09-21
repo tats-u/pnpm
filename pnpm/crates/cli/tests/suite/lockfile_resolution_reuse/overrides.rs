@@ -45,7 +45,11 @@ fn compatible_catalog_range_update_reuses_the_locked_peer_snapshot() {
     let npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let npmrc = npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{npmrc}\n"))
@@ -59,7 +63,9 @@ fn compatible_catalog_range_update_reuses_the_locked_peer_snapshot() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load wanted lockfile")
         .expect("wanted lockfile");
-    let entry = &wanted.catalogs.expect("catalog snapshots")["default"]["@pnpm.e2e/has-optional-peer-with-peer"];
+    let entry = &wanted
+        .catalogs
+        .expect("catalog snapshots")["default"]["@pnpm.e2e/has-optional-peer-with-peer"];
     assert_eq!(entry.specifier, ">=1.0.0 <2");
     assert_eq!(entry.version, "1.0.0");
 
@@ -70,7 +76,9 @@ fn compatible_catalog_range_update_reuses_the_locked_peer_snapshot() {
 fn exact_override_update_reuses_the_locked_children() {
     let fixture = CommandTempCwd::init().add_mocked_registry();
     let manifest_path = fixture.workspace.join("package.json");
-    let workspace_yaml_path = fixture.workspace.join("pnpm-workspace.yaml");
+    let workspace_yaml_path = fixture
+        .workspace
+        .join("pnpm-workspace.yaml");
     fs::write(
         &manifest_path,
         serde_json::json!({
@@ -96,9 +104,14 @@ fn exact_override_update_reuses_the_locked_children() {
     let before = pnpm_lockfile::Lockfile::load_wanted_from_dir(&fixture.workspace)
         .expect("load wanted lockfile")
         .expect("wanted lockfile");
-    let old_key = "@pnpm.e2e/pkg-with-1-dep@100.0.0".parse().expect("old key");
-    let child_name = "@pnpm.e2e/dep-of-pkg-with-1-dep".parse().expect("child name");
-    let old_child = before.snapshots
+    let old_key = "@pnpm.e2e/pkg-with-1-dep@100.0.0"
+        .parse()
+        .expect("old key");
+    let child_name = "@pnpm.e2e/dep-of-pkg-with-1-dep"
+        .parse()
+        .expect("child name");
+    let old_child = before
+        .snapshots
         .as_ref()
         .and_then(|snapshots| snapshots.get(&old_key))
         .and_then(|snapshot| snapshot.dependencies.as_ref())
@@ -109,10 +122,8 @@ fn exact_override_update_reuses_the_locked_children() {
     let workspace_yaml = fs::read_to_string(&workspace_yaml_path).expect("read initial override");
     fs::write(
         &workspace_yaml_path,
-        workspace_yaml.replace(
-            "'@pnpm.e2e/pkg-with-1-dep': 100.0.0",
-            "'@pnpm.e2e/pkg-with-1-dep': 100.1.0",
-        ),
+        workspace_yaml
+            .replace("'@pnpm.e2e/pkg-with-1-dep': 100.0.0", "'@pnpm.e2e/pkg-with-1-dep': 100.1.0"),
     )
     .expect("update exact override");
     pacquet_at(&fixture.workspace)
@@ -124,14 +135,19 @@ fn exact_override_update_reuses_the_locked_children() {
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
     let current = pnpm_lockfile::Lockfile::load_current_from_virtual_store_dir(
-        &fixture.workspace.join("node_modules/.pnpm"),
+        &fixture
+            .workspace
+            .join("node_modules/.pnpm"),
     )
     .expect("load current lockfile")
     .expect("current lockfile");
-    let new_key = "@pnpm.e2e/pkg-with-1-dep@100.1.0".parse().expect("new key");
+    let new_key = "@pnpm.e2e/pkg-with-1-dep@100.1.0"
+        .parse()
+        .expect("new key");
     for lockfile in [&wanted, &current] {
         assert_eq!(
-            lockfile.snapshots
+            lockfile
+                .snapshots
                 .as_ref()
                 .and_then(|snapshots| snapshots.get(&new_key))
                 .and_then(|snapshot| snapshot.dependencies.as_ref())
@@ -139,7 +155,8 @@ fn exact_override_update_reuses_the_locked_children() {
             Some(&old_child),
         );
         assert!(
-            lockfile.snapshots
+            lockfile
+                .snapshots
                 .as_ref()
                 .is_some_and(|snapshots| !snapshots.contains_key(&old_key)),
         );
@@ -182,7 +199,11 @@ fn dependency_removal_override_prunes_the_locked_subtree_without_resolving() {
     let npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let npmrc = npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{npmrc}\n"))
@@ -196,30 +217,39 @@ fn dependency_removal_override_prunes_the_locked_subtree_without_resolving() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let current = pnpm_lockfile::Lockfile::load_current_from_virtual_store_dir(&workspace.join(
-        "node_modules/.pnpm",
-    ))
+    let current = pnpm_lockfile::Lockfile::load_current_from_virtual_store_dir(
+        &workspace.join("node_modules/.pnpm"),
+    )
     .expect("load current lockfile")
     .expect("current lockfile");
-    let parent_key = "@pnpm.e2e/pkg-with-good-optional@1.0.0".parse().expect("parent package key");
-    let removed_key = "is-positive@1.0.0".parse().expect("removed package key");
-    let removed_name = "is-positive".parse().expect("removed package name");
+    let parent_key = "@pnpm.e2e/pkg-with-good-optional@1.0.0"
+        .parse()
+        .expect("parent package key");
+    let removed_key = "is-positive@1.0.0"
+        .parse()
+        .expect("removed package key");
+    let removed_name = "is-positive"
+        .parse()
+        .expect("removed package name");
     for lockfile in [&wanted, &current] {
         dbg!(&lockfile.snapshots, &lockfile.packages);
         assert!(
-            lockfile.snapshots
+            lockfile
+                .snapshots
                 .as_ref()
                 .and_then(|snapshots| snapshots.get(&parent_key))
                 .and_then(|snapshot| snapshot.optional_dependencies.as_ref())
                 .is_none_or(|dependencies| !dependencies.contains_key(&removed_name)),
         );
         assert!(
-            lockfile.snapshots
+            lockfile
+                .snapshots
                 .as_ref()
                 .is_none_or(|snapshots| !snapshots.contains_key(&removed_key)),
         );
         assert!(
-            lockfile.packages
+            lockfile
+                .packages
                 .as_ref()
                 .is_none_or(|packages| !packages.contains_key(&removed_key)),
         );
@@ -281,7 +311,11 @@ fn removal_override_composes_with_a_settled_catalog_override() {
     let npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let npmrc = npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{npmrc}\n"))
@@ -295,12 +329,18 @@ fn removal_override_composes_with_a_settled_catalog_override() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let overrides = wanted.overrides.as_ref().expect("recorded overrides");
+    let overrides = wanted
+        .overrides
+        .as_ref()
+        .expect("recorded overrides");
     assert_eq!(overrides["@pnpm.e2e/foo"], "1.0.0");
     assert_eq!(overrides["is-positive"], "-");
-    let removed_key = "is-positive@1.0.0".parse().expect("removed package key");
+    let removed_key = "is-positive@1.0.0"
+        .parse()
+        .expect("removed package key");
     assert!(
-        wanted.snapshots
+        wanted
+            .snapshots
             .as_ref()
             .is_none_or(|snapshots| !snapshots.contains_key(&removed_key)),
     );
@@ -316,7 +356,9 @@ fn removal_override_composes_with_a_settled_catalog_override() {
 fn an_override_on_a_cataloged_package_drops_the_catalog_entry() {
     let fixture = CommandTempCwd::init().add_mocked_registry();
     let manifest_path = fixture.workspace.join("package.json");
-    let workspace_yaml_path = fixture.workspace.join("pnpm-workspace.yaml");
+    let workspace_yaml_path = fixture
+        .workspace
+        .join("pnpm-workspace.yaml");
     fs::write(
         &manifest_path,
         serde_json::json!({
@@ -354,8 +396,13 @@ fn an_override_on_a_cataloged_package_drops_the_catalog_entry() {
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
     assert!(wanted.catalogs.is_none());
-    let name = "@pnpm.e2e/pkg-with-1-dep".parse().expect("package name");
-    let dependency = &wanted.importers["."].dependencies.as_ref().expect("dependencies")[&name];
+    let name = "@pnpm.e2e/pkg-with-1-dep"
+        .parse()
+        .expect("package name");
+    let dependency = &wanted.importers["."]
+        .dependencies
+        .as_ref()
+        .expect("dependencies")[&name];
     assert_eq!(dependency.specifier, "100.1.0");
     assert_eq!(dependency.version.to_string(), "100.1.0");
 
@@ -412,7 +459,11 @@ fn a_catalog_edit_and_a_removal_override_are_absorbed_in_one_pass() {
     let npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let npmrc = npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{npmrc}\n"))
@@ -426,17 +477,24 @@ fn a_catalog_edit_and_a_removal_override_are_absorbed_in_one_pass() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let entry = &wanted.catalogs.as_ref().expect("catalog snapshots")["default"]["@pnpm.e2e/pkg-with-good-optional"];
+    let entry = &wanted
+        .catalogs
+        .as_ref()
+        .expect("catalog snapshots")["default"]["@pnpm.e2e/pkg-with-good-optional"];
     assert_eq!(entry.specifier, ">=1.0.0 <2");
     assert_eq!(entry.version, "1.0.0");
-    let removed_key = "is-positive@1.0.0".parse().expect("removed package key");
+    let removed_key = "is-positive@1.0.0"
+        .parse()
+        .expect("removed package key");
     assert!(
-        wanted.snapshots
+        wanted
+            .snapshots
             .as_ref()
             .is_none_or(|snapshots| !snapshots.contains_key(&removed_key)),
     );
     assert!(
-        wanted.packages
+        wanted
+            .packages
             .as_ref()
             .is_none_or(|packages| !packages.contains_key(&removed_key)),
     );
@@ -491,10 +549,15 @@ fn config_drift_full_resolve_keeps_still_satisfied_pins() {
         .with_arg("install")
         .assert()
         .success();
-    let foobar_key = "@pnpm.e2e/foobar@100.0.0".parse().expect("foobar key");
-    let foo_name = "@pnpm.e2e/foo".parse().expect("foo name");
+    let foobar_key = "@pnpm.e2e/foobar@100.0.0"
+        .parse()
+        .expect("foobar key");
+    let foo_name = "@pnpm.e2e/foo"
+        .parse()
+        .expect("foo name");
     let foobar_foo_child = |lockfile: &pnpm_lockfile::Lockfile| {
-        lockfile.snapshots
+        lockfile
+            .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.get(&foobar_key))
             .and_then(|snapshot| snapshot.dependencies.as_ref())
@@ -542,7 +605,8 @@ fn config_drift_full_resolve_keeps_still_satisfied_pins() {
         .expect("load wanted lockfile")
         .expect("wanted lockfile");
     assert_eq!(foobar_foo_child(&wanted).as_deref(), Some("@pnpm.e2e/foo@100.0.0"));
-    let extended_child = wanted.snapshots
+    let extended_child = wanted
+        .snapshots
         .as_ref()
         .and_then(|snapshots| snapshots.get(&foobar_key))
         .and_then(|snapshot| snapshot.dependencies.as_ref())
@@ -550,9 +614,12 @@ fn config_drift_full_resolve_keeps_still_satisfied_pins() {
         .and_then(|dep_ref| dep_ref.resolve(&"is-positive".parse().expect("name")))
         .map(|key| key.to_string());
     assert_eq!(extended_child.as_deref(), Some("is-positive@1.0.0"));
-    let foo_100_1_0 = "@pnpm.e2e/foo@100.1.0".parse().expect("foo 100.1.0 key");
+    let foo_100_1_0 = "@pnpm.e2e/foo@100.1.0"
+        .parse()
+        .expect("foo 100.1.0 key");
     assert!(
-        wanted.snapshots
+        wanted
+            .snapshots
             .as_ref()
             .is_some_and(|snapshots| snapshots.contains_key(&foo_100_1_0)),
     );

@@ -21,7 +21,11 @@ async fn surfaces_min_release_age_violation_inline() {
     // the picker should fall back to 1.0.0 as the highest mature
     // version and the picked result should *not* trip a violation.
     // To force a violation we set the cutoff before both versions.
-    let published_by = Some(chrono::Utc.with_ymd_and_hms(2023, 12, 1, 0, 0, 0).unwrap());
+    let published_by = Some(
+        chrono::Utc
+            .with_ymd_and_hms(2023, 12, 1, 0, 0, 0)
+            .unwrap(),
+    );
     let opts = ResolveOptions {
         policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
             published_by,
@@ -39,7 +43,9 @@ async fn surfaces_min_release_age_violation_inline() {
         .await
         .unwrap()
         .unwrap();
-    let violation = result.policy_violation.expect("violation surfaced");
+    let violation = result
+        .policy_violation
+        .expect("violation surfaced");
     assert_eq!(violation.code, MINIMUM_RELEASE_AGE_VIOLATION_CODE);
 }
 
@@ -58,7 +64,11 @@ async fn latest_is_suppressed_when_published_by_holds_back_raw_latest() {
     // PACKAGE_BODY has 1.0.0 (2024-01-10) and 1.1.0 (2024-12-10),
     // dist-tags.latest = 1.1.0. Cutoff 2024-06-01 leaves 1.1.0 immature:
     // the hint must not fire rather than name a non-latest version.
-    let published_by = Some(chrono::Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap());
+    let published_by = Some(
+        chrono::Utc
+            .with_ymd_and_hms(2024, 6, 1, 0, 0, 0)
+            .unwrap(),
+    );
     let opts = ResolveOptions {
         policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
             published_by,
@@ -77,7 +87,9 @@ async fn latest_is_suppressed_when_published_by_holds_back_raw_latest() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix
@@ -102,7 +114,11 @@ async fn latest_is_raw_registry_tag_when_it_satisfies_published_by() {
 
     // Cutoff 2025-01-01 is after both versions, so the pinned 1.0.0 install
     // still advertises the mature 1.1.0.
-    let published_by = Some(chrono::Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap());
+    let published_by = Some(
+        chrono::Utc
+            .with_ymd_and_hms(2025, 1, 1, 0, 0, 0)
+            .unwrap(),
+    );
     let opts = ResolveOptions {
         policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
             published_by,
@@ -121,7 +137,9 @@ async fn latest_is_raw_registry_tag_when_it_satisfies_published_by() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix
@@ -154,7 +172,9 @@ async fn latest_is_raw_registry_tag_when_published_by_is_none() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix
@@ -178,7 +198,11 @@ async fn latest_is_raw_registry_tag_when_published_by_exclude_matches_package() 
 
     // The exclude policy disables the maturity policy for `acme` entirely, so
     // neither the pick nor the latest hint may be affected by the cutoff.
-    let published_by = Some(chrono::Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap());
+    let published_by = Some(
+        chrono::Utc
+            .with_ymd_and_hms(2024, 6, 1, 0, 0, 0)
+            .unwrap(),
+    );
     let exclude = create_package_version_policy(["acme"]).expect("policy");
     let opts = ResolveOptions {
         policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
@@ -199,7 +223,9 @@ async fn latest_is_raw_registry_tag_when_published_by_exclude_matches_package() 
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix
@@ -222,7 +248,11 @@ async fn latest_is_raw_registry_tag_when_published_by_exclude_trusts_that_versio
     let registry = format!("{}/", server.url());
     let (resolver, _tempdir) = build_resolver(&registry);
 
-    let published_by = Some(chrono::Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap());
+    let published_by = Some(
+        chrono::Utc
+            .with_ymd_and_hms(2024, 6, 1, 0, 0, 0)
+            .unwrap(),
+    );
     let exclude = create_package_version_policy(["acme@1.1.0"]).expect("policy");
     let opts = ResolveOptions {
         policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
@@ -243,7 +273,9 @@ async fn latest_is_raw_registry_tag_when_published_by_exclude_trusts_that_versio
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix

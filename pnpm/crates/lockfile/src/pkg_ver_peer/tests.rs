@@ -44,10 +44,23 @@ fn parse_ok() {
     case("1.21.3(react@17.0.2)", ((1, 21, 3), "(react@17.0.2)"));
     case(
         "1.21.3-rc.0(react@17.0.2)",
-        ("1.21.3-rc.0".parse::<Version>().unwrap(), "(react@17.0.2)"),
+        (
+            "1.21.3-rc.0"
+                .parse::<Version>()
+                .unwrap(),
+            "(react@17.0.2)",
+        ),
     );
     case("1.21.3", ((1, 21, 3), ""));
-    case("1.21.3-rc.0", ("1.21.3-rc.0".parse::<Version>().unwrap(), ""));
+    case(
+        "1.21.3-rc.0",
+        (
+            "1.21.3-rc.0"
+                .parse::<Version>()
+                .unwrap(),
+            "",
+        ),
+    );
 }
 
 #[test]
@@ -87,10 +100,23 @@ fn deserialize_ok() {
     case("1.21.3(react@17.0.2)", ((1, 21, 3), "(react@17.0.2)"));
     case(
         "1.21.3-rc.0(react@17.0.2)",
-        ("1.21.3-rc.0".parse::<Version>().unwrap(), "(react@17.0.2)"),
+        (
+            "1.21.3-rc.0"
+                .parse::<Version>()
+                .unwrap(),
+            "(react@17.0.2)",
+        ),
     );
     case("1.21.3", ((1, 21, 3), ""));
-    case("1.21.3-rc.0", ("1.21.3-rc.0".parse::<Version>().unwrap(), ""));
+    case(
+        "1.21.3-rc.0",
+        (
+            "1.21.3-rc.0"
+                .parse::<Version>()
+                .unwrap(),
+            "",
+        ),
+    );
 }
 
 #[test]
@@ -135,7 +161,9 @@ fn deserialize_serialize() {
 /// [`PkgVerPeer::prefix`].
 #[test]
 fn parse_runtime_prefix_round_trips() {
-    let parsed: PkgVerPeer = "runtime:22.0.0".parse().expect("parse runtime version");
+    let parsed: PkgVerPeer = "runtime:22.0.0"
+        .parse()
+        .expect("parse runtime version");
     dbg!(&parsed);
     assert_eq!(parsed.prefix(), Prefix::Runtime);
     assert_eq!(parsed.version_semver(), Some(&"22.0.0".parse::<Version>().unwrap()));
@@ -151,8 +179,9 @@ fn parse_runtime_prefix_round_trips() {
 /// erroring.
 #[test]
 fn parse_runtime_prefix_with_peer_suffix() {
-    let parsed: PkgVerPeer =
-        "runtime:22.0.0(node@22.0.0)".parse().expect("parse runtime with peer");
+    let parsed: PkgVerPeer = "runtime:22.0.0(node@22.0.0)"
+        .parse()
+        .expect("parse runtime with peer");
     dbg!(&parsed);
     assert_eq!(parsed.prefix(), Prefix::Runtime);
     assert_eq!(parsed.version_semver(), Some(&"22.0.0".parse::<Version>().unwrap()));
@@ -175,9 +204,18 @@ fn parse_bare_semver_has_no_prefix() {
 #[test]
 fn parse_runtime_substring_in_version_is_not_a_prefix() {
     // `1.21.3-runtime` is a valid semver pre-release tag.
-    let parsed: PkgVerPeer = "1.21.3-runtime".parse().expect("parse semver pre-release");
+    let parsed: PkgVerPeer = "1.21.3-runtime"
+        .parse()
+        .expect("parse semver pre-release");
     assert_eq!(parsed.prefix(), Prefix::None);
-    assert_eq!(parsed.version_semver(), Some(&"1.21.3-runtime".parse::<Version>().unwrap()));
+    assert_eq!(
+        parsed.version_semver(),
+        Some(
+            &"1.21.3-runtime"
+                .parse::<Version>()
+                .unwrap()
+        )
+    );
 }
 
 /// Serde round-trip on a runtime version — pacquet stores
@@ -199,7 +237,9 @@ fn serde_round_trip_runtime_prefix() {
 
 #[test]
 fn parse_file_prefix_round_trips() {
-    let parsed: PkgVerPeer = "file:packages/pkg".parse().expect("parse file version");
+    let parsed: PkgVerPeer = "file:packages/pkg"
+        .parse()
+        .expect("parse file version");
     dbg!(&parsed);
     assert_eq!(parsed.prefix(), Prefix::None);
     assert_eq!(parsed.version(), &VersionPart::File("packages/pkg".to_string()));
@@ -212,7 +252,9 @@ fn parse_file_prefix_round_trips() {
 /// `file:` body must compose with the parenthesised peer suffix.
 #[test]
 fn parse_file_prefix_with_peer_suffix() {
-    let parsed: PkgVerPeer = "file:packages/pkg(peer@1.0.0)".parse().expect("parse file with peer");
+    let parsed: PkgVerPeer = "file:packages/pkg(peer@1.0.0)"
+        .parse()
+        .expect("parse file with peer");
     assert_eq!(parsed.prefix(), Prefix::None);
     assert_eq!(parsed.version(), &VersionPart::File("packages/pkg".to_string()));
     assert_eq!(parsed.peer(), "(peer@1.0.0)");
@@ -239,7 +281,9 @@ fn serde_round_trip_file_prefix() {
 #[test]
 fn parse_codeload_tarball_url_round_trips() {
     let url = "https://codeload.github.com/whiskeysockets/libsignal-node/tar.gz/0848bc83347720c322c5087f3bd0d6cd086ffa4b";
-    let parsed: PkgVerPeer = url.parse().expect("parse codeload tarball url");
+    let parsed: PkgVerPeer = url
+        .parse()
+        .expect("parse codeload tarball url");
     assert_eq!(parsed.prefix(), Prefix::None);
     assert_eq!(parsed.version(), &VersionPart::NonSemver(url.to_string()));
     assert_eq!(parsed.version_semver(), None);
@@ -249,8 +293,9 @@ fn parse_codeload_tarball_url_round_trips() {
 
 #[test]
 fn parse_non_semver_with_peer_suffix() {
-    let parsed: PkgVerPeer =
-        "https://example.com/foo.tgz(peer@1.0.0)".parse().expect("parse non-semver with peer");
+    let parsed: PkgVerPeer = "https://example.com/foo.tgz(peer@1.0.0)"
+        .parse()
+        .expect("parse non-semver with peer");
     assert_eq!(parsed.prefix(), Prefix::None);
     assert_eq!(
         parsed.version(),
@@ -266,7 +311,9 @@ fn parse_non_semver_with_peer_suffix() {
 #[test]
 fn parse_patch_hash_then_peer_suffix_round_trip() {
     let raw = "1.0.0(patch_hash=0000)(@types/babel__core@7.1.14)";
-    let parsed: PkgVerPeer = raw.parse().expect("parse patch-hash + peer");
+    let parsed: PkgVerPeer = raw
+        .parse()
+        .expect("parse patch-hash + peer");
     assert_eq!(parsed.version_semver(), Some(&"1.0.0".parse::<Version>().unwrap()));
     assert_eq!(parsed.peer(), "(patch_hash=0000)(@types/babel__core@7.1.14)");
     assert_eq!(parsed.to_string(), raw);
@@ -289,7 +336,9 @@ fn serde_round_trip_non_semver() {
 #[test]
 fn parse_registry_qualified_round_trip() {
     let raw = "work:1.0.0(react@18.0.0)";
-    let parsed: PkgVerPeer = raw.parse().expect("parse registry-qualified");
+    let parsed: PkgVerPeer = raw
+        .parse()
+        .expect("parse registry-qualified");
     assert_eq!(
         parsed.version(),
         &VersionPart::RegistryQualified {
@@ -300,7 +349,9 @@ fn parse_registry_qualified_round_trip() {
     // Bare-semver reuse paths must treat the version as opaque...
     assert_eq!(parsed.version_semver(), None);
     // ...while registry-aware callers read the pair.
-    let (registry_name, version) = parsed.registry_qualified().expect("registry qualified");
+    let (registry_name, version) = parsed
+        .registry_qualified()
+        .expect("registry qualified");
     assert_eq!(registry_name, "work");
     assert_eq!(version, &"1.0.0".parse::<Version>().unwrap());
     assert_eq!(parsed.peer(), "(react@18.0.0)");
@@ -312,16 +363,22 @@ fn parse_registry_qualified_round_trip() {
 /// prefix with a semver slot, `file:` stays a file path.
 #[test]
 fn reserved_prefixes_do_not_parse_as_registry_qualified() {
-    let runtime: PkgVerPeer = "runtime:22.0.0".parse().expect("parse runtime");
+    let runtime: PkgVerPeer = "runtime:22.0.0"
+        .parse()
+        .expect("parse runtime");
     assert_eq!(runtime.registry_qualified(), None);
     assert_eq!(runtime.version_semver(), Some(&"22.0.0".parse::<Version>().unwrap()));
 
-    let file: PkgVerPeer = "file:pkg-1.0.0".parse().expect("parse file");
+    let file: PkgVerPeer = "file:pkg-1.0.0"
+        .parse()
+        .expect("parse file");
     assert_eq!(file.registry_qualified(), None);
     assert_eq!(file.version(), &VersionPart::File("pkg-1.0.0".to_string()));
 
     // A non-semver remainder is not registry-qualified.
-    let opaque: PkgVerPeer = "work:not-semver".parse().expect("parse opaque");
+    let opaque: PkgVerPeer = "work:not-semver"
+        .parse()
+        .expect("parse opaque");
     assert_eq!(opaque.registry_qualified(), None);
     assert_eq!(opaque.version(), &VersionPart::NonSemver("work:not-semver".to_string()));
 }

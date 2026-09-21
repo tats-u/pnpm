@@ -30,7 +30,9 @@ fn render_parseable_for_project(
 ) -> String {
     let root_already_seen = dep_paths.contains(&project.path);
     dep_paths.insert(project.path.clone());
-    let all_deps: Vec<&DependencyNode> = project.hierarchy.optional_dependencies
+    let all_deps: Vec<&DependencyNode> = project
+        .hierarchy
+        .optional_dependencies
         .iter()
         .chain(&project.hierarchy.dependencies)
         .chain(&project.hierarchy.dev_dependencies)
@@ -49,7 +51,11 @@ fn render_parseable_for_project(
     if !root_already_seen {
         lines.push(parseable_project_line(project, opts.long));
     }
-    lines.extend(flattened.into_iter().map(|node| parseable_node_line(node, opts.long)));
+    lines.extend(
+        flattened
+            .into_iter()
+            .map(|node| parseable_node_line(node, opts.long)),
+    );
     lines.join("\n")
 }
 

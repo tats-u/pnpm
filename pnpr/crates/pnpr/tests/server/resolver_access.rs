@@ -79,7 +79,11 @@ async fn resolve_rejects_duplicate_authorization_headers() {
     let (repo_url, request_count) = spawn_git_probe().await;
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config_for("http://127.0.0.1:1", tmp.path().to_path_buf()), auth);
     let mut request = git_resolve_request(&repo_url, Some(&format!("Bearer {token}")));
     request
@@ -157,15 +161,20 @@ async fn authenticated_resolve_preserves_git_dependencies() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for("http://127.0.0.1:1", tmp.path().to_path_buf());
     // A git dependency's host must be on the fetch allowlist for the resolver
     // to reach it; an off-allowlist URL dependency is rejected at the request
     // boundary before any fetch.
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(repo_url.clone()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(repo_url.clone()), package: None });
     let app = router_with_auth(config, auth);
     let response = app
         .oneshot(git_resolve_request(&repo_url, Some(&format!("Bearer {token}"))))
@@ -193,8 +202,14 @@ async fn authenticated_resolve_preserves_git_dependencies() {
 async fn building_the_server_rejects_an_ungated_credentialed_upstream() {
     let tmp = TempDir::new().unwrap();
     let mut config = config_for("http://127.0.0.1:1", tmp.path().to_path_buf());
-    let upstream = config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream");
-    upstream.headers.insert("x-api-key", "secret".parse().unwrap());
+    let upstream = config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream");
+    upstream
+        .headers
+        .insert("x-api-key", "secret".parse().unwrap());
     let err =
         pnpr::try_router(config).expect_err("an ungated credentialed upstream must fail startup");
     assert!(err.to_string().contains("npmjs"), "unexpected error: {err}");

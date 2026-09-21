@@ -5,8 +5,12 @@ use super::{
 
 #[tokio::test]
 async fn multi_project_request_sends_every_workspace_project_without_a_synthetic_root() {
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.expect("bind capture");
-    let addr = listener.local_addr().expect("capture addr");
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+        .await
+        .expect("bind capture");
+    let addr = listener
+        .local_addr()
+        .expect("capture addr");
     let done = serde_json::json!({
         "type": "done",
         "lockfile": {
@@ -47,8 +51,13 @@ async fn multi_project_request_sends_every_workspace_project_without_a_synthetic
         },
     ];
 
-    let outcome = client.resolve_projects(opts).await.expect("multi-project response should parse");
-    let mut importer_ids = outcome.lockfile.importers
+    let outcome = client
+        .resolve_projects(opts)
+        .await
+        .expect("multi-project response should parse");
+    let mut importer_ids = outcome
+        .lockfile
+        .importers
         .keys()
         .cloned()
         .collect::<Vec<_>>();
@@ -56,7 +65,9 @@ async fn multi_project_request_sends_every_workspace_project_without_a_synthetic
     assert_eq!(importer_ids, ["packages/app".to_string(), "packages/lib".to_string()]);
 
     let request = capture.await.expect("capture task");
-    let (_, body) = request.split_once("\r\n\r\n").expect("captured HTTP request has a body");
+    let (_, body) = request
+        .split_once("\r\n\r\n")
+        .expect("captured HTTP request has a body");
     let body: serde_json::Value = serde_json::from_str(body).expect("request body is JSON");
     assert_eq!(
         body["projects"],

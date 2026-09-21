@@ -44,7 +44,9 @@ pub async fn wanted_lockfile_satisfies_workspace(
     if check.lockfile.is_empty() {
         return false;
     }
-    if check.config.config_dependencies
+    if check
+        .config
+        .config_dependencies
         .as_ref()
         .is_some_and(|deps| !deps.is_empty())
     {
@@ -57,7 +59,9 @@ pub async fn wanted_lockfile_satisfies_workspace(
     else {
         return false;
     };
-    let workspace_root = workspace_dir_opt.clone().unwrap_or_else(|| manifest_dir.to_path_buf());
+    let workspace_root = workspace_dir_opt
+        .clone()
+        .unwrap_or_else(|| manifest_dir.to_path_buf());
     // The importer ids below name projects relative to the directory the
     // check.lockfile sits in, which `lockfileDir` can move away from the
     // workspace root — deriving them from the workspace instead would
@@ -126,7 +130,10 @@ fn workspace_packages_for_freshness(
     workspace_projects: Option<&[pnpm_workspace::Project]>,
 ) -> Option<pnpm_resolving_resolver_base::WorkspacePackages> {
     (check.config.exclude_links_from_lockfile
-        && check.config.link_workspace_packages.enabled_at_depth(0))
+        && check
+            .config
+            .link_workspace_packages
+            .enabled_at_depth(0))
     .then(|| super::build_workspace_packages_map(workspace_projects))
     .flatten()
 }
@@ -163,7 +170,11 @@ pub(super) async fn try_fast_update_lockfile<Reporter: pnpm_reporter::Reporter>(
     // snapshot, and reading the patch files is the only I/O any of them do.
     // `Err` is a patch file that cannot be read or hashed, which the
     // resolver reports — not the same as having none configured.
-    let Ok(patch_hashes) = opts.freshness.config.patched_dependency_hashes() else {
+    let Ok(patch_hashes) = opts
+        .freshness
+        .config
+        .patched_dependency_hashes()
+    else {
         return None;
     };
     let candidate = crate::fast_update_compose::try_compose_fast_updates(
@@ -172,9 +183,13 @@ pub(super) async fn try_fast_update_lockfile<Reporter: pnpm_reporter::Reporter>(
         opts.project_manifests,
         opts.freshness.config,
         patch_hashes.as_ref(),
-        opts.freshness.scope.prune_stale_importers,
+        opts.freshness
+            .scope
+            .prune_stale_importers,
     )?;
-    check_lockfile_freshness(&candidate, &opts.freshness).await.ok()?;
+    check_lockfile_freshness(&candidate, &opts.freshness)
+        .await
+        .ok()?;
     // Only the committed candidate is worth reporting on: a rewrite the
     // freshness gates reject is followed by the resolution, which reports it
     // itself.
@@ -213,7 +228,8 @@ pub(super) fn removed_importer_id<'a>(
         .iter()
         .map(|(id, _)| id.as_str())
         .collect();
-    lockfile.importers
+    lockfile
+        .importers
         .keys()
         .find(|importer_id| !manifest_ids.contains(importer_id.as_str()))
         .map(String::as_str)
@@ -290,7 +306,9 @@ pub(super) async fn check_lockfile_freshness(
         inputs.config,
         inputs.workspace_packages,
         parsed_overrides_opt.as_deref(),
-        inputs.scope.allow_missing_dependency_free_importers,
+        inputs
+            .scope
+            .allow_missing_dependency_free_importers,
     )
 }
 
@@ -305,7 +323,10 @@ fn check_importer_freshness(
     allow_missing_dependency_free_importers: bool,
 ) -> Result<(), FreshnessCheckError> {
     let ignored_optional_matcher = pnpm_matcher::create_matcher(
-        config.ignored_optional_dependencies.as_deref().unwrap_or_default(),
+        config
+            .ignored_optional_dependencies
+            .as_deref()
+            .unwrap_or_default(),
     );
     // Each importer's check reads only shared references, so a
     // workspace-scale importer list fans out across the rayon pool; the
@@ -315,7 +336,9 @@ fn check_importer_freshness(
         .par_iter()
         .map(|(importer_id, manifest)| {
             if allow_missing_dependency_free_importers
-                && !lockfile.importers.contains_key(importer_id)
+                && !lockfile
+                    .importers
+                    .contains_key(importer_id)
                 && !manifest_has_effective_dependencies(manifest, &ignored_optional_matcher)
             {
                 return Ok(());
@@ -378,11 +401,8 @@ pub(crate) fn check_lockfile_settings_drift(
     catalogs: &Catalogs,
     opts: CheckLockfileSettingsDriftOptions<'_>,
 ) -> Result<(), FreshnessCheckError> {
-    let CheckLockfileSettingsDriftOptions {
-        parsed_overrides,
-        pnpmfile_checksum,
-        dedupe_peers,
-    } = opts;
+    let CheckLockfileSettingsDriftOptions { parsed_overrides, pnpmfile_checksum, dedupe_peers } =
+        opts;
     let overrides_map: Option<std::collections::HashMap<String, String>> =
         parsed_overrides.map(pnpm_config_parse_overrides::create_overrides_map_from_parsed);
     let package_extensions_checksum =
@@ -391,15 +411,18 @@ pub(crate) fn check_lockfile_settings_drift(
     // files here lets `check_lockfile_settings` catch an edited patch
     // whose hash (and thus its `(patch_hash=...)` depPath suffix) drifted
     // from what the lockfile recorded.
-    let patched_dependency_hashes =
-        config.patched_dependency_hashes().map_err(FreshnessCheckError::CalcPatchHashes)?;
+    let patched_dependency_hashes = config
+        .patched_dependency_hashes()
+        .map_err(FreshnessCheckError::CalcPatchHashes)?;
     pnpm_lockfile::check_lockfile_settings(
         lockfile,
         pnpm_lockfile::LockfileSettingsCheck {
             catalogs,
             overrides: overrides_map.as_ref(),
             package_extensions_checksum: package_extensions_checksum.as_deref(),
-            ignored_optional_dependencies: config.ignored_optional_dependencies.as_deref(),
+            ignored_optional_dependencies: config
+                .ignored_optional_dependencies
+                .as_deref(),
             patched_dependencies: patched_dependency_hashes.as_ref(),
             resolution: pnpm_lockfile::ResolutionSettingsCheck {
                 auto_install_peers: config.auto_install_peers,

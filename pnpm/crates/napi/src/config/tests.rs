@@ -34,7 +34,11 @@ fn concurrent_publication_retains_one_interned_config() {
 
     let config_addresses = handles
         .into_iter()
-        .map(|handle| handle.join().expect("config thread should not panic"))
+        .map(|handle| {
+            handle
+                .join()
+                .expect("config thread should not panic")
+        })
         .collect::<HashSet<_>>();
 
     assert_eq!(config_addresses.len(), 1);
@@ -81,7 +85,9 @@ fn unkeyed_header_pins_to_the_registry_the_same_overlay_declared() {
     let by_uri = pin_unkeyed_header(&headers, &overlay_default_registry(&overlay));
 
     assert_eq!(
-        by_uri.get("//trusted.example.com/").map(String::as_str),
+        by_uri
+            .get("//trusted.example.com/")
+            .map(String::as_str),
         Some("Bearer host-secret"),
     );
     assert_eq!(by_uri.len(), 1);
@@ -96,7 +102,12 @@ fn unkeyed_header_falls_back_to_npmjs_when_the_overlay_declares_no_registry() {
 
     let by_uri = pin_unkeyed_header(&headers, &overlay_default_registry(&ConfigOverlay::default()));
 
-    assert_eq!(by_uri.get("//registry.npmjs.org/").map(String::as_str), Some("Bearer host-secret"));
+    assert_eq!(
+        by_uri
+            .get("//registry.npmjs.org/")
+            .map(String::as_str),
+        Some("Bearer host-secret")
+    );
 }
 
 /// A default registry that is not a parseable URL leaves the unkeyed header
@@ -130,7 +141,12 @@ fn an_explicit_key_missing_its_trailing_slash_still_wins() {
 
     let by_uri = pin_unkeyed_header(&headers, &overlay_default_registry(&overlay));
 
-    assert_eq!(by_uri.get("//trusted.example.com/").map(String::as_str), Some("Bearer explicit"));
+    assert_eq!(
+        by_uri
+            .get("//trusted.example.com/")
+            .map(String::as_str),
+        Some("Bearer explicit")
+    );
     assert_eq!(by_uri.len(), 1);
 }
 
@@ -147,5 +163,10 @@ fn a_header_the_host_keyed_explicitly_wins_over_the_unkeyed_one() {
 
     let by_uri = pin_unkeyed_header(&headers, &overlay_default_registry(&overlay));
 
-    assert_eq!(by_uri.get("//trusted.example.com/").map(String::as_str), Some("Bearer explicit"));
+    assert_eq!(
+        by_uri
+            .get("//trusted.example.com/")
+            .map(String::as_str),
+        Some("Bearer explicit")
+    );
 }

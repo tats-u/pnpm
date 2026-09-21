@@ -250,31 +250,43 @@ impl DependenciesTreeNode {
     /// Wanted-lockfile `DepPath` for this occurrence, if it carried one.
     #[must_use]
     pub fn previous_dep_path(&self) -> Option<&DepPath> {
-        self.locked.as_ref()?.previous_dep_path.as_ref()
+        self.locked
+            .as_ref()?
+            .previous_dep_path
+            .as_ref()
     }
 
     /// Locked `peer name → provider DepPath` bindings, if any.
     #[must_use]
     pub fn locked_peer_context(&self) -> Option<&BTreeMap<String, DepPath>> {
-        self.locked.as_ref()?.locked_peer_context.as_ref()
+        self.locked
+            .as_ref()?
+            .locked_peer_context
+            .as_ref()
     }
 
     /// Child aliases whose current provider must win over a locked one.
     #[must_use]
     pub fn must_win_dependency_names(&self) -> Option<&HashSet<String>> {
-        self.locked.as_ref()?.dependency_names_whose_current_provider_must_win.as_ref()
+        self.locked
+            .as_ref()?
+            .dependency_names_whose_current_provider_must_win
+            .as_ref()
     }
 
     /// `true` when no locked peer context is recorded — the fast-cache
     /// precondition.
     #[must_use]
     pub fn has_no_locked_peer_context(&self) -> bool {
-        self.locked.as_ref().is_none_or(|locked| locked.locked_peer_context.is_none())
+        self.locked
+            .as_ref()
+            .is_none_or(|locked| locked.locked_peer_context.is_none())
     }
 
     /// The carry-over slot, allocated on first write.
     pub fn locked_mut(&mut self) -> &mut LockedResolution {
-        self.locked.get_or_insert_with(Box::default)
+        self.locked
+            .get_or_insert_with(Box::default)
     }
 }
 

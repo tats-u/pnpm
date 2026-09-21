@@ -42,7 +42,10 @@ impl DefaultResolver {
         opts: &ResolveOptions,
     ) -> Result<ResolveResult, ResolveError> {
         for resolver in &self.chain {
-            if let Some(result) = resolver.resolve(wanted_dependency, opts).await? {
+            if let Some(result) = resolver
+                .resolve(wanted_dependency, opts)
+                .await?
+            {
                 return Ok(result);
             }
         }
@@ -58,7 +61,10 @@ impl DefaultResolver {
         opts: &ResolveOptions,
     ) -> Result<Option<LatestInfo>, ResolveError> {
         for resolver in &self.chain {
-            if let Some(info) = resolver.resolve_latest(query, opts).await? {
+            if let Some(info) = resolver
+                .resolve_latest(query, opts)
+                .await?
+            {
                 return Ok(Some(info));
             }
         }
@@ -82,7 +88,10 @@ impl Resolver for DefaultResolver {
     ) -> ResolveFuture<'a> {
         Box::pin(async move {
             for resolver in &self.chain {
-                if let Some(result) = resolver.resolve(wanted_dependency, opts).await? {
+                if let Some(result) = resolver
+                    .resolve(wanted_dependency, opts)
+                    .await?
+                {
                     return Ok(Some(result));
                 }
             }
@@ -134,8 +143,14 @@ impl SpecNotSupportedByAnyResolverError {
 /// either half omitted when absent. Used at error-construction time so
 /// the message is computed once.
 fn render_specifier(wanted_dependency: &WantedDependency) -> String {
-    let alias = wanted_dependency.alias.as_deref().unwrap_or("");
-    let bare = wanted_dependency.bare_specifier.as_deref().unwrap_or("");
+    let alias = wanted_dependency
+        .alias
+        .as_deref()
+        .unwrap_or("");
+    let bare = wanted_dependency
+        .bare_specifier
+        .as_deref()
+        .unwrap_or("");
     if alias.is_empty() && bare.is_empty() {
         return String::new();
     }

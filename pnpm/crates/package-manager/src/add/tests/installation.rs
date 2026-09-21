@@ -200,7 +200,9 @@ async fn add_does_not_wait_for_a_slower_later_resolution_after_an_error() {
     for (scope, name, response_delay_ms) in packages {
         let package_name = format!("@{scope}/{name}");
         let mut server = mockito::Server::new_async().await;
-        config.registries_by_scope.insert(format!("@{scope}"), format!("{}/", server.url()));
+        config
+            .registries_by_scope
+            .insert(format!("@{scope}"), format!("{}/", server.url()));
         let latest_path = format!("/@{scope}%2F{name}/latest");
         let latest = server
             .mock("GET", latest_path.as_str())

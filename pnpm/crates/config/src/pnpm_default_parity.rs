@@ -171,8 +171,9 @@ fn mapped_rows(cfg: &Config) -> Vec<(&'static str, Scalar)> {
         ("frozen-store", Bool(cfg.frozen_store)),
         (
             "minimum-release-age",
-            Int(cfg.minimum_release_age.expect("pacquet defaults minimum-release-age to Some")
-                as i64),
+            Int(cfg
+                .minimum_release_age
+                .expect("pacquet defaults minimum-release-age to Some") as i64),
         ),
         ("modules-cache-max-age", Int(cfg.modules_cache_max_age as i64)),
         ("dlx-cache-max-age", Int(cfg.dlx_cache_max_age as i64)),
@@ -302,14 +303,13 @@ fn scripts_prepend_node_path_scalar(value: ScriptsPrependNodePath) -> Scalar {
 /// a checked-in copy that could silently drift.
 fn read_pnpm_default_options() -> String {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../../pnpm11/config/reader/src/index.ts");
-    let src = std::fs::read_to_string(path)
-        .unwrap_or_else(|err| {
-            panic!(
-                "read pnpm config-reader source at {path}: {err}. \
+    let src = std::fs::read_to_string(path).unwrap_or_else(|err| {
+        panic!(
+            "read pnpm config-reader source at {path}: {err}. \
              This contract test reads pnpm's `defaultOptions` from the TypeScript \
              tree; if config/reader moved, update the path.",
-            )
-        });
+        )
+    });
     let marker = "const defaultOptions: Partial<KebabCaseConfig> = {";
     let start = src
         .find(marker)
@@ -371,11 +371,17 @@ fn pnpm_raw_value<'a>(block: &'a str, key: &str) -> Option<&'a str> {
         })?;
     let after = block[key_pos.0 + key_pos.1..].trim_start();
     if after.starts_with('[') {
-        let close = after.find(']').expect("unterminated array literal in defaultOptions");
+        let close = after
+            .find(']')
+            .expect("unterminated array literal in defaultOptions");
         Some(&after[..=close])
     } else {
         let line_end = after.find('\n').unwrap_or(after.len());
-        Some(strip_line_comment(&after[..line_end]).trim().trim_end_matches(','))
+        Some(
+            strip_line_comment(&after[..line_end])
+                .trim()
+                .trim_end_matches(','),
+        )
     }
 }
 
@@ -464,10 +470,9 @@ fn intentional_divergences_still_diverge() {
     let cfg = Config::default();
 
     for (key, pacquet_value, reason) in divergent_rows(&cfg) {
-        let raw = pnpm_raw_value(&block, key)
-            .unwrap_or_else(|| {
-                panic!("pnpm `defaultOptions` has no entry for divergent key {key:?}")
-            });
+        let raw = pnpm_raw_value(&block, key).unwrap_or_else(|| {
+            panic!("pnpm `defaultOptions` has no entry for divergent key {key:?}")
+        });
         let pnpm_value = parse_scalar(raw, key);
         assert_ne!(
             pacquet_value, pnpm_value,
@@ -521,7 +526,9 @@ fn every_pnpm_default_is_classified() {
         .cloned()
         .collect();
 
-    let unclassified: Vec<_> = pnpm_keys.difference(&classified).collect();
+    let unclassified: Vec<_> = pnpm_keys
+        .difference(&classified)
+        .collect();
     assert!(
         unclassified.is_empty(),
         "pnpm added settings pacquet hasn't classified: {unclassified:?}. \
@@ -529,7 +536,9 @@ fn every_pnpm_default_is_classified() {
          `divergent_rows`.",
     );
 
-    let stale: Vec<_> = classified.difference(&pnpm_keys).collect();
+    let stale: Vec<_> = classified
+        .difference(&pnpm_keys)
+        .collect();
     assert!(
         stale.is_empty(),
         "these keys are classified here but no longer in pnpm's `defaultOptions`: {stale:?}. \

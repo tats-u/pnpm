@@ -250,13 +250,17 @@ impl NpmrcAuth {
                 config.registry.clone_from(&url);
                 continue;
             }
-            config.registries_by_scope.insert(scope, url);
+            config
+                .registries_by_scope
+                .insert(scope, url);
         }
         for (scope, url) in std::mem::take(&mut self.routes.json_env) {
             if scope == "default" {
                 config.registry.clone_from(&url);
             }
-            config.registries_by_scope.insert(scope, url);
+            config
+                .registries_by_scope
+                .insert(scope, url);
         }
     }
 }

@@ -61,7 +61,8 @@ fn manifest_from(value: Value) -> PackageManifest {
 }
 
 fn snapshot_keys(lockfile: &Lockfile) -> Vec<String> {
-    let mut keys: Vec<_> = lockfile.snapshots
+    let mut keys: Vec<_> = lockfile
+        .snapshots
         .as_ref()
         .expect("snapshots")
         .keys()
@@ -72,7 +73,11 @@ fn snapshot_keys(lockfile: &Lockfile) -> Vec<String> {
 }
 
 fn snapshot_optional(lockfile: &Lockfile, key: &str) -> bool {
-    lockfile.snapshots.as_ref().expect("snapshots")[&key.parse().expect("snapshot key")].optional
+    lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots")[&key.parse().expect("snapshot key")]
+        .optional
 }
 
 #[test]
@@ -105,7 +110,8 @@ fn absorbs_a_removal_and_a_widened_ignore_list_in_one_pass() {
     let importer = &updated.importers["."];
     assert!(importer.optional_dependencies.is_none());
     assert!(
-        !importer.dependencies
+        !importer
+            .dependencies
             .as_ref()
             .expect("dependencies")
             .contains_key(&"foo".parse().expect("alias")),
@@ -136,12 +142,17 @@ fn absorbs_a_group_move_and_a_settings_change_in_one_pass() {
 
     let importer = &updated.importers["."];
     assert!(
-        importer.dev_dependencies
+        importer
+            .dev_dependencies
             .as_ref()
             .is_some_and(|deps| deps.contains_key(&"foo".parse().expect("alias"))),
     );
     assert!(
-        !updated.settings.as_ref().expect("settings").auto_install_peers,
+        !updated
+            .settings
+            .as_ref()
+            .expect("settings")
+            .auto_install_peers,
         "the settings block rode along with the manifest drift",
     );
 }
@@ -298,14 +309,18 @@ fn absorbs_a_removal_that_orphans_a_patch_under_allow_unused_patches() {
 #[test]
 fn falls_back_when_an_ignored_optional_is_embedded_in_a_peer_suffix() {
     let mut subject = lockfile();
-    subject.snapshots
+    subject
+        .snapshots
         .as_mut()
         .expect("snapshots")
         .insert(
-            "baz@4.0.0(opt@5.0.0)".parse().expect("snapshot key"),
+            "baz@4.0.0(opt@5.0.0)"
+                .parse()
+                .expect("snapshot key"),
             serde_saphyr::from_str("dependencies:\n  opt: 5.0.0").expect("snapshot"),
         );
-    subject.importers
+    subject
+        .importers
         .get_mut(".")
         .expect("importer")
         .dependencies
@@ -363,17 +378,23 @@ fn recomputes_optional_flags_for_an_ignored_optional_removal() {
         ..Config::default()
     };
     let mut subject = lockfile();
-    let importer = subject.importers.get_mut(".").expect("importer");
-    let moved = importer.dependencies
+    let importer = subject
+        .importers
+        .get_mut(".")
+        .expect("importer");
+    let moved = importer
+        .dependencies
         .as_mut()
         .expect("dependencies")
         .remove(&"bar".parse().expect("alias"))
         .expect("bar");
-    importer.optional_dependencies
+    importer
+        .optional_dependencies
         .as_mut()
         .expect("optionalDependencies")
         .insert("bar".parse().expect("alias"), moved);
-    subject.snapshots
+    subject
+        .snapshots
         .as_mut()
         .expect("snapshots")
         .get_mut(&"bar@2.0.0".parse().expect("key"))
@@ -399,7 +420,9 @@ fn recomputes_optional_flags_for_an_ignored_optional_removal() {
 /// The hashes the caller computes once per attempt and hands to the
 /// pipeline.
 fn patch_hashes(config: &Config) -> Option<std::collections::BTreeMap<String, String>> {
-    config.patched_dependency_hashes().expect("hash the configured patch files")
+    config
+        .patched_dependency_hashes()
+        .expect("hash the configured patch files")
 }
 
 fn workspace(patches: &[&str]) -> TempDir {
@@ -437,7 +460,8 @@ fn absorbs_a_peer_setting_once_the_removal_drops_the_last_peer_dependent() {
     let mut subject = lockfile();
     subject.settings =
         Some(crate::fast_update_settings::lockfile_settings_from_config(&Config::default()));
-    subject.importers
+    subject
+        .importers
         .get_mut(".")
         .expect("importer")
         .dependencies
@@ -447,21 +471,27 @@ fn absorbs_a_peer_setting_once_the_removal_drops_the_last_peer_dependent() {
             "has-peer".parse().expect("alias"),
             serde_saphyr::from_str("{specifier: ^6.0.0, version: 6.0.0}").expect("dependency"),
         );
-    subject.packages
+    subject
+        .packages
         .as_mut()
         .expect("packages")
         .insert(
-            "has-peer@6.0.0".parse().expect("package key"),
+            "has-peer@6.0.0"
+                .parse()
+                .expect("package key"),
             serde_saphyr::from_str(
                 "resolution:\n  integrity: sha512-has-peer\npeerDependencies:\n  foo: ^1.0.0",
             )
             .expect("package"),
         );
-    subject.snapshots
+    subject
+        .snapshots
         .as_mut()
         .expect("snapshots")
         .insert(
-            "has-peer@6.0.0".parse().expect("snapshot key"),
+            "has-peer@6.0.0"
+                .parse()
+                .expect("snapshot key"),
             serde_saphyr::from_str("{}").expect("snapshot"),
         );
     let manifest = manifest_from(json!({
@@ -480,7 +510,13 @@ fn absorbs_a_peer_setting_once_the_removal_drops_the_last_peer_dependent() {
     )
     .expect("the removal prunes the only peer dependent, so the setting cannot affect the graph");
 
-    assert!(!updated.settings.as_ref().expect("settings").auto_install_peers);
+    assert!(
+        !updated
+            .settings
+            .as_ref()
+            .expect("settings")
+            .auto_install_peers
+    );
     assert!(
         !snapshot_keys(&updated)
             .iter()

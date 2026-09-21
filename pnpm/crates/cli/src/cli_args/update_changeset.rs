@@ -119,8 +119,11 @@ pub(super) struct UpdateChangesetContext {
 
 impl UpdateChangesetContext {
     pub(super) fn capture(config: &Config, manifest_path: &Path) -> miette::Result<Self> {
-        let project_dir = manifest_path.parent().expect("manifest path always has a parent dir");
-        let workspace_dir = config.workspace_dir
+        let project_dir = manifest_path
+            .parent()
+            .expect("manifest path always has a parent dir");
+        let workspace_dir = config
+            .workspace_dir
             .as_deref()
             .unwrap_or(project_dir)
             .to_path_buf();
@@ -182,7 +185,9 @@ impl UpdateChangesetContext {
             return Ok(());
         }
 
-        let releases = releases.into_iter().collect::<IndexMap<_, _>>();
+        let releases = releases
+            .into_iter()
+            .collect::<IndexMap<_, _>>();
         ensure_changeset_dir_is_safe(&changeset_dir)?;
         let content = format_change_intent(&releases, "Update dependencies.");
         let changeset_path = write_changeset(&changeset_dir, &content)?;
@@ -221,15 +226,18 @@ impl UpdateChangesetContext {
         let Some(package_name) = releasable_package_name(&manifest, ignored) else {
             return Ok(None);
         };
-        let dep_specs =
-            UpdateDepSpecs::from_manifest(&manifest).map_err(UpdateChangesetError::InspectProject)?;
-        let dep_specs_before = self.dep_specs_before.get(root_dir).and_then(Option::as_ref);
-        let peer_dependencies_changed = dep_specs_before.is_some_and(|before| {
-            before.peer_dependencies != dep_specs.peer_dependencies
-        }) || uses_changed_catalog_entry(
-            [dep_specs.peer_dependencies.as_ref()],
-            changed_catalog_entries,
-        );
+        let dep_specs = UpdateDepSpecs::from_manifest(&manifest)
+            .map_err(UpdateChangesetError::InspectProject)?;
+        let dep_specs_before = self
+            .dep_specs_before
+            .get(root_dir)
+            .and_then(Option::as_ref);
+        let peer_dependencies_changed = dep_specs_before
+            .is_some_and(|before| before.peer_dependencies != dep_specs.peer_dependencies)
+            || uses_changed_catalog_entry(
+                [dep_specs.peer_dependencies.as_ref()],
+                changed_catalog_entries,
+            );
         if peer_dependencies_changed {
             return Ok(Some((package_name.to_string(), IntentBumpType::Major)));
         }
@@ -240,9 +248,8 @@ impl UpdateChangesetContext {
             dep_specs.production_groups(),
             changed_catalog_entries,
         );
-        Ok(production_dependencies_changed.then(|| {
-            (package_name.to_string(), IntentBumpType::Patch)
-        }))
+        Ok(production_dependencies_changed
+            .then(|| (package_name.to_string(), IntentBumpType::Patch)))
     }
 }
 
@@ -279,11 +286,9 @@ fn read_ignored_matcher(config_path: &Path) -> Result<Option<Matcher>, UpdateCha
             });
         }
     };
-    let config: Value = serde_json::from_str(&config_text)
-        .map_err(|source| UpdateChangesetError::ParseConfig {
-            path: config_path.to_path_buf(),
-            source,
-        })?;
+    let config: Value = serde_json::from_str(&config_text).map_err(|source| {
+        UpdateChangesetError::ParseConfig { path: config_path.to_path_buf(), source }
+    })?;
     let ignore_patterns = config
         .get("ignore")
         .and_then(Value::as_array)
@@ -300,7 +305,8 @@ fn read_ignored_matcher(config_path: &Path) -> Result<Option<Matcher>, UpdateCha
 fn write_changeset(changeset_dir: &Path, content: &str) -> Result<PathBuf, UpdateChangesetError> {
     loop {
         let mut random = [0_u8; 4];
-        getrandom::fill(&mut random).map_err(|source| UpdateChangesetError::GenerateId { source })?;
+        getrandom::fill(&mut random)
+            .map_err(|source| UpdateChangesetError::GenerateId { source })?;
         let id = format!("pnpm-update-{:08x}", u32::from_be_bytes(random));
         let changeset_path = changeset_dir.join(format!("{id}.md"));
         let mut file = match OpenOptions::new()

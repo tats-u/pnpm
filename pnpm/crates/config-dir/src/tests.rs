@@ -36,20 +36,41 @@ fn macos_uses_library_preferences() {
 #[test]
 fn linux_uses_dot_config() {
     let dir = config_dir("pnpr", "linux", None, None, home("/home/u"));
-    assert_eq!(dir, Some(Path::new("/home/u").join(".config").join("pnpr")));
+    assert_eq!(
+        dir,
+        Some(
+            Path::new("/home/u")
+                .join(".config")
+                .join("pnpr")
+        )
+    );
 }
 
 #[test]
 fn windows_uses_local_app_data() {
     let dir =
         config_dir("pnpm", "windows", None, Some(r"C:\Users\u\AppData\Local"), home(r"C:\Users\u"));
-    assert_eq!(dir, Some(Path::new(r"C:\Users\u\AppData\Local").join("pnpm").join("config")));
+    assert_eq!(
+        dir,
+        Some(
+            Path::new(r"C:\Users\u\AppData\Local")
+                .join("pnpm")
+                .join("config")
+        )
+    );
 }
 
 #[test]
 fn windows_without_local_app_data_falls_back_to_dot_config() {
     let dir = config_dir("pnpm", "windows", None, None, home(r"C:\Users\u"));
-    assert_eq!(dir, Some(Path::new(r"C:\Users\u").join(".config").join("pnpm")));
+    assert_eq!(
+        dir,
+        Some(
+            Path::new(r"C:\Users\u")
+                .join(".config")
+                .join("pnpm")
+        )
+    );
 }
 
 #[test]

@@ -120,7 +120,9 @@ impl OidcState {
         Ok(Self {
             providers,
             http,
-            public_url: public_url.trim_end_matches('/').to_string(),
+            public_url: public_url
+                .trim_end_matches('/')
+                .to_string(),
             state_key,
             consumed: Mutex::new(HashMap::new()),
             attempts: Mutex::new(VecDeque::new()),
@@ -130,7 +132,10 @@ impl OidcState {
     }
 
     pub async fn start(&self, provider_name: &str) -> Result<LoginStart> {
-        let provider = self.providers.get(provider_name).ok_or(RegistryError::NotFound)?;
+        let provider = self
+            .providers
+            .get(provider_name)
+            .ok_or(RegistryError::NotFound)?;
         if provider.config.login.is_none() {
             return Err(RegistryError::NotFound);
         }
@@ -165,9 +170,15 @@ impl OidcState {
     ) -> Result<LoginSession> {
         let login = self.open_login(browser_secret)?;
         self.validate_pending_login(&login, provider_name, state, code)?;
-        let _exchange = self.exchanges.try_acquire().map_err(|_| unavailable())?;
+        let _exchange = self
+            .exchanges
+            .try_acquire()
+            .map_err(|_| unavailable())?;
         self.record_attempt(&login.state_hash)?;
-        let provider = self.providers.get(provider_name).ok_or_else(rejected)?;
+        let provider = self
+            .providers
+            .get(provider_name)
+            .ok_or_else(rejected)?;
         let metadata = self.metadata(provider, false).await?;
         let response = self
             .login_client(provider, metadata.clone())?
@@ -177,21 +188,21 @@ impl OidcState {
             .request_async(self)
             .await
             .map_err(|_| rejected())?;
-        let token = response.id_token().ok_or_else(rejected)?;
-        let expiration = self.verified_expiration(
-            provider,
-            &metadata,
-            &response,
-            token,
-            &Nonce::new(login.nonce),
-        )
-        .await?;
+        let token = response
+            .id_token()
+            .ok_or_else(rejected)?;
+        let expiration = self
+            .verified_expiration(provider, &metadata, &response, token, &Nonce::new(login.nonce))
+            .await?;
         let binding = bound_user(&provider.config, token)?;
         let now = Utc::now().timestamp();
         if login.expires <= now {
             return Err(rejected());
         }
-        let mut consumed = self.consumed.lock().expect("OIDC consumed mutex poisoned");
+        let mut consumed = self
+            .consumed
+            .lock()
+            .expect("OIDC consumed mutex poisoned");
         consumed.retain(|_, expires| *expires > now);
         if consumed.contains_key(&login.state_hash) || consumed.len() >= MAX_ENTRIES {
             return Err(rejected());
@@ -217,7 +228,8 @@ impl OidcState {
         {
             return Err(rejected());
         }
-        if self.consumed
+        if self
+            .consumed
             .lock()
             .expect("OIDC consumed mutex poisoned")
             .contains_key(&login.state_hash)
@@ -242,12 +254,18 @@ impl OidcState {
         if token.claims(&verifier, nonce).is_err() {
             verifier = token_verifier(&provider.config, &self.metadata(provider, true).await?)?;
         }
-        let claims = token.claims(&verifier, nonce).map_err(|_| rejected())?;
+        let claims = token
+            .claims(&verifier, nonce)
+            .map_err(|_| rejected())?;
         if let Some(expected) = claims.access_token_hash() {
             let actual = AccessTokenHash::from_token(
                 response.access_token(),
-                token.signing_alg().map_err(|_| rejected())?,
-                token.signing_key(&verifier).map_err(|_| rejected())?,
+                token
+                    .signing_alg()
+                    .map_err(|_| rejected())?,
+                token
+                    .signing_key(&verifier)
+                    .map_err(|_| rejected())?,
             )
             .map_err(|_| rejected())?;
             if actual != *expected {
@@ -258,7 +276,10 @@ impl OidcState {
     }
 
     fn record_attempt(&self, state_hash: &str) -> Result<()> {
-        let mut attempts = self.attempts.lock().expect("OIDC attempts mutex poisoned");
+        let mut attempts = self
+            .attempts
+            .lock()
+            .expect("OIDC attempts mutex poisoned");
         if attempts
             .iter()
             .any(|state| state == state_hash)
@@ -286,9 +307,15 @@ impl OidcState {
         if cookie.len() > 4096 {
             return Err(rejected());
         }
-        let (payload, signature) = cookie.split_once('.').ok_or_else(rejected)?;
-        let payload = BASE64_URL_SAFE_NO_PAD.decode(payload).map_err(|_| rejected())?;
-        let signature = BASE64_URL_SAFE_NO_PAD.decode(signature).map_err(|_| rejected())?;
+        let (payload, signature) = cookie
+            .split_once('.')
+            .ok_or_else(rejected)?;
+        let payload = BASE64_URL_SAFE_NO_PAD
+            .decode(payload)
+            .map_err(|_| rejected())?;
+        let signature = BASE64_URL_SAFE_NO_PAD
+            .decode(signature)
+            .map_err(|_| rejected())?;
         let signature = Signature::from_slice(&signature).map_err(|_| rejected())?;
         self.state_key
             .verifying_key()
@@ -303,7 +330,10 @@ impl OidcState {
         metadata: CoreProviderMetadata,
     ) -> Result<LoginClient> {
         let config = &provider.config;
-        let login = config.login.as_ref().ok_or_else(rejected)?;
+        let login = config
+            .login
+            .as_ref()
+            .ok_or_else(rejected)?;
         let auth_type = if login.client_secret.is_none() {
             AuthType::RequestBody
         } else if metadata
@@ -324,7 +354,10 @@ impl OidcState {
         Ok(CoreClient::from_provider_metadata(
             metadata,
             ClientId::new(config.audience.clone()),
-            login.client_secret.clone().map(ClientSecret::new),
+            login
+                .client_secret
+                .clone()
+                .map(ClientSecret::new),
         )
         .set_auth_type(auth_type)
         .set_redirect_uri(
@@ -344,15 +377,23 @@ impl OidcState {
             if let Some(metadata) = cached_metadata(&cache, refresh) {
                 return Ok(metadata);
             }
-            if cache.attempted_at.is_some_and(|at| at.elapsed() < REFRESH_INTERVAL) {
+            if cache
+                .attempted_at
+                .is_some_and(|at| at.elapsed() < REFRESH_INTERVAL)
+            {
                 return Err(unavailable());
             }
             cache.attempted_at = Some(Instant::now());
         }
         let issuer = IssuerUrl::new(provider.config.issuer.clone()).map_err(|_| rejected())?;
-        let metadata =
-            CoreProviderMetadata::discover_async(issuer, self).await.map_err(|_| unavailable())?;
-        secure_url(metadata.authorization_endpoint().as_str())?;
+        let metadata = CoreProviderMetadata::discover_async(issuer, self)
+            .await
+            .map_err(|_| unavailable())?;
+        secure_url(
+            metadata
+                .authorization_endpoint()
+                .as_str(),
+        )?;
         if let Some(endpoint) = metadata.token_endpoint() {
             secure_url(endpoint.as_str())?;
         }
@@ -364,7 +405,8 @@ impl OidcState {
         secure_url(&request.uri().to_string())?;
         network::validate_destination(&request.uri().to_string())?;
         let (parts, body) = request.into_parts();
-        let mut response = self.http
+        let mut response = self
+            .http
             .request(parts.method, parts.uri.to_string())
             .headers(parts.headers)
             .body(body)
@@ -376,19 +418,28 @@ impl OidcState {
             builder = builder.header(key, value);
         }
         let mut body = Vec::new();
-        while let Some(chunk) = response.chunk().await.map_err(|_| unavailable())? {
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|_| unavailable())?
+        {
             if body.len() + chunk.len() > 1024 * 1024 {
                 return Err(unavailable());
             }
             body.extend_from_slice(&chunk);
         }
-        builder.body(body).map_err(|_| unavailable())
+        builder
+            .body(body)
+            .map_err(|_| unavailable())
     }
 }
 
 fn cached_metadata(cache: &MetadataCache, refresh: bool) -> Option<CoreProviderMetadata> {
-    let recently_attempted = cache.attempted_at.is_some_and(|at| at.elapsed() < REFRESH_INTERVAL);
-    cache.value
+    let recently_attempted = cache
+        .attempted_at
+        .is_some_and(|at| at.elapsed() < REFRESH_INTERVAL);
+    cache
+        .value
         .as_ref()
         .filter(|(fetched, _)| fetched.elapsed() < METADATA_TTL && (!refresh || recently_attempted))
         .map(|(_, metadata)| metadata.clone())

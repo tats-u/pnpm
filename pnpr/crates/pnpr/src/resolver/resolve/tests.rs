@@ -138,7 +138,8 @@ async fn workspace_without_root_project_has_no_synthetic_root_importer() {
     .await;
 
     assert_eq!(
-        lockfile.importers
+        lockfile
+            .importers
             .keys()
             .map(String::as_str)
             .collect::<std::collections::BTreeSet<_>>(),
@@ -275,14 +276,18 @@ async fn case_aliasing_importer_dirs_never_drop_a_project() {
 }
 
 async fn resolve_json(request: serde_json::Value) -> Lockfile {
-    try_resolve_json(request).await.expect("offline workspace resolution succeeds")
+    try_resolve_json(request)
+        .await
+        .expect("offline workspace resolution succeeds")
 }
 
 async fn resolve_json_with(
     request: serde_json::Value,
     configure: impl FnOnce(&mut Config),
 ) -> Lockfile {
-    try_resolve_json_with(request, configure).await.expect("offline workspace resolution succeeds")
+    try_resolve_json_with(request, configure)
+        .await
+        .expect("offline workspace resolution succeeds")
 }
 
 async fn try_resolve_json(request: serde_json::Value) -> Result<Lockfile, super::ResolveError> {
@@ -316,14 +321,17 @@ async fn try_resolve_json_with(
 }
 
 fn assert_workspace_link(lockfile: &Lockfile, importer: &str, alias: &str, expected_target: &str) {
-    let dependencies = lockfile.importers
+    let dependencies = lockfile
+        .importers
         .get(importer)
         .expect("importer exists")
         .dependencies
         .as_ref()
         .expect("importer dependencies exist");
     let alias = PkgName::parse(alias).expect("dependency alias parses");
-    let dependency = dependencies.get(&alias).expect("workspace dependency exists");
+    let dependency = dependencies
+        .get(&alias)
+        .expect("workspace dependency exists");
     match &dependency.version {
         ImporterDepVersion::Link(target) => assert_eq!(target, expected_target),
         version => panic!("expected workspace link, got {version:?}"),

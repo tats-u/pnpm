@@ -141,7 +141,10 @@ fn self_update_republishes_global_shims_from_a_compatible_engine() {
     assert_eq!(fs::read(node).unwrap(), b"new shim engine");
     assert_eq!(
         native_shim_target(&global_bin, "node").unwrap(),
-        Some(ShimTarget::Installed(root.path().join("node-release/bin/node"))),
+        Some(ShimTarget::Installed(
+            root.path()
+                .join("node-release/bin/node")
+        )),
     );
 }
 
@@ -186,7 +189,11 @@ fn self_update_migrates_legacy_shell_shims() {
         native_shim_target(&global_bin, "yarn").unwrap(),
         Some(ShimTarget::Virtual("yarn".to_string())),
     );
-    assert!(fs::read_to_string(global_bin.join("direct")).unwrap().starts_with("#!/bin/sh"));
+    assert!(
+        fs::read_to_string(global_bin.join("direct"))
+            .unwrap()
+            .starts_with("#!/bin/sh")
+    );
     assert_eq!(native_shim_target(&global_bin, "direct").unwrap(), None);
     assert!(!dispatcher.exists());
 }
@@ -204,7 +211,12 @@ fn self_update_installs_no_shim_where_none_exists() {
 
     refresh_global_shims(&global_bin, &installed, "12.3.0").unwrap();
 
-    assert_eq!(fs::read_dir(&global_bin).unwrap().count(), 0);
+    assert_eq!(
+        fs::read_dir(&global_bin)
+            .unwrap()
+            .count(),
+        0
+    );
 }
 
 #[test]
@@ -269,5 +281,9 @@ fn assert_pnpm_runs_reports_the_exit_code_of_an_engine_that_fails() {
 
     let err = install_pnpm::assert_pnpm_runs(&install_dir, "@pnpm/exe", "1.2.3").unwrap_err();
 
-    assert!(err.to_string().contains("exited with code 1"), "{err}");
+    assert!(
+        err.to_string()
+            .contains("exited with code 1"),
+        "{err}"
+    );
 }

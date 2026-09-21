@@ -21,9 +21,15 @@ fn hydrates_only_requested_versions_and_caches_them() {
 
     assert_eq!(package.versions.len(), 2);
     assert!(package.versions.contains_key("1.0.0"));
-    let picked = package.versions.get("2.0.0").expect("hydrate 2.0.0");
+    let picked = package
+        .versions
+        .get("2.0.0")
+        .expect("hydrate 2.0.0");
     assert_eq!(picked.version.to_string(), "2.0.0");
-    let again = package.versions.get("2.0.0").expect("cached 2.0.0");
+    let again = package
+        .versions
+        .get("2.0.0")
+        .expect("cached 2.0.0");
     assert!(std::sync::Arc::ptr_eq(&picked, &again));
 }
 
@@ -42,7 +48,8 @@ fn sorts_version_slots_for_lookup() {
     );
 
     assert_eq!(
-        package.versions
+        package
+            .versions
             .keys()
             .map(String::as_str)
             .collect::<Vec<_>>(),
@@ -118,7 +125,9 @@ fn filtered_keeps_slots_without_hydration() {
             }
         }"#,
     );
-    let filtered = package.versions.filtered(|version| version == "1.0.0");
+    let filtered = package
+        .versions
+        .filtered(|version| version == "1.0.0");
     assert_eq!(filtered.len(), 1);
     assert!(filtered.get("1.0.0").is_some());
 }
@@ -135,7 +144,9 @@ fn pinned_version_falls_back_past_undecodable_highest() {
             }
         }"#,
     );
-    let pinned = package.pinned_version("^1.0.0").expect("fall back to 1.0.0");
+    let pinned = package
+        .pinned_version("^1.0.0")
+        .expect("fall back to 1.0.0");
     assert_eq!(pinned.version.to_string(), "1.0.0");
 }
 
@@ -179,7 +190,10 @@ fn is_deprecated_probes_without_hydrating() {
     // can hydrate, and must not have hydrated anything itself: `get`
     // still parses fresh (no cached Arc identity from the probe).
     for version in ["1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0"] {
-        let manifest = package.versions.get(version).expect("hydrate");
+        let manifest = package
+            .versions
+            .get(version)
+            .expect("hydrate");
         assert_eq!(
             package.versions.is_deprecated(version),
             manifest.deprecated.is_some(),

@@ -93,17 +93,17 @@ pub(super) fn select_install_family<Reporter: self::Reporter>(
     let NarrowedWorkspace { selection, unmatched, root_selector } = narrowed;
     // Only an install another ecosystem takes part in reads the scope. The
     // npm install reads the selection itself, so it pays nothing for this.
-    let scope = crate::ecosystem_install::is_enabled(cfg)
-        .then(|| WorkspaceScope {
-            projects: Arc::new(
-                selection.projects
-                    .iter()
-                    .map(|project| project.root_dir.clone())
-                    .collect(),
-            ),
-            selected: Arc::clone(&selection.selected_dirs),
-            root_selector,
-        });
+    let scope = crate::ecosystem_install::is_enabled(cfg).then(|| WorkspaceScope {
+        projects: Arc::new(
+            selection
+                .projects
+                .iter()
+                .map(|project| project.root_dir.clone())
+                .collect(),
+        ),
+        selected: Arc::clone(&selection.selected_dirs),
+        root_selector,
+    });
     // Report what the `--filter` / `-r` selection resolved to, so the user
     // can confirm it before the install acts on it. Emitted once here for
     // every plan shape below — a `PerProject` plan installs each selected
@@ -115,7 +115,12 @@ pub(super) fn select_install_family<Reporter: self::Reporter>(
         level: LogLevel::Debug,
         selected: selection.selected_dirs.len(),
         total: Some(selection.projects.len()),
-        workspace_prefix: Some(selection.workspace_root.to_string_lossy().into_owned()),
+        workspace_prefix: Some(
+            selection
+                .workspace_root
+                .to_string_lossy()
+                .into_owned(),
+        ),
     }));
     let plan = if cfg.shares_one_lockfile() {
         InstallFamilyPlan::Shared(Box::new(selection))
@@ -159,7 +164,10 @@ fn select_workspace_projects_with_cycles(
         return Ok(None);
     }
 
-    let workspace_root = cfg.workspace_dir.clone().unwrap_or_else(|| prefix.to_path_buf());
+    let workspace_root = cfg
+        .workspace_dir
+        .clone()
+        .unwrap_or_else(|| prefix.to_path_buf());
     let (mut projects, workspace_patterns) = discover_workspace_projects(&workspace_root, cfg)?;
     apply_runtime_on_fail(cfg, &mut projects);
     let resolved = resolve_selection(
@@ -174,7 +182,9 @@ fn select_workspace_projects_with_cycles(
         (recursive_sort, precompute_workspace_cycles),
     )?;
 
-    let active_dir = manifest_path.parent().expect("manifest path always has a parent dir");
+    let active_dir = manifest_path
+        .parent()
+        .expect("manifest path always has a parent dir");
     let active_manifest_is_standin =
         configuration::active_manifest_is_standin(active_dir, &projects)?;
     let install_dirs = install_dirs(&resolved.selected_dirs, &projects, &workspace_root);
@@ -236,7 +246,8 @@ fn resolve_selection(
 
 fn selected_project_dirs(selection: &RecursiveSelection<'_>) -> Arc<HashSet<PathBuf>> {
     Arc::new(
-        selection.selected
+        selection
+            .selected
             .keys()
             .cloned()
             .collect(),

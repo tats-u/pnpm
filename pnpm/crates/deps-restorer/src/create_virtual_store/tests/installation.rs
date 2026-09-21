@@ -54,7 +54,8 @@ async fn shared_store_context_materializes_a_warm_package() {
         ("package.json", br#"{"name":"from-shared-context","version":"1.0.0"}"#.as_slice()),
         ("index.js", b"module.exports = true\n".as_slice()),
     ] {
-        let (_, digest) = config.store_dir
+        let (_, digest) = config
+            .store_dir
             .write_cas_file(content, false)
             .expect("write package file to materialization store");
         files.insert(
@@ -105,7 +106,9 @@ async fn shared_store_context_materializes_a_warm_package() {
     let logged_methods = AtomicU8::new(0);
     let progress_reported = SharedReportedProgressKeys::default();
     let (store_index_writer, writer_task) = StoreIndexWriter::spawn(&config.store_dir);
-    let requester = workspace_root.to_string_lossy().into_owned();
+    let requester = workspace_root
+        .to_string_lossy()
+        .into_owned();
 
     let output = CreateVirtualStore {
         fetching: crate::VirtualStoreFetchInputs {
@@ -155,9 +158,17 @@ async fn shared_store_context_materializes_a_warm_package() {
     .expect("shared store context should satisfy the offline install");
 
     drop(store_index_writer);
-    writer_task.await.expect("join store-index writer").expect("flush store-index writer");
+    writer_task
+        .await
+        .expect("join store-index writer")
+        .expect("flush store-index writer");
 
-    assert_eq!(output.requires_build_by_snapshot.get(&package_key), Some(&false));
+    assert_eq!(
+        output
+            .requires_build_by_snapshot
+            .get(&package_key),
+        Some(&false)
+    );
     assert_eq!(output.materialized_snapshots.as_slice(), std::slice::from_ref(&package_key));
     let installed_body = layout
         .slot_dir(&package_key)

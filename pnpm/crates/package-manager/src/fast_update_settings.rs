@@ -60,12 +60,9 @@ pub(crate) fn apply_settings_update(
 ) -> bool {
     let changed = changed_settings(candidate.settings.as_ref(), settings);
     let workspace_package_names = workspace_package_names(manifests);
-    if !changed
-        .iter()
-        .all(|setting| {
-            setting_cannot_affect_lockfile(*setting, candidate, manifests, &workspace_package_names)
-        })
-    {
+    if !changed.iter().all(|setting| {
+        setting_cannot_affect_lockfile(*setting, candidate, manifests, &workspace_package_names)
+    }) {
         return false;
     }
     candidate.settings = Some(settings.clone());
@@ -131,31 +128,40 @@ fn has_no_peer_dependencies(
     lockfile: &Lockfile,
     manifests: &[(PathBuf, &PackageManifest)],
 ) -> bool {
-    let peerless_packages = lockfile.packages
+    let peerless_packages = lockfile
+        .packages
         .iter()
         .flatten()
         .all(|(key, metadata)| {
             key.suffix.peer().is_empty()
-                && metadata.peer_dependencies.as_ref().is_none_or(HashMap::is_empty)
-                && metadata.peer_dependencies_meta.as_ref().is_none_or(HashMap::is_empty)
+                && metadata
+                    .peer_dependencies
+                    .as_ref()
+                    .is_none_or(HashMap::is_empty)
+                && metadata
+                    .peer_dependencies_meta
+                    .as_ref()
+                    .is_none_or(HashMap::is_empty)
         });
-    let peerless_snapshots = lockfile.snapshots
+    let peerless_snapshots = lockfile
+        .snapshots
         .iter()
         .flatten()
         .all(|(key, snapshot)| {
             key.suffix.peer().is_empty()
-                && snapshot.transitive_peer_dependencies.as_ref().is_none_or(Vec::is_empty)
+                && snapshot
+                    .transitive_peer_dependencies
+                    .as_ref()
+                    .is_none_or(Vec::is_empty)
         });
     peerless_packages
         && peerless_snapshots
-        && manifests
-            .iter()
-            .all(|(_, manifest)| {
-                manifest
-                    .dependencies([DependencyGroup::Peer])
-                    .next()
-                    .is_none()
-            })
+        && manifests.iter().all(|(_, manifest)| {
+            manifest
+                .dependencies([DependencyGroup::Peer])
+                .next()
+                .is_none()
+        })
 }
 
 /// `excludeLinksFromLockfile` decides whether a dependency that
@@ -169,21 +175,18 @@ fn has_no_linked_dependencies(
     manifests: &[(PathBuf, &PackageManifest)],
     workspace_package_names: &HashSet<String>,
 ) -> bool {
-    !lockfile.importers.values().any(has_directory_reference)
-        && manifests
-            .iter()
-            .all(|(_, manifest)| {
-                manifest
-                    .dependencies(DEPENDENCY_GROUPS)
-                    .all(|(alias, bare_specifier)| {
-                        bare_specifier.starts_with("workspace:")
-                            || !is_directory_dependency(
-                                alias,
-                                bare_specifier,
-                                workspace_package_names,
-                            )
-                    })
-            })
+    !lockfile
+        .importers
+        .values()
+        .any(has_directory_reference)
+        && manifests.iter().all(|(_, manifest)| {
+            manifest
+                .dependencies(DEPENDENCY_GROUPS)
+                .all(|(alias, bare_specifier)| {
+                    bare_specifier.starts_with("workspace:")
+                        || !is_directory_dependency(alias, bare_specifier, workspace_package_names)
+                })
+        })
 }
 
 /// `injectWorkspacePackages` replaces the symlinks to workspace
@@ -195,17 +198,18 @@ fn has_no_injectable_dependencies(
     manifests: &[(PathBuf, &PackageManifest)],
     workspace_package_names: &HashSet<String>,
 ) -> bool {
-    !lockfile.importers.values().any(has_directory_reference)
-        && manifests
-            .iter()
-            .all(|(_, manifest)| {
-                !declares_injected_dependency(manifest)
-                    && manifest
-                        .dependencies(DEPENDENCY_GROUPS)
-                        .all(|(alias, bare_specifier)| {
-                            !is_directory_dependency(alias, bare_specifier, workspace_package_names)
-                        })
-            })
+    !lockfile
+        .importers
+        .values()
+        .any(has_directory_reference)
+        && manifests.iter().all(|(_, manifest)| {
+            !declares_injected_dependency(manifest)
+                && manifest
+                    .dependencies(DEPENDENCY_GROUPS)
+                    .all(|(alias, bare_specifier)| {
+                        !is_directory_dependency(alias, bare_specifier, workspace_package_names)
+                    })
+        })
 }
 
 /// Whether `alias` resolves to a directory rather than to a registry
@@ -239,13 +243,11 @@ fn declares_injected_dependency(manifest: &PackageManifest) -> bool {
         .get("dependenciesMeta")
         .and_then(serde_json::Value::as_object)
         .is_some_and(|entries| {
-            entries
-                .values()
-                .any(|meta| {
-                    meta.get("injected")
-                        .and_then(serde_json::Value::as_bool)
-                        .unwrap_or(false)
-                })
+            entries.values().any(|meta| {
+                meta.get("injected")
+                    .and_then(serde_json::Value::as_bool)
+                    .unwrap_or(false)
+            })
         })
 }
 

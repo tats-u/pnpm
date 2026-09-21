@@ -23,7 +23,9 @@ pub fn dependencies_graph_to_package_map(
         builder.add_importer(
             importer_id,
             importer,
-            importer_names.get(importer_id).and_then(Option::as_deref),
+            importer_names
+                .get(importer_id)
+                .and_then(Option::as_deref),
         );
     }
     for (graph_key, node) in &graph.graph {
@@ -84,7 +86,9 @@ impl<'b> HoistedMapBuilder<'b> {
         ] {
             add_hoisted_importer_dependencies(&mut dependencies, deps, &self.package_ids_by_pkg_id);
         }
-        let importer_modules_dir = self.is_loose.then(|| importer_dir.join("node_modules"));
+        let importer_modules_dir = self
+            .is_loose
+            .then(|| importer_dir.join("node_modules"));
         for deps in [
             importer.dependencies.as_ref(),
             importer.optional_dependencies.as_ref(),
@@ -124,17 +128,21 @@ impl<'b> HoistedMapBuilder<'b> {
             &self.package_ids_by_graph_key,
         );
 
-        if let Some(snapshot) = lockfile.snapshots
+        if let Some(snapshot) = lockfile
+            .snapshots
             .as_ref()
             .and_then(|snapshots| {
-                node.package.dep_path
+                node.package
+                    .dep_path
                     .as_str()
                     .parse::<PackageKey>()
                     .ok()
                     .and_then(|key| snapshots.get(&key))
             })
         {
-            let package_modules_dir = self.is_loose.then(|| node.dir.join("node_modules"));
+            let package_modules_dir = self
+                .is_loose
+                .then(|| node.dir.join("node_modules"));
             for deps in [snapshot.dependencies.as_ref(), snapshot.optional_dependencies.as_ref()] {
                 add_hoisted_linked_dependencies(
                     &mut self.packages,
@@ -185,7 +193,12 @@ pub(super) fn index_graph_nodes(
     for (graph_key, node) in &graph.graph {
         let id = graph_package_id(&node.dir, modules_dir);
         package_ids_by_graph_key.insert(graph_key.clone(), id.clone());
-        if let Ok(key) = node.package.dep_path.as_str().parse::<PackageKey>() {
+        if let Ok(key) = node
+            .package
+            .dep_path
+            .as_str()
+            .parse::<PackageKey>()
+        {
             package_ids_by_pkg_id
                 .entry(pnpm_real_hoist::pkg_id(&key))
                 .or_insert_with(|| id.clone());

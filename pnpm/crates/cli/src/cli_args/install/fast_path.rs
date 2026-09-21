@@ -21,11 +21,15 @@ fn report_up_to_date_install(
         level: pnpm_reporter::LogLevel::Debug,
         selected: up_to_date.project_count.unwrap_or(1),
         total: up_to_date.project_count,
-        workspace_prefix: config.workspace_dir
+        workspace_prefix: config
+            .workspace_dir
             .as_deref()
             .map(|dir| dir.to_string_lossy().into_owned()),
     }));
-    let prefix = up_to_date.root.to_string_lossy().into_owned();
+    let prefix = up_to_date
+        .root
+        .to_string_lossy()
+        .into_owned();
     emit(&pnpm_reporter::LogEvent::Pnpm(pnpm_reporter::PnpmLog {
         level: pnpm_reporter::LogLevel::Info,
         message: "Already up to date".to_string(),
@@ -69,7 +73,9 @@ impl InstallArgs {
         if !self.fast_path_is_eligible(config) {
             return false;
         }
-        let config_root = config.root_project_manifest_dir(dir).to_path_buf();
+        let config_root = config
+            .root_project_manifest_dir(dir)
+            .to_path_buf();
         if !pnpm_hooks::finder::find_pnpmfiles(
             &config_root,
             pnpm_package_manager::pnpmfile_selection(config),
@@ -85,16 +91,21 @@ impl InstallArgs {
         let Ok(manifest) = pnpm_package_manifest::PackageManifest::from_path(manifest_path) else {
             return false;
         };
-        let node_linker =
-            self.materialization.node_linker.map_or(config.node_linker, NodeLinkerArg::into_config);
+        let node_linker = self
+            .materialization
+            .node_linker
+            .map_or(config.node_linker, NodeLinkerArg::into_config);
         let Some(up_to_date) = install_already_up_to_date(&UpToDateFastPathCheck {
             config,
             manifest: &manifest,
-            dependency_groups: self.dependency_options.dependency_groups(config.optional).collect(),
+            dependency_groups: self
+                .dependency_options
+                .dependency_groups(config.optional)
+                .collect(),
             node_linker,
-            supported_architectures: self.supported_architectures.apply_to(
-                config.supported_architectures.clone(),
-            ),
+            supported_architectures: self
+                .supported_architectures
+                .apply_to(config.supported_architectures.clone()),
         }) else {
             return false;
         };
@@ -111,7 +122,9 @@ impl InstallArgs {
             || self.lockfile.only
             || self.lockfile.fix
             || self.materialization.force
-            || self.materialization.verify_deps_before_run_install
+            || self
+                .materialization
+                .verify_deps_before_run_install
         {
             return false;
         }
@@ -120,8 +133,13 @@ impl InstallArgs {
         }
         // The merge flags reach `config` only in the dispatch, after this
         // check; and merging is work no up-to-date verdict can skip.
-        if self.lockfile_updates.merge_git_branch_lockfiles
-            || !self.lockfile_updates.merge_git_branch_lockfiles_branch_pattern.is_empty()
+        if self
+            .lockfile_updates
+            .merge_git_branch_lockfiles
+            || !self
+                .lockfile_updates
+                .merge_git_branch_lockfiles_branch_pattern
+                .is_empty()
         {
             return false;
         }
@@ -132,6 +150,9 @@ impl InstallArgs {
         if !config.shares_one_lockfile() && config.workspace_dir.is_some() {
             return false;
         }
-        config.config_dependencies.as_ref().is_none_or(std::collections::BTreeMap::is_empty)
+        config
+            .config_dependencies
+            .as_ref()
+            .is_none_or(std::collections::BTreeMap::is_empty)
     }
 }

@@ -22,8 +22,15 @@ use std::{fs, path::Path};
 fn assert_no_import_backups(lockfile_dir: &Path) {
     let leftovers: Vec<_> = fs::read_dir(lockfile_dir)
         .expect("read the lockfile directory")
-        .map(|entry| entry.expect("read a lockfile directory entry").file_name())
-        .filter(|name| name.to_string_lossy().ends_with(".import.bak"))
+        .map(|entry| {
+            entry
+                .expect("read a lockfile directory entry")
+                .file_name()
+        })
+        .filter(|name| {
+            name.to_string_lossy()
+                .ends_with(".import.bak")
+        })
         .collect();
     assert!(leftovers.is_empty(), "import backups left behind: {leftovers:?}");
 }
@@ -302,8 +309,11 @@ const WORKSPACE_NPM_LOCKFILE: &str = r#"{
 
 fn write_file(dir: &Path, relative_path: &str, contents: &str) {
     let path = dir.join(relative_path);
-    fs::create_dir_all(path.parent().expect("a file path has a parent"))
-        .expect("create parent dir");
+    fs::create_dir_all(
+        path.parent()
+            .expect("a file path has a parent"),
+    )
+    .expect("create parent dir");
     fs::write(path, contents).expect("write fixture file");
 }
 
@@ -340,13 +350,8 @@ fn assert_workspace_pins(workspace: &Path) {
 
 #[test]
 fn import_from_package_lock_json() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_own_storage();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_own_storage();
     npmrc_info.set_dist_tag(DEP_OF_PKG_WITH_1_DEP, "100.1.0", "latest");
 
     write_file(&workspace, "package.json", NPM_FIXTURE_MANIFEST);
@@ -369,13 +374,8 @@ fn import_from_package_lock_json() {
 
 #[test]
 fn import_from_npm_shrinkwrap_json() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_own_storage();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_own_storage();
     npmrc_info.set_dist_tag(DEP_OF_PKG_WITH_1_DEP, "100.1.0", "latest");
 
     write_file(&workspace, "package.json", NPM_FIXTURE_MANIFEST);
@@ -398,13 +398,8 @@ fn import_from_npm_shrinkwrap_json() {
 
 #[test]
 fn import_from_package_lock_json_v3() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_own_storage();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_own_storage();
     npmrc_info.set_dist_tag(DEP_OF_PKG_WITH_1_DEP, "100.1.0", "latest");
 
     write_file(&workspace, "package.json", NPM_FIXTURE_MANIFEST);
@@ -427,13 +422,8 @@ fn import_from_package_lock_json_v3() {
 
 #[test]
 fn import_from_yarn_lock() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_own_storage();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_own_storage();
     npmrc_info.set_dist_tag(DEP_OF_PKG_WITH_1_DEP, "100.1.0", "latest");
 
     write_file(&workspace, "package.json", YARN_FIXTURE_MANIFEST);
@@ -456,13 +446,8 @@ fn import_from_yarn_lock() {
 
 #[test]
 fn import_from_yarn_berry_lock() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_file(&workspace, "package.json", YARN_BERRY_FIXTURE_MANIFEST);
@@ -497,13 +482,8 @@ fn import_from_yarn_berry_lock() {
 
 #[test]
 fn import_fails_when_no_lockfile_is_found() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_file(&workspace, "package.json", r#"{"name":"project","version":"0.0.0"}"#);
@@ -516,20 +496,20 @@ fn import_fails_when_no_lockfile_is_found() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("ERR_PNPM_LOCKFILE_NOT_FOUND"), "stderr:\n{stderr}");
     assert!(stderr.contains("No lockfile found"), "stderr:\n{stderr}");
-    assert!(!workspace.join("pnpm-lock.yaml").exists(), "import must not write a lockfile");
+    assert!(
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "import must not write a lockfile"
+    );
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn import_replaces_existing_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_own_storage();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_own_storage();
     npmrc_info.set_dist_tag(DEP_OF_PKG_WITH_1_DEP, "100.1.0", "latest");
 
     write_file(&workspace, "package.json", NPM_FIXTURE_MANIFEST);
@@ -558,13 +538,8 @@ fn import_replaces_existing_lockfile() {
 
 #[test]
 fn import_preserves_project_lockfile_with_external_lockfile_dir() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_own_storage();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_own_storage();
     npmrc_info.set_dist_tag(DEP_OF_PKG_WITH_1_DEP, "100.1.0", "latest");
 
     write_file(&workspace, "package.json", NPM_FIXTURE_MANIFEST);
@@ -586,7 +561,13 @@ fn import_preserves_project_lockfile_with_external_lockfile_dir() {
     let lockfile = pnpm_lockfile::Lockfile::load_wanted_from_dir(root.path())
         .expect("load imported lockfile")
         .expect("imported lockfile exists");
-    assert_eq!(lockfile.importers.into_keys().collect::<Vec<_>>(), ["workspace"]);
+    assert_eq!(
+        lockfile
+            .importers
+            .into_keys()
+            .collect::<Vec<_>>(),
+        ["workspace"]
+    );
     assert_eq!(
         fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read project lockfile"),
         project_lockfile,
@@ -598,13 +579,8 @@ fn import_preserves_project_lockfile_with_external_lockfile_dir() {
 
 #[test]
 fn import_replaces_external_lockfile_and_preserves_its_env_document() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_own_storage();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_own_storage();
     npmrc_info.set_dist_tag(DEP_OF_PKG_WITH_1_DEP, "100.1.0", "latest");
 
     write_file(&workspace, "package.json", NPM_FIXTURE_MANIFEST);
@@ -621,7 +597,9 @@ fn import_replaces_external_lockfile_and_preserves_its_env_document() {
                 version: "1.0.0".to_string(),
             },
         );
-    env_lockfile.write(root.path()).expect("write external env document");
+    env_lockfile
+        .write(root.path())
+        .expect("write external env document");
     append_workspace_yaml_key(&workspace, "lockfileDir", "..");
 
     pacquet
@@ -632,7 +610,8 @@ fn import_replaces_external_lockfile_and_preserves_its_env_document() {
     let lockfile = pnpm_lockfile::Lockfile::load_wanted_from_dir(root.path())
         .expect("load imported lockfile")
         .expect("imported lockfile exists");
-    let packages: Vec<_> = lockfile.packages
+    let packages: Vec<_> = lockfile
+        .packages
         .expect("imported packages exist")
         .keys()
         .map(ToString::to_string)
@@ -649,7 +628,12 @@ fn import_replaces_external_lockfile_and_preserves_its_env_document() {
         pnpm_lockfile::EnvLockfile::read(root.path()).expect("read external env document"),
         Some(env_lockfile),
     );
-    assert!(!workspace.join("pnpm-lock.yaml").exists(), "no lockfile in the project directory");
+    assert!(
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "no lockfile in the project directory"
+    );
     assert_no_import_backups(root.path());
 
     drop((root, npmrc_info));
@@ -657,13 +641,8 @@ fn import_replaces_external_lockfile_and_preserves_its_env_document() {
 
 #[test]
 fn import_preserves_shared_lockfile_when_writing_a_branch_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_own_storage();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_own_storage();
     npmrc_info.set_dist_tag(DEP_OF_PKG_WITH_1_DEP, "100.1.0", "latest");
 
     write_file(&workspace, "package.json", NPM_FIXTURE_MANIFEST);
@@ -684,7 +663,9 @@ fn import_preserves_shared_lockfile_when_writing_a_branch_lockfile() {
                 version: "1.0.0".to_string(),
             },
         );
-    env_lockfile.write(root.path()).expect("write shared env document");
+    env_lockfile
+        .write(root.path())
+        .expect("write shared env document");
     let shared_lockfile =
         fs::read_to_string(root.path().join("pnpm-lock.yaml")).expect("read shared lockfile");
     write_file(root.path(), "pnpm-lock.feature!import.yaml", "# stale branch lockfile\n");
@@ -694,12 +675,23 @@ fn import_preserves_shared_lockfile_when_writing_a_branch_lockfile() {
         .assert()
         .success();
 
-    let lockfile =
-        pnpm_lockfile::Lockfile::load_from_path(&root.path().join("pnpm-lock.feature!import.yaml"))
-            .expect("load branch lockfile")
-            .expect("branch lockfile exists");
-    assert_eq!(lockfile.importers.into_keys().collect::<Vec<_>>(), ["workspace"]);
-    let packages = lockfile.packages.expect("imported packages exist");
+    let lockfile = pnpm_lockfile::Lockfile::load_from_path(
+        &root
+            .path()
+            .join("pnpm-lock.feature!import.yaml"),
+    )
+    .expect("load branch lockfile")
+    .expect("branch lockfile exists");
+    assert_eq!(
+        lockfile
+            .importers
+            .into_keys()
+            .collect::<Vec<_>>(),
+        ["workspace"]
+    );
+    let packages = lockfile
+        .packages
+        .expect("imported packages exist");
     assert!(
         packages
             .keys()
@@ -721,13 +713,8 @@ fn import_preserves_shared_lockfile_when_writing_a_branch_lockfile() {
 
 #[test]
 fn failed_import_restores_branch_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_file(
@@ -751,8 +738,11 @@ fn failed_import_restores_branch_lockfile() {
     let stderr = String::from_utf8_lossy(&output.get_output().stderr);
     assert!(stderr.contains("ERR_PNPM_NO_MATCHING_VERSION"), "stderr:\n{stderr}");
     assert_eq!(
-        fs::read_to_string(root.path().join("pnpm-lock.feature!import.yaml"))
-            .expect("read restored branch lockfile"),
+        fs::read_to_string(
+            root.path()
+                .join("pnpm-lock.feature!import.yaml")
+        )
+        .expect("read restored branch lockfile"),
         branch_lockfile,
     );
     assert_eq!(
@@ -766,13 +756,8 @@ fn failed_import_restores_branch_lockfile() {
 
 #[test]
 fn failed_import_restores_external_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_file(
@@ -796,20 +781,20 @@ fn failed_import_restores_external_lockfile() {
         original_lockfile,
     );
     assert_no_import_backups(root.path());
-    assert!(!workspace.join("pnpm-lock.yaml").exists(), "no lockfile in the project directory");
+    assert!(
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "no lockfile in the project directory"
+    );
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn failed_import_writes_no_lockfile_where_there_was_none() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_file(
@@ -834,20 +819,20 @@ fn failed_import_writes_no_lockfile_where_there_was_none() {
         "no lockfile in the external lockfile directory",
     );
     assert_no_import_backups(root.path());
-    assert!(!workspace.join("pnpm-lock.yaml").exists(), "no lockfile in the project directory");
+    assert!(
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "no lockfile in the project directory"
+    );
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn import_from_shared_yarn_lock_of_monorepo() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     prepare_workspace(&workspace);
@@ -865,13 +850,8 @@ fn import_from_shared_yarn_lock_of_monorepo() {
 
 #[test]
 fn import_from_shared_package_lock_json_of_monorepo() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     prepare_workspace(&workspace);
@@ -889,13 +869,8 @@ fn import_from_shared_package_lock_json_of_monorepo() {
 
 #[test]
 fn import_from_shared_npm_shrinkwrap_json_of_monorepo() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     prepare_workspace(&workspace);

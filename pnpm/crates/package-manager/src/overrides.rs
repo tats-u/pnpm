@@ -89,8 +89,12 @@ pub struct OverriddenDependencyMatcher<'a> {
 impl OverriddenDependencyMatcher<'_> {
     #[must_use]
     pub fn matches(&self, dep_name: &str, dep_spec: &str) -> bool {
-        self.overrider.choose_override(&self.applicable_parent_scoped, dep_name, dep_spec).is_some()
-            || self.overrider.converge_applies(dep_name, dep_spec)
+        self.overrider
+            .choose_override(&self.applicable_parent_scoped, dep_name, dep_spec)
+            .is_some()
+            || self
+                .overrider
+                .converge_applies(dep_name, dep_spec)
     }
 }
 
@@ -107,7 +111,9 @@ impl VersionsOverrider {
                 converge.insert(
                     override_entry.target_pkg.name.clone(),
                     ConvergeOverride {
-                        new_bare_specifier: override_entry.new_bare_specifier.clone(),
+                        new_bare_specifier: override_entry
+                            .new_bare_specifier
+                            .clone(),
                         version: Version::parse(&override_entry.new_bare_specifier).ok(),
                     },
                 );
@@ -137,9 +143,7 @@ impl VersionsOverrider {
     /// `true` when the hook has no entries and can be skipped.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.parent_scoped.is_empty()
-            && self.generic.is_empty()
-            && self.converge.is_empty()
+        self.parent_scoped.is_empty() && self.generic.is_empty() && self.converge.is_empty()
     }
 
     /// Snapshot of every declared range recorded so far for packages
@@ -168,8 +172,9 @@ impl VersionsOverrider {
     pub fn apply_to_value(&self, manifest: &mut Value, manifest_dir: Option<&Path>) {
         let applicable_parent_scoped = self.applicable_parent_scoped(manifest);
 
-        for group in
-            [DependencyGroup::Prod, DependencyGroup::Optional, DependencyGroup::Dev].iter().copied()
+        for group in [DependencyGroup::Prod, DependencyGroup::Optional, DependencyGroup::Dev]
+            .iter()
+            .copied()
         {
             self.override_group(manifest, group, &applicable_parent_scoped, manifest_dir);
         }
@@ -199,8 +204,12 @@ impl VersionsOverrider {
     }
 
     fn applicable_parent_scoped<'b>(&'b self, manifest: &Value) -> Vec<&'b ResolvedOverride> {
-        let manifest_name = manifest.get("name").and_then(Value::as_str);
-        let manifest_version = manifest.get("version").and_then(Value::as_str);
+        let manifest_name = manifest
+            .get("name")
+            .and_then(Value::as_str);
+        let manifest_version = manifest
+            .get("version")
+            .and_then(Value::as_str);
 
         self.parent_scoped
             .iter()
@@ -237,16 +246,20 @@ impl VersionsOverrider {
         applicable_parent_scoped: &[&ResolvedOverride],
     ) -> bool {
         let key: &'static str = group.into();
-        let Some(map) = value.get(key).and_then(Value::as_object) else { return false };
+        let Some(map) = value
+            .get(key)
+            .and_then(Value::as_object)
+        else {
+            return false;
+        };
 
-        map.iter()
-            .any(|(name, spec)| {
-                spec.as_str()
-                    .is_some_and(|spec| {
-                        self.choose_override(applicable_parent_scoped, name, spec).is_some()
-                            || self.converge_applies(name, spec)
-                    })
+        map.iter().any(|(name, spec)| {
+            spec.as_str().is_some_and(|spec| {
+                self.choose_override(applicable_parent_scoped, name, spec)
+                    .is_some()
+                    || self.converge_applies(name, spec)
             })
+        })
     }
 
     /// Record the declared ranges of every converge-governed edge in
@@ -266,10 +279,18 @@ impl VersionsOverrider {
             DependencyGroup::Peer,
         ] {
             let key: &'static str = group.into();
-            let Some(map) = value.get(key).and_then(Value::as_object) else { continue };
+            let Some(map) = value
+                .get(key)
+                .and_then(Value::as_object)
+            else {
+                continue;
+            };
             for (name, spec) in map {
                 let Some(spec) = spec.as_str() else { continue };
-                if self.choose_override(&applicable_parent_scoped, name, spec).is_none() {
+                if self
+                    .choose_override(&applicable_parent_scoped, name, spec)
+                    .is_none()
+                {
                     self.try_record_converge_range(name, spec);
                 }
             }
@@ -284,7 +305,12 @@ impl VersionsOverrider {
         manifest_dir: Option<&Path>,
     ) {
         let key: &'static str = group.into();
-        let Some(map) = value.get_mut(key).and_then(Value::as_object_mut) else { return };
+        let Some(map) = value
+            .get_mut(key)
+            .and_then(Value::as_object_mut)
+        else {
+            return;
+        };
 
         let entries: Vec<(String, String)> = map
             .iter()
@@ -307,7 +333,8 @@ impl VersionsOverrider {
                 continue;
             }
 
-            let new_spec = chosen.local_target
+            let new_spec = chosen
+                .local_target
                 .as_ref()
                 .map_or_else(
                     || chosen.inner.new_bare_specifier.clone(),
@@ -363,7 +390,8 @@ impl VersionsOverrider {
             remove_peer_dependency(value, &name);
             return;
         }
-        let new_spec = chosen.local_target
+        let new_spec = chosen
+            .local_target
             .as_ref()
             .map_or_else(
                 || chosen.inner.new_bare_specifier.clone(),
@@ -399,7 +427,8 @@ impl VersionsOverrider {
                 return Some("-".to_string());
             }
             return Some(
-                chosen.local_target
+                chosen
+                    .local_target
                     .as_ref()
                     .map_or_else(
                         || chosen.inner.new_bare_specifier.clone(),
@@ -408,7 +437,11 @@ impl VersionsOverrider {
             );
         }
         self.converge_applies(dep_name, dep_spec)
-            .then(|| self.converge[dep_name].new_bare_specifier.clone())
+            .then(|| {
+                self.converge[dep_name]
+                    .new_bare_specifier
+                    .clone()
+            })
     }
 
     /// An [`OverriddenDependencyMatcher`] bound to `manifest`, so the
@@ -451,7 +484,8 @@ impl VersionsOverrider {
         dep_name: &str,
         dep_spec: &str,
     ) -> Option<&ResolvedOverride> {
-        let mut matching: Vec<&ResolvedOverride> = self.generic
+        let mut matching: Vec<&ResolvedOverride> = self
+            .generic
             .iter()
             .filter(|entry| matches_target(&entry.inner.target_pkg, dep_name, dep_spec))
             .collect();
@@ -467,7 +501,9 @@ impl VersionsOverrider {
         let range = self.try_record_converge_range(dep_name, dep_spec)?;
         let entry = &self.converge[dep_name];
         let version = entry.version.as_ref()?;
-        range.satisfies(version).then(|| entry.new_bare_specifier.clone())
+        range
+            .satisfies(version)
+            .then(|| entry.new_bare_specifier.clone())
     }
 
     /// Rewrite-only variant of [`Self::converge_dep`] for
@@ -477,7 +513,8 @@ impl VersionsOverrider {
         self.converge
             .get(dep_name)
             .is_some_and(|entry| {
-                entry.version
+                entry
+                    .version
                     .as_ref()
                     .is_some_and(|version| {
                         parse_declared_range(dep_spec).is_some_and(|range| range.satisfies(version))
@@ -504,13 +541,19 @@ impl VersionsOverrider {
 /// Rewrite a peer's range, as long as the manifest still declares a
 /// `peerDependencies` object.
 fn insert_peer_dependency(value: &mut Value, name: String, spec: String) {
-    if let Some(peers) = value.get_mut("peerDependencies").and_then(Value::as_object_mut) {
+    if let Some(peers) = value
+        .get_mut("peerDependencies")
+        .and_then(Value::as_object_mut)
+    {
         peers.insert(name, Value::String(spec));
     }
 }
 
 fn remove_peer_dependency(value: &mut Value, name: &str) {
-    if let Some(peers) = value.get_mut("peerDependencies").and_then(Value::as_object_mut) {
+    if let Some(peers) = value
+        .get_mut("peerDependencies")
+        .and_then(Value::as_object_mut)
+    {
         peers.remove(name);
     }
 }
@@ -518,12 +561,17 @@ fn remove_peer_dependency(value: &mut Value, name: &str) {
 /// An override value that is not a valid peer range moves the edge into
 /// `dependencies`, creating that object when the manifest declares none.
 fn insert_regular_dependency(value: &mut Value, name: String, spec: String) {
-    if !value.get("dependencies").is_some_and(Value::is_object)
+    if !value
+        .get("dependencies")
+        .is_some_and(Value::is_object)
         && let Some(root) = value.as_object_mut()
     {
         root.insert("dependencies".to_string(), Value::Object(serde_json::Map::new()));
     }
-    if let Some(deps) = value.get_mut("dependencies").and_then(Value::as_object_mut) {
+    if let Some(deps) = value
+        .get_mut("dependencies")
+        .and_then(Value::as_object_mut)
+    {
         deps.insert(name, Value::String(spec));
     }
 }

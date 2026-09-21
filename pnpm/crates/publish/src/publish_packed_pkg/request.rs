@@ -138,7 +138,10 @@ pub(super) async fn put_publish(
         .unwrap_or_default()
         .to_owned();
     let www_authenticate = www_authenticate_header(&response);
-    let body = response.text().await.unwrap_or_default();
+    let body = response
+        .text()
+        .await
+        .unwrap_or_default();
 
     // The registry signals an OTP / web-auth challenge with a 401 that either
     // advertises the `otp` token in `WWW-Authenticate` or carries a
@@ -148,7 +151,9 @@ pub(super) async fn put_publish(
         return Err(PublishHttpError::Otp { challenge: parse_otp_challenge(&body) });
     }
 
-    let stage_id = is_stage.then(|| stage_id_from_body(&body)).flatten();
+    let stage_id = is_stage
+        .then(|| stage_id_from_body(&body))
+        .flatten();
     Ok(PublishResponse {
         ok: status.is_success(),
         status: status.as_u16(),
@@ -175,20 +180,21 @@ pub(super) fn is_otp_challenge(www_authenticate: Option<&str>, body: &str) -> bo
             .split(',')
             .any(|token| token.trim().eq_ignore_ascii_case("otp"))
     });
-    header_lists_otp || body.to_lowercase().contains("one-time pass")
+    header_lists_otp
+        || body
+            .to_lowercase()
+            .contains("one-time pass")
 }
 
 /// Read `authUrl` / `doneUrl` out of a challenge body for the web-auth flow.
 pub(super) fn parse_otp_challenge(body: &str) -> OtpChallenge {
     let parsed = serde_json::from_str::<Value>(body).ok();
     let read = |field: &str| {
-        parsed
-            .as_ref()
-            .and_then(|json| {
-                json.get(field)?
-                    .as_str()
-                    .map(str::to_owned)
-            })
+        parsed.as_ref().and_then(|json| {
+            json.get(field)?
+                .as_str()
+                .map(str::to_owned)
+        })
     };
     OtpChallenge {
         body: Some(OtpErrorBody { auth_url: read("authUrl"), done_url: read("doneUrl") }),

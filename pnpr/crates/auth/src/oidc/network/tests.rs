@@ -60,5 +60,12 @@ async fn checks_the_addresses_returned_to_the_connector() {
         .await
         .unwrap()
         .collect();
-    assert_eq!(addresses, vec!["8.8.8.8:0".parse::<SocketAddr>().unwrap()]);
+    assert_eq!(
+        addresses,
+        vec![
+            "8.8.8.8:0"
+                .parse::<SocketAddr>()
+                .unwrap()
+        ]
+    );
 }

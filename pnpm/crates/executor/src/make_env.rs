@@ -103,8 +103,19 @@ fn build_env_for_platform(
         env.insert(k.clone(), v.clone());
     }
 
-    env.insert("INIT_CWD".into(), opts.environment.init_cwd.to_string_lossy().into_owned());
-    env.insert("PNPM_SCRIPT_SRC_DIR".into(), opts.script_src_dir.to_string_lossy().into_owned());
+    env.insert(
+        "INIT_CWD".into(),
+        opts.environment
+            .init_cwd
+            .to_string_lossy()
+            .into_owned(),
+    );
+    env.insert(
+        "PNPM_SCRIPT_SRC_DIR".into(),
+        opts.script_src_dir
+            .to_string_lossy()
+            .into_owned(),
+    );
 
     if let Some(ua) = opts.environment.user_agent {
         env.insert("npm_config_user_agent".into(), ua.to_string());
@@ -121,7 +132,10 @@ fn build_env_for_platform(
     let tmpdir = if opts.unsafe_perm {
         None
     } else {
-        let dir = opts.pkg_root.join("node_modules").join(".tmp");
+        let dir = opts
+            .pkg_root
+            .join("node_modules")
+            .join(".tmp");
         // Windows treats differently cased spellings as one variable,
         // so remove them before inserting the authoritative override.
         if is_windows {
@@ -223,8 +237,10 @@ fn strip_env_prefix<'key>(key: &'key str, prefix: &str, is_windows: bool) -> Opt
 /// returning the value here lets the rest of [`build_env`] stay
 /// independent of casing.
 pub(crate) fn path_value(env: &HashMap<String, String>) -> Option<String> {
-    env.iter()
-        .find_map(|(k, v)| k.eq_ignore_ascii_case("PATH").then(|| v.clone()))
+    env.iter().find_map(|(k, v)| {
+        k.eq_ignore_ascii_case("PATH")
+            .then(|| v.clone())
+    })
 }
 
 /// Look up `node` along the supplied `PATH`. Driven by the filtered
@@ -234,11 +250,10 @@ pub(crate) fn path_value(env: &HashMap<String, String>) -> Option<String> {
 fn find_node_in_path(path: Option<&str>) -> Option<PathBuf> {
     let path = path?;
     let node_name = if cfg!(windows) { "node.exe" } else { "node" };
-    env::split_paths(path)
-        .find_map(|dir| {
-            let candidate = dir.join(node_name);
-            candidate.is_file().then_some(candidate)
-        })
+    env::split_paths(path).find_map(|dir| {
+        let candidate = dir.join(node_name);
+        candidate.is_file().then_some(candidate)
+    })
 }
 
 /// Recursively stamp `npm_package_*` env vars from the manifest. JSON
@@ -299,7 +314,8 @@ fn stamp_executables(
     pkg_root: &Path,
 ) {
     let parent_path = path_value(env);
-    let node_execpath = opts.node_execpath
+    let node_execpath = opts
+        .node_execpath
         .map(Path::to_path_buf)
         .or_else(|| find_node_in_path(parent_path.as_deref()));
     if let Some(node) = node_execpath {
@@ -316,7 +332,8 @@ fn stamp_executables(
             .into_owned(),
     );
 
-    let npm_execpath = opts.npm_execpath
+    let npm_execpath = opts
+        .npm_execpath
         .map(Path::to_path_buf)
         .or_else(|| env::current_exe().ok());
     if let Some(path) = npm_execpath {

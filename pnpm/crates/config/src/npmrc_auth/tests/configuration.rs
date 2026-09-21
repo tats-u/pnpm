@@ -334,7 +334,10 @@ fn json_env_duplicate_route_keeps_last_in_source_order() {
     );
     let auth = NpmrcAuth::from_json_sources::<Env>(None).expect("valid _auth");
     assert_eq!(
-        auth.routes.json_env.get("default").map(String::as_str),
+        auth.routes
+            .json_env
+            .get("default")
+            .map(String::as_str),
         Some("https://aaa.example/"),
     );
 }
@@ -347,7 +350,10 @@ fn json_env_default_scope_infers_default_registry_route() {
     );
     let auth = NpmrcAuth::from_json_sources::<Env>(None).expect("valid _auth");
     assert_eq!(
-        auth.routes.json_env.get("default").map(String::as_str),
+        auth.routes
+            .json_env
+            .get("default")
+            .map(String::as_str),
         Some("https://my-npm-proxy.example/"),
     );
 }
@@ -360,10 +366,18 @@ fn json_env_package_scope_infers_scoped_registry_route() {
     );
     let auth = NpmrcAuth::from_json_sources::<Env>(None).expect("valid _auth");
     assert_eq!(
-        auth.routes.json_env.get("@org").map(String::as_str),
+        auth.routes
+            .json_env
+            .get("@org")
+            .map(String::as_str),
         Some("https://npm.pkg.github.com/"),
     );
-    assert!(!auth.routes.json_env.contains_key("default"));
+    assert!(
+        !auth
+            .routes
+            .json_env
+            .contains_key("default")
+    );
 }
 
 #[test]
@@ -428,7 +442,9 @@ fn json_env_rejects_host_value_that_is_not_a_scope_object() {
 #[test]
 fn json_env_rejects_host_key_that_is_not_a_registry_url() {
     static_env!(Env, &[("pnpm_config__auth", r#"{"not a url":{"@":{"authToken":"tok"}}}"#)]);
-    let error = NpmrcAuth::from_json_sources::<Env>(None).unwrap_err().to_string();
+    let error = NpmrcAuth::from_json_sources::<Env>(None)
+        .unwrap_err()
+        .to_string();
     assert!(!error.contains("not a url"), "raw key must not leak into the error: {error}");
 }
 
@@ -492,7 +508,10 @@ fn json_env_normalizes_registry_url_key() {
     let auth = NpmrcAuth::from_json_sources::<Env>(None).expect("valid _auth");
     assert_eq!(default_auth_token(&auth, "//reg.example/"), Some(Some("tok")));
     assert_eq!(
-        auth.routes.json_env.get("default").map(String::as_str),
+        auth.routes
+            .json_env
+            .get("default")
+            .map(String::as_str),
         Some("https://reg.example/"),
     );
 }

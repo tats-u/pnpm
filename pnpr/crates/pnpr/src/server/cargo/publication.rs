@@ -230,8 +230,15 @@ pub(super) async fn set_yanked(
     ) {
         return error_response(err);
     }
-    let _guard = state.inner.locks.packages.lock(key.as_str()).await;
-    let outcome = state.inner.storage
+    let _guard = state
+        .inner
+        .locks
+        .packages
+        .lock(key.as_str())
+        .await;
+    let outcome = state
+        .inner
+        .storage
         .for_hosted(&target.org)
         .update_hosted_document_with_retry(&key, DOCUMENT_WRITE_RETRIES, |existing| {
             let Some(bytes) = existing else { return Ok(None) };

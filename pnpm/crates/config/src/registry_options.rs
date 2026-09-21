@@ -56,11 +56,18 @@ impl Config {
     /// implicitly enable a public default.
     #[must_use]
     pub fn python_registry_indexes(&self) -> Vec<crate::EcosystemIndex> {
-        let mut indexes = self.indexes_by_ecosystem
+        let mut indexes = self
+            .indexes_by_ecosystem
             .get(&Ecosystem::Pypi)
             .filter(|indexes| !indexes.is_empty())
             .cloned()
-            .unwrap_or_else(|| vec![DEFAULT_PYPI_INDEX_URL.to_string().into()]);
+            .unwrap_or_else(|| {
+                vec![
+                    DEFAULT_PYPI_INDEX_URL
+                        .to_string()
+                        .into(),
+                ]
+            });
         indexes.sort_by(|a, b| a.url.cmp(&b.url));
         indexes
     }
@@ -68,7 +75,8 @@ impl Config {
     /// All Python index URLs, in canonical order independent of declarations.
     #[must_use]
     pub fn python_indexes(&self) -> Vec<&str> {
-        let Some(indexes) = self.indexes_by_ecosystem
+        let Some(indexes) = self
+            .indexes_by_ecosystem
             .get(&Ecosystem::Pypi)
             .filter(|indexes| !indexes.is_empty())
         else {
@@ -102,11 +110,13 @@ impl Config {
     #[must_use]
     pub fn resolved_registry_lookups(&self) -> RegistryLookups {
         let mut lookups = self.registry_lookups(Some(self.registry.clone()));
-        lookups.registries_by_scope
+        lookups
+            .registries_by_scope
             .entry("@jsr".to_string())
             .or_insert_with(|| DEFAULT_JSR_REGISTRY.to_string());
         for (prefix, registry) in BUILTIN_REGISTRIES_BY_PREFIX {
-            lookups.registries_by_prefix
+            lookups
+                .registries_by_prefix
                 .entry((*prefix).to_string())
                 .or_insert_with(|| (*registry).to_string());
         }
@@ -129,10 +139,16 @@ impl Config {
     #[must_use]
     pub fn resolved_update_settings(&self) -> Option<UpdateSettings> {
         let update = UpdateSettings {
-            ignore_deps: self.update_config.ignore_dependencies.clone(),
+            ignore_deps: self
+                .update_config
+                .ignore_dependencies
+                .clone(),
             changeset: self.update_config.changeset,
             github_actions: self.update_config.github_actions,
-            github_actions_server: self.update_config.github_actions_server.clone(),
+            github_actions_server: self
+                .update_config
+                .github_actions_server
+                .clone(),
         };
         (update != UpdateSettings::default()).then_some(update)
     }
@@ -145,9 +161,11 @@ impl Config {
     pub fn resolved_audit_settings(&self) -> Option<AuditSettings> {
         let audit = AuditSettings {
             level: self.audit_level,
-            ignore: (!self.audit_config.ignore_ghsas.is_empty()).then(|| {
-                self.audit_config.ignore_ghsas.clone()
-            }),
+            ignore: (!self
+                .audit_config
+                .ignore_ghsas
+                .is_empty())
+            .then(|| self.audit_config.ignore_ghsas.clone()),
             ignore_prune: self.audit_ignore_prune,
         };
         (audit != AuditSettings::default()).then_some(audit)
@@ -169,7 +187,9 @@ impl Config {
             (&mut self.proxy, &mut self.proxy_keys),
             (
                 &mut self.package_manager_bootstrap.proxy,
-                &mut self.package_manager_bootstrap.proxy_keys,
+                &mut self
+                    .package_manager_bootstrap
+                    .proxy_keys,
             ),
         ] {
             for (key, raw) in [
@@ -200,9 +220,11 @@ impl Config {
     ///
     /// [`WorkspaceSettings::clear_self_update_policy`]: crate::WorkspaceSettings::clear_self_update_policy
     pub fn resolved_minimum_release_age_strict(&self) -> bool {
-        self.minimum_release_age_strict.unwrap_or_else(|| {
-            self.explicit_settings.contains_key("minimumReleaseAge")
-        })
+        self.minimum_release_age_strict
+            .unwrap_or_else(|| {
+                self.explicit_settings
+                    .contains_key("minimumReleaseAge")
+            })
     }
 
     /// Effective [`Self::minimum_release_age`], with `Some(0)` treated
@@ -214,7 +236,8 @@ impl Config {
     /// — while a cutoff is active the picker always prefers the highest
     /// mature version, overriding the lowest-version pick.
     pub fn resolved_minimum_release_age(&self) -> Option<u64> {
-        self.minimum_release_age.filter(|&minutes| minutes > 0)
+        self.minimum_release_age
+            .filter(|&minutes| minutes > 0)
     }
 
     /// Whether version resolution must fetch the full packument to obtain
@@ -314,7 +337,9 @@ impl Config {
     #[must_use]
     pub fn resolved_registries(&self) -> BTreeMap<String, String> {
         let mut registries = self.registries_by_scope.clone();
-        registries.entry("@jsr".to_string()).or_insert_with(|| DEFAULT_JSR_REGISTRY.to_string());
+        registries
+            .entry("@jsr".to_string())
+            .or_insert_with(|| DEFAULT_JSR_REGISTRY.to_string());
         registries.insert("default".to_string(), self.registry.clone());
         registries
     }

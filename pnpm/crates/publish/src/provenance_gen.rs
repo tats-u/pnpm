@@ -74,7 +74,9 @@ where
     let statement_bytes = serde_json::to_vec(&statement).expect("serialize provenance statement");
 
     let jwt = fetch_sigstore_token::<Sys, Reporter>(options).await?;
-    let timeout = options.fetch_timeout.map(Duration::from_millis);
+    let timeout = options
+        .fetch_timeout
+        .map(Duration::from_millis);
     let signed = Sys::sign_statement(&jwt, &statement_bytes, timeout).await?;
 
     global_info::<Reporter>("Signed provenance statement with source and build information");

@@ -5,15 +5,27 @@ use serde_json::json;
 #[test]
 fn specified_scripts_exact_match() {
     let manifest = json!({ "scripts": { "build": "tsc", "test": "jest" } });
-    assert_eq!(ScriptSelector::new("build").unwrap().select(&manifest), vec!["build".to_string()]);
-    assert_eq!(ScriptSelector::new("test").unwrap().select(&manifest), vec!["test".to_string()]);
+    assert_eq!(
+        ScriptSelector::new("build")
+            .unwrap()
+            .select(&manifest),
+        vec!["build".to_string()]
+    );
+    assert_eq!(
+        ScriptSelector::new("test")
+            .unwrap()
+            .select(&manifest),
+        vec!["test".to_string()]
+    );
 }
 
 #[test]
 fn specified_scripts_start_fallback() {
     let manifest = json!({ "scripts": { "build": "tsc" } });
     assert_eq!(
-        ScriptSelector::new("start").unwrap().select_with_start(&manifest),
+        ScriptSelector::new("start")
+            .unwrap()
+            .select_with_start(&manifest),
         vec!["start".to_string()],
     );
     assert!(
@@ -47,14 +59,18 @@ fn specified_scripts_selects_every_regexp_match() {
         },
     });
     assert_eq!(
-        ScriptSelector::new("/^build:(backend|frontend)$/").unwrap().select(&manifest),
+        ScriptSelector::new("/^build:(backend|frontend)$/")
+            .unwrap()
+            .select(&manifest),
         vec!["build:backend".to_string(), "build:frontend".to_string()],
     );
     // The pattern is not implicitly anchored to the whole script name —
     // it is searched for — so `build` matches this one too, and the
     // matches keep the manifest's declaration order.
     assert_eq!(
-        ScriptSelector::new("/^build/").unwrap().select(&manifest),
+        ScriptSelector::new("/^build/")
+            .unwrap()
+            .select(&manifest),
         vec!["build:backend".to_string(), "build:frontend".to_string(), "build".to_string()],
     );
 }
@@ -64,7 +80,12 @@ fn specified_scripts_selects_every_regexp_match() {
 #[test]
 fn specified_scripts_prefers_an_exact_match_over_the_pattern() {
     let manifest = json!({ "scripts": { "/^a/": "echo literal", "ab": "echo matched" } });
-    assert_eq!(ScriptSelector::new("/^a/").unwrap().select(&manifest), vec!["/^a/".to_string()]);
+    assert_eq!(
+        ScriptSelector::new("/^a/")
+            .unwrap()
+            .select(&manifest),
+        vec!["/^a/".to_string()]
+    );
 }
 
 #[test]

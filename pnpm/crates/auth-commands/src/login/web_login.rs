@@ -73,7 +73,9 @@ async fn web_login_post(
     http_client: &ThrottledClient,
     login_url: &str,
 ) -> Result<HttpResponse, WebLoginFlowError> {
-    let guard = http_client.acquire_for_url(login_url).await;
+    let guard = http_client
+        .acquire_for_url(login_url)
+        .await;
     let response = guard
         .post(login_url)
         .header("content-type", "application/json")
@@ -85,7 +87,10 @@ async fn web_login_post(
         .map_err(|error| WebLoginFlowError::Transport { reason: error.to_string() })?;
     let ok = response.status().is_success();
     let status = response.status().as_u16();
-    let body = response.text().await.unwrap_or_default();
+    let body = response
+        .text()
+        .await
+        .unwrap_or_default();
     Ok(HttpResponse { ok, status, body })
 }
 

@@ -41,7 +41,9 @@ pub(crate) fn file_mtime(path: &Path) -> Option<FileMtime> {
 
 pub(crate) fn file_mtime_from_metadata(metadata: &fs::Metadata) -> Option<FileMtime> {
     let modified = metadata.modified().ok()?;
-    let elapsed = modified.duration_since(SystemTime::UNIX_EPOCH).ok()?;
+    let elapsed = modified
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .ok()?;
     Some(FileMtime {
         ms: i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX),
         ns: i64::try_from(elapsed.as_nanos()).unwrap_or(i64::MAX),
@@ -93,8 +95,13 @@ pub(crate) fn validation_baseline_ms(
     config: &Config,
     project_manifests: &[(PathBuf, &PackageManifest)],
 ) -> Option<i64> {
-    let lockfile = mtime_ms(&workspace_root.join(config.wanted_lockfile_name()))
-        .or_else(|| mtime_ms(&config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME)));
+    let lockfile = mtime_ms(&workspace_root.join(config.wanted_lockfile_name())).or_else(|| {
+        mtime_ms(
+            &config
+                .virtual_store_dir
+                .join(Lockfile::CURRENT_FILE_NAME),
+        )
+    });
     project_manifests
         .iter()
         .filter_map(|(_, manifest)| mtime_ms(manifest.path()))
@@ -200,7 +207,13 @@ pub(crate) fn manifest_drift_reference_ms(
     }
     wanted_lockfile_mtime
         .map(|mtime| mtime.ms)
-        .or_else(|| mtime_ms(&config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME)))
+        .or_else(|| {
+            mtime_ms(
+                &config
+                    .virtual_store_dir
+                    .join(Lockfile::CURRENT_FILE_NAME),
+            )
+        })
         .unwrap_or(last_validated_timestamp)
 }
 

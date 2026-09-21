@@ -114,7 +114,9 @@ fn cargo_resolve_request(registry: &str, token: &str) -> Request<Body> {
 }
 
 async fn frames(body: Body) -> Vec<Value> {
-    let bytes = to_bytes(body, usize::MAX).await.expect("read body");
+    let bytes = to_bytes(body, usize::MAX)
+        .await
+        .expect("read body");
     String::from_utf8_lossy(&bytes)
         .lines()
         .filter(|line| !line.is_empty())
@@ -138,12 +140,17 @@ async fn cargo_resolve_walks_the_index_and_returns_a_lockfile() {
     let (index, mocks) = sparse_index(1).await;
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -165,12 +172,17 @@ async fn cargo_resolve_reuses_cached_index_files() {
     let (index, mocks) = sparse_index(1).await;
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let first = app
@@ -196,12 +208,17 @@ async fn concurrent_resolves_fetch_a_cold_index_entry_once() {
     let (index, mocks) = sparse_index(1).await;
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let requests = (0..4).map(|_| {
@@ -237,12 +254,17 @@ async fn cargo_resolve_stops_on_an_oversized_index_entry() {
         .await;
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -268,7 +290,11 @@ async fn cargo_resolve_rejects_an_off_allowlist_registry() {
     let (index, mocks) = sparse_index(0).await;
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     // No public route for the index: the operator never declared it.
     let app = router_with_auth(config_for(tmp.path().to_path_buf()), auth);
 
@@ -287,7 +313,11 @@ async fn cargo_resolve_rejects_an_off_allowlist_registry() {
 async fn cargo_resolve_rejects_a_registry_with_inline_credentials() {
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config_for(tmp.path().to_path_buf()), auth);
 
     let response = app
@@ -308,12 +338,17 @@ async fn cargo_resolve_reports_an_unresolvable_workspace() {
         .await;
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -340,10 +375,11 @@ async fn anonymous_cargo_resolve_is_rejected() {
     let (index, mocks) = sparse_index(0).await;
     let tmp = TempDir::new().unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, AuthState::in_memory());
 
     let body = json!({

@@ -102,8 +102,14 @@ impl FetchTarballForResolution<'_> {
         mem_cache: Option<&MemCache>,
     ) -> Result<ResolvedTarball, TarballError> {
         match (mem_cache, self.package.integrity) {
-            (Some(mem_cache), Some(_)) => self.run_pinned::<Reporter>(mem_cache).await,
-            (mem_cache, _) => self.fetch_and_publish::<Reporter>(mem_cache).await,
+            (Some(mem_cache), Some(_)) => {
+                self.run_pinned::<Reporter>(mem_cache)
+                    .await
+            }
+            (mem_cache, _) => {
+                self.fetch_and_publish::<Reporter>(mem_cache)
+                    .await
+            }
         }
     }
 
@@ -124,7 +130,8 @@ impl FetchTarballForResolution<'_> {
         match owner_notify {
             None => self.take_cached(&cache_lock).await,
             Some(notify) => {
-                self.fetch_as_owner::<Reporter>(mem_cache, mem_cache_key, cache_lock, notify).await
+                self.fetch_as_owner::<Reporter>(mem_cache, mem_cache_key, cache_lock, notify)
+                    .await
             }
         }
     }
@@ -134,9 +141,14 @@ impl FetchTarballForResolution<'_> {
         cache_lock: &RwLock<CacheValue>,
     ) -> Result<ResolvedTarball, TarballError> {
         let cached = wait_for_cached_tarball(cache_lock, self.package.url).await?;
-        let integrity =
-            self.package.integrity.cloned().expect("a pinned read claims a hashed cache identity");
-        let manifest = self.manifest_from_cached(&cached).await?;
+        let integrity = self
+            .package
+            .integrity
+            .cloned()
+            .expect("a pinned read claims a hashed cache identity");
+        let manifest = self
+            .manifest_from_cached(&cached)
+            .await?;
         Ok(ResolvedTarball { integrity, manifest })
     }
 
@@ -189,7 +201,9 @@ impl FetchTarballForResolution<'_> {
         self,
         mem_cache: Option<&MemCache>,
     ) -> Result<ResolvedTarball, TarballError> {
-        let extracted = self.fetch_extracted::<Reporter>().await?;
+        let extracted = self
+            .fetch_extracted::<Reporter>()
+            .await?;
         if let Some(mem_cache) = mem_cache {
             insert_available_if_vacant(
                 mem_cache,

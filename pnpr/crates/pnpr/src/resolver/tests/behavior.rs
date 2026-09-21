@@ -150,7 +150,10 @@ fn package_qualified_alias_descriptor_rechecks_upstream_rules_on_replay() {
         }],
         Some(AccessList::from_tokens(["$authenticated"])),
     );
-    config.routing.upstreams.insert("corp".to_string(), upstream);
+    config
+        .routing
+        .upstreams
+        .insert("corp".to_string(), upstream);
     let context = RouteContext::from_config(&config);
 
     // Alice satisfies the per-package refinement: the hit replays.
@@ -253,8 +256,16 @@ fn candidate_lists_stay_bounded_and_keep_public_entries() {
         ));
     }
 
-    let cache = cache.lock().expect("resolution cache poisoned");
-    let candidates = cache.get(&key).expect("base key remains cached");
+    let cache = cache
+        .lock()
+        .expect("resolution cache poisoned");
+    let candidates = cache
+        .get(&key)
+        .expect("base key remains cached");
     assert_eq!(candidates.len(), MAX_RESOLUTION_CACHE_CANDIDATES_PER_KEY);
-    assert!(candidates.iter().any(|candidate| candidate.footprint.is_public()));
+    assert!(
+        candidates
+            .iter()
+            .any(|candidate| candidate.footprint.is_public())
+    );
 }

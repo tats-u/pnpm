@@ -57,7 +57,8 @@ pub(super) fn expand_update_selectors(selectors: &[ParsedSelector]) -> Vec<Parse
             pattern: selector.pattern.clone(),
             version: selector.version.clone(),
         });
-        let Some(aliased) = selector.version
+        let Some(aliased) = selector
+            .version
             .as_deref()
             .and_then(|version| version.strip_prefix("npm:"))
         else {
@@ -92,7 +93,13 @@ pub(super) fn insert_update_target(
             continue;
         }
         claimed = true;
-        targets.insert(name.to_string(), selector.version.as_deref().and_then(VersionLine::parse));
+        targets.insert(
+            name.to_string(),
+            selector
+                .version
+                .as_deref()
+                .and_then(VersionLine::parse),
+        );
     }
     if !claimed {
         targets.insert(name.to_string(), None);
@@ -106,13 +113,11 @@ pub(super) fn selector_matches_a_direct_dependency(
     include_direct: &[DependencyGroup],
 ) -> bool {
     let matcher = matcher_one(&selector.pattern);
-    manifests
-        .iter()
-        .any(|manifest| {
-            manifest
-                .dependencies(include_direct.iter().copied())
-                .any(|(name, _)| matcher.matches(name))
-        })
+    manifests.iter().any(|manifest| {
+        manifest
+            .dependencies(include_direct.iter().copied())
+            .any(|(name, _)| matcher.matches(name))
+    })
 }
 /// `pacquet update <dep>@<version>` where `<dep>` matches no direct dependency
 /// has nowhere to record the version. An update resolves such a target the way

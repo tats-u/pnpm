@@ -72,7 +72,10 @@ pub(super) fn run_materialized_project_scripts<Reporter: self::Reporter>(
     if !projects_to_run.is_empty() {
         let project_graph = project_lifecycle_graph(
             &projects_to_run,
-            inputs.request.workspace.map(|selection| selection.project_dependencies),
+            inputs
+                .request
+                .workspace
+                .map(|selection| selection.project_dependencies),
             inputs.workspace_root,
             inputs.materialized_current_lockfile,
         )?;
@@ -98,12 +101,15 @@ pub(super) fn materialized_script_projects<'a>(
     if inputs.config.ignore_scripts || inputs.config.virtual_store_only {
         Vec::new()
     } else if let Some(rebuild) = inputs.request.rebuild {
-        inputs.materialized_project_manifests
+        inputs
+            .materialized_project_manifests
             .iter()
             .filter(|(project_dir, _)| {
                 let importer_id =
                     pnpm_workspace::importer_id_from_root_dir(inputs.workspace_root, project_dir);
-                rebuild.pending_projects.contains(&importer_id)
+                rebuild
+                    .pending_projects
+                    .contains(&importer_id)
             })
             .cloned()
             .collect()
@@ -112,7 +118,10 @@ pub(super) fn materialized_script_projects<'a>(
             mutation: inputs.request.mutation,
             workspace_root: inputs.workspace_root,
             active_project_dir: inputs.request.manifest_dir,
-            selected_dirs: inputs.request.workspace.map(|selection| selection.selected_dirs),
+            selected_dirs: inputs
+                .request
+                .workspace
+                .map(|selection| selection.selected_dirs),
             project_manifests: inputs.project_manifests,
             materialized_project_manifests: inputs.materialized_project_manifests,
         })
@@ -160,9 +169,17 @@ pub(super) fn report_install_completion<Reporter: self::Reporter>(
     // throwaway per-group directory, and the approval prompt that
     // follows it records the ignored builds against the stable global
     // packages dir instead.
-    let is_global_install = inputs.workspace.config.global_pkg_dir
+    let is_global_install = inputs
+        .workspace
+        .config
+        .global_pkg_dir
         .as_deref()
-        .is_some_and(|global_pkg_dir| inputs.workspace.workspace_root.starts_with(global_pkg_dir));
+        .is_some_and(|global_pkg_dir| {
+            inputs
+                .workspace
+                .workspace_root
+                .starts_with(global_pkg_dir)
+        });
     // Leave the user a line to edit in `pnpm-workspace.yaml` for every
     // build this install blocked, so approving one is an edit rather
     // than recalling the `allowBuilds` shape. Written before the strict
@@ -173,13 +190,16 @@ pub(super) fn report_install_completion<Reporter: self::Reporter>(
         && !is_global_install
         && !inputs.workspace.config.ignore_workspace
     {
-        let allow_build_keys: BTreeSet<String> = inputs.ignored_builds
+        let allow_build_keys: BTreeSet<String> = inputs
+            .ignored_builds
             .iter()
             .map(|dep_path| crate::allow_build_key_from_ignored_build(dep_path))
             .collect();
         pnpm_workspace_manifest_writer::scaffold_allow_builds(
             inputs.workspace.workspace_manifest_dir,
-            allow_build_keys.iter().map(String::as_str),
+            allow_build_keys
+                .iter()
+                .map(String::as_str),
         )
         .map_err(InstallError::ScaffoldAllowBuilds)?;
     }
@@ -189,7 +209,12 @@ pub(super) fn report_install_completion<Reporter: self::Reporter>(
     // `ERR_PNPM_IGNORED_BUILDS` *after* the artifacts are written, so
     // the package is still added/installed and the user approves the
     // builds and reinstalls.
-    if inputs.workspace.config.strict_dep_builds && !inputs.ignored_builds.is_empty() {
+    if inputs
+        .workspace
+        .config
+        .strict_dep_builds
+        && !inputs.ignored_builds.is_empty()
+    {
         return Err(InstallError::IgnoredBuilds { package_names: inputs.ignored_builds });
     }
 

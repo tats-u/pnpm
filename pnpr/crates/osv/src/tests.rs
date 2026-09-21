@@ -186,7 +186,9 @@ fn loads_zip_archive_and_fingerprints_it() {
     let mut writer = zip::ZipWriter::new(fs::File::create(&zip_path).expect("create zip"));
     let options =
         zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
-    writer.start_file("GHSA-zip.json", options).expect("start file");
+    writer
+        .start_file("GHSA-zip.json", options)
+        .expect("start file");
     writer
         .write_all(
             br#"{"id":"GHSA-zip","affected":[{"package":{"ecosystem":"npm","name":"zipped"},"versions":["1.0.0"]}]}"#,
@@ -215,8 +217,12 @@ fn fingerprint_ignores_the_order_records_appear_in() {
         let options = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Stored);
         for (name, body) in entries {
-            writer.start_file(name, options).expect("start file");
-            writer.write_all(body.as_bytes()).expect("write entry");
+            writer
+                .start_file(name, options)
+                .expect("start file");
+            writer
+                .write_all(body.as_bytes())
+                .expect("write entry");
         }
         writer.finish().expect("finish zip");
         zip_path
@@ -272,8 +278,18 @@ async fn package_version_guard_rejects_vulnerable_versions() {
 
     let index = Arc::new(OsvIndex::load_from_path(dir.path()).expect("load index"));
 
-    assert_eq!(index.check("guarded", "1.1.0").await.unwrap(), PackageVersionGuardDecision::Allow);
-    match index.check("guarded", "1.0.0").await.unwrap() {
+    assert_eq!(
+        index
+            .check("guarded", "1.1.0")
+            .await
+            .unwrap(),
+        PackageVersionGuardDecision::Allow
+    );
+    match index
+        .check("guarded", "1.0.0")
+        .await
+        .unwrap()
+    {
         PackageVersionGuardDecision::Reject { reason } => {
             assert!(reason.contains("GHSA-guard"));
         }
@@ -297,7 +313,9 @@ fn enabled_database_without_npm_advisories_is_rejected() {
     )
     .expect("write record");
 
-    let listen = "127.0.0.1:4873".parse().expect("listen addr");
+    let listen = "127.0.0.1:4873"
+        .parse()
+        .expect("listen addr");
     let mut config = crate::Config::proxy(listen, dir.path().to_path_buf());
     config.osv.enabled = true;
     config.osv.path = Some(dir.path().to_path_buf());

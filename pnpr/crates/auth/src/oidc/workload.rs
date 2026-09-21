@@ -25,7 +25,11 @@ pub(super) fn bound_user<'p>(
 ) -> Result<&'p OidcBinding> {
     let payload = token_payload(&token.to_string())?;
     validate_claims(config, &payload)?;
-    let users = &config.login.as_ref().ok_or_else(rejected)?.users;
+    let users = &config
+        .login
+        .as_ref()
+        .ok_or_else(rejected)?
+        .users;
     unique_binding(users.iter(), &payload)
 }
 
@@ -68,7 +72,9 @@ pub(super) fn token_payload(raw: &str) -> Result<Value> {
         .split('.')
         .nth(1)
         .ok_or_else(rejected)?;
-    let bytes = BASE64_URL_SAFE_NO_PAD.decode(payload).map_err(|_| rejected())?;
+    let bytes = BASE64_URL_SAFE_NO_PAD
+        .decode(payload)
+        .map_err(|_| rejected())?;
     serde_json::from_slice(&bytes).map_err(|_| rejected())
 }
 
@@ -128,8 +134,12 @@ pub(super) fn match_workload_binding(
 }
 
 pub(super) fn binding_matches(binding: &OidcBinding, payload: &Value) -> bool {
-    payload.get("sub").and_then(Value::as_str) == Some(binding.subject.as_str())
-        && binding.claims
+    payload
+        .get("sub")
+        .and_then(Value::as_str)
+        == Some(binding.subject.as_str())
+        && binding
+            .claims
             .iter()
             .all(|(key, expected)| {
                 payload.get(key).and_then(Value::as_str) == Some(expected.as_str())

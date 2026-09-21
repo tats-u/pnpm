@@ -25,7 +25,9 @@ fn locked_peer_versions_are_recorded_for_direct_deps() {
                     ResolvedDependencySpec {
                         specifier: "1.0.0".to_string(),
                         version: ImporterDepVersion::Regular(
-                            "1.0.0(peer@2.0.0)".parse::<PkgVerPeer>().unwrap(),
+                            "1.0.0(peer@2.0.0)"
+                                .parse::<PkgVerPeer>()
+                                .unwrap(),
                         ),
                     },
                 )])),
@@ -291,7 +293,8 @@ async fn auto_installs_missing_required_peer() {
         .await
         .unwrap();
 
-    let direct_aliases: Vec<&str> = result.peers_result
+    let direct_aliases: Vec<&str> = result
+        .peers_result
         .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
@@ -299,11 +302,18 @@ async fn auto_installs_missing_required_peer() {
     assert!(direct_aliases.contains(&"react"), "react should be hoisted: {direct_aliases:?}");
     assert!(direct_aliases.contains(&"react-dom"));
     assert!(
-        !result.peers_result.peer_dependency_issues.missing.contains_key("react"),
+        !result
+            .peers_result
+            .peer_dependency_issues
+            .missing
+            .contains_key("react"),
         "react should no longer be missing after hoisting",
     );
     assert_eq!(
-        result.peers_result.direct_dependencies_by_alias.get("react-dom"),
+        result
+            .peers_result
+            .direct_dependencies_by_alias
+            .get("react-dom"),
         Some(&DepPath::from("react-dom@18.0.0(react@18.2.0)".to_string())),
     );
 }
@@ -350,7 +360,9 @@ async fn transitive_required_peer_is_hoisted() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
@@ -358,7 +370,13 @@ async fn transitive_required_peer_is_hoisted() {
         direct.contains(&"peer-pkg"),
         "transitive peer should be hoisted to importer direct deps: {direct:?}",
     );
-    assert!(!result.peers_result.peer_dependency_issues.missing.contains_key("peer-pkg"));
+    assert!(
+        !result
+            .peers_result
+            .peer_dependency_issues
+            .missing
+            .contains_key("peer-pkg")
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -399,7 +417,9 @@ async fn auto_install_skips_optional_peers_without_preferred_versions() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
@@ -463,10 +483,8 @@ async fn keeps_locked_optional_peer_over_lower_sibling_version() {
 
     let mut opts = default_opts();
     let mut peer_c_selectors = VersionSelectors::new();
-    peer_c_selectors.insert(
-        "1.0.0".to_string(),
-        VersionSelectorEntry::Plain(VersionSelectorType::Version),
-    );
+    peer_c_selectors
+        .insert("1.0.0".to_string(), VersionSelectorEntry::Plain(VersionSelectorType::Version));
     peer_c_selectors.insert(
         "1.0.1".to_string(),
         VersionSelectorEntry::Weighted(VersionSelectorWithWeight {
@@ -483,11 +501,16 @@ async fn keeps_locked_optional_peer_over_lower_sibling_version() {
         .unwrap();
 
     assert_eq!(
-        result.peers_result.direct_dependencies_by_alias.get("peer-c"),
+        result
+            .peers_result
+            .direct_dependencies_by_alias
+            .get("peer-c"),
         Some(&DepPath::from("peer-c@1.0.1".to_string())),
         "the already-locked optional peer 1.0.1 must win over the sibling's 1.0.0",
     );
-    let abc = result.peers_result.direct_dependencies_by_alias
+    let abc = result
+        .peers_result
+        .direct_dependencies_by_alias
         .get("abc")
         .expect("abc resolved")
         .to_string();
@@ -544,18 +567,24 @@ async fn auto_installed_peer_uses_the_intersection_of_compatible_ranges() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
     assert!(direct.contains(&"peer-c"), "single intersected peer-c should be hoisted: {direct:?}");
-    let peer_c_entries: Vec<&DepPath> = result.peers_result.graph
+    let peer_c_entries: Vec<&DepPath> = result
+        .peers_result
+        .graph
         .keys()
         .filter(|dp| dp.to_string().starts_with("peer-c@"))
         .collect();
     assert_eq!(peer_c_entries.len(), 1, "expected one peer-c entry, got: {peer_c_entries:?}");
     assert!(
-        peer_c_entries[0].to_string().starts_with("peer-c@2.2.5"),
+        peer_c_entries[0]
+            .to_string()
+            .starts_with("peer-c@2.2.5"),
         "the provider must resolve through the intersected range: {peer_c_entries:?}",
     );
 }
@@ -621,18 +650,28 @@ async fn a_peer_reported_once_per_path_is_hoisted_through_one_intersection() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
     assert!(direct.contains(&"react"), "react should be hoisted: {direct:?}");
-    let react_entries: Vec<&DepPath> = result.peers_result.graph
+    let react_entries: Vec<&DepPath> = result
+        .peers_result
+        .graph
         .keys()
-        .filter(|dep_path| dep_path.to_string().starts_with("react@"))
+        .filter(|dep_path| {
+            dep_path
+                .to_string()
+                .starts_with("react@")
+        })
         .collect();
     assert_eq!(react_entries.len(), 1, "expected one react entry, got: {react_entries:?}");
     assert!(
-        react_entries[0].to_string().starts_with("react@19.0.0"),
+        react_entries[0]
+            .to_string()
+            .starts_with("react@19.0.0"),
         "react must resolve through the intersected range: {react_entries:?}",
     );
 }
@@ -692,7 +731,9 @@ async fn auto_install_reuses_peer_already_brought_by_a_sibling() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();

@@ -38,12 +38,13 @@ pub fn extract_manifest_from_packed(tarball_path: &str) -> Result<Value, Extract
             continue;
         }
         let mut text = String::new();
-        entry.read_to_string(&mut text).map_err(read_err)?;
-        return parse_manifest(&text)
-            .map_err(|source| ExtractManifestError::Parse {
-                tarball_path: tarball_path.to_owned(),
-                source,
-            });
+        entry
+            .read_to_string(&mut text)
+            .map_err(read_err)?;
+        return parse_manifest(&text).map_err(|source| ExtractManifestError::Parse {
+            tarball_path: tarball_path.to_owned(),
+            source,
+        });
     }
 
     Err(ExtractManifestError::MissingManifest(PublishArchiveMissingManifestError {
@@ -87,11 +88,9 @@ pub fn extract_publish_manifest_from_packed(
             tarball_path: tarball_path.to_owned(),
         })
     })?;
-    let mut manifest: Value = parse_manifest(&manifest_text)
-        .map_err(|source| ExtractManifestError::Parse {
-            tarball_path: tarball_path.to_owned(),
-            source,
-        })?;
+    let mut manifest: Value = parse_manifest(&manifest_text).map_err(|source| {
+        ExtractManifestError::Parse { tarball_path: tarball_path.to_owned(), source }
+    })?;
     if let Some(readme) = readme {
         attach_readme(&mut manifest, readme);
     }
@@ -107,7 +106,9 @@ fn read_entry_text<Reader: Read>(entry: &mut tar::Entry<'_, Reader>) -> std::io:
 /// A packed README fills a manifest's missing `readme`, as npm's publish
 /// document carries it.
 fn attach_readme(manifest: &mut Value, readme: String) {
-    if manifest.get("readme").is_none_or(Value::is_null)
+    if manifest
+        .get("readme")
+        .is_none_or(Value::is_null)
         && let Some(object) = manifest.as_object_mut()
     {
         object.insert("readme".to_string(), Value::String(readme));
@@ -131,7 +132,9 @@ fn is_root_readme(normalized: &str) -> bool {
 /// `../package/package.json` normalize to themselves and must *not* match the
 /// relative `package/package.json` the loop is looking for, exactly as in pnpm.
 fn normalize_entry_path(path: &Path) -> String {
-    let raw = path.to_string_lossy().replace('\\', "/");
+    let raw = path
+        .to_string_lossy()
+        .replace('\\', "/");
     if raw.is_empty() {
         return ".".to_owned();
     }

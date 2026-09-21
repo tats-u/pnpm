@@ -23,7 +23,9 @@ impl StripedLocks {
 
     /// Lock the stripe owning `name`, held until the returned guard is dropped.
     pub(crate) async fn lock(&self, name: &str) -> tokio::sync::MutexGuard<'_, ()> {
-        self.stripes[self.stripe_index(name)].lock().await
+        self.stripes[self.stripe_index(name)]
+            .lock()
+            .await
     }
 
     /// Lock the stripes owning every name in `names`, held until the

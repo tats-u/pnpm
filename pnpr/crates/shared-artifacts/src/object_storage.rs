@@ -21,12 +21,14 @@ impl SharedArtifactStore {
         relative: &str,
         bytes: impl Into<PutPayload>,
     ) -> Result<bool> {
-        match self.store.put_opts(
-            &self.object_path(relative),
-            bytes.into(),
-            PutOptions { mode: PutMode::Create, ..PutOptions::default() },
-        )
-        .await
+        match self
+            .store
+            .put_opts(
+                &self.object_path(relative),
+                bytes.into(),
+                PutOptions { mode: PutMode::Create, ..PutOptions::default() },
+            )
+            .await
         {
             Ok(_) => Ok(true),
             Err(error) if is_create_conflict(&error) => Ok(false),
@@ -39,7 +41,11 @@ impl SharedArtifactStore {
         relative: &str,
         max_size: u64,
     ) -> Result<Option<Vec<u8>>> {
-        match self.store.get(&self.object_path(relative)).await {
+        match self
+            .store
+            .get(&self.object_path(relative))
+            .await
+        {
             Ok(result) => {
                 if result.meta.size > max_size {
                     return Err(stored_object_too_large(result.meta.size, max_size));
@@ -66,9 +72,8 @@ impl SharedArtifactStore {
         let prefix = relative_prefix
             .map(|prefix| self.object_path(prefix))
             .or_else(|| {
-                (!self.prefix.is_empty()).then(|| {
-                    ObjectPath::from(self.prefix.trim_end_matches('/'))
-                })
+                (!self.prefix.is_empty())
+                    .then(|| ObjectPath::from(self.prefix.trim_end_matches('/')))
             });
         self.store.list(prefix.as_ref())
     }

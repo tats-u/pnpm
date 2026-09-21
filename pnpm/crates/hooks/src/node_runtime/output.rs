@@ -46,7 +46,10 @@ pub(super) fn parse_logger_line(line: &str) -> Option<(LoggerLevel, String)> {
         return None;
     }
     let parsed = serde_json::from_str::<serde_json::Value>(line).ok()?;
-    let level = match parsed.get("level").and_then(|v| v.as_str()) {
+    let level = match parsed
+        .get("level")
+        .and_then(|v| v.as_str())
+    {
         Some("info") => LoggerLevel::Info,
         Some("warn") => LoggerLevel::Warn,
         _ => return None,

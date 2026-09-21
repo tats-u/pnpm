@@ -59,7 +59,10 @@ async fn resolve_latest_error(latest: &str) -> ResolveLatestError {
         shared_packument_fetch_locker(),
     );
 
-    picker.resolve("acme", true).await.expect_err("latest cannot resolve")
+    picker
+        .resolve("acme", true)
+        .await
+        .expect_err("latest cannot resolve")
 }
 
 #[tokio::test]

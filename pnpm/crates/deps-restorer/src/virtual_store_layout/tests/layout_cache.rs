@@ -110,7 +110,9 @@ fn layout_cache_load_rejects_a_map_it_cannot_vouch_for() {
         lockfile_dir: project.path(),
         fingerprint,
     };
-    let foo: PackageKey = "@scope/foo@1.2.3".parse().expect("parse key");
+    let foo: PackageKey = "@scope/foo@1.2.3"
+        .parse()
+        .expect("parse key");
     let bar: PackageKey = "bar@4.5.6".parse().expect("parse key");
     let snapshots = HashMap::from([
         (foo.clone(), SnapshotEntry::default()),
@@ -156,10 +158,17 @@ fn layout_cache_load_rejects_a_map_it_cannot_vouch_for() {
 
     let traversing = HashMap::from([
         (
-            "@scope/foo@1.2.3".parse::<PackageKey>().expect("parse key"),
+            "@scope/foo@1.2.3"
+                .parse::<PackageKey>()
+                .expect("parse key"),
             "@scope/foo/1.2.3/../../../../../../tmp/evil".to_string(),
         ),
-        ("bar@4.5.6".parse::<PackageKey>().expect("parse key"), format!("@/bar/4.5.6/{DIGEST_B}")),
+        (
+            "bar@4.5.6"
+                .parse::<PackageKey>()
+                .expect("parse key"),
+            format!("@/bar/4.5.6/{DIGEST_B}"),
+        ),
     ]);
     super::super::gvs_layout_cache::store(file("fingerprint"), &traversing);
     assert_eq!(

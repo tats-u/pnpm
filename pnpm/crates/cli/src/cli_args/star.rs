@@ -54,7 +54,8 @@ pub(crate) async fn star_action(
     is_star: bool,
 ) -> miette::Result<()> {
     let action = action_word(is_star);
-    let auth_header = config.auth_headers
+    let auth_header = config
+        .auth_headers
         .for_url(&config.registry)
         .ok_or(StarError::Unauthorized { action })?;
     let http_client = build_registry_client(config)?;
@@ -118,11 +119,14 @@ async fn perform_legacy_star_action(
     let pkg_url = format!("{registry_url}{escaped_name}");
 
     let mut pkg_data =
-        fetch_package_document(http_client, &pkg_url, auth_header, retry_opts, package_name).await?;
+        fetch_package_document(http_client, &pkg_url, auth_header, retry_opts, package_name)
+            .await?;
 
     apply_star_to_users(&mut pkg_data, &username, is_star);
 
-    let rev = pkg_data.get("_rev").and_then(Value::as_str);
+    let rev = pkg_data
+        .get("_rev")
+        .and_then(Value::as_str);
     let update_url = match rev {
         Some(rev) => format!("{pkg_url}/-rev/{rev}"),
         None => pkg_url.clone(),
@@ -143,7 +147,10 @@ async fn perform_legacy_star_action(
 
     if !update_response.status().is_success() {
         let status = update_response.status();
-        let body = update_response.text().await.unwrap_or_default();
+        let body = update_response
+            .text()
+            .await
+            .unwrap_or_default();
         return Err(StarError::LegacyFailed {
             action,
             status: status.as_u16(),
@@ -210,7 +217,9 @@ fn apply_star_to_users(pkg_data: &mut Value, username: &str, is_star: bool) {
     if !users.is_object() {
         *users = Value::Object(Map::new());
     }
-    let users = users.as_object_mut().expect("users was just ensured to be an object");
+    let users = users
+        .as_object_mut()
+        .expect("users was just ensured to be an object");
     if is_star {
         users.insert(username.to_string(), Value::Bool(true));
     } else {
@@ -266,12 +275,17 @@ async fn fetch_alternate_star(
         )
         .await;
     }
-    Err(star_error(response2, action).await.into())
+    Err(star_error(response2, action)
+        .await
+        .into())
 }
 
 async fn star_error(response: reqwest::Response, action: &'static str) -> StarError {
     let status = response.status();
-    let body = response.text().await.unwrap_or_default();
+    let body = response
+        .text()
+        .await
+        .unwrap_or_default();
     StarError::Failed {
         action,
         status: status.as_u16(),

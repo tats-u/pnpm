@@ -31,7 +31,9 @@ async fn identical_projects_share_one_fresh_registry_resolution() {
             member(root.path(), name, &["demo"]);
         }
         let mut command = pacquet_in(root.path());
-        command.env("PNPM_CONFIG_WORKSPACE_CONCURRENCY", "3").arg("install");
+        command
+            .env("PNPM_CONFIG_WORKSPACE_CONCURRENCY", "3")
+            .arg("install");
         if lockfile_only {
             command.arg("--lockfile-only");
         }

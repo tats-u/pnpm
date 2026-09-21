@@ -23,7 +23,9 @@ fn pkg_root_for_key_hoisted_uses_override() {
     let config = config.leak();
     let layout = VirtualStoreLayout::new(config, None, None, None, None, None);
 
-    let key: PackageKey = "is-positive@1.0.0".parse().expect("parse key");
+    let key: PackageKey = "is-positive@1.0.0"
+        .parse()
+        .expect("parse key");
     let hoisted_dir = PathBuf::from("/repo/node_modules/is-positive");
     let map: HashMap<PackageKey, Vec<PathBuf>> = [(key.clone(), vec![hoisted_dir.clone()])].into();
 

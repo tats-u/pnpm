@@ -36,7 +36,10 @@ impl Registry<'_> {
         name: &PackageName,
         version: &Version,
     ) -> Result<()> {
-        let sdist = self.resolution.packages.candidates
+        let sdist = self
+            .resolution
+            .packages
+            .candidates
             .get(name)
             .and_then(|versions| versions.get(version))
             .and_then(pnpm_python_resolver::Candidate::sdist)
@@ -45,19 +48,25 @@ impl Registry<'_> {
             })?
             .clone();
         self.check_buildable(name, version, &sdist)?;
-        let files = self.fetch_sdist::<Reporter>(&sdist).await?;
+        let files = self
+            .fetch_sdist::<Reporter>(&sdist)
+            .await?;
         let root = sdist.root().to_owned();
         let source = tokio::task::spawn_blocking(move || unpack(&files, &root))
             .await
             .into_diagnostic()?
             .wrap_err_with(|| format!("unpack the Python source distribution {}", sdist.name))?;
         let manifest = read_manifest(source.path()).await?;
-        let built = Box::pin(self.sources.prepare.build::<Reporter>(Buildable {
-            root: source.path(),
-            manifest: &manifest,
-            editable: false,
-            contract: Contract::Interpreter,
-        }))
+        let built = Box::pin(
+            self.sources
+                .prepare
+                .build::<Reporter>(Buildable {
+                    root: source.path(),
+                    manifest: &manifest,
+                    editable: false,
+                    contract: Contract::Interpreter,
+                }),
+        )
         .await?;
         let mut built = match built {
             build::Build::Made(built) => built,
@@ -73,7 +82,9 @@ impl Registry<'_> {
         // has the installer record nothing about where it came from.
         built.wheel.direct_url = None;
         self.remember(name.clone(), version.clone(), built.wheel.clone());
-        self.sources.built.insert((name.clone(), version.clone()), *built);
+        self.sources
+            .built
+            .insert((name.clone(), version.clone()), *built);
         Ok(())
     }
 
@@ -134,7 +145,8 @@ impl Registry<'_> {
             offline: self.config.offline,
         };
         if sdist.is_zip() {
-            return self.fetch_source_zip::<Reporter>(sdist, fetching, &integrity, &package_id)
+            return self
+                .fetch_source_zip::<Reporter>(sdist, fetching, &integrity, &package_id)
                 .await;
         }
         // A tar archive of a source distribution holds one directory
@@ -203,8 +215,11 @@ fn unpack(files: &HashMap<String, PathBuf>, root: &str) -> Result<tempfile::Temp
     let nested = nested_in_its_release_directory(files, root);
     for (entry, stored) in files {
         let path = entry_path(source.path(), strip_release_directory(entry, root, nested))?;
-        std::fs::create_dir_all(path.parent().expect("an entry path has a parent"))
-            .into_diagnostic()?;
+        std::fs::create_dir_all(
+            path.parent()
+                .expect("an entry path has a parent"),
+        )
+        .into_diagnostic()?;
         let mut blob = std::fs::File::open(stored)
             .into_diagnostic()
             .wrap_err_with(|| format!("read the stored Python source file {entry}"))?;
@@ -227,13 +242,11 @@ fn unpack(files: &HashMap<String, PathBuf>, root: &str) -> Result<tempfile::Temp
 /// entries say otherwise is left exactly as the extractor produced it.
 fn nested_in_its_release_directory(files: &HashMap<String, PathBuf>, root: &str) -> bool {
     !files.is_empty()
-        && files
-            .keys()
-            .all(|entry| {
-                entry
-                    .strip_prefix(root)
-                    .is_some_and(|rest| rest.starts_with('/'))
-            })
+        && files.keys().all(|entry| {
+            entry
+                .strip_prefix(root)
+                .is_some_and(|rest| rest.starts_with('/'))
+        })
 }
 
 fn strip_release_directory<'a>(entry: &'a str, root: &str, nested: bool) -> &'a str {
@@ -260,8 +273,16 @@ fn check_identity(
     version: &Version,
     sdist: &LockedSdist,
 ) -> Result<()> {
-    if metadata.name.parse::<PackageName>().into_diagnostic()? != *name
-        || metadata.version.parse::<Version>().into_diagnostic()? != *version
+    if metadata
+        .name
+        .parse::<PackageName>()
+        .into_diagnostic()?
+        != *name
+        || metadata
+            .version
+            .parse::<Version>()
+            .into_diagnostic()?
+            != *version
     {
         bail!(
             "the Python source distribution {} built {} {}, not {name} {version}",

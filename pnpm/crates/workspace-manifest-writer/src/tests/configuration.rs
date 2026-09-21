@@ -19,7 +19,9 @@ fn config_dependency_added_to_existing_block() {
 #[test]
 fn config_dependencies_batch_updates_all_entries_in_one_manifest() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     fs::write(&path, "# preserved comment\nconfigDependencies:\n  existing-package: 0.1.0\n")
         .expect("seed manifest");
 
@@ -112,7 +114,9 @@ fn ignore_ghsas_empty_preserves_sibling_audit_config_keys() {
 #[test]
 fn ignore_ghsas_edits_an_inline_flow_audit_config() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     fs::write(&path, "auditConfig: { other: keep, ignoreGhsas: [GHSA-aaaa-bbbb-cccc] }\n")
         .expect("seed");
 
@@ -126,7 +130,9 @@ fn ignore_ghsas_edits_an_inline_flow_audit_config() {
 #[test]
 fn ignore_ghsas_refuses_a_multiline_flow_audit_config() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     // Rebuilding a multi-line flow mapping onto one line would drop the
     // comments between its entries, so the write is refused instead.
     let original = "auditConfig: {\n  ignoreGhsas: [GHSA-aaaa-bbbb-cccc], # pinned\n}\n";
@@ -143,7 +149,9 @@ fn ignore_ghsas_refuses_a_multiline_flow_audit_config() {
 #[test]
 fn setting_a_field_after_deleting_the_last_one_keeps_a_single_blank_line() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     let original = "cacheDir: ~/cache\n\nstoreDir: ~/store\n";
     fs::write(&path, original).expect("seed manifest");
     let with_field = format!("{original}\nvirtualStoreDir: .pnpm\n");

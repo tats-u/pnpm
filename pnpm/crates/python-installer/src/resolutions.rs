@@ -19,10 +19,15 @@ impl PythonPrepare<'_> {
         inputs: LockfileInputs<'_>,
     ) -> Result<Lockfile> {
         let Some(key) = self.resolution_key(&inputs)? else {
-            return self.lockfile::<Reporter>(registry, inputs).await;
+            return self
+                .lockfile::<Reporter>(registry, inputs)
+                .await;
         };
         let entry = Arc::clone(
-            self.state.caches.resolutions.0
+            self.state
+                .caches
+                .resolutions
+                .0
                 .lock()
                 .await
                 .entry(key)
@@ -35,15 +40,13 @@ impl PythonPrepare<'_> {
                 return Ok(lock);
             }
             drop(cached);
-            return self.accept_lockfile::<Reporter>(
-                registry,
-                lock,
-                inputs.requirements,
-                &inputs.local,
-            )
-            .await;
+            return self
+                .accept_lockfile::<Reporter>(registry, lock, inputs.requirements, &inputs.local)
+                .await;
         }
-        let lock = self.lockfile::<Reporter>(registry, inputs).await?;
+        let lock = self
+            .lockfile::<Reporter>(registry, inputs)
+            .await?;
         *cached = Some(toml::to_string(&lock).into_diagnostic()?);
         Ok(lock)
     }
@@ -51,7 +54,8 @@ impl PythonPrepare<'_> {
     fn resolution_key(&self, inputs: &LockfileInputs<'_>) -> Result<Option<String>> {
         if inputs.existing.is_some()
             || !inputs.local.is_empty()
-            || inputs.requirements
+            || inputs
+                .requirements
                 .iter()
                 .any(|requirement| {
                     matches!(requirement.version_or_url, Some(pep508_rs::VersionOrUrl::Url(_)))

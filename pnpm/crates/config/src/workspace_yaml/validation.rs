@@ -38,17 +38,24 @@ impl WorkspaceSettings {
         task: &str,
         settings: &TaskSettings,
     ) -> Result<(), LoadWorkspaceYamlError> {
-        let concurrency = settings.concurrency
+        let concurrency = settings
+            .concurrency
             .filter(|concurrency| *concurrency < 1)
             .map(|concurrency| concurrency.to_string())
-            .or_else(|| settings.invalid_concurrency.as_ref().map(ToString::to_string));
+            .or_else(|| {
+                settings
+                    .invalid_concurrency
+                    .as_ref()
+                    .map(ToString::to_string)
+            });
         if let Some(concurrency) = concurrency {
             return Err(LoadWorkspaceYamlError::InvalidTaskConcurrency {
                 task: task.to_string(),
                 concurrency,
             });
         }
-        if let Some(group) = settings.concurrency_group
+        if let Some(group) = settings
+            .concurrency_group
             .as_deref()
             .filter(|group| !is_valid_concurrency_group_name(group))
         {
@@ -85,10 +92,13 @@ impl WorkspaceSettings {
                 return true;
             }
             report.total += settings.unknown.len();
-            let named = settings.unknown
+            let named = settings
+                .unknown
                 .keys()
                 .take(NAMED_UNRECOGNIZED_TASK_SETTINGS.saturating_sub(report.named.len()));
-            report.named.extend(named.map(|field| format!("tasks['{task}'].{field}")));
+            report
+                .named
+                .extend(named.map(|field| format!("tasks['{task}'].{field}")));
             settings.unknown.clear();
             // An entry left with nothing declares nothing, and a task with no
             // entry is the one that keeps the default `^<name>` ordering. A
@@ -160,7 +170,10 @@ impl WorkspaceSettings {
             ("trustedKeys", settings.trusted_keys.is_some()),
             ("privateKey", settings.private_key.is_some()),
         ];
-        let Some((field, _)) = machine_only.into_iter().find(|(_, is_set)| *is_set) else {
+        let Some((field, _)) = machine_only
+            .into_iter()
+            .find(|(_, is_set)| *is_set)
+        else {
             return Ok(());
         };
         Err(LoadWorkspaceYamlError::WorkspaceRemoteSideEffectsTrust {
@@ -229,12 +242,10 @@ impl WorkspaceSettings {
     /// measure or classify counts as one to look at, so the answer errs only
     /// towards re-reading, never towards missing a key.
     pub(super) fn may_have_key_issues(text: &str) -> bool {
-        let content_lines = text
-            .lines()
-            .filter(|line| {
-                let trimmed = line.trim_start();
-                !trimmed.is_empty() && !trimmed.starts_with('#')
-            });
+        let content_lines = text.lines().filter(|line| {
+            let trimmed = line.trim_start();
+            !trimmed.is_empty() && !trimmed.starts_with('#')
+        });
         let mut root_indent = usize::MAX;
         for line in content_lines.clone() {
             let indent = line.len() - line.trim_start().len();

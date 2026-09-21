@@ -37,7 +37,9 @@ fn fresh_install_records_importer_manifest_metadata() {
         None,
         None,
     ));
-    let importer = lockfile.root_project().expect("root importer exists");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer exists");
 
     assert_eq!(importer.dependencies_meta, Some(json!({ "pkg-a": { "injected": true } })));
     assert_eq!(importer.publish_directory.as_deref(), Some("dist"));
@@ -81,11 +83,19 @@ fn dev_and_optional_direct_deps_split_into_distinct_importer_sections() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let importer = lockfile.root_project().expect("root importer");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
     assert!(importer.dependencies.is_none(), "no prod deps declared");
-    let dev = importer.dev_dependencies.as_ref().expect("dev deps");
+    let dev = importer
+        .dev_dependencies
+        .as_ref()
+        .expect("dev deps");
     assert!(dev.contains_key(&PkgName::parse("typescript").unwrap()));
-    let opt = importer.optional_dependencies.as_ref().expect("optional deps");
+    let opt = importer
+        .optional_dependencies
+        .as_ref()
+        .expect("optional deps");
     assert!(opt.contains_key(&PkgName::parse("fsevents").unwrap()));
 
     let packages = lockfile.packages.as_ref().unwrap();
@@ -149,8 +159,11 @@ fn runtime_dependency_strips_importer_prefix_and_records_package_version() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .expect("deps")
         .get(&PkgName::parse("node").unwrap())
@@ -162,7 +175,10 @@ fn runtime_dependency_strips_importer_prefix_and_records_package_version() {
     }
 
     let metadata_key: PackageKey = "node@runtime:26.3.0".parse().unwrap();
-    let metadata = &lockfile.packages.as_ref().expect("packages")[&metadata_key];
+    let metadata = &lockfile
+        .packages
+        .as_ref()
+        .expect("packages")[&metadata_key];
     assert_eq!(metadata.version.as_deref(), Some("26.3.0"));
 }
 #[test]
@@ -184,8 +200,11 @@ fn git_hosted_dependency_records_bare_tarball_url_in_importer() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .expect("dependencies")
         .get(&PkgName::parse("is-negative").unwrap())
@@ -198,11 +217,22 @@ fn git_hosted_dependency_records_bare_tarball_url_in_importer() {
         other => panic!("expected Regular({GIT_TARBALL_URL}), got {other:?}"),
     }
 
-    let package_key: PackageKey = format!("is-negative@{GIT_TARBALL_URL}").parse().unwrap();
-    let packages = lockfile.packages.as_ref().expect("packages");
-    assert_eq!(packages[&package_key].version.as_deref(), Some("1.0.0"));
+    let package_key: PackageKey = format!("is-negative@{GIT_TARBALL_URL}")
+        .parse()
+        .unwrap();
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages");
+    assert_eq!(
+        packages[&package_key]
+            .version
+            .as_deref(),
+        Some("1.0.0")
+    );
     assert!(
-        lockfile.snapshots
+        lockfile
+            .snapshots
             .as_ref()
             .expect("snapshots")
             .contains_key(&package_key),
@@ -230,8 +260,11 @@ fn aliased_git_hosted_dependency_keeps_package_name_in_importer_ref() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .expect("dependencies")
         .get(&PkgName::parse("renamed").unwrap())
@@ -242,15 +275,19 @@ fn aliased_git_hosted_dependency_keeps_package_name_in_importer_ref() {
     };
     assert_eq!(parsed.to_string(), format!("is-negative@{GIT_TARBALL_URL}"));
 
-    let package_key: PackageKey = format!("is-negative@{GIT_TARBALL_URL}").parse().unwrap();
+    let package_key: PackageKey = format!("is-negative@{GIT_TARBALL_URL}")
+        .parse()
+        .unwrap();
     assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .as_ref()
             .expect("packages")
             .contains_key(&package_key),
     );
     assert!(
-        lockfile.snapshots
+        lockfile
+            .snapshots
             .as_ref()
             .expect("snapshots")
             .contains_key(&package_key),
@@ -321,8 +358,11 @@ fn non_host_git_dependency_records_bare_git_url_in_importer() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .expect("dependencies")
         .get(&PkgName::parse("is-negative").unwrap())
@@ -334,7 +374,10 @@ fn non_host_git_dependency_records_bare_git_url_in_importer() {
         other => panic!("expected Regular({GIT_REF}), got {other:?}"),
     }
 
-    let packages = lockfile.packages.as_ref().expect("packages");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages");
     let (package_key, metadata) = packages
         .iter()
         .find(|(key, _)| key.to_string().contains("is-negative"))
@@ -342,7 +385,8 @@ fn non_host_git_dependency_records_bare_git_url_in_importer() {
     assert!(matches!(metadata.resolution, LockfileResolution::Git(_)));
     assert_eq!(metadata.version.as_deref(), Some("1.0.0"));
     assert!(
-        lockfile.snapshots
+        lockfile
+            .snapshots
             .as_ref()
             .expect("snapshots")
             .contains_key(package_key),
@@ -378,8 +422,13 @@ fn workspace_link_direct_dep_renders_as_importer_link() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let importer = lockfile.root_project().expect("root importer");
-    let dep = importer.dependencies.as_ref().expect("dependencies map");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let dep = importer
+        .dependencies
+        .as_ref()
+        .expect("dependencies map");
     let entry = dep
         .get(&PkgName::parse("shared").unwrap())
         .expect("shared entry");
@@ -391,14 +440,16 @@ fn workspace_link_direct_dep_renders_as_importer_link() {
 
     assert!(
         lockfile.packages.is_none()
-            || lockfile.packages
+            || lockfile
+                .packages
                 .as_ref()
                 .unwrap()
                 .is_empty(),
     );
     assert!(
         lockfile.snapshots.is_none()
-            || lockfile.snapshots
+            || lockfile
+                .snapshots
                 .as_ref()
                 .unwrap()
                 .is_empty(),
@@ -436,10 +487,16 @@ fn workspace_link_child_renders_as_snapshot_link() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
     let wrapper_key: PackageKey = "wrapper@1.0.0".parse().unwrap();
     let wrapper_snap = &snapshots[&wrapper_key];
-    let deps = wrapper_snap.dependencies.as_ref().expect("wrapper dependencies");
+    let deps = wrapper_snap
+        .dependencies
+        .as_ref()
+        .expect("wrapper dependencies");
     match deps
         .get(&PkgName::parse("shared").unwrap())
         .expect("shared child")
@@ -556,7 +613,10 @@ fn multi_importer_pruner_marks_shared_dep_non_optional_when_any_importer_reaches
         },
     });
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
     let prod_only_key: PackageKey = "prod-only@1.0.0".parse().unwrap();
     let opt_only_key: PackageKey = "opt-only@1.0.0".parse().unwrap();
     let shared_key: PackageKey = "shared@1.0.0".parse().unwrap();
@@ -645,8 +705,12 @@ fn workspace_sibling_link_renders_per_importer_with_link_ref() {
         },
     });
 
-    let a_snap = lockfile.importers.get("packages/a").expect("importer a");
-    let b_in_a = a_snap.dependencies
+    let a_snap = lockfile
+        .importers
+        .get("packages/a")
+        .expect("importer a");
+    let b_in_a = a_snap
+        .dependencies
         .as_ref()
         .unwrap()
         .get(&PkgName::parse("b").unwrap())
@@ -657,16 +721,23 @@ fn workspace_sibling_link_renders_per_importer_with_link_ref() {
         other => panic!("expected Link(..), got {other:?}"),
     }
 
-    let b_snap = lockfile.importers.get("packages/b").expect("importer b");
+    let b_snap = lockfile
+        .importers
+        .get("packages/b")
+        .expect("importer b");
     assert!(
-        b_snap.dependencies
+        b_snap
+            .dependencies
             .as_ref()
             .unwrap()
             .contains_key(&PkgName::parse("lodash").unwrap()),
         "importer b carries its own deps",
     );
 
-    let packages = lockfile.packages.as_ref().expect("packages");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages");
     let lodash_key: PackageKey = "lodash@4.17.21".parse().unwrap();
     assert!(packages.contains_key(&lodash_key));
     assert_eq!(packages.len(), 1, "only lodash lands in packages:");
@@ -728,16 +799,20 @@ fn importer_records_a_peer_only_alias_only_under_auto_install_peers() {
         None,
         None,
     ));
-    let importer = without_auto_install.root_project().expect("root importer exists");
+    let importer = without_auto_install
+        .root_project()
+        .expect("root importer exists");
     dbg!(&importer.dependencies);
     assert!(
-        !importer.dependencies
+        !importer
+            .dependencies
             .as_ref()
             .is_some_and(|deps| deps.contains_key(&peer_key)),
         "a peer-only alias must stay out of the importer entry under `autoInstallPeers: false`",
     );
     assert!(
-        !importer.specifiers
+        !importer
+            .specifiers
             .as_ref()
             .is_some_and(|specs| specs.contains_key("peer")),
         "a peer-only alias must stay out of the importer specifiers under `autoInstallPeers: false`",
@@ -746,8 +821,11 @@ fn importer_records_a_peer_only_alias_only_under_auto_install_peers() {
     let with_auto_install = dependencies_graph_to_lockfile(single_importer_opts(
         &manifest, &graph, direct, true, false, None, None,
     ));
-    let importer = with_auto_install.root_project().expect("root importer exists");
-    let entry = importer.dependencies
+    let importer = with_auto_install
+        .root_project()
+        .expect("root importer exists");
+    let entry = importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(&peer_key))
         .expect("auto-installed peer entry");
@@ -764,15 +842,22 @@ fn injected_workspace_dep_keeps_prior_link_on_untargeted_install() {
     let lockfile = dependencies_graph_to_lockfile({
         let mut base_options =
             single_importer_opts(&manifest, &graph, direct, false, false, None, None);
-        base_options.metadata_sources.registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
-        base_options.metadata_sources.registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
+        base_options
+            .metadata_sources
+            .registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
+        base_options
+            .metadata_sources
+            .registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
         base_options.reuse.previous_importers = Some(&previous);
         base_options.reuse.scope = UpdateReuseScope::All;
         base_options
     });
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(&PkgName::parse("n").unwrap()))
         .expect("n entry");
@@ -790,16 +875,25 @@ fn injected_workspace_dep_renders_file_without_prior_link() {
     let lockfile = dependencies_graph_to_lockfile({
         let mut base_options =
             single_importer_opts(&manifest, &graph, direct, false, false, None, None);
-        base_options.metadata_sources.registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
-        base_options.metadata_sources.registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
-        base_options.metadata_sources.previous_packages = None;
+        base_options
+            .metadata_sources
+            .registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
+        base_options
+            .metadata_sources
+            .registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
+        base_options
+            .metadata_sources
+            .previous_packages = None;
         base_options.reuse.previous_importers = None;
         base_options.reuse.scope = UpdateReuseScope::All;
         base_options
     });
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(&PkgName::parse("n").unwrap()))
         .expect("n entry");

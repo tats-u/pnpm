@@ -100,7 +100,10 @@ pub(super) async fn find_signature_failure(
     // integrity the registry published; any other installed form can never
     // validate, and verifying it would misreport an authentic release as
     // tampered with.
-    if !component.integrity.starts_with("sha512-") {
+    if !component
+        .integrity
+        .starts_with("sha512-")
+    {
         return failure(
             format!(
                 "{label} is pinned by a non-sha512 integrity, which npm registry signatures cannot cover",
@@ -165,13 +168,19 @@ async fn attempt_signature_verification(
         Err(reason) => return Some((reason, FailureCategory::Unreachable)),
     };
 
-    let Some(version) = packument.versions.get(&component.version) else {
+    let Some(version) = packument
+        .versions
+        .get(&component.version)
+    else {
         return Some((
             format!("{label} was not found on {display_registry}"),
             FailureCategory::Absent,
         ));
     };
-    let raw_signatures = version.dist.as_ref().and_then(|dist| dist.signatures.as_ref());
+    let raw_signatures = version
+        .dist
+        .as_ref()
+        .and_then(|dist| dist.signatures.as_ref());
     let Some(parsed_signatures) = parse_signatures(raw_signatures) else {
         return Some((
             format!("malformed registry signatures metadata for {label}"),
@@ -185,7 +194,10 @@ async fn attempt_signature_verification(
         ));
     }
 
-    let published_at = packument.time.get(&component.version).and_then(serde_json::Value::as_str);
+    let published_at = packument
+        .time
+        .get(&component.version)
+        .and_then(serde_json::Value::as_str);
     // The message is built from the *lockfile* integrity, so a signature
     // only validates when the installed bytes match what the registry
     // signed.
@@ -223,7 +235,9 @@ fn equal_registries(left: &str, right: &str) -> bool {
 fn normalize_registry_url(registry: &str) -> String {
     let with_slash = redact_and_sanitize(&with_trailing_slash(registry));
     // URL normalization lowercases the host and drops a default port.
-    url::Url::parse(&with_slash).map(String::from).unwrap_or(with_slash)
+    url::Url::parse(&with_slash)
+        .map(String::from)
+        .unwrap_or(with_slash)
 }
 
 /// `true` as soon as one signature validates against a trusted, unexpired
@@ -275,11 +289,15 @@ pub(super) fn verify_one(public_key_base64: &str, message: &str, signature_base6
     let Ok(signature) = Signature::from_der(&signature_der) else {
         return false;
     };
-    verifying_key.verify(message.as_bytes(), &signature).is_ok()
+    verifying_key
+        .verify(message.as_bytes(), &signature)
+        .is_ok()
 }
 
 fn parse_timestamp(value: &str) -> Option<i64> {
-    chrono::DateTime::parse_from_rfc3339(value).ok().map(|datetime| datetime.timestamp_millis())
+    chrono::DateTime::parse_from_rfc3339(value)
+        .ok()
+        .map(|datetime| datetime.timestamp_millis())
 }
 
 #[derive(Deserialize)]
@@ -325,13 +343,15 @@ async fn fetch_packument(
     // Resolve auth against the request URL *and* the package name so a
     // `@scope:registry`-scoped token applies (plain `for_url` skips the
     // scope lookup, breaking bootstrap registries that require it).
-    let authorization = config.package_manager_bootstrap.auth_headers.for_url_with_package(
-        &packument_url,
-        Some(&component.name),
-    );
+    let authorization = config
+        .package_manager_bootstrap
+        .auth_headers
+        .for_url_with_package(&packument_url, Some(&component.name));
 
     let (_guard, response) = send_with_retry(client, &packument_url, retry_opts, |client| {
-        let mut request = client.get(&packument_url).header("accept", "application/json");
+        let mut request = client
+            .get(&packument_url)
+            .header("accept", "application/json");
         if let Some(value) = &authorization {
             request = request.header("authorization", value);
         }
@@ -392,7 +412,9 @@ pub(super) fn pick_registry(name: &str, config: &Config) -> String {
     if let Some(scope) = name
         .strip_prefix('@')
         .and_then(|rest| rest.split('/').next())
-        && let Some(registry) = bootstrap.registries.get(&format!("@{scope}"))
+        && let Some(registry) = bootstrap
+            .registries
+            .get(&format!("@{scope}"))
     {
         return registry.clone();
     }

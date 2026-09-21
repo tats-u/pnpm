@@ -17,7 +17,8 @@ pub(super) async fn write_transaction(dir: &Path, packages: &[JournaledPublish<'
             ecosystem: package.ecosystem,
             org: package.org.map(str::to_string),
             document_file,
-            blobs: package.slots
+            blobs: package
+                .slots
                 .iter()
                 .map(|slot| ManifestBlob {
                     filename: slot.filename().to_string(),
@@ -102,7 +103,10 @@ pub(super) async fn write_synced(path: &Path, bytes: &[u8]) -> Result<()> {
 
 #[cfg(unix)]
 pub(super) async fn sync_dir(dir: &Path) -> io::Result<()> {
-    fs::File::open(dir).await?.sync_all().await
+    fs::File::open(dir)
+        .await?
+        .sync_all()
+        .await
 }
 
 #[cfg(not(unix))]

@@ -76,7 +76,8 @@ where
     };
 
     let mut url = Url::parse(&request_url).map_err(GitHubRequestTokenError::InvalidRequestUrl)?;
-    url.query_pairs_mut().append_pair("audience", audience);
+    url.query_pairs_mut()
+        .append_pair("audience", audience);
     let url = url.to_string();
 
     let authorization = format!("Bearer {request_token}");

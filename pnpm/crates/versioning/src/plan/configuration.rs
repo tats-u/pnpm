@@ -34,7 +34,10 @@ pub(super) fn resolve_fixed_groups(
     versioning: Option<&VersioningSettings>,
 ) -> Result<Vec<Vec<String>>, VersioningError> {
     let mut groups = Vec::new();
-    for group in versioning.map(|settings| settings.fixed.as_slice()).unwrap_or_default() {
+    for group in versioning
+        .map(|settings| settings.fixed.as_slice())
+        .unwrap_or_default()
+    {
         groups.push(resolve_fixed_group(refs, participants, group)?);
     }
     Ok(groups)
@@ -86,13 +89,17 @@ pub(super) fn resolve_epics(
     versioning: Option<&VersioningSettings>,
 ) -> Result<Vec<ResolvedEpic>, VersioningError> {
     let mut epics = Vec::new();
-    for epic in versioning.map(|settings| settings.epics.as_slice()).unwrap_or_default() {
+    for epic in versioning
+        .map(|settings| settings.epics.as_slice())
+        .unwrap_or_default()
+    {
         let lead_dir = resolve_config_ref(refs, &epic.lead, "versioning.epics lead")?
             .into_iter()
             .next()
             .filter(|dir| participants.contains_key(dir))
             .ok_or_else(|| VersioningError::EpicUnknownLead { lead: epic.lead.clone() })?;
-        let selectors: Vec<EpicSelector> = epic.packages
+        let selectors: Vec<EpicSelector> = epic
+            .packages
             .iter()
             .map(|selector| compile_epic_selector(selector))
             .collect();

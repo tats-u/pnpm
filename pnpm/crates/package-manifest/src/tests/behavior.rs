@@ -17,7 +17,9 @@ fn save_leaves_the_original_intact_when_the_write_cannot_complete() {
     std::fs::write(&path, original).unwrap();
 
     let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
-    manifest.add_dependency("fastify", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("fastify", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
 
     // Make the directory read-only so a sibling temp file cannot be created.
     // An atomic temp-file-then-rename write fails up front and leaves the
@@ -57,7 +59,9 @@ fn should_throw_on_missing_command() {
     let dir = tempdir().unwrap();
     let tmp = dir.path().join("package.json");
     let manifest = PackageManifest::create_if_needed(tmp).unwrap();
-    manifest.script("dev", false).expect_err("dev command should not exist");
+    manifest
+        .script("dev", false)
+        .expect_err("dev command should not exist");
 }
 
 #[test]
@@ -73,8 +77,15 @@ fn should_execute_a_command() {
     write!(tmp.as_file(), "{data}").unwrap();
     let manifest = PackageManifest::create_if_needed(tmp.path().to_path_buf()).unwrap();
     assert_eq!(manifest.script("test", false).unwrap(), Some("echo"));
-    manifest.script("invalid", false).expect_err("invalid command should not exist");
-    assert_eq!(manifest.script("invalid", true).unwrap(), None);
+    manifest
+        .script("invalid", false)
+        .expect_err("invalid command should not exist");
+    assert_eq!(
+        manifest
+            .script("invalid", true)
+            .unwrap(),
+        None
+    );
 }
 
 #[cfg(unix)]
@@ -118,7 +129,9 @@ fn save_preserves_the_source_indentation() {
         let path = dir.path().join(file_name);
         std::fs::write(&path, source).unwrap();
         let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
-        manifest.add_dependency("fastify", "1.0.0", DependencyGroup::Prod).unwrap();
+        manifest
+            .add_dependency("fastify", "1.0.0", DependencyGroup::Prod)
+            .unwrap();
         manifest.save().unwrap();
         let saved = read_to_string(&path).unwrap();
         eprintln!("{file_name} SAVED:\n{saved}");
@@ -129,7 +142,9 @@ fn save_preserves_the_source_indentation() {
     let single_line = dir.path().join("single-line.json");
     std::fs::write(&single_line, r#"{"name":"foo"}"#).unwrap();
     let mut manifest = PackageManifest::from_path(single_line.clone()).unwrap();
-    manifest.add_dependency("fastify", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("fastify", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
     assert_eq!(
         read_to_string(&single_line).unwrap(),
@@ -146,7 +161,9 @@ fn save_caps_the_indentation_unit_at_ten_characters() {
     let twelve_spaces = " ".repeat(12);
     std::fs::write(&path, format!("{{\n{twelve_spaces}\"name\": \"foo\"\n}}\n")).unwrap();
     let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
-    manifest.add_dependency("fastify", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("fastify", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let saved = read_to_string(&path).unwrap();

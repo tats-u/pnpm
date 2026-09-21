@@ -45,13 +45,8 @@ fn version_updates_package_yaml() {
 
 #[test]
 fn add_update_and_remove_save_package_yaml() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let path = workspace.join("package.yaml");
     fs::write(&path, "# project\nname: fixture\nversion: 1.0.0\n").unwrap();
     command(&pacquet)
@@ -59,7 +54,9 @@ fn add_update_and_remove_save_package_yaml() {
         .assert()
         .success();
     assert_eq!(
-        PackageManifest::from_path(path.clone()).unwrap().value()["dependencies"],
+        PackageManifest::from_path(path.clone())
+            .unwrap()
+            .value()["dependencies"],
         json!({"@pnpm.e2e/foo":"1.0.0"}),
     );
     command(&pacquet)
@@ -67,7 +64,9 @@ fn add_update_and_remove_save_package_yaml() {
         .assert()
         .success();
     assert_eq!(
-        PackageManifest::from_path(path.clone()).unwrap().value()["dependencies"],
+        PackageManifest::from_path(path.clone())
+            .unwrap()
+            .value()["dependencies"],
         json!({"@pnpm.e2e/foo":"2.0.0"}),
     );
     command(&pacquet)
@@ -114,7 +113,9 @@ fn json_manifest_takes_precedence_over_yaml() {
         .success();
     assert_eq!(fs::read_to_string(workspace.join("package.yaml")).unwrap(), yaml);
     assert_eq!(
-        PackageManifest::from_path(workspace.join("package.json")).unwrap().value(),
+        PackageManifest::from_path(workspace.join("package.json"))
+            .unwrap()
+            .value(),
         &json!({"name":"json","version":"1.0.0"}),
     );
     drop(root);
@@ -122,13 +123,8 @@ fn json_manifest_takes_precedence_over_yaml() {
 
 #[test]
 fn link_saves_yaml_and_accepts_a_yaml_target() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let path = workspace.join("package.yaml");
     fs::write(&path, "# project\nname: fixture\nversion: 1.0.0\n").unwrap();
     let target = root.path().join("target-project");
@@ -139,10 +135,16 @@ fn link_saves_yaml_and_accepts_a_yaml_target() {
         .assert()
         .success();
     assert_eq!(
-        PackageManifest::from_path(path.clone()).unwrap().value()["dependencies"],
+        PackageManifest::from_path(path.clone())
+            .unwrap()
+            .value()["dependencies"],
         json!({"target-project":"link:../target-project"}),
     );
-    assert!(fs::read_to_string(path).unwrap().starts_with("# project\n"));
+    assert!(
+        fs::read_to_string(path)
+            .unwrap()
+            .starts_with("# project\n")
+    );
     assert!(!workspace.join("package.json").exists());
     drop((root, npmrc_info));
 }

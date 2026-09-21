@@ -62,11 +62,10 @@ pub(crate) fn package_manager_to_sync(
     }
     // A range pin names no exact version, so the running pnpm's version is
     // the one the project actually uses.
-    version_satisfies(PNPM_VERSION, wanted_version)
-        .then(|| PackageManagerToSync {
-            specifier: wanted_version.to_string(),
-            version: PNPM_VERSION.to_string(),
-        })
+    version_satisfies(PNPM_VERSION, wanted_version).then(|| PackageManagerToSync {
+        specifier: wanted_version.to_string(),
+        version: PNPM_VERSION.to_string(),
+    })
 }
 
 /// The root project's `package.json` as raw JSON, for the config-load
@@ -75,7 +74,9 @@ pub(crate) fn package_manager_to_sync(
 /// `None`: a warning has nothing to say about one, and the install path
 /// reports it with far more context.
 pub(crate) fn read_root_manifest_json(root_dir: &Path) -> Option<Value> {
-    read_manifest_json(&root_dir.join("package.json")).ok().flatten()
+    read_manifest_json(&root_dir.join("package.json"))
+        .ok()
+        .flatten()
 }
 
 pub(crate) fn read_manifest_json(path: &Path) -> miette::Result<Option<Value>> {
@@ -84,12 +85,15 @@ pub(crate) fn read_manifest_json(path: &Path) -> miette::Result<Option<Value>> {
         Err(error) if error.kind() == ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(error).into_diagnostic(),
     };
-    parse_manifest(&content).into_diagnostic().map(Some)
+    parse_manifest(&content)
+        .into_diagnostic()
+        .map(Some)
 }
 
 pub(crate) fn wanted_package_manager(manifest: &Value) -> Option<WantedPackageManager> {
     if let Some(mut pm) = parse_dev_engines_package_manager(manifest) {
-        if pm.version
+        if pm
+            .version
             .as_deref()
             .is_some_and(|version| node_semver::Range::parse(version).is_err())
         {
@@ -97,7 +101,9 @@ pub(crate) fn wanted_package_manager(manifest: &Value) -> Option<WantedPackageMa
         }
         return Some(pm);
     }
-    let package_manager = manifest.get("packageManager")?.as_str()?;
+    let package_manager = manifest
+        .get("packageManager")?
+        .as_str()?;
     let (name, version) = parse_package_manager(package_manager);
     let version = version.and_then(|version| exact_version(&version));
     Some(WantedPackageManager { name, version, from_dev_engines: false, on_fail: None })
@@ -114,7 +120,12 @@ fn parse_dev_engines_package_manager(manifest: &Value) -> Option<WantedPackageMa
         // the first entry does.
         let index = entries
             .iter()
-            .position(|entry| entry.get("name").and_then(Value::as_str) == Some("pnpm"))
+            .position(|entry| {
+                entry
+                    .get("name")
+                    .and_then(Value::as_str)
+                    == Some("pnpm")
+            })
             .unwrap_or(0);
         (Some(index), *entries.get(index)?)
     } else {
@@ -156,7 +167,12 @@ pub(crate) fn parse_package_manager(package_manager: &str) -> (String, Option<St
 }
 
 pub(crate) fn should_persist_package_manager_lockfile(pm: &WantedPackageManager) -> bool {
-    if pm.on_fail.as_deref().unwrap_or("download") == "ignore" {
+    if pm
+        .on_fail
+        .as_deref()
+        .unwrap_or("download")
+        == "ignore"
+    {
         return false;
     }
     if pm.from_dev_engines {
@@ -170,7 +186,9 @@ pub(crate) fn should_persist_package_manager_lockfile(pm: &WantedPackageManager)
 
 pub(crate) fn current_source_pnpm_version() -> Option<String> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir.ancestors().find_map(pnpm_version_from)
+    manifest_dir
+        .ancestors()
+        .find_map(pnpm_version_from)
 }
 
 fn pnpm_version_from(root_dir: &Path) -> Option<String> {

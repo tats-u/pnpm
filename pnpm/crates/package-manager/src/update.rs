@@ -207,14 +207,12 @@ fn update_mutation(packages: &[String], latest: bool) -> ProjectMutation {
 
 impl Update<'_> {
     pub async fn run<Reporter: self::Reporter + 'static>(self) -> Result<(), UpdateError> {
-        let Self {
-            options: update,
-            resources: owned,
-            manifest,
-        } = self;
+        let Self { options: update, resources: owned, manifest } = self;
         begin::<Reporter>(update, &owned);
         let site = UpdateSite::find::<Reporter>(update, manifest)?;
-        let unsaved = site.hook_update_manifest(update, manifest).await?;
+        let unsaved = site
+            .hook_update_manifest(update, manifest)
+            .await?;
         if !update.version.latest && update.selection.depth > 0 {
             reject_versions_of_indirect_update_specs::<Reporter>(
                 &parse_selectors(update.selection.packages),
@@ -240,11 +238,7 @@ impl Update<'_> {
         self,
         selected: SelectedProjects<'_>,
     ) -> Result<(), UpdateError> {
-        let Self {
-            options: update,
-            resources: owned,
-            manifest,
-        } = self;
+        let Self { options: update, resources: owned, manifest } = self;
         begin::<Reporter>(update, &owned);
         let selected_indices = selected_project_indices(
             selected.projects,
@@ -255,9 +249,9 @@ impl Update<'_> {
             return Ok(());
         }
         let site = UpdateSite::find::<Reporter>(update, manifest)?;
-        let unsaved =
-            site.hook_selected_manifests(update, selected.projects, manifest, &selected_indices)
-                .await?;
+        let unsaved = site
+            .hook_selected_manifests(update, selected.projects, manifest, &selected_indices)
+            .await?;
         let prepared = prepare_selected_manifests::<Reporter>(
             selected.projects,
             &selected_indices,
@@ -383,8 +377,12 @@ impl SelectedProjects<'_> {
 
 /// Route the clients' warnings through the reporter.
 fn begin<Reporter: self::Reporter>(update: UpdateOptions<'_>, owned: &UpdateResources) {
-    update.http_client.set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
-    owned.http_client_arc.set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+    update
+        .http_client
+        .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+    owned
+        .http_client_arc
+        .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
 }
 
 fn manifest_dir(manifest: &PackageManifest) -> &Path {
@@ -435,9 +433,8 @@ impl UpdateSite {
         }
         Ok(UnsavedManifests {
             hooked_paths,
-            lockfile_specifiers: (!update.version.save).then(|| {
-                vec![(manifest_dir(manifest).to_path_buf(), manifest.clone())]
-            }),
+            lockfile_specifiers: (!update.version.save)
+                .then(|| vec![(manifest_dir(manifest).to_path_buf(), manifest.clone())]),
         })
     }
 

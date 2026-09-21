@@ -58,7 +58,9 @@ fn set_cafile_global_writes_auth_ini() {
         .unwrap();
 
     assert_eq!(
-        read_ini(&config_dir.join("auth.ini")).get("cafile").map(String::as_str),
+        read_ini(&config_dir.join("auth.ini"))
+            .get("cafile")
+            .map(String::as_str),
         Some("some-cafile"),
     );
 }
@@ -78,7 +80,9 @@ fn set_scoped_registry_project_creates_npmrc() {
     .unwrap();
 
     assert_eq!(
-        read_ini(&tmp.path().join(".npmrc")).get("@myorg:registry").map(String::as_str),
+        read_ini(&tmp.path().join(".npmrc"))
+            .get("@myorg:registry")
+            .map(String::as_str),
         Some("https://test-registry.example.com/"),
     );
     assert!(
@@ -430,7 +434,9 @@ fn delete_auth_key_set_and_unset() {
     .unwrap();
     config_set(&config, tmp.path(), flags(true, None, false), "registry", None).unwrap();
     assert_eq!(
-        read_ini(&config_dir.join("auth.ini")).get("@my-company:registry").map(String::as_str),
+        read_ini(&config_dir.join("auth.ini"))
+            .get("@my-company:registry")
+            .map(String::as_str),
         Some("https://registry.my-company.example.com/"),
     );
 
@@ -450,7 +456,12 @@ fn delete_missing_params_errors() {
     // dispatch uses.
     let (key, value) = (None::<String>, None::<String>);
     let err = super::split_set_params(key, value, "set").unwrap_err();
-    assert_eq!(miette::Diagnostic::code(&err).unwrap().to_string(), "ERR_PNPM_CONFIG_NO_PARAMS");
+    assert_eq!(
+        miette::Diagnostic::code(&err)
+            .unwrap()
+            .to_string(),
+        "ERR_PNPM_CONFIG_NO_PARAMS"
+    );
 }
 
 // --- config get / list -----------------------------------------------------
@@ -458,10 +469,14 @@ fn delete_missing_params_errors() {
 fn config_for_get(explicit: &[(&str, Value)], auth: &[(&str, &str)]) -> Config {
     let mut config = Config { config_dir: Some(PathBuf::from("/config")), ..Config::default() };
     for (key, value) in explicit {
-        config.explicit_settings.insert((*key).to_string(), value.clone());
+        config
+            .explicit_settings
+            .insert((*key).to_string(), value.clone());
     }
     for (key, value) in auth {
-        config.raw_auth_config.insert((*key).to_string(), (*value).to_string());
+        config
+            .raw_auth_config
+            .insert((*key).to_string(), (*value).to_string());
     }
     config
 }
@@ -551,10 +566,9 @@ fn get_scoped_registry_from_auth_and_merged() {
 
     // merged `registries` block wins over the raw .npmrc value (pnpm/pnpm#11492)
     let mut merged = config_for_get(&[], &[("@scope:registry", "https://from-npmrc.example.com/")]);
-    merged.registries_by_scope.insert(
-        "@scope".to_string(),
-        "https://from-workspace-yaml.example.com/".to_string(),
-    );
+    merged
+        .registries_by_scope
+        .insert("@scope".to_string(), "https://from-workspace-yaml.example.com/".to_string());
     assert_eq!(
         config_get(&merged, flags(false, None, false), "@scope:registry").unwrap(),
         "https://from-workspace-yaml.example.com/",
@@ -602,8 +616,12 @@ fn get_registry_and_jsr_answer_the_merged_routes() {
 fn get_registries_returns_resolved_declarations() {
     let mut config = config_for_get(&[], &[]);
     config.registry = "https://registry.example.com/".to_string();
-    config.registries_by_scope.insert("@corp".to_string(), "https://work.example.com/".to_string());
-    config.registries_by_prefix.insert("work".to_string(), "https://work.example.com/".to_string());
+    config
+        .registries_by_scope
+        .insert("@corp".to_string(), "https://work.example.com/".to_string());
+    config
+        .registries_by_prefix
+        .insert("work".to_string(), "https://work.example.com/".to_string());
     config.registry_options_by_url.insert(
         "https://work.example.com/".to_string(),
         pnpm_lockfile::RegistryOptions {
@@ -647,7 +665,9 @@ fn list_rejoins_registry_lookups_under_registries() {
         &[],
     );
     config.registry = "https://registry.example.com/".to_string();
-    config.registries_by_prefix.insert("work".to_string(), "https://work.example.com/".to_string());
+    config
+        .registries_by_prefix
+        .insert("work".to_string(), "https://work.example.com/".to_string());
     let listed: Value = serde_json::from_str(&config_list(&config)).unwrap();
     assert_eq!(
         listed["registries"],
@@ -753,7 +773,9 @@ fn get_globalconfig_path() {
     let config = config_for_get(&[], &[]);
     assert_eq!(
         config_get(&config, flags(true, None, false), "globalconfig").unwrap(),
-        Path::new("/config").join("config.yaml").to_string_lossy(),
+        Path::new("/config")
+            .join("config.yaml")
+            .to_string_lossy(),
     );
 }
 

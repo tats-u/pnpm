@@ -24,14 +24,20 @@ fn apply_named_reset(
 /// pinning it does, so a `modulesDir` still set keeps its shape and a
 /// pinned lockfile directory keeps its paths.
 fn reanchor_lockfile_paths(config: &mut Config, base_dir: &Path) {
-    let dir = config.lockfile_dir.clone().unwrap_or_else(|| base_dir.to_path_buf());
+    let dir = config
+        .lockfile_dir
+        .clone()
+        .unwrap_or_else(|| base_dir.to_path_buf());
     config.anchor_lockfile_paths(&dir);
 }
 
 /// `lockfile` follows `packageLock` while nothing sets it, as it does when
 /// the config is built.
 fn derive_lockfile(config: &mut Config) {
-    if !config.explicit_settings.contains_key("lockfile") {
+    if !config
+        .explicit_settings
+        .contains_key("lockfile")
+    {
         config.lockfile = config.package_lock;
     }
 }
@@ -40,7 +46,8 @@ fn derive_lockfile(config: &mut Config) {
 /// and none at all while hoisting is off. A `virtualStoreOnly` install
 /// still in force keeps both patterns empty.
 fn reset_hoist_pattern(config: &mut Config, defaults: &Config) {
-    config.hoist_pattern = config.hoist
+    config.hoist_pattern = config
+        .hoist
         .then(|| explicit_or_default(config, "hoistPattern", defaults.hoist_pattern.as_deref()))
         .flatten();
     config.apply_virtual_store_only_derivation();
@@ -205,7 +212,9 @@ impl WorkspaceSettings {
     ) -> bool {
         match key {
             "packages" => {
-                config.workspace_package_patterns.clone_from(&defaults.workspace_package_patterns);
+                config
+                    .workspace_package_patterns
+                    .clone_from(&defaults.workspace_package_patterns);
             }
             "gitBranchLockfile" => {
                 config.use_git_branch_lockfile = defaults.use_git_branch_lockfile;
@@ -214,17 +223,23 @@ impl WorkspaceSettings {
             "sideEffectsCache" => {
                 config.side_effects_cache_read_setting = defaults.side_effects_cache_read_setting;
                 config.side_effects_cache_write_setting = defaults.side_effects_cache_write_setting;
-                config.remote_side_effects_cache.clone_from(&defaults.remote_side_effects_cache);
+                config
+                    .remote_side_effects_cache
+                    .clone_from(&defaults.remote_side_effects_cache);
             }
             "httpsProxy" | "httpProxy" | "proxy" | "noProxy" | "noproxy" => {
                 reset_proxy_setting(config, defaults, key);
             }
             "audit" | "auditLevel" | "auditConfig" => {
                 config.audit_level = defaults.audit_level;
-                config.audit_config.clone_from(&defaults.audit_config);
+                config
+                    .audit_config
+                    .clone_from(&defaults.audit_config);
                 config.audit_ignore_prune = defaults.audit_ignore_prune;
             }
-            "update" | "updateConfig" => config.update_config.clone_from(&defaults.update_config),
+            "update" | "updateConfig" => config
+                .update_config
+                .clone_from(&defaults.update_config),
             "cleanupUnusedCatalogs" => config.catalog_prune = defaults.catalog_prune,
             "virtualStoreType" => {
                 config.enable_global_virtual_store = defaults.enable_global_virtual_store;

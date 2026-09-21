@@ -208,7 +208,9 @@ fn resolves_catalog_value_of_convergence_override() {
 fn rejects_non_exact_convergence_override_values() {
     for value in ["^1.2.3", "latest", "-", "link:../foo", "npm:bar@1.2.3"] {
         let input = HashMap::from([("foo@".to_string(), value.to_string())]);
-        let message = parse_overrides(&input, &Catalogs::new()).unwrap_err().to_string();
+        let message = parse_overrides(&input, &Catalogs::new())
+            .unwrap_err()
+            .to_string();
         eprintln!("MESSAGE:\n{message}\n");
         assert_eq!(
             message,
@@ -222,7 +224,9 @@ fn rejects_non_exact_convergence_override_values() {
 #[test]
 fn rejects_empty_range_in_parent_child_selector() {
     let input = HashMap::from([("bar>foo@".to_string(), "1.2.3".to_string())]);
-    let message = parse_overrides(&input, &Catalogs::new()).unwrap_err().to_string();
+    let message = parse_overrides(&input, &Catalogs::new())
+        .unwrap_err()
+        .to_string();
     eprintln!("MESSAGE:\n{message}\n");
     assert_eq!(
         message,

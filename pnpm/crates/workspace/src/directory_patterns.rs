@@ -23,10 +23,9 @@ pub(crate) fn negated_directory_pattern(
     let Some(directory) = normalize_directory_pattern(body) else {
         return Ok(None);
     };
-    Glob::new(&directory)
-        .map_err(|error| FindWorkspaceProjectsError::InvalidGlob {
-            pattern: pattern.to_string(),
-            message: error.to_string(),
-        })?;
+    Glob::new(&directory).map_err(|error| FindWorkspaceProjectsError::InvalidGlob {
+        pattern: pattern.to_string(),
+        message: error.to_string(),
+    })?;
     Ok(Some(directory))
 }

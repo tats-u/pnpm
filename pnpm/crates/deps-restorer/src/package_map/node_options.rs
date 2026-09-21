@@ -6,7 +6,11 @@ pub fn make_node_package_map_option(package_map_path: &Path, node_options: Optio
     let node_options = node_options
         .map(str::to_string)
         .or_else(|| std::env::var("NODE_OPTIONS").ok());
-    let mut parts = remove_node_package_map_option(node_options.as_deref().unwrap_or_default());
+    let mut parts = remove_node_package_map_option(
+        node_options
+            .as_deref()
+            .unwrap_or_default(),
+    );
     parts.push(format!(
         "--experimental-package-map={}",
         quote_path_if_needed(&package_map_path.to_string_lossy()),
@@ -34,17 +38,25 @@ pub fn package_map_path_for_execution(config: &Config, dir: &Path) -> Option<Pat
     }
     // Installs write the map under the configured modules dir, so detect it
     // by that dir's basename rather than the hard-coded `node_modules`.
-    let modules_dir_name =
-        config.modules_dir.file_name().unwrap_or_else(|| std::ffi::OsStr::new("node_modules"));
-    let workspace_path = config.workspace_dir
+    let modules_dir_name = config
+        .modules_dir
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new("node_modules"));
+    let workspace_path = config
+        .workspace_dir
         .as_ref()
-        .map(|dir| dir.join(modules_dir_name).join(PACKAGE_MAP_FILENAME));
+        .map(|dir| {
+            dir.join(modules_dir_name)
+                .join(PACKAGE_MAP_FILENAME)
+        });
     if let Some(path) = workspace_path
         && path.exists()
     {
         return Some(path);
     }
-    let path = dir.join(modules_dir_name).join(PACKAGE_MAP_FILENAME);
+    let path = dir
+        .join(modules_dir_name)
+        .join(PACKAGE_MAP_FILENAME);
     path.exists().then_some(path)
 }
 pub(super) fn remove_node_package_map_option(node_options: &str) -> Vec<String> {
@@ -116,7 +128,8 @@ impl NodeOptionsTokenizer {
 
     fn end_token(&mut self) {
         if !self.token.is_empty() {
-            self.tokens.push(std::mem::take(&mut self.token));
+            self.tokens
+                .push(std::mem::take(&mut self.token));
         }
     }
 
@@ -135,7 +148,9 @@ pub(super) fn quote_path_if_needed(path: &str) -> String {
         .chars()
         .any(|ch| ch.is_whitespace() || matches!(ch, '"' | '\'' | '\\'))
     {
-        let escaped = path.replace('\\', r"\\").replace('"', r#"\""#);
+        let escaped = path
+            .replace('\\', r"\\")
+            .replace('"', r#"\""#);
         format!(r#""{escaped}""#)
     } else {
         path.to_string()

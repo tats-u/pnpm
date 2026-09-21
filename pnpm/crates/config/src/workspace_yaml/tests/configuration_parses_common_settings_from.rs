@@ -214,11 +214,17 @@ namedRegistries:
         Some(pnpm_network::NoProxySetting::List(vec!["internal.example.com".to_string()])),
     );
     assert_eq!(
-        config.registries_by_prefix.get("stable").map(String::as_str),
+        config
+            .registries_by_prefix
+            .get("stable")
+            .map(String::as_str),
         Some("https://registry.example.com/npm/"),
     );
     assert_eq!(
-        config.registries_by_prefix.get("work").map(String::as_str),
+        config
+            .registries_by_prefix
+            .get("work")
+            .map(String::as_str),
         Some("https://internal.example.com/work/"),
     );
 }
@@ -261,7 +267,9 @@ configDependencies:
     tarball: https://example.test/dep.tgz
 "#;
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
-    let map = settings.config_dependencies.expect("field present");
+    let map = settings
+        .config_dependencies
+        .expect("field present");
     assert_eq!(
         map.get("@scope/dep"),
         Some(&ConfigDependency::Detailed(ConfigDependencyDetail {
@@ -322,7 +330,9 @@ fn the_remote_tier_reads_both_environment_spellings() {
     for suffix in ["KEY_ID", "BUILDER_ID", "IMAGE_DIGEST", "ARCHITECTURE_BASELINE", "PRIVATE_KEY"] {
         for prefixes in [vec![CANONICAL], vec![OLDER], vec![CANONICAL, OLDER]] {
             let config = read(&prefixes, suffix, "value");
-            let shared = config.remote_side_effects_cache.expect("shared cache config");
+            let shared = config
+                .remote_side_effects_cache
+                .expect("shared cache config");
             let read_back = match suffix {
                 "KEY_ID" => shared.key_id,
                 "BUILDER_ID" => shared.builder_id,
@@ -337,15 +347,21 @@ fn the_remote_tier_reads_both_environment_spellings() {
     for prefixes in [vec![CANONICAL], vec![OLDER], vec![CANONICAL, OLDER]] {
         let config = read(&prefixes, "PUBLISH", "true");
         assert_eq!(
-            config.remote_side_effects_cache.expect("shared cache config").publish,
+            config
+                .remote_side_effects_cache
+                .expect("shared cache config")
+                .publish,
             Some(true),
             "PUBLISH under {prefixes:?}",
         );
 
         let config = read(&prefixes, "BUILD_ENV", r#"{"CC":"clang"}"#);
-        let shared = config.remote_side_effects_cache.expect("shared cache config");
+        let shared = config
+            .remote_side_effects_cache
+            .expect("shared cache config");
         assert_eq!(
-            shared.build_env
+            shared
+                .build_env
                 .expect("build env")
                 .get("CC")
                 .map(String::as_str),
@@ -354,9 +370,12 @@ fn the_remote_tier_reads_both_environment_spellings() {
         );
 
         let config = read(&prefixes, "TRUSTED_KEYS", r#"{"acme-2026":"AA=="}"#);
-        let shared = config.remote_side_effects_cache.expect("shared cache config");
+        let shared = config
+            .remote_side_effects_cache
+            .expect("shared cache config");
         assert_eq!(
-            shared.trusted_keys
+            shared
+                .trusted_keys
                 .expect("trusted keys")
                 .get("acme-2026")
                 .map(String::as_str),
@@ -410,7 +429,11 @@ fn the_canonical_environment_spelling_wins() {
     let mut config = Config::new();
     config.apply_remote_side_effects_cache_env::<Env>();
     assert_eq!(
-        config.remote_side_effects_cache.expect("shared cache config").key_id.as_deref(),
+        config
+            .remote_side_effects_cache
+            .expect("shared cache config")
+            .key_id
+            .as_deref(),
         Some("canonical"),
     );
 }
@@ -447,13 +470,16 @@ remoteSideEffectsCache:
     settings.apply_to(&mut config, Path::new("/workspace"));
     config.apply_remote_side_effects_cache_env::<Env>();
 
-    let shared = config.remote_side_effects_cache.expect("shared cache config");
+    let shared = config
+        .remote_side_effects_cache
+        .expect("shared cache config");
     assert_eq!(shared.org, "acme");
     assert_eq!(shared.packages, ["native-addon"]);
     assert_eq!(shared.publish, Some(true));
     assert_eq!(shared.key_id.as_deref(), Some("acme-2026"));
     assert_eq!(
-        shared.trusted_keys
+        shared
+            .trusted_keys
             .expect("trusted keys")
             .get("acme-2026")
             .unwrap(),
@@ -488,7 +514,9 @@ trustPolicyIgnoreAfter: 525600
     assert_eq!(settings.cache_dir.as_deref(), Some("./.pacquet-cache"));
     assert_eq!(settings.minimum_release_age, Some(1440));
     assert_eq!(
-        settings.minimum_release_age_exclude.as_deref(),
+        settings
+            .minimum_release_age_exclude
+            .as_deref(),
         Some(&["lodash".to_string(), "is-*".to_string()][..]),
     );
     assert_eq!(settings.minimum_release_age_ignore_missing_time, Some(true));
@@ -503,7 +531,9 @@ trustPolicyIgnoreAfter: 525600
     assert_eq!(config.cache_dir, Path::new("/proj/.pacquet-cache"));
     assert_eq!(config.minimum_release_age, Some(1440));
     assert_eq!(
-        config.minimum_release_age_exclude.as_deref(),
+        config
+            .minimum_release_age_exclude
+            .as_deref(),
         Some(&["lodash".to_string(), "is-*".to_string()][..]),
     );
     assert!(config.minimum_release_age_ignore_missing_time);
@@ -528,10 +558,19 @@ updateConfig:
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
 
     let mut config = Config::new();
-    assert!(config.update_config.ignore_dependencies.is_none(), "default is unset");
+    assert!(
+        config
+            .update_config
+            .ignore_dependencies
+            .is_none(),
+        "default is unset"
+    );
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert_eq!(
-        config.update_config.ignore_dependencies.as_deref(),
+        config
+            .update_config
+            .ignore_dependencies
+            .as_deref(),
         Some(&["@pnpm.e2e/foo".to_string(), "@pnpm.e2e/bar".to_string()][..]),
     );
 }
@@ -551,7 +590,10 @@ updateConfig:
     let mut config = Config::new();
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert_eq!(
-        config.update_config.ignore_dependencies.as_deref(),
+        config
+            .update_config
+            .ignore_dependencies
+            .as_deref(),
         Some(&["@pnpm.e2e/foo".to_string()][..]),
         "the update section should override updateConfig",
     );
@@ -626,7 +668,10 @@ registries:
 ";
     let mut settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
     settings.substitute_env_untrusted::<EnvWithToken>();
-    let entries = settings.registries.as_ref().expect("registries present");
+    let entries = settings
+        .registries
+        .as_ref()
+        .expect("registries present");
     assert_eq!(entries.len(), 1);
     assert!(entries.contains_key("https://npm.example.com/"));
     assert!(
@@ -695,7 +740,8 @@ registries:
 fn load_at_ignores_keys_nested_under_a_setting() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "catalog:\n  zzzNotASettingZzz: ^1\noverrides:\n  alsoNotASetting: 2\n",
     )
     .unwrap();
@@ -711,7 +757,8 @@ fn load_at_ignores_keys_nested_under_a_setting() {
 fn reports_an_unknown_task_setting_field_as_a_key_issue() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "packages:\n  - packages/*\ntasks:\n  build:\n    dependson: ['^build']\n",
     )
     .unwrap();
@@ -720,13 +767,18 @@ fn reports_an_unknown_task_setting_field_as_a_key_issue() {
         .expect("load pnpm-workspace.yaml")
         .expect("pnpm-workspace.yaml is present");
 
-    let reported = &settings.key_issues.unrecognized_task_settings;
+    let reported = &settings
+        .key_issues
+        .unrecognized_task_settings;
     assert_eq!(reported.named, ["tasks['build'].dependson"]);
     assert_eq!(reported.total, 1);
     // The entry held nothing else, so it goes with the field it carried: it
     // must not reach `pnpm config`, nor stand in for the ordering a task
     // with no entry keeps.
-    let tasks = settings.tasks.as_ref().expect("the tasks section is present");
+    let tasks = settings
+        .tasks
+        .as_ref()
+        .expect("the tasks section is present");
     assert!(tasks.is_empty(), "the entry should be gone: {tasks:?}");
 }
 
@@ -746,7 +798,13 @@ fn a_task_entry_keeps_the_settings_this_version_reads() {
     let build = &settings.tasks.as_ref().unwrap()["build"];
     assert_eq!(build.depends_on.as_deref(), Some(["^build".to_string()].as_slice()));
     assert!(build.unknown.is_empty());
-    assert_eq!(settings.key_issues.unrecognized_task_settings.total, 1);
+    assert_eq!(
+        settings
+            .key_issues
+            .unrecognized_task_settings
+            .total,
+        1
+    );
 }
 
 #[test]
@@ -757,7 +815,8 @@ fn a_report_names_only_the_first_unrecognized_task_settings() {
         writeln!(fields, "    later{index}: 1").unwrap();
     }
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         format!("packages:\n  - packages/*\ntasks:\n  build:\n{fields}"),
     )
     .unwrap();
@@ -766,7 +825,9 @@ fn a_report_names_only_the_first_unrecognized_task_settings() {
         .expect("load pnpm-workspace.yaml")
         .expect("pnpm-workspace.yaml is present");
 
-    let reported = &settings.key_issues.unrecognized_task_settings;
+    let reported = &settings
+        .key_issues
+        .unrecognized_task_settings;
     assert_eq!(reported.named.len(), NAMED_UNRECOGNIZED_TASK_SETTINGS);
     assert_eq!(reported.total, NAMED_UNRECOGNIZED_TASK_SETTINGS + 3);
 }
@@ -775,7 +836,8 @@ fn a_report_names_only_the_first_unrecognized_task_settings() {
 fn rejects_fractional_task_concurrency_as_an_invalid_setting() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "packages:\n  - packages/*\ntasks:\n  build:\n    concurrency: 1.5\n",
     )
     .unwrap();
@@ -792,7 +854,8 @@ fn rejects_fractional_task_concurrency_as_an_invalid_setting() {
 fn rejects_string_task_concurrency_as_an_invalid_setting() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "packages:\n  - packages/*\ntasks:\n  build:\n    concurrency: '2'\n",
     )
     .unwrap();
@@ -819,11 +882,14 @@ fn parses_task_concurrency_groups() {
         .expect("pnpm-workspace.yaml is present");
 
     assert_eq!(
-        settings.tasks.as_ref().unwrap()["build"].concurrency_group.as_deref(),
+        settings.tasks.as_ref().unwrap()["build"]
+            .concurrency_group
+            .as_deref(),
         Some("cargo"),
     );
     assert_eq!(
-        settings.concurrency_groups
+        settings
+            .concurrency_groups
             .as_ref()
             .unwrap()
             .get("cargo")
@@ -831,7 +897,8 @@ fn parses_task_concurrency_groups() {
         Some(2),
     );
     assert_eq!(
-        settings.concurrency_groups
+        settings
+            .concurrency_groups
             .as_ref()
             .unwrap()
             .get("node")
@@ -852,7 +919,8 @@ fn concurrency_groups_merge_across_layers() {
         settings.apply_to(&mut config, dir);
     }
 
-    let limits: Vec<(&str, u32)> = config.concurrency_groups
+    let limits: Vec<(&str, u32)> = config
+        .concurrency_groups
         .iter()
         .map(|(group, limit)| (group.as_str(), *limit))
         .collect();
@@ -867,7 +935,8 @@ fn rejects_a_task_concurrency_group_that_is_not_a_plain_name() {
     for group in ["../escape", "a/b", "", ".", "..", "with space", "nul", "COM1.x", "trailing."] {
         let dir = tempfile::tempdir().unwrap();
         fs::write(
-            dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+            dir.path()
+                .join(WORKSPACE_MANIFEST_FILENAME),
             format!(
                 "packages:\n  - packages/*\ntasks:\n  build:\n    concurrencyGroup: {group:?}\n",
             ),

@@ -35,14 +35,17 @@ impl PeerSccPass {
             if let Some((parent, _, _)) = work.last() {
                 let parent_low = self.low_of[parent];
                 let node_low = self.low_of[&node_id];
-                self.low_of.insert(parent.clone(), parent_low.min(node_low));
+                self.low_of
+                    .insert(parent.clone(), parent_low.min(node_low));
             }
         }
     }
 
     pub(super) fn open(&mut self, node_id: &NodeId) {
-        self.index_of.insert(node_id.clone(), self.next_index);
-        self.low_of.insert(node_id.clone(), self.next_index);
+        self.index_of
+            .insert(node_id.clone(), self.next_index);
+        self.low_of
+            .insert(node_id.clone(), self.next_index);
         self.next_index += 1;
         self.on_stack.insert(node_id.clone());
         self.tarjan_stack.push(node_id.clone());
@@ -66,7 +69,8 @@ impl PeerSccPass {
             if self.on_stack.contains(&child) {
                 let node_low = self.low_of[node_id];
                 let child_index = self.index_of[&child];
-                self.low_of.insert(node_id.clone(), node_low.min(child_index));
+                self.low_of
+                    .insert(node_id.clone(), node_low.min(child_index));
             }
         }
         None
@@ -80,7 +84,8 @@ impl PeerSccPass {
         let mut component = Vec::new();
         while let Some(member) = self.tarjan_stack.pop() {
             self.on_stack.remove(&member);
-            self.scc_of.insert(member.clone(), scc_index);
+            self.scc_of
+                .insert(member.clone(), scc_index);
             let is_root = member == *root;
             component.push(member);
             if is_root {

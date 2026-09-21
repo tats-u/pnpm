@@ -80,7 +80,9 @@ async fn fetch_package_meta_once<Meta: serde::de::DeserializeOwned>(
     {
         return Err(FetchError::BodyTooLarge);
     }
-    let body = read_limited_body(response, DEPRECATION_BODY_LIMIT).await.map_err(FetchError::Body)?;
+    let body = read_limited_body(response, DEPRECATION_BODY_LIMIT)
+        .await
+        .map_err(FetchError::Body)?;
     if body.truncated {
         return Err(FetchError::BodyTooLarge);
     }
@@ -145,7 +147,9 @@ pub(super) async fn put_package_meta(
     }
 
     let action = if is_deprecate { "deprecate" } else { "undeprecate" }.to_string();
-    Err(registry_write_error(response, action).await.into())
+    Err(registry_write_error(response, action)
+        .await
+        .into())
 }
 
 /// The error a failed registry write maps to, once its body is read.
@@ -209,7 +213,10 @@ pub(crate) fn auth_header_for_registry(
     registry_url: &str,
     package_name: &str,
 ) -> Option<String> {
-    context.config.auth_headers.for_url_with_package(registry_url, Some(package_name))
+    context
+        .config
+        .auth_headers
+        .for_url_with_package(registry_url, Some(package_name))
 }
 
 pub(crate) fn build_http_client(config: &Config) -> miette::Result<ThrottledClient> {
@@ -229,7 +236,8 @@ pub(crate) fn package_url(package_name: &str, registry_url: &str) -> miette::Res
 }
 
 pub(crate) fn package_name_for_url(package_name: &str) -> Result<String, DeprecateError> {
-    parse_wanted_dependency(package_name).alias
+    parse_wanted_dependency(package_name)
+        .alias
         .ok_or_else(|| DeprecateError::InvalidPackageSpec { spec: package_name.to_string() })
 }
 

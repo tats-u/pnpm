@@ -38,7 +38,8 @@ pub(super) fn drop_stale_importers(
     plan: &ImportersPlan<'_, '_>,
     edits: &mut GraphEdits,
 ) -> bool {
-    if plan.stale
+    if plan
+        .stale
         .iter()
         .any(|importer_id| is_linked_from_a_survivor(candidate, importer_id, &plan.stale))
     {
@@ -72,12 +73,10 @@ pub(super) fn apply_one_importer_update(
     plan: &ImportersPlan<'_, '_>,
     edits: &mut GraphEdits,
 ) -> bool {
-    let ImporterUpdate {
-        importer_id,
-        manifest,
-        manifest_dependencies,
-    } = *entry;
-    let records_nothing = importers.get(importer_id.as_str()).is_none_or(records_no_dependencies);
+    let ImporterUpdate { importer_id, manifest, manifest_dependencies } = *entry;
+    let records_nothing = importers
+        .get(importer_id.as_str())
+        .is_none_or(records_no_dependencies);
     if records_nothing && !manifest_dependencies.is_empty() {
         let Some(new_importer) =
             importer_from_locked_versions(locked.snapshots, manifest, manifest_dependencies, plan)
@@ -174,7 +173,9 @@ pub(super) fn retarget_importer_dependency(
         let Ok(moved) = wanted.version.to_string().parse() else {
             return false;
         };
-        edits.dropped.record(alias, &*dependency);
+        edits
+            .dropped
+            .record(alias, &*dependency);
         dependency.version = ImporterDepVersion::Regular(moved);
     }
     dependency.specifier = specifier.to_string();
@@ -276,7 +277,8 @@ pub(super) fn add_importer_edge(
     let (specifier, target) = declared;
     // A recorded specifier with nothing to point at is a lockfile only the
     // resolver can make sense of.
-    if importer.specifiers
+    if importer
+        .specifiers
         .as_ref()
         .is_some_and(|specifiers| specifiers.contains_key(&alias.to_string()))
     {

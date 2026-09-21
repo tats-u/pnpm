@@ -19,7 +19,12 @@ fn run(
     };
     let code = execute_emulated(script, cwd, env, EmulatedOutput::Lines(&sink), None)
         .expect("run the script under the emulator");
-    (code, lines.into_inner().expect("the sink is never poisoned"))
+    (
+        code,
+        lines
+            .into_inner()
+            .expect("the sink is never poisoned"),
+    )
 }
 
 /// The lines `stdio` carried, in the order the sink saw them.
@@ -252,7 +257,9 @@ fn keeps_a_shell_operator_in_a_default_as_word_text() {
 fn keeps_an_operator_literal_behind_any_backslash_run() {
     let dir = tempdir().expect("create a temp dir");
 
-    for (operator, backslashes) in [';', '&', '|', '<', '>'].into_iter().flat_map(with_run_lengths)
+    for (operator, backslashes) in [';', '&', '|', '<', '>']
+        .into_iter()
+        .flat_map(with_run_lengths)
     {
         let run_of = r"\".repeat(backslashes);
         let script = format!("echo [${{MISSING:-a{run_of}{operator}b}}] && echo second");
@@ -348,7 +355,9 @@ fn leaves_unsupported_parameter_forms_alone() {
     let env = HashMap::from([("MY_VAR".to_string(), "hello".to_string())]);
 
     for script in ["echo ${MY_VAR:=x}", "echo ${MY_VAR=x}", "echo ${#MY_VAR}", "echo ${MY_VAR"] {
-        let expected = script.trim_start_matches("echo ").to_string();
+        let expected = script
+            .trim_start_matches("echo ")
+            .to_string();
         let (code, lines) = run(script, dir.path(), &env);
         assert_eq!(code, 0, "`{script}` must exit zero");
         assert_eq!(lines, vec![(LifecycleStdio::Stdout, expected)], "`{script}`");

@@ -24,7 +24,8 @@ pub(super) fn convert_package_metadata(
     metadata.resolution = match &metadata.resolution {
         LockfileResolution::Directory(resolution) => {
             let resolved = validate_lockfile_local_path(
-                &ctx.lockfile_dir.join(&resolution.directory),
+                &ctx.lockfile_dir
+                    .join(&resolution.directory),
                 ctx.lockfile_dir,
             )?;
             LockfileResolution::Directory(DirectoryResolution {
@@ -32,7 +33,9 @@ pub(super) fn convert_package_metadata(
             })
         }
         LockfileResolution::Tarball(resolution) if resolution.tarball.starts_with("file:") => {
-            let input_path = resolution.tarball.trim_start_matches("file:");
+            let input_path = resolution
+                .tarball
+                .trim_start_matches("file:");
             let resolved =
                 validate_lockfile_local_path(&ctx.lockfile_dir.join(input_path), ctx.lockfile_dir)?;
             LockfileResolution::Tarball(TarballResolution {
@@ -40,7 +43,10 @@ pub(super) fn convert_package_metadata(
                 integrity: resolution.integrity.clone(),
                 revision: None,
                 git_hosted: resolution.git_hosted,
-                path: resolution.path.as_ref().map(|_| relative_path(ctx.deploy_dir, &resolved)),
+                path: resolution
+                    .path
+                    .as_ref()
+                    .map(|_| relative_path(ctx.deploy_dir, &resolved)),
             })
         }
         _ => metadata.resolution.clone(),
@@ -236,7 +242,10 @@ fn resolve_link_payload(base: &Path, payload: &str) -> LocalResolve {
 
 pub(super) fn split_local_payload(payload: &str) -> (&str, &str) {
     let suffix = pnpm_deps_path::index_of_dep_path_suffix(payload);
-    match suffix.patch_hash_index.or(suffix.peers_index) {
+    match suffix
+        .patch_hash_index
+        .or(suffix.peers_index)
+    {
         Some(index) => (&payload[..index], &payload[index..]),
         None => (payload, ""),
     }

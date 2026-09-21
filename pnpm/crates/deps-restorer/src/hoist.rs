@@ -169,7 +169,9 @@ fn resolved_keys_by_alias(
         let Some(map) = project_snapshot.get_map_by_group(*group) else { continue };
         for (name, spec) in map {
             let Some(key) = spec.version.resolved_key(name) else { continue };
-            resolved_by_alias.entry(name.to_string()).or_insert(key);
+            resolved_by_alias
+                .entry(name.to_string())
+                .or_insert(key);
         }
     }
     resolved_by_alias
@@ -194,7 +196,8 @@ fn ordered_direct_deps(
         for (name, _) in entries {
             let alias = name.to_string();
             let Some(key) = resolved_by_alias.get(&alias) else { continue };
-            deps.entry(alias).or_insert_with(|| key.clone());
+            deps.entry(alias)
+                .or_insert_with(|| key.clone());
         }
     }
     deps
@@ -338,7 +341,9 @@ fn merged_direct_deps(input: &HoistInputs<'_>) -> IndexMap<String, PackageKey> {
     let mut direct_deps = IndexMap::new();
     for importer_deps in input.direct_deps_by_importer.values() {
         for (alias, node_id) in importer_deps {
-            direct_deps.entry(alias.clone()).or_insert_with(|| node_id.clone());
+            direct_deps
+                .entry(alias.clone())
+                .or_insert_with(|| node_id.clone());
         }
     }
     direct_deps
@@ -406,7 +411,8 @@ impl<'a> HoistPass<'a> {
                 public_bins_seen: HashSet::new(),
             },
             input,
-            hoisted_aliases: input.direct_deps_by_importer
+            hoisted_aliases: input
+                .direct_deps_by_importer
                 .get(".")
                 .map(|map| {
                     map.keys()
@@ -427,12 +433,21 @@ impl<'a> HoistPass<'a> {
     /// nondeterministically (v11's graph-miss `continue` skips the
     /// claim by accident).
     fn hoist_workspace_packages(&mut self) {
-        for (name, dir) in self.input.hoisted_workspace_packages.into_iter().flatten() {
+        for (name, dir) in self
+            .input
+            .hoisted_workspace_packages
+            .into_iter()
+            .flatten()
+        {
             let Some(hoist_kind) = self.hoist_kind(name) else { continue };
-            if !self.hoisted_aliases.insert(name.to_lowercase()) {
+            if !self
+                .hoisted_aliases
+                .insert(name.to_lowercase())
+            {
                 continue;
             }
-            self.hoisted_workspace_aliases.push((name.clone(), hoist_kind, dir.clone()));
+            self.hoisted_workspace_aliases
+                .push((name.clone(), hoist_kind, dir.clone()));
         }
     }
 
@@ -441,7 +456,11 @@ impl<'a> HoistPass<'a> {
     fn hoist_kind(&self, alias: &str) -> Option<HoistKind> {
         if self.input.public_pattern.matches(alias) {
             Some(HoistKind::Public)
-        } else if self.input.private_pattern.matches(alias) {
+        } else if self
+            .input
+            .private_pattern
+            .matches(alias)
+        {
             Some(HoistKind::Private)
         } else {
             None
@@ -451,7 +470,10 @@ impl<'a> HoistPass<'a> {
     fn place_child(&mut self, alias: &str, child_node_id: &PackageKey) {
         let Some(hoist_kind) = self.hoist_kind(alias) else { return };
         let alias_norm = alias.to_lowercase();
-        if self.hoisted_aliases.contains(&alias_norm) {
+        if self
+            .hoisted_aliases
+            .contains(&alias_norm)
+        {
             return;
         }
         // Record (childNodeId, alias) → kind unconditionally; the
@@ -464,11 +486,16 @@ impl<'a> HoistPass<'a> {
         // Note we do NOT claim the alias in that case, so a later
         // sibling with the same alias still gets a chance.
         let Some(node) = self.input.graph.get(child_node_id) else { return };
-        if self.input.skipped.contains(child_node_id) {
+        if self
+            .input
+            .skipped
+            .contains(child_node_id)
+        {
             return;
         }
         if node.has_bin {
-            self.bins.record_bin(alias, child_node_id, hoist_kind);
+            self.bins
+                .record_bin(alias, child_node_id, hoist_kind);
         }
         self.hoisted_aliases.insert(alias_norm);
         self.hoisted_dependencies
@@ -482,7 +509,9 @@ impl<'a> HoistPass<'a> {
             hoisted_dependencies: self.hoisted_dependencies,
             hoisted_dependencies_by_node_id: self.hoisted_dependencies_by_node_id,
             hoisted_aliases_with_bins: self.bins.hoisted_aliases_with_bins,
-            publicly_hoisted_aliases_with_bins: self.bins.publicly_hoisted_aliases_with_bins,
+            publicly_hoisted_aliases_with_bins: self
+                .bins
+                .publicly_hoisted_aliases_with_bins,
             hoisted_workspace_aliases: self.hoisted_workspace_aliases,
         }
     }
@@ -513,11 +542,14 @@ fn append_dependency_entries<'a>(
         let next_steps: Vec<Vec<&PackageKey>> = nodes
             .iter()
             .map(|node_id| {
-                graph[*node_id].children
+                graph[*node_id]
+                    .children
                     .values()
                     .filter_map(|child_id| {
                         let (graph_key, _) = graph.get_key_value(child_id)?;
-                        visited.insert(graph_key).then_some(graph_key)
+                        visited
+                            .insert(graph_key)
+                            .then_some(graph_key)
                     })
                     .collect()
             })
@@ -547,13 +579,21 @@ impl HoistedBins {
     fn record_bin(&mut self, alias: &str, child_node_id: &PackageKey, hoist_kind: HoistKind) {
         match hoist_kind {
             HoistKind::Private => {
-                if self.private_bins_seen.insert(alias.to_owned()) {
-                    self.hoisted_aliases_with_bins.push((alias.to_owned(), child_node_id.clone()));
+                if self
+                    .private_bins_seen
+                    .insert(alias.to_owned())
+                {
+                    self.hoisted_aliases_with_bins
+                        .push((alias.to_owned(), child_node_id.clone()));
                 }
             }
             HoistKind::Public => {
-                if self.public_bins_seen.insert(alias.to_owned()) {
-                    self.publicly_hoisted_aliases_with_bins.push(alias.to_owned());
+                if self
+                    .public_bins_seen
+                    .insert(alias.to_owned())
+                {
+                    self.publicly_hoisted_aliases_with_bins
+                        .push(alias.to_owned());
                 }
             }
         }

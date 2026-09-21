@@ -123,13 +123,16 @@ pub fn peer_issues_for_lockfile(
         check_peer_dependencies_of_importers(lockfile, lockfile_dir, importer_ids, catalogs)?,
         rules,
     );
-    let has_missing_peer = issues
-        .values()
-        .any(|project_issues| {
-            project_issues.missing
-                .values()
-                .any(|entries| entries.iter().any(|entry| !entry.optional))
-        });
+    let has_missing_peer = issues.values().any(|project_issues| {
+        project_issues
+            .missing
+            .values()
+            .any(|entries| {
+                entries
+                    .iter()
+                    .any(|entry| !entry.optional)
+            })
+    });
     let has_issues = has_missing_peer
         || issues
             .values()
@@ -148,7 +151,11 @@ pub fn check_peer_dependencies_from_lockfile(
     let mut importer_ids: Vec<String> = project_dirs
         .iter()
         .map(|project_dir| pnpm_workspace::importer_id_from_root_dir(lockfile_dir, project_dir))
-        .filter(|importer_id| lockfile.importers.contains_key(importer_id))
+        .filter(|importer_id| {
+            lockfile
+                .importers
+                .contains_key(importer_id)
+        })
         .collect();
     importer_ids.sort();
     importer_ids.dedup();
@@ -166,8 +173,14 @@ pub fn check_peer_dependencies_of_importers(
 ) -> Result<IssuesByProjects, CatalogResolutionError> {
     let empty_packages = HashMap::new();
     let empty_snapshots = HashMap::new();
-    let packages = lockfile.packages.as_ref().unwrap_or(&empty_packages);
-    let snapshots = lockfile.snapshots.as_ref().unwrap_or(&empty_snapshots);
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .unwrap_or(&empty_packages);
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .unwrap_or(&empty_snapshots);
     let context = PeerWalkContext { lockfile, lockfile_dir, catalogs };
 
     let mut result: IssuesByProjects = BTreeMap::new();
@@ -221,7 +234,11 @@ fn collect_initial_keys(
     issues: &mut PeerIssues,
 ) -> Result<Vec<PkgNameVerPeer>, CatalogResolutionError> {
     let mut keys = Vec::new();
-    let Some(importer) = context.lockfile.importers.get(importer_id) else {
+    let Some(importer) = context
+        .lockfile
+        .importers
+        .get(importer_id)
+    else {
         return Ok(keys);
     };
     let importer_dir = context.lockfile_dir.join(importer_id);
@@ -252,14 +269,7 @@ fn collect_initial_keys(
 /// Check one linked workspace package's own peer dependencies against what
 /// the consuming importer and the linked importer provide.
 fn check_link(inputs: CheckLink<'_>) -> Result<(), CatalogResolutionError> {
-    let CheckLink {
-        context,
-        importer,
-        importer_dir,
-        alias,
-        link_target,
-        issues,
-    } = inputs;
+    let CheckLink { context, importer, importer_dir, alias, link_target, issues } = inputs;
     let Some(linked) = LinkedDependency::resolve(importer_dir, context.lockfile_dir, link_target)
     else {
         return Ok(());
@@ -274,7 +284,10 @@ fn check_link(inputs: CheckLink<'_>) -> Result<(), CatalogResolutionError> {
         providers: crate::linked::PeerProviders {
             lockfile: context.lockfile,
             importer,
-            linked_importer: context.lockfile.importers.get(&linked.importer_id),
+            linked_importer: context
+                .lockfile
+                .importers
+                .get(&linked.importer_id),
             importer_dir,
             linked_importer_dir: &linked.dir,
             lockfile_dir: context.lockfile_dir,
@@ -304,10 +317,8 @@ impl LinkedDependency {
     /// version, the peer check, and the linked importer's own snapshot all
     /// need the same answers, and this walk runs on the install path.
     fn resolve(importer_dir: &Path, lockfile_dir: &Path, link_target: &str) -> Option<Self> {
-        let CanonicalPathWithin {
-            path: dir,
-            base: canonical_lockfile_dir,
-        } = canonical_path_within(&importer_dir.join(link_target), lockfile_dir)?;
+        let CanonicalPathWithin { path: dir, base: canonical_lockfile_dir } =
+            canonical_path_within(&importer_dir.join(link_target), lockfile_dir)?;
         let manifest = PackageManifest::from_path(dir.join("package.json")).ok();
         let version = manifest
             .as_ref()
@@ -370,18 +381,26 @@ struct SnapshotPeers<'a> {
 /// leaves unsatisfied.
 fn check_snapshot_peers(inputs: SnapshotPeers<'_>) {
     let issues = inputs.issues;
-    let Some(meta) = inputs.packages.get(&inputs.key.without_peer()) else { return };
+    let Some(meta) = inputs
+        .packages
+        .get(&inputs.key.without_peer())
+    else {
+        return;
+    };
     let Some(peers) = &meta.peer_dependencies else { return };
 
     for (peer_name, peer_range) in peers {
         let peer_range = get_peer_version_range(peer_range);
-        let optional = meta.peer_dependencies_meta
+        let optional = meta
+            .peer_dependencies_meta
             .as_ref()
             .and_then(|meta_map| meta_map.get(peer_name))
             .is_some_and(|peer_meta| peer_meta.optional);
 
         let Ok(peer_pkg_name) = peer_name.parse::<PkgName>() else { continue };
-        let dep_ref = inputs.snapshot.and_then(|entry| snapshot_dependency(entry, &peer_pkg_name));
+        let dep_ref = inputs
+            .snapshot
+            .and_then(|entry| snapshot_dependency(entry, &peer_pkg_name));
         let Some(dep_ref) = dep_ref else {
             record_missing_peer(issues, peer_name, inputs.parents, optional, &peer_range);
             continue;
@@ -398,11 +417,13 @@ fn snapshot_dependency<'a>(
     snapshot: &'a SnapshotEntry,
     name: &PkgName,
 ) -> Option<&'a SnapshotDepRef> {
-    snapshot.dependencies
+    snapshot
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(name))
         .or_else(|| {
-            snapshot.optional_dependencies
+            snapshot
+                .optional_dependencies
                 .as_ref()
                 .and_then(|deps| deps.get(name))
         })
@@ -425,10 +446,16 @@ fn child_keys(snapshot: Option<&SnapshotEntry>) -> impl Iterator<Item = PkgNameV
     snapshot
         .into_iter()
         .flat_map(|snapshot| {
-            snapshot.dependencies
+            snapshot
+                .dependencies
                 .iter()
                 .flat_map(|deps| deps.iter())
-                .chain(snapshot.optional_dependencies.iter().flat_map(|deps| deps.iter()))
+                .chain(
+                    snapshot
+                        .optional_dependencies
+                        .iter()
+                        .flat_map(|deps| deps.iter()),
+                )
         })
         .filter_map(|(alias, dep_ref)| dep_ref.resolve(alias))
 }
@@ -466,12 +493,11 @@ fn satisfies(version: &str, range: &str) -> bool {
     // port applies that rule unconditionally. What is left is the plain
     // bound check, and ordering still holds: `18.3.0-canary` satisfies
     // `^18.0.0`, while `2.0.0-beta.1` stays below `>=2.0.0`.
-    parse_range_to_intervals(&preprocess_hyphen_ranges(range))
-        .is_some_and(|intervals| {
-            intervals
-                .iter()
-                .any(|interval| interval.contains(&parsed_version))
-        })
+    parse_range_to_intervals(&preprocess_hyphen_ranges(range)).is_some_and(|intervals| {
+        intervals
+            .iter()
+            .any(|interval| interval.contains(&parsed_version))
+    })
 }
 
 #[cfg(test)]

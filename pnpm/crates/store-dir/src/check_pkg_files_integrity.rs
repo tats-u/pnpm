@@ -66,7 +66,8 @@ impl VerifiedFileIntegrityTally {
                 .min(u128::from(u64::MAX)) as u64,
             Ordering::Relaxed,
         );
-        self.files.fetch_add(1, Ordering::Relaxed);
+        self.files
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     fn snapshot(&self) -> VerifiedFileIntegrity {
@@ -107,8 +108,12 @@ impl VerifiedFileIntegrity {
     #[must_use]
     pub fn since(self, baseline: Self) -> Self {
         VerifiedFileIntegrity {
-            files: self.files.saturating_sub(baseline.files),
-            duration: self.duration.saturating_sub(baseline.duration),
+            files: self
+                .files
+                .saturating_sub(baseline.files),
+            duration: self
+                .duration
+                .saturating_sub(baseline.duration),
         }
     }
 }
@@ -200,13 +205,7 @@ pub fn defer_pkg_files_integrity(
     store_dir: &StoreDir,
     entry: PackageFilesIndex,
 ) -> (VerifyResult, PendingFilesCheck) {
-    let PackageFilesIndex {
-        files,
-        algo,
-        side_effects,
-        remote_side_effects_quarantine,
-        ..
-    } = entry;
+    let PackageFilesIndex { files, algo, side_effects, remote_side_effects_quarantine, .. } = entry;
     let mut files_map = HashMap::with_capacity(files.len());
     let mut passed = true;
     for (filename, info) in &files {
@@ -443,7 +442,9 @@ fn verify_modified_file(path: &Path, filename: &str, info: &CafsFileInfo, algo: 
     // here — the lock cost only applies to files actually being
     // re-verified, which is rare.
     let lock = pnpm_fs::cas_write_lock(path);
-    let _guard = lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let _guard = lock
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
 
     // Re-stat under the lock. The writer (if any) has finished by
     // now, so the size + mtime reflect the committed state. A file
@@ -599,12 +600,10 @@ fn check_file(path: &Path, checked_at: Option<u64>) -> Option<(bool, u64)> {
 /// a missing, unreadable, or re-hashed file all read as mutated.
 #[must_use]
 pub fn package_dir_matches_index(dir: &Path, index: &PackageFilesIndex) -> bool {
-    index.files
-        .iter()
-        .all(|(path, file)| {
-            join_inside(dir, path)
-                .is_some_and(|path| verify_file_integrity(&path, &file.digest, &index.algo))
-        })
+    index.files.iter().all(|(path, file)| {
+        join_inside(dir, path)
+            .is_some_and(|path| verify_file_integrity(&path, &file.digest, &index.algo))
+    })
 }
 
 /// `dir` joined with a recorded in-package path, or `None` if that path is

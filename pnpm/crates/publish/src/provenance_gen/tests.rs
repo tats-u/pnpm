@@ -195,7 +195,11 @@ macro_rules! github_sigstore_sys {
 async fn fetch_sigstore_token_uses_github_request_token() {
     github_sigstore_sys!(Sys, |request: OidcRequest<'_>| {
         // The sigstore audience drives the request-token query parameter.
-        assert!(request.url.contains("audience=sigstore"));
+        assert!(
+            request
+                .url
+                .contains("audience=sigstore")
+        );
         Ok(OidcResponse {
             ok: true,
             status: 200,
@@ -288,7 +292,13 @@ impl EnvVar for GhSignSys {
 }
 impl OidcFetch for GhSignSys {
     async fn fetch(request: OidcRequest<'_>) -> Result<OidcResponse, OidcFetchError> {
-        assert!(request.url.contains("audience=sigstore"), "unexpected request: {}", request.url);
+        assert!(
+            request
+                .url
+                .contains("audience=sigstore"),
+            "unexpected request: {}",
+            request.url
+        );
         Ok(OidcResponse { ok: true, status: 200, body: r#"{"value":"sigstore-token"}"#.to_owned() })
     }
 }
@@ -413,7 +423,8 @@ const INSTANT_RETRIES: pnpm_network::RetryOpts = pnpm_network::RetryOpts {
 
 #[tokio::test]
 async fn with_sign_deadline_times_out_a_hung_attempt() {
-    let err = with_sign_deadline(Duration::ZERO, std::future::pending()).await
+    let err = with_sign_deadline(Duration::ZERO, std::future::pending())
+        .await
         .expect_err("a hung exchange hits the deadline");
     assert!(matches!(err, ProvenanceGenError::Sign { .. }), "got {err:?}");
 }

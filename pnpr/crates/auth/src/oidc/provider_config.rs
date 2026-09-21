@@ -6,7 +6,8 @@ use super::{
 pub(super) fn validate_provider(config: &OidcProvider) -> Result<()> {
     if config.name.is_empty()
         || config.name.len() > 64
-        || !config.name
+        || !config
+            .name
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
         || config.audience.is_empty()
@@ -17,10 +18,16 @@ pub(super) fn validate_provider(config: &OidcProvider) -> Result<()> {
     }
     secure_url(&config.issuer)?;
     let mut subjects = HashSet::new();
-    for binding in config.login
+    for binding in config
+        .login
         .iter()
         .flat_map(|login| &login.users)
-        .chain(config.workloads.iter().map(|workload| &workload.identity))
+        .chain(
+            config
+                .workloads
+                .iter()
+                .map(|workload| &workload.identity),
+        )
     {
         super::super::validate_username(&binding.username)
             .map_err(|_| invalid_config("invalid OIDC username"))?;
@@ -30,7 +37,10 @@ pub(super) fn validate_provider(config: &OidcProvider) -> Result<()> {
             ));
         }
     }
-    if config.login.as_ref().is_some_and(|login| login.users.is_empty())
+    if config
+        .login
+        .as_ref()
+        .is_some_and(|login| login.users.is_empty())
         || (config.login.is_none() && config.workloads.is_empty())
     {
         return Err(invalid_config("OIDC providers require explicit user or workload bindings"));

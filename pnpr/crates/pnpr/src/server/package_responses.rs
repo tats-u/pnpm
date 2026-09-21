@@ -49,7 +49,8 @@ pub(super) fn expected_tarball_dist(
     filename: &str,
 ) -> Result<Option<TarballDist>, RegistryError> {
     let packument: PackumentDists = serde_json::from_slice(packument)?;
-    let mut matches = packument.versions
+    let mut matches = packument
+        .versions
         .iter()
         .filter_map(|(version, manifest)| {
             let dist = manifest.dist.as_ref()?;
@@ -177,7 +178,10 @@ pub(super) fn filter_osv_vulnerable_versions(
         .get("time")
         .and_then(Value::as_object)
         .is_some();
-    if let Some(versions) = packument.get_mut("versions").and_then(Value::as_object_mut) {
+    if let Some(versions) = packument
+        .get_mut("versions")
+        .and_then(Value::as_object_mut)
+    {
         versions.retain(|key, manifest| {
             if version_is_vulnerable(osv_index, package_name, key, manifest) {
                 blocked_keys.insert(key.clone());
@@ -205,15 +209,16 @@ pub(super) fn drop_blocked_dist_tags(
     package_name: &str,
     blocked: &HashSet<String>,
 ) {
-    let Some(tags) = packument.get_mut("dist-tags").and_then(Value::as_object_mut) else {
+    let Some(tags) = packument
+        .get_mut("dist-tags")
+        .and_then(Value::as_object_mut)
+    else {
         return;
     };
     tags.retain(|_, version| {
-        version
-            .as_str()
-            .is_none_or(|version| {
-                !blocked.contains(version) && !osv_index.is_vulnerable(package_name, version)
-            })
+        version.as_str().is_none_or(|version| {
+            !blocked.contains(version) && !osv_index.is_vulnerable(package_name, version)
+        })
     });
 }
 
@@ -231,7 +236,10 @@ pub(super) fn drop_blocked_time_entries(
     package_name: &str,
     versions: &BlockedVersions<'_>,
 ) {
-    let Some(time) = packument.get_mut("time").and_then(Value::as_object_mut) else {
+    let Some(time) = packument
+        .get_mut("time")
+        .and_then(Value::as_object_mut)
+    else {
         return;
     };
     time.retain(|key, _| {
@@ -271,11 +279,9 @@ pub(super) fn filter_osv_vulnerable_dist_tags(
     };
     let package_name = name.as_str();
     tags.retain(|_, version| {
-        version
-            .as_str()
-            .is_none_or(|version| {
-                !is_osv_vulnerable_packument_version(packument, package_name, version, osv_index)
-            })
+        version.as_str().is_none_or(|version| {
+            !is_osv_vulnerable_packument_version(packument, package_name, version, osv_index)
+        })
     });
 }
 
@@ -330,8 +336,9 @@ pub(super) fn packument_bytes_response(
     content_type: &'static str,
     last_modified: Option<String>,
 ) -> Response {
-    let mut builder =
-        Response::builder().status(StatusCode::OK).header(header::CONTENT_TYPE, content_type);
+    let mut builder = Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, content_type);
     if let Some(last_modified) = last_modified {
         builder = builder.header(header::LAST_MODIFIED, last_modified);
     }
@@ -360,7 +367,11 @@ pub(super) fn packument_last_modified(doc: &Value) -> Option<String> {
     if whole_seconds.timestamp_subsec_nanos() > 0 {
         whole_seconds += chrono::Duration::seconds(1);
     }
-    Some(whole_seconds.format("%a, %d %b %Y %H:%M:%S GMT").to_string())
+    Some(
+        whole_seconds
+            .format("%a, %d %b %Y %H:%M:%S GMT")
+            .to_string(),
+    )
 }
 
 pub(super) fn tarball_response(body: Body, content_length: Option<u64>) -> Response {
@@ -370,7 +381,9 @@ pub(super) fn tarball_response(body: Body, content_length: Option<u64>) -> Respo
     if let Some(len) = content_length {
         builder = builder.header(header::CONTENT_LENGTH, len);
     }
-    builder.body(body).expect("static-shape response always builds")
+    builder
+        .body(body)
+        .expect("static-shape response always builds")
 }
 
 pub(super) fn revision_tarball_response(
@@ -383,11 +396,15 @@ pub(super) fn revision_tarball_response(
     let headers = response.headers_mut();
     headers.insert(
         header::CACHE_CONTROL,
-        "public, max-age=31536000, immutable".parse().expect("static cache control is valid"),
+        "public, max-age=31536000, immutable"
+            .parse()
+            .expect("static cache control is valid"),
     );
     headers.insert(
         header::ETAG,
-        format!(r#""{digest}""#).parse().expect("canonical base64url digest is a valid ETag"),
+        format!(r#""{digest}""#)
+            .parse()
+            .expect("canonical base64url digest is a valid ETag"),
     );
     if let [hash] = integrity.hashes.as_slice() {
         headers.insert(

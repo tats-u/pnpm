@@ -53,7 +53,9 @@ impl ReporterState {
         let instruction = self.options.ignored_builds_instruction_text.as_deref().unwrap_or(
             r#"Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts."#,
         );
-        self.display.frame.push_block(format!("Ignored build scripts: {list}.\n{instruction}"));
+        self.display
+            .frame
+            .push_block(format!("Ignored build scripts: {list}.\n{instruction}"));
     }
 
     /// pnpm's `reportUpdateCheck`: tell the user a newer pnpm exists and
@@ -77,7 +79,8 @@ impl ReporterState {
         let msg = match log.status {
             InstallingConfigDepsStatus::Started => "Installing config dependencies...".to_string(),
             InstallingConfigDepsStatus::Done => {
-                let list = log.deps
+                let list = log
+                    .deps
                     .iter()
                     .map(|dep| format!("{}@{}", dep.name, dep.version))
                     .collect::<Vec<_>>()
@@ -86,7 +89,9 @@ impl ReporterState {
             }
         };
         let mut slot = std::mem::take(&mut self.display.config_deps_slot);
-        self.display.frame.emit(&mut slot, msg, false);
+        self.display
+            .frame
+            .emit(&mut slot, msg, false);
         self.display.config_deps_slot = slot;
     }
 
@@ -128,7 +133,9 @@ impl ReporterState {
             }
         };
         let mut slot = std::mem::take(&mut self.display.lockfile_verification_slot);
-        self.display.frame.emit(&mut slot, msg, false);
+        self.display
+            .frame
+            .emit(&mut slot, msg, false);
         self.display.lockfile_verification_slot = slot;
     }
 
@@ -143,7 +150,9 @@ impl ReporterState {
     }
 
     pub(super) fn on_request_retry(&mut self, log: &RequestRetryLog) {
-        let left = log.max_retries.saturating_sub(log.attempt);
+        let left = log
+            .max_retries
+            .saturating_sub(log.attempt);
         let msg = format!(
             "{} {} error ({}) {} {}\nWill retry in {}. {left} retries left.",
             log.method,
@@ -164,7 +173,9 @@ impl ReporterState {
     pub(super) fn on_pnpm(&mut self, level: LogLevel, message: &str, prefix: &str) {
         match level {
             LogLevel::Debug if self.options.max_log_level >= MaxLogLevel::Debug => {
-                self.display.frame.push_block(message.to_string());
+                self.display
+                    .frame
+                    .push_block(message.to_string());
             }
             LogLevel::Warn if self.options.max_log_level >= MaxLogLevel::Warn => {
                 self.notices.push_warning(
@@ -174,7 +185,10 @@ impl ReporterState {
                     message,
                 );
             }
-            LogLevel::Error => self.display.frame.push_block(message.to_string()),
+            LogLevel::Error => self
+                .display
+                .frame
+                .push_block(message.to_string()),
             LogLevel::Info if self.options.max_log_level >= MaxLogLevel::Info => {
                 self.on_info(message, prefix);
             }
@@ -191,26 +205,38 @@ impl ReporterState {
         if message == "Lockfile is up to date, resolution step is skipped" {
             self.display.pending_lockfile_message = Some(message.to_string());
         } else {
-            self.display.frame.push_block(message.to_string());
+            self.display
+                .frame
+                .push_block(message.to_string());
         }
     }
 
     pub(super) fn flush_pending_lockfile_message(&mut self) {
-        if let Some(message) = self.display.pending_lockfile_message.take() {
+        if let Some(message) = self
+            .display
+            .pending_lockfile_message
+            .take()
+        {
             self.display.frame.push_block(message);
         }
     }
 
     pub(super) fn on_dedupe_check(&mut self, log: &DedupeCheckLog) {
-        self.display.frame.push_block(format!("\n{}", log.rendered));
+        self.display
+            .frame
+            .push_block(format!("\n{}", log.rendered));
     }
 
     pub(super) fn on_execution_time(&mut self, log: &ExecutionTimeLog) {
-        let elapsed = log.ended_at.saturating_sub(log.started_at);
+        let elapsed = log
+            .ended_at
+            .saturating_sub(log.started_at);
         let msg =
             format!("Done in {} using pnpm v{}", pretty_ms(elapsed), crate::package_version());
         let mut slot = std::mem::take(&mut self.display.exec_slot);
-        self.display.frame.emit(&mut slot, msg, true);
+        self.display
+            .frame
+            .emit(&mut slot, msg, true);
         self.display.exec_slot = slot;
     }
 
@@ -219,7 +245,12 @@ impl ReporterState {
     /// dependency of the current project) renders; transitive and
     /// parent-less skips stay debug-only.
     pub(super) fn on_skipped_optional(&mut self, log: &SkippedOptionalDependencyLog) {
-        if log.prefix != self.rendering.cwd || !log.parents.as_ref().is_some_and(Vec::is_empty) {
+        if log.prefix != self.rendering.cwd
+            || !log
+                .parents
+                .as_ref()
+                .is_some_and(Vec::is_empty)
+        {
             return;
         }
         let pkg = match &log.package {
@@ -243,7 +274,9 @@ impl ReporterState {
     /// `resolution_done` summary.
     pub(super) fn on_deprecation(&mut self, log: &DeprecationLog) {
         if log.depth != 0 {
-            self.notices.deprecated_subdeps.push(log.clone());
+            self.notices
+                .deprecated_subdeps
+                .push(log.clone());
             return;
         }
         let msg = format!(
@@ -256,15 +289,23 @@ impl ReporterState {
         if !self.options.scope.recursive && log.prefix == self.rendering.cwd {
             self.display.frame.push_block(msg);
         } else {
-            self.display.frame.push_block(zoom_out(&self.rendering.cwd, &log.prefix, &msg));
+            self.display
+                .frame
+                .push_block(zoom_out(&self.rendering.cwd, &log.prefix, &msg));
         }
     }
 
     pub(super) fn flush_deprecated_subdeps(&mut self) {
-        if self.notices.deprecated_subdeps.is_empty() {
+        if self
+            .notices
+            .deprecated_subdeps
+            .is_empty()
+        {
             return;
         }
-        let mut names: Vec<String> = self.notices.deprecated_subdeps
+        let mut names: Vec<String> = self
+            .notices
+            .deprecated_subdeps
             .iter()
             .map(pkg_label)
             .collect();
@@ -273,10 +314,14 @@ impl ReporterState {
         let msg = format!(
             "{} {} {}",
             self.rendering.colors.warn_label(),
-            self.rendering.colors.red(&format!("{count} deprecated subdependencies found:")),
+            self.rendering
+                .colors
+                .red(&format!("{count} deprecated subdependencies found:")),
             names.join(", "),
         );
-        self.display.frame.emit(&mut self.notices.deprecated_slot, msg, false);
+        self.display
+            .frame
+            .emit(&mut self.notices.deprecated_slot, msg, false);
         self.notices.deprecated_subdeps.clear();
     }
 
@@ -284,7 +329,13 @@ impl ReporterState {
     /// `reportHooks.ts` format. When the hook's `prefix` differs from
     /// `self.rendering.cwd` the message is zoomed out with the prefix.
     pub(super) fn on_hook(&mut self, log: &HookLog) {
-        let msg = format!("{}: {}", self.rendering.colors.magenta_bright(&log.hook), log.message);
+        let msg = format!(
+            "{}: {}",
+            self.rendering
+                .colors
+                .magenta_bright(&log.hook),
+            log.message
+        );
         if log.prefix.is_empty() || log.prefix == self.rendering.cwd {
             self.display.frame.push_block(msg);
         } else {

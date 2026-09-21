@@ -208,9 +208,7 @@ impl AuthHeaders {
     /// authorization for any URL.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.by_uri.is_empty()
-            && self.scoped_by_scope.is_empty()
-            && self.route_hook.is_none()
+        self.by_uri.is_empty() && self.scoped_by_scope.is_empty() && self.route_hook.is_none()
     }
 
     /// Overlay a ready-to-send `Authorization` header at `url`.
@@ -234,8 +232,11 @@ impl AuthHeaders {
         if uri.is_empty() {
             return;
         }
-        self.max_parts = self.max_parts.max(uri.split('/').count());
-        self.by_uri.insert(uri, AuthEntry::Header(header));
+        self.max_parts = self
+            .max_parts
+            .max(uri.split('/').count());
+        self.by_uri
+            .insert(uri, AuthEntry::Header(header));
     }
 
     /// Build an [`AuthHeaders`] from `(nerf_darted_uri, header_value)`

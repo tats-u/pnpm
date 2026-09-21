@@ -77,15 +77,17 @@ impl MockInstanceOptions<'_> {
     }
 
     pub(crate) async fn spawn(self) -> MockInstance {
-        let MockInstanceOptions {
-            port, public_url, stdout, stderr, ..
-        } = self;
+        let MockInstanceOptions { port, public_url, stdout, stderr, .. } = self;
 
         let stdout = stdout.map_or_else(Stdio::null, |stdout| {
-            File::create(stdout).expect("create file for stdout").into()
+            File::create(stdout)
+                .expect("create file for stdout")
+                .into()
         });
         let stderr = stderr.map_or_else(Stdio::null, |stderr| {
-            File::create(stderr).expect("create file for stderr").into()
+            File::create(stderr)
+                .expect("create file for stderr")
+                .into()
         });
         // Storage is built from the in-repo fixtures (see
         // `registry_mock_storage`) and seeded into runtime storage by

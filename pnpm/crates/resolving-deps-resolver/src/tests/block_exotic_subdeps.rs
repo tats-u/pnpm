@@ -202,7 +202,10 @@ async fn allows_exotic_subdep_when_disabled() {
     )
     .await
     .expect("exotic subdep must pass when disabled");
-    assert!(tree.packages.contains_key("say-hi@1.0.0"));
+    assert!(
+        tree.packages
+            .contains_key("say-hi@1.0.0")
+    );
 }
 
 #[tokio::test]
@@ -249,5 +252,8 @@ async fn allows_exotic_dep_under_workspace_dep() {
     )
     .await
     .expect("exotic dep under workspace dep must pass");
-    assert!(tree.packages.contains_key("say-hi@1.0.0"));
+    assert!(
+        tree.packages
+            .contains_key("say-hi@1.0.0")
+    );
 }

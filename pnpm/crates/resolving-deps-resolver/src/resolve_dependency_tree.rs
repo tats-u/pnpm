@@ -66,7 +66,9 @@ use walk::{
 /// the lock — better than escalating into a hard install-wide
 /// failure.
 fn lock_recoverable<Inner>(mutex: &Mutex<Inner>) -> MutexGuard<'_, Inner> {
-    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    mutex
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// Options threaded into [`fn@resolve_dependency_tree`].
@@ -102,10 +104,34 @@ impl std::fmt::Debug for ResolveDependencyTreeOptions {
         f.debug_struct("ResolveDependencyTreeOptions")
             .field("base_opts", &self.base_opts)
             .field("patched_dependencies", &self.patched_dependencies)
-            .field("manifest_hook", &self.manifest_hook.as_ref().map(|_| "<hook>"))
-            .field("overrides_hook", &self.overrides_hook.as_ref().map(|_| "<hook>"))
-            .field("pnpmfile_hook", &self.pnpmfile_hook.as_ref().map(|_| "<hook>"))
-            .field("read_package_log", &self.read_package_log.as_ref().map(|_| "<log>"))
+            .field(
+                "manifest_hook",
+                &self
+                    .manifest_hook
+                    .as_ref()
+                    .map(|_| "<hook>"),
+            )
+            .field(
+                "overrides_hook",
+                &self
+                    .overrides_hook
+                    .as_ref()
+                    .map(|_| "<hook>"),
+            )
+            .field(
+                "pnpmfile_hook",
+                &self
+                    .pnpmfile_hook
+                    .as_ref()
+                    .map(|_| "<hook>"),
+            )
+            .field(
+                "read_package_log",
+                &self
+                    .read_package_log
+                    .as_ref()
+                    .map(|_| "<log>"),
+            )
             .field("auto_install_peers", &self.auto_install_peers)
             .finish()
     }
@@ -495,7 +521,11 @@ where
         reuse,
         ancestors: Arc::new(Vec::new()),
         parent_pkg_aliases,
-        base_overlay: &ctx.options.base.version.preferred_versions_overlay,
+        base_overlay: &ctx
+            .options
+            .base
+            .version
+            .preferred_versions_overlay,
     };
     let seeds = wanted
         .into_iter()
@@ -509,7 +539,11 @@ where
     // sees the resolved direct-dep versions.
     record_direct_dep_versions(ctx, importer_id, &direct_versions);
     let children_overlay = PreferredVersionsOverlay::layer(
-        ctx.options.base.version.preferred_versions_overlay.clone(),
+        ctx.options
+            .base
+            .version
+            .preferred_versions_overlay
+            .clone(),
         direct_versions,
     );
     let children_pkg_aliases = parent_pkg_aliases.extend(level_aliases(&seeds));
@@ -517,7 +551,9 @@ where
     // below it a level at a time.
     let direct =
         walk_from_seeds(ctx, resolver, seeds, children_overlay, children_pkg_aliases).await?;
-    ctx.workspace.versions.record_preferred_version_roots(direct.iter().map(|dep| dep.id.as_str()));
+    ctx.workspace
+        .versions
+        .record_preferred_version_roots(direct.iter().map(|dep| dep.id.as_str()));
     // Second bump, after every write of this wave (including the roots
     // above) has landed: a `run_preferred_versions` read racing with
     // this call could bind the entry bump's revision to a partial

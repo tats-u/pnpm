@@ -91,11 +91,12 @@ pub fn parse_change_intent(
     let frontmatter: IndexMap<String, String> = if frontmatter_text.trim().is_empty() {
         IndexMap::new()
     } else {
-        serde_saphyr::from_str(&frontmatter_text)
-            .map_err(|err| VersioningError::InvalidFrontmatter {
+        serde_saphyr::from_str(&frontmatter_text).map_err(|err| {
+            VersioningError::InvalidFrontmatter {
                 file_path: file_path.to_path_buf(),
                 message: err.to_string(),
-            })?
+            }
+        })?
     };
 
     let releases = parse_intent_releases(frontmatter, file_path)?;

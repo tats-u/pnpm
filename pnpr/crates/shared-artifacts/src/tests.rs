@@ -64,8 +64,12 @@ fn publication(builder_id: &str) -> PublishArtifactRequest {
 /// test wanting several of them for one dependency has to vary the platform —
 /// which is the only reason a second artifact for one input is legitimate.
 fn for_platform(mut request: PublishArtifactRequest, index: usize) -> PublishArtifactRequest {
-    let mut payload: ArtifactPayload =
-        serde_json::from_slice(&BASE64.decode(&request.envelope.payload).unwrap()).unwrap();
+    let mut payload: ArtifactPayload = serde_json::from_slice(
+        &BASE64
+            .decode(&request.envelope.payload)
+            .unwrap(),
+    )
+    .unwrap();
     // Node major, not the glibc floor: two floors for one architecture and Node
     // major both apply to a consumer meeting the higher one, so they overlap and
     // the second could not be published. Distinct Node majors never share a
@@ -83,8 +87,12 @@ fn publication_for_platform(index: usize) -> PublishArtifactRequest {
 
 fn publication_tagged(builder_id: &str, tags: &[&str]) -> PublishArtifactRequest {
     let mut request = publication(builder_id);
-    let mut payload: ArtifactPayload =
-        serde_json::from_slice(&BASE64.decode(&request.envelope.payload).unwrap()).unwrap();
+    let mut payload: ArtifactPayload = serde_json::from_slice(
+        &BASE64
+            .decode(&request.envelope.payload)
+            .unwrap(),
+    )
+    .unwrap();
     payload.compatibility = CompatibilityConstraints::Tagged {
         tags: tags
             .iter()
@@ -232,7 +240,9 @@ impl fmt::Display for FailArtifactWrites {
 impl FailArtifactWrites {
     fn count_usage_write(&self, location: &ObjectPath) {
         if let Some(writes) = self.quota.usage_writes.as_ref()
-            && location.as_ref().ends_with("/quota.json")
+            && location
+                .as_ref()
+                .ends_with("/quota.json")
         {
             writes.fetch_add(1, Ordering::SeqCst);
         }
@@ -249,12 +259,9 @@ impl FailArtifactWrites {
         }
         Some(
             async {
-                self.inner.put_opts(
-                    location,
-                    PutPayload::from(winner.clone()),
-                    PutOptions::default(),
-                )
-                .await?;
+                self.inner
+                    .put_opts(location, PutPayload::from(winner.clone()), PutOptions::default())
+                    .await?;
                 Err(object_store::Error::AlreadyExists {
                     path: location.to_string(),
                     source: std::io::Error::other("slot claimed by another publication").into(),
@@ -271,10 +278,17 @@ impl FailArtifactWrites {
         payload: PutPayload,
         options: PutOptions,
     ) -> object_store::Result<PutResult> {
-        let injected = match self.fail_only.as_ref().expect("caller checked fail_only") {
+        let injected = match self
+            .fail_only
+            .as_ref()
+            .expect("caller checked fail_only")
+        {
             FailOnly::RegistrationAfter(stored) => {
-                location.as_ref().ends_with("/quota.json")
-                    && self.inner
+                location
+                    .as_ref()
+                    .ends_with("/quota.json")
+                    && self
+                        .inner
                         .head(&ObjectPath::from(stored.as_str()))
                         .await
                         .is_ok()
@@ -283,10 +297,15 @@ impl FailArtifactWrites {
             FailOnly::DeleteOf(_) => false,
         };
         if !injected {
-            return self.inner.put_opts(location, payload, options).await;
+            return self
+                .inner
+                .put_opts(location, payload, options)
+                .await;
         }
         if self.commit_before_error {
-            self.inner.put_opts(location, payload, options).await?;
+            self.inner
+                .put_opts(location, payload, options)
+                .await?;
         }
         Err(object_store::Error::Generic {
             store: "test",
@@ -300,7 +319,9 @@ impl FailArtifactWrites {
         payload: PutPayload,
         options: PutOptions,
     ) -> object_store::Result<PutResult> {
-        if self.quota.fail_next_write
+        if self
+            .quota
+            .fail_next_write
             .as_ref()
             .is_some_and(|fail| fail.swap(false, Ordering::SeqCst))
         {
@@ -309,7 +330,9 @@ impl FailArtifactWrites {
                 source: std::io::Error::other("injected quota write failure").into(),
             });
         }
-        self.inner.put_opts(location, payload, options).await
+        self.inner
+            .put_opts(location, payload, options)
+            .await
     }
 }
 
@@ -326,31 +349,50 @@ impl ObjectStore for FailArtifactWrites {
             return claimed;
         }
         if self.fail_only.is_some() {
-            return self.put_with_targeted_failure(location, payload, options).await;
+            return self
+                .put_with_targeted_failure(location, payload, options)
+                .await;
         }
         if !self.fail_scope_writes && location.as_ref().contains("/scopes/") {
-            return self.inner.put_opts(location, payload, options).await;
+            return self
+                .inner
+                .put_opts(location, payload, options)
+                .await;
         }
-        if location.as_ref().ends_with("/quota.json") {
-            return self.put_quota(location, payload, options).await;
+        if location
+            .as_ref()
+            .ends_with("/quota.json")
+        {
+            return self
+                .put_quota(location, payload, options)
+                .await;
         }
-        let Some((path, envelope)) = self.publish_overlapping_after_create.as_ref() else {
+        let Some((path, envelope)) = self
+            .publish_overlapping_after_create
+            .as_ref()
+        else {
             if self.commit_before_error {
-                self.inner.put_opts(location, payload, options).await?;
+                self.inner
+                    .put_opts(location, payload, options)
+                    .await?;
             }
             return Err(object_store::Error::Generic {
                 store: "test",
                 source: std::io::Error::other("injected artifact write failure").into(),
             });
         };
-        let stored = self.inner.put_opts(location, payload, options).await?;
-        if location.as_ref() != path {
-            self.inner.put_opts(
-                &ObjectPath::from(path.as_str()),
-                PutPayload::from(envelope.clone()),
-                PutOptions::default(),
-            )
+        let stored = self
+            .inner
+            .put_opts(location, payload, options)
             .await?;
+        if location.as_ref() != path {
+            self.inner
+                .put_opts(
+                    &ObjectPath::from(path.as_str()),
+                    PutPayload::from(envelope.clone()),
+                    PutOptions::default(),
+                )
+                .await?;
         }
         Ok(stored)
     }
@@ -360,7 +402,9 @@ impl ObjectStore for FailArtifactWrites {
         location: &ObjectPath,
         options: PutMultipartOptions,
     ) -> object_store::Result<Box<dyn MultipartUpload>> {
-        self.inner.put_multipart_opts(location, options).await
+        self.inner
+            .put_multipart_opts(location, options)
+            .await
     }
 
     async fn get_opts(
@@ -368,7 +412,8 @@ impl ObjectStore for FailArtifactWrites {
         location: &ObjectPath,
         options: GetOptions,
     ) -> object_store::Result<GetResult> {
-        if self.fail_reads_of
+        if self
+            .fail_reads_of
             .as_ref()
             .is_some_and(|path| location.as_ref() == path)
         {
@@ -377,8 +422,13 @@ impl ObjectStore for FailArtifactWrites {
                 source: std::io::Error::other("injected variant read failure").into(),
             });
         }
-        if let Some(reads) = self.quota.fail_slot_read_after_first.as_ref()
-            && self.quota.claim_slot_first
+        if let Some(reads) = self
+            .quota
+            .fail_slot_read_after_first
+            .as_ref()
+            && self
+                .quota
+                .claim_slot_first
                 .as_ref()
                 .is_some_and(|(slot, _)| location.as_ref() == slot)
             && reads.fetch_add(1, Ordering::SeqCst) > 0
@@ -388,7 +438,9 @@ impl ObjectStore for FailArtifactWrites {
                 source: std::io::Error::other("injected slot read failure").into(),
             });
         }
-        self.inner.get_opts(location, options).await
+        self.inner
+            .get_opts(location, options)
+            .await
     }
 
     fn delete_stream(
@@ -442,14 +494,17 @@ impl ObjectStore for FailArtifactWrites {
         prefix: Option<&ObjectPath>,
         offset: &ObjectPath,
     ) -> BoxStream<'static, object_store::Result<ObjectMeta>> {
-        self.inner.list_with_offset(prefix, offset)
+        self.inner
+            .list_with_offset(prefix, offset)
     }
 
     async fn list_with_delimiter(
         &self,
         prefix: Option<&ObjectPath>,
     ) -> object_store::Result<ListResult> {
-        self.inner.list_with_delimiter(prefix).await
+        self.inner
+            .list_with_delimiter(prefix)
+            .await
     }
 
     async fn copy_opts(
@@ -458,7 +513,9 @@ impl ObjectStore for FailArtifactWrites {
         to: &ObjectPath,
         options: CopyOptions,
     ) -> object_store::Result<()> {
-        self.inner.copy_opts(from, to, options).await
+        self.inner
+            .copy_opts(from, to, options)
+            .await
     }
 
     async fn rename_opts(
@@ -467,6 +524,8 @@ impl ObjectStore for FailArtifactWrites {
         to: &ObjectPath,
         options: RenameOptions,
     ) -> object_store::Result<()> {
-        self.inner.rename_opts(from, to, options).await
+        self.inner
+            .rename_opts(from, to, options)
+            .await
     }
 }

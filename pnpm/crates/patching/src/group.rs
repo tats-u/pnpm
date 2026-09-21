@@ -48,8 +48,12 @@ where
 
         match (parsed.name, parsed.version, parsed.non_semver_version) {
             (Some(name), Some(version), _) => {
-                let group = result.entry(name.to_string()).or_default();
-                group.exact.insert(version.to_string(), extended);
+                let group = result
+                    .entry(name.to_string())
+                    .or_default();
+                group
+                    .exact
+                    .insert(version.to_string(), extended);
             }
             (Some(name), None, Some(non_semver_version)) => {
                 if Range::parse(non_semver_version).is_err() {
@@ -57,7 +61,9 @@ where
                         non_semver_version: non_semver_version.to_string(),
                     });
                 }
-                let group = result.entry(name.to_string()).or_default();
+                let group = result
+                    .entry(name.to_string())
+                    .or_default();
                 if non_semver_version.trim() == "*" {
                     group.all = Some(extended);
                 } else {

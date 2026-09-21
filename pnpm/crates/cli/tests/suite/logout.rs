@@ -17,7 +17,9 @@ fn logout_revokes_token_and_removes_it_from_auth_ini() {
         .with_status(200)
         .create();
     let registry = server.url();
-    let host = registry.strip_prefix("http://").expect("mockito serves http");
+    let host = registry
+        .strip_prefix("http://")
+        .expect("mockito serves http");
     let token_key = format!("//{host}/:_authToken");
 
     let CommandTempCwd { pacquet, root, .. } = CommandTempCwd::init();
@@ -116,7 +118,9 @@ fn logout_matches_the_registry_however_the_url_is_spelled() {
         .with_status(200)
         .create();
     let registry = server.url();
-    let host = registry.strip_prefix("http://").expect("mockito serves http");
+    let host = registry
+        .strip_prefix("http://")
+        .expect("mockito serves http");
 
     let CommandTempCwd { pacquet, root, .. } = CommandTempCwd::init();
     let config_home = root.path().join("config");

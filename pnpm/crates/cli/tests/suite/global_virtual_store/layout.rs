@@ -29,7 +29,9 @@ fn pnp_without_symlinks_repairs_a_missing_global_virtual_store_package() {
         .assert()
         .success();
     assert!(
-        package_dir.join("package.json").is_file(),
+        package_dir
+            .join("package.json")
+            .is_file(),
         "a frozen PnP install must repair a missing GVS package when symlinks are disabled",
     );
 
@@ -59,7 +61,9 @@ fn virtual_store_only_populates_standard_virtual_store_without_importer_symlinks
         "the standard virtual store must still be populated",
     );
     assert!(
-        !workspace.join("node_modules/@pnpm.e2e/pkg-with-1-dep").exists(),
+        !workspace
+            .join("node_modules/@pnpm.e2e/pkg-with-1-dep")
+            .exists(),
         "importer-level symlinks must not be created",
     );
 
@@ -124,7 +128,9 @@ fn virtual_store_only_with_no_modules_dir_works_when_gvs_is_enabled() {
     let version_dir = pkg_version_dir(&store_dir, "@pnpm.e2e/pkg-with-1-dep", "100.0.0");
     let hash_dir = sole_hash_dir(&version_dir);
     assert!(
-        pkg_in_slot(&hash_dir, "@pnpm.e2e/pkg-with-1-dep").join("package.json").exists(),
+        pkg_in_slot(&hash_dir, "@pnpm.e2e/pkg-with-1-dep")
+            .join("package.json")
+            .exists(),
         "the GVS must be populated even with no modules dir",
     );
 
@@ -150,11 +156,15 @@ fn virtual_store_only_with_gvs_populates_the_store_without_importer_links() {
     let version_dir = pkg_version_dir(&store_dir, "@pnpm.e2e/pkg-with-1-dep", "100.0.0");
     let hash_dir = sole_hash_dir(&version_dir);
     assert!(
-        pkg_in_slot(&hash_dir, "@pnpm.e2e/pkg-with-1-dep").join("package.json").exists(),
+        pkg_in_slot(&hash_dir, "@pnpm.e2e/pkg-with-1-dep")
+            .join("package.json")
+            .exists(),
         "the GVS must be populated",
     );
     assert!(
-        pkg_in_slot(&hash_dir, "@pnpm.e2e/dep-of-pkg-with-1-dep").join("package.json").exists(),
+        pkg_in_slot(&hash_dir, "@pnpm.e2e/dep-of-pkg-with-1-dep")
+            .join("package.json")
+            .exists(),
         "the transitive dep must be materialized in the slot too",
     );
 
@@ -193,11 +203,15 @@ fn virtual_store_only_with_frozen_lockfile_populates_the_gvs_without_importer_sy
     let version_dir = pkg_version_dir(&store_dir, "@pnpm.e2e/pkg-with-1-dep", "100.0.0");
     let hash_dir = sole_hash_dir(&version_dir);
     assert!(
-        pkg_in_slot(&hash_dir, "@pnpm.e2e/pkg-with-1-dep").join("package.json").exists(),
+        pkg_in_slot(&hash_dir, "@pnpm.e2e/pkg-with-1-dep")
+            .join("package.json")
+            .exists(),
         "the GVS must be populated",
     );
     assert!(
-        pkg_in_slot(&hash_dir, "@pnpm.e2e/dep-of-pkg-with-1-dep").join("package.json").exists(),
+        pkg_in_slot(&hash_dir, "@pnpm.e2e/dep-of-pkg-with-1-dep")
+            .join("package.json")
+            .exists(),
         "the transitive dep must be materialized in the slot too",
     );
 
@@ -312,7 +326,9 @@ fn ordinary_install_after_virtual_store_only_completes_the_linking() {
         .success();
 
     assert!(
-        workspace.join("node_modules/@pnpm.e2e/pkg-with-1-dep/package.json").exists(),
+        workspace
+            .join("node_modules/@pnpm.e2e/pkg-with-1-dep/package.json")
+            .exists(),
         "the follow-up install must create the importer symlinks",
     );
     assert_eq!(

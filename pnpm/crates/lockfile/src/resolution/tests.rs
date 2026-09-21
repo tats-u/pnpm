@@ -22,7 +22,9 @@ fn undeclared_form(registry: &str, include_tarball_url: bool) -> LockfileFormOpt
 }
 
 fn integrity(integrity_str: &str) -> Integrity {
-    integrity_str.parse().expect("parse integrity string")
+    integrity_str
+        .parse()
+        .expect("parse integrity string")
 }
 
 /// Render a resolution exactly as it appears under a `packages:` entry, then
@@ -39,8 +41,15 @@ fn render_resolution(resolution: &LockfileResolution) -> String {
     serialize_yaml::to_string(&document)
         .unwrap()
         .lines()
-        .skip_while(|line| !line.trim_start().starts_with("resolution:"))
-        .map(|line| line.strip_prefix("    ").unwrap_or(line))
+        .skip_while(|line| {
+            !line
+                .trim_start()
+                .starts_with("resolution:")
+        })
+        .map(|line| {
+            line.strip_prefix("    ")
+                .unwrap_or(line)
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }

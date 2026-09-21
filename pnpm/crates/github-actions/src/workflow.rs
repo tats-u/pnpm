@@ -5,14 +5,16 @@ use super::{
 
 pub(super) async fn discover(root: &Path) -> miette::Result<Vec<ActionReference>> {
     let root_display = root.display();
-    let canonical_root = fs::canonicalize(root).await
+    let canonical_root = fs::canonicalize(root)
+        .await
         .map_err(|error| miette::miette!("Failed to read {root_display}: {error}"))?;
     let mut queue = workflow_files(&root.join(".github/workflows")).await?;
     let mut visited = HashSet::new();
     let mut actions = Vec::new();
     while let Some(file) = queue.pop_front() {
         let file_display = file.display();
-        let real_file = fs::canonicalize(&file).await
+        let real_file = fs::canonicalize(&file)
+            .await
             .map_err(|error| miette::miette!("Failed to read {file_display}: {error}"))?;
         if !real_file.starts_with(&canonical_root) {
             return Err(miette::miette!(
@@ -48,7 +50,11 @@ async fn workflow_files(workflows: &Path) -> miette::Result<VecDeque<PathBuf>> {
         .map_err(|error| miette::miette!("Failed to read {workflows_display}: {error}"))?
     {
         let path = entry.path();
-        if matches!(path.extension().and_then(|ext| ext.to_str()), Some("yml" | "yaml")) {
+        if matches!(
+            path.extension()
+                .and_then(|ext| ext.to_str()),
+            Some("yml" | "yaml")
+        ) {
             queue.push_back(path);
         }
     }
@@ -69,7 +75,8 @@ async fn scan_workflow_file(
     real_file: &Path,
 ) -> miette::Result<WorkflowScan> {
     let real_file_display = real_file.display();
-    let text = fs::read_to_string(real_file).await
+    let text = fs::read_to_string(real_file)
+        .await
         .map_err(|error| miette::miette!("Failed to read {real_file_display}: {error}"))?;
     let mut scan = WorkflowScan { actions: Vec::new(), local_references: Vec::new() };
     for uses_value in uses_values(&text)
@@ -134,24 +141,33 @@ async fn resolve_local_reference(
 ) -> miette::Result<Option<PathBuf>> {
     let target = root.join(reference);
     let candidate = if matches!(
-        target.extension().and_then(|extension| extension.to_str()),
+        target
+            .extension()
+            .and_then(|extension| extension.to_str()),
         Some("yml" | "yaml"),
     ) {
-        existing_file(&target).await?.then_some(target)
+        existing_file(&target)
+            .await?
+            .then_some(target)
     } else {
         let action_yml = target.join("action.yml");
         if existing_file(&action_yml).await? {
             Some(action_yml)
         } else {
             let action_yaml = target.join("action.yaml");
-            existing_file(&action_yaml).await?.then_some(action_yaml)
+            existing_file(&action_yaml)
+                .await?
+                .then_some(action_yaml)
         }
     };
     let Some(candidate) = candidate else { return Ok(None) };
     let candidate_display = candidate.display();
-    let candidate = fs::canonicalize(&candidate).await
+    let candidate = fs::canonicalize(&candidate)
+        .await
         .map_err(|error| miette::miette!("Failed to read {candidate_display}: {error}"))?;
-    Ok(candidate.starts_with(canonical_root).then_some(candidate))
+    Ok(candidate
+        .starts_with(canonical_root)
+        .then_some(candidate))
 }
 
 async fn existing_file(path: &Path) -> miette::Result<bool> {
@@ -205,13 +221,12 @@ fn uses_values(text: &str) -> Result<Vec<UsesValue<'_>>, QueryError> {
 }
 
 fn parse_workflow(text: &str) -> Result<Value, QueryError> {
-    yaml_serde::from_str::<Value>(text)
-        .map_err(|err| {
-            let (line, column) = err
-                .location()
-                .map_or((0, 0), |loc| (loc.line(), loc.column()));
-            QueryError::InvalidInput(line, column)
-        })
+    yaml_serde::from_str::<Value>(text).map_err(|err| {
+        let (line, column) = err
+            .location()
+            .map_or((0, 0), |loc| (loc.line(), loc.column()));
+        QueryError::InvalidInput(line, column)
+    })
 }
 
 /// The `uses:` scalar at `route` with its byte range in `text`, or `None`
@@ -230,7 +245,10 @@ fn uses_value_at<'text>(
         .checked_sub(key.location.byte_span.1)
         .map(|_| &text[key.location.byte_span.1..start]);
     if separator.is_none_or(|separator| {
-        !separator.starts_with(':') || !separator[1..].chars().all(char::is_whitespace)
+        !separator.starts_with(':')
+            || !separator[1..]
+                .chars()
+                .all(char::is_whitespace)
     }) {
         return Ok(None);
     }
@@ -260,7 +278,10 @@ fn uses_value_at<'text>(
 
 fn uses_routes(value: &Value) -> Vec<Route<'static>> {
     let mut routes = Vec::new();
-    if let Some(jobs) = value.get("jobs").and_then(Value::as_mapping) {
+    if let Some(jobs) = value
+        .get("jobs")
+        .and_then(Value::as_mapping)
+    {
         for (name, job) in jobs {
             let Some(name) = name.as_str() else { continue };
             if job

@@ -40,11 +40,14 @@ pub fn compose_changelog_section(release: &PlannedRelease) -> String {
         entries.push(format_list_item(&intent.summary));
     }
     if !release.dependency_updates.is_empty() {
-        let dep_lines: Vec<String> = release.dependency_updates
+        let dep_lines: Vec<String> = release
+            .dependency_updates
             .iter()
             .map(|dep| format!("  - {}@{}", dep.name, dep.new_version))
             .collect();
-        entries_by_bump[2].1.push(format!("- Updated dependencies:\n{}", dep_lines.join("\n")));
+        entries_by_bump[2]
+            .1
+            .push(format!("- Updated dependencies:\n{}", dep_lines.join("\n")));
     }
 
     let mut parts = vec![format!("## {}", release.version.next)];

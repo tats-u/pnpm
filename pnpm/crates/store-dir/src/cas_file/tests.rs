@@ -40,7 +40,8 @@ fn cas_file_path_by_mode_suffix_matches_write_side() {
             .cas_file_path_by_mode(&hex, mode)
             .unwrap_or_else(|| panic!("mode {mode:o} should produce a path"));
         assert!(
-            path.to_string_lossy().ends_with("-exec"),
+            path.to_string_lossy()
+                .ends_with("-exec"),
             "mode {mode:o} should resolve to an `-exec` path, got {path:?}",
         );
     }
@@ -49,7 +50,9 @@ fn cas_file_path_by_mode_suffix_matches_write_side() {
             .cas_file_path_by_mode(&hex, mode)
             .unwrap_or_else(|| panic!("mode {mode:o} should produce a path"));
         assert!(
-            !path.to_string_lossy().ends_with("-exec"),
+            !path
+                .to_string_lossy()
+                .ends_with("-exec"),
             "mode {mode:o} should NOT resolve to an `-exec` path, got {path:?}",
         );
     }
@@ -82,7 +85,9 @@ fn shard_cache_populates_on_first_write_and_skips_mkdir_thereafter() {
     let tempdir = tempdir().unwrap();
     let store_dir = StoreDir::new(tempdir.path());
 
-    let (path_a, hash_a) = store_dir.write_cas_file(b"hello world", false).unwrap();
+    let (path_a, hash_a) = store_dir
+        .write_cas_file(b"hello world", false)
+        .unwrap();
     assert!(store_dir.shard_already_ensured(hash_a[0]));
     assert!(path_a.is_file());
 
@@ -95,7 +100,9 @@ fn shard_cache_populates_on_first_write_and_skips_mkdir_thereafter() {
     // `write_atomic` instead, which is covered by
     // `existing_target_with_wrong_content_is_overwritten_atomically`
     // over in `crates/fs/src/ensure_file.rs`.
-    let (path_b, hash_b) = store_dir.write_cas_file(b"hello world", false).unwrap();
+    let (path_b, hash_b) = store_dir
+        .write_cas_file(b"hello world", false)
+        .unwrap();
     assert_eq!(hash_a, hash_b);
     assert_eq!(path_a, path_b);
     assert!(store_dir.shard_already_ensured(hash_b[0]));
@@ -104,7 +111,9 @@ fn shard_cache_populates_on_first_write_and_skips_mkdir_thereafter() {
     // grows by one) or happens to share the same first digest byte
     // as "hello world" (cache stays put). Either way the write
     // must succeed and materialize the file on disk.
-    let (path_c, _) = store_dir.write_cas_file(b"goodbye world", false).unwrap();
+    let (path_c, _) = store_dir
+        .write_cas_file(b"goodbye world", false)
+        .unwrap();
     assert!(path_c.is_file());
 }
 
@@ -118,14 +127,17 @@ fn write_cas_file_from_reader_matches_write_cas_file() {
 
     // Larger than the internal copy buffer so the read loop runs more
     // than one iteration.
-    let content: Vec<u8> = (0u32..200_000).flat_map(u32::to_le_bytes).collect();
+    let content: Vec<u8> = (0u32..200_000)
+        .flat_map(u32::to_le_bytes)
+        .collect();
 
     for executable in [false, true] {
         eprintln!("CASE: executable = {executable:?}");
         let buffered_dir = tempdir().unwrap();
         let buffered_store = StoreDir::new(buffered_dir.path());
-        let (buffered_path, buffered_hash) =
-            buffered_store.write_cas_file(&content, executable).unwrap();
+        let (buffered_path, buffered_hash) = buffered_store
+            .write_cas_file(&content, executable)
+            .unwrap();
 
         let streamed_dir = tempdir().unwrap();
         let streamed_store = StoreDir::new(streamed_dir.path());
@@ -140,8 +152,12 @@ fn write_cas_file_from_reader_matches_write_cas_file() {
         assert_eq!(streamed_hash, buffered_hash);
         assert_eq!(streamed_size, content.len() as u64);
         assert_eq!(
-            streamed_path.strip_prefix(streamed_store.root()).unwrap(),
-            buffered_path.strip_prefix(buffered_store.root()).unwrap(),
+            streamed_path
+                .strip_prefix(streamed_store.root())
+                .unwrap(),
+            buffered_path
+                .strip_prefix(buffered_store.root())
+                .unwrap(),
         );
         assert_eq!(std::fs::read(&streamed_path).unwrap(), content);
         #[cfg(unix)]
@@ -326,6 +342,14 @@ fn cas_file_path_by_mode_rejects_invalid_hex() {
     assert_eq!(store_dir.cas_file_path_by_mode("ab", 0o644), None);
     assert_eq!(store_dir.cas_file_path_by_mode("zz", 0o644), None);
     assert_eq!(store_dir.cas_file_path_by_mode("Ab\tcd", 0o644), None);
-    assert!(store_dir.cas_file_path_by_mode("abc", 0o644).is_some());
-    assert!(store_dir.cas_file_path_by_mode("abcdef", 0o755).is_some());
+    assert!(
+        store_dir
+            .cas_file_path_by_mode("abc", 0o644)
+            .is_some()
+    );
+    assert!(
+        store_dir
+            .cas_file_path_by_mode("abcdef", 0o755)
+            .is_some()
+    );
 }

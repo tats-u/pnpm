@@ -27,7 +27,11 @@ async fn jsr_specifier_suppresses_latest_when_published_by_holds_back_raw_latest
     };
     let opts = ResolveOptions {
         policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
-            published_by: Some(chrono::Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap()),
+            published_by: Some(
+                chrono::Utc
+                    .with_ymd_and_hms(2024, 6, 1, 0, 0, 0)
+                    .unwrap(),
+            ),
             ..Default::default()
         },
         ..ResolveOptions::default()
@@ -38,7 +42,9 @@ async fn jsr_specifier_suppresses_latest_when_published_by_holds_back_raw_latest
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix

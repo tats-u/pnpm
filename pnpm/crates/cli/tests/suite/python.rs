@@ -69,7 +69,9 @@ fn wheel_with_tags(
         archive
             .start_file(path, SimpleFileOptions::default())
             .unwrap();
-        archive.write_all(contents.as_bytes()).unwrap();
+        archive
+            .write_all(contents.as_bytes())
+            .unwrap();
     }
     archive.finish().unwrap().into_inner()
 }
@@ -455,14 +457,23 @@ async fn installs_real_environment_with_ranges_extras_markers_scripts_and_offlin
         .args(["-c", "import alpha, beta; assert beta.VERSION == '1.0'"])
         .assert()
         .success();
-    let command = root
-        .path()
-        .join(if cfg!(windows) { ".venv/Scripts/alpha-cli.cmd" } else { ".venv/bin/alpha-cli" });
+    let command = root.path().join(if cfg!(windows) {
+        ".venv/Scripts/alpha-cli.cmd"
+    } else {
+        ".venv/bin/alpha-cli"
+    });
     Command::new(command)
         .assert()
         .success()
         .stdout(if cfg!(windows) { "1.0\r\n" } else { "1.0\n" });
-    assert_eq!(fs::read_to_string(root.path().join(".venv/share/alpha.txt")).unwrap(), "data file");
+    assert_eq!(
+        fs::read_to_string(
+            root.path()
+                .join(".venv/share/alpha.txt")
+        )
+        .unwrap(),
+        "data file"
+    );
     let lock = fs::read_to_string(root.path().join("pylock.toml")).unwrap();
     let parsed: toml::Value = toml::from_str(&lock).unwrap();
     assert_eq!(parsed["lock-version"].as_str(), Some("1.0"));
@@ -604,7 +615,9 @@ fn interpreter_archive(version: &str) -> Vec<u8> {
     header.set_size(shim.len() as u64);
     header.set_mode(0o755);
     header.set_cksum();
-    archive.append_data(&mut header, "python/bin/python3", shim.as_bytes()).unwrap();
+    archive
+        .append_data(&mut header, "python/bin/python3", shim.as_bytes())
+        .unwrap();
     let mut encoder = archive.into_inner().unwrap();
     encoder.flush().unwrap();
     encoder.finish().unwrap()
@@ -982,14 +995,20 @@ async fn frozen_lockfile_replays_after_a_kernel_only_marker_change() {
     .unwrap();
     let install = |args: &[&str], kernel: &str| {
         let mut command = pacquet_in(root.path());
-        command.args(args).env("PNPM_TEST_KERNEL_RELEASE", kernel);
+        command
+            .args(args)
+            .env("PNPM_TEST_KERNEL_RELEASE", kernel);
         command
     };
-    install(&["install"], "1.0.0").assert().success();
+    install(&["install"], "1.0.0")
+        .assert()
+        .success();
     let lock = fs::read_to_string(root.path().join("pylock.toml")).unwrap();
     eprintln!("LOCK:\n{lock}");
     let parsed: toml::Value = toml::from_str(&lock).unwrap();
-    let environments = parsed["environments"].as_array().unwrap();
+    let environments = parsed["environments"]
+        .as_array()
+        .unwrap();
     assert_eq!(environments.len(), 1);
     let marker = environments[0].as_str().unwrap();
     assert!(marker.contains("platform_release == '1.0.0'"), "{marker}");
@@ -1005,7 +1024,9 @@ async fn frozen_lockfile_replays_after_a_kernel_only_marker_change() {
     );
 
     pnpm_fs::remove_symlink_dir(&root.path().join(".venv")).unwrap();
-    install(&["install", "--offline", "--frozen-lockfile"], "1.0.1").assert().success();
+    install(&["install", "--offline", "--frozen-lockfile"], "1.0.1")
+        .assert()
+        .success();
     assert_eq!(fs::read_to_string(root.path().join("pylock.toml")).unwrap(), lock);
     python(root.path())
         .args(["-c", "import alpha"])
@@ -1018,7 +1039,9 @@ async fn frozen_lockfile_replays_after_a_kernel_only_marker_change() {
     );
     assert_eq!(fs::read_to_string(root.path().join("pylock.toml")).unwrap(), lock);
 
-    let output = install(&["install"], "9.0.0").output().unwrap();
+    let output = install(&["install"], "9.0.0")
+        .output()
+        .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
     eprintln!("stdout:\n{stdout}\nstderr:\n{}", String::from_utf8_lossy(&output.stderr));
     assert!(output.status.success());
@@ -1307,12 +1330,15 @@ async fn caches_python_index_as_raw_json_and_reuses_it_offline() {
         .arg("install")
         .assert()
         .success();
-    let cache = fs::read_dir(root.path().join("cache/python-index-v3"))
-        .unwrap()
-        .next()
-        .unwrap()
-        .unwrap()
-        .path();
+    let cache = fs::read_dir(
+        root.path()
+            .join("cache/python-index-v3"),
+    )
+    .unwrap()
+    .next()
+    .unwrap()
+    .unwrap()
+    .path();
     let cached: serde_json::Value = serde_json::from_slice(&fs::read(cache).unwrap()).unwrap();
     dbg!(&cached);
     assert!(cached["body"]["files"].is_array(), "metadata was not stored as a JSON object");
@@ -1546,7 +1572,11 @@ fn python_add_failure(root: &Path) -> String {
 /// resolves the leading directories of `TMPDIR` and Windows rewrites their
 /// case, so only the tail is the same in the diagnostic and in the test.
 fn manifest_tail(root: &Path) -> PathBuf {
-    Path::new(root.file_name().expect("the temporary directory has a name")).join("pyproject.toml")
+    Path::new(
+        root.file_name()
+            .expect("the temporary directory has a name"),
+    )
+    .join("pyproject.toml")
 }
 
 #[test]
@@ -1658,7 +1688,8 @@ async fn installs_node_cargo_and_python_through_the_real_coordinator() {
     fs::write(root.path().join("src/main.rs"), "fn main() {}\n").unwrap();
     fs::create_dir(root.path().join("node-package")).unwrap();
     fs::write(
-        root.path().join("node-package/package.json"),
+        root.path()
+            .join("node-package/package.json"),
         r#"{"name":"local-node","version":"1.0.0"}"#,
     )
     .unwrap();
@@ -1722,9 +1753,11 @@ async fn installs_the_projects_own_package_from_its_source_tree() {
         .assert()
         .success();
 
-    let script = root
-        .path()
-        .join(if cfg!(windows) { ".venv/Scripts/my-app.cmd" } else { ".venv/bin/my-app" });
+    let script = root.path().join(if cfg!(windows) {
+        ".venv/Scripts/my-app.cmd"
+    } else {
+        ".venv/bin/my-app"
+    });
     Command::new(&script)
         .assert()
         .success()
@@ -2003,7 +2036,9 @@ async fn rejects_a_platform_it_cannot_resolve_for() {
 #[tokio::test]
 async fn reports_a_platform_it_cannot_resolve_python_for() {
     let (platform, tag) = running_platform();
-    let (os, cpu) = platform.split_once('-').expect("a platform names an os and a cpu");
+    let (os, cpu) = platform
+        .split_once('-')
+        .expect("a platform names an os and a cpu");
     let cases = [
         (
             vec![format!("os: [{os}, freebsd]"), format!("cpu: [{cpu}]")],
@@ -2066,7 +2101,12 @@ async fn locks_one_environment_per_platform_however_it_is_named() {
             .len(),
         1,
     );
-    assert_eq!(parsed["tool"]["pnpm"]["platforms"].as_array().unwrap(), &[platform.into()]);
+    assert_eq!(
+        parsed["tool"]["pnpm"]["platforms"]
+            .as_array()
+            .unwrap(),
+        &[platform.into()]
+    );
 
     project(root.path(), &server.url(), &["alpha>=1"]);
     add_supported_architectures(root.path(), &[triple]);
@@ -2138,7 +2178,9 @@ fn sdist_dot_prefixed(name: &str, version: &str, dependencies: &[&str]) -> Vec<u
         let field = &mut header.as_old_mut().name;
         field[..name.len()].copy_from_slice(name.as_bytes());
         header.set_cksum();
-        archive.append(&header, contents.as_bytes()).unwrap();
+        archive
+            .append(&header, contents.as_bytes())
+            .unwrap();
     }
     archive
         .into_inner()
@@ -2156,7 +2198,9 @@ fn sdist_zip(name: &str, version: &str, dependencies: &[&str]) -> Vec<u8> {
         archive
             .start_file(format!("{root}/{path}"), SimpleFileOptions::default())
             .unwrap();
-        archive.write_all(contents.as_bytes()).unwrap();
+        archive
+            .write_all(contents.as_bytes())
+            .unwrap();
     }
     archive.finish().unwrap().into_inner()
 }
@@ -2301,7 +2345,9 @@ async fn build_backend_writes_do_not_modify_shared_wheel_files() {
             .assert()
             .success();
         assert_eq!(
-            fs::read_to_string(root.path().join("backend-mutation")).unwrap().trim_end(),
+            fs::read_to_string(root.path().join("backend-mutation"))
+                .unwrap()
+                .trim_end(),
             "VERSION = 'modified by backend'",
         );
         python(root.path())
@@ -2669,7 +2715,12 @@ async fn a_backend_building_another_name_is_refused_without_a_declared_version()
     project(root.path(), &server.url(), &[]);
     python_project(root.path(), "app", "dependencies = []");
     fs::create_dir(root.path().join("src/impostor")).unwrap();
-    fs::write(root.path().join("src/impostor/__init__.py"), "").unwrap();
+    fs::write(
+        root.path()
+            .join("src/impostor/__init__.py"),
+        "",
+    )
+    .unwrap();
     // The backend names the version, so only the distribution is declared.
     fs::write(
         root.path().join("pyproject.toml"),
@@ -2720,7 +2771,8 @@ async fn a_source_narrowed_by_a_marker_is_refused() {
     project(root.path(), &server.url(), &[]);
     fs::create_dir_all(root.path().join("packages/lib")).unwrap();
     fs::write(
-        root.path().join("packages/lib/pyproject.toml"),
+        root.path()
+            .join("packages/lib/pyproject.toml"),
         "[project]\nname = 'lib'\nversion = '1.0'\nrequires-python = '>=3.10'\n\
          dependencies = []\n",
     )
@@ -2831,7 +2883,10 @@ async fn a_backend_nothing_approved_does_not_build_the_project() {
     let workspace = fs::read_to_string(root.path().join("pnpm-workspace.yaml")).unwrap();
     fs::write(
         root.path().join("pnpm-workspace.yaml"),
-        workspace.split_once("allowBuilds:").expect("the fixture approves builds").0,
+        workspace
+            .split_once("allowBuilds:")
+            .expect("the fixture approves builds")
+            .0,
     )
     .unwrap();
     python_project(root.path(), "app", "dependencies = []");
@@ -2856,7 +2911,10 @@ async fn an_unapproved_backend_warns_when_builds_are_not_strict() {
         root.path().join("pnpm-workspace.yaml"),
         format!(
             "{}strictDepBuilds: false\n",
-            workspace.split_once("allowBuilds:").expect("the fixture approves builds").0,
+            workspace
+                .split_once("allowBuilds:")
+                .expect("the fixture approves builds")
+                .0,
         ),
     )
     .unwrap();
@@ -3016,7 +3074,8 @@ async fn a_default_build_requirement_naming_a_workspace_project_is_refused() {
     python_project(&root.path().join("packages/setuptools"), "setuptools", "dependencies = []");
     fs::create_dir_all(root.path().join("packages/legacy")).unwrap();
     fs::write(
-        root.path().join("packages/legacy/pyproject.toml"),
+        root.path()
+            .join("packages/legacy/pyproject.toml"),
         "[project]\nname = 'legacy'\nversion = '1.0'\nrequires-python = '>=3.10'\n\
          dependencies = []\n",
     )
@@ -3073,7 +3132,10 @@ async fn an_allow_builds_key_names_the_distribution_however_it_is_written() {
         root.path().join("pnpm-workspace.yaml"),
         format!(
             "{}allowBuilds:\n  pkg:pypi/TinyBackend: true\n",
-            workspace.split_once("allowBuilds:").expect("the fixture approves builds").0,
+            workspace
+                .split_once("allowBuilds:")
+                .expect("the fixture approves builds")
+                .0,
         ),
     )
     .unwrap();
@@ -3103,7 +3165,10 @@ async fn an_allow_builds_key_naming_no_ecosystem_approves_no_python_build() {
         root.path().join("pnpm-workspace.yaml"),
         format!(
             "{}allowBuilds:\n  tinybackend: true\n",
-            workspace.split_once("allowBuilds:").expect("the fixture approves builds").0,
+            workspace
+                .split_once("allowBuilds:")
+                .expect("the fixture approves builds")
+                .0,
         ),
     )
     .unwrap();
@@ -3205,12 +3270,11 @@ async fn wheel_package_import_methods_control_sharing() {
     assert!(
         !same_file::is_same_file(
             &first_script,
-            root.path()
-                .join(if cfg!(windows) {
-                    ".venv/Scripts/alpha-cli-script.py"
-                } else {
-                    ".venv/bin/alpha-cli"
-                })
+            root.path().join(if cfg!(windows) {
+                ".venv/Scripts/alpha-cli-script.py"
+            } else {
+                ".venv/bin/alpha-cli"
+            })
         )
         .unwrap(),
     );
@@ -3250,7 +3314,11 @@ async fn wheel_package_import_methods_control_sharing() {
         assert!(!same_file::is_same_file(&first, &private).unwrap());
         fs::write(&private, "modified").unwrap();
         eprintln!("store-linked module must remain unchanged after {mode} writes");
-        assert!(fs::read_to_string(&first).unwrap().contains("VERSION"));
+        assert!(
+            fs::read_to_string(&first)
+                .unwrap()
+                .contains("VERSION")
+        );
     }
     for mock in mocks {
         mock.assert_async().await;
@@ -3264,7 +3332,13 @@ fn installed_module(root: &Path, name: &str) -> PathBuf {
         .unwrap();
     eprintln!("Python module lookup: {output:?}");
     assert!(output.status.success());
-    PathBuf::from(String::from_utf8(output.stdout).unwrap().trim()).canonicalize().unwrap()
+    PathBuf::from(
+        String::from_utf8(output.stdout)
+            .unwrap()
+            .trim(),
+    )
+    .canonicalize()
+    .unwrap()
 }
 
 #[tokio::test]

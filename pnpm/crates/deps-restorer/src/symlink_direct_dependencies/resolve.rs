@@ -168,8 +168,10 @@ pub(super) fn resolve_target_path(
             // slot keyed by `(importer_key, file:<payload>)`. Route
             // through `resolved_key` so the layout's GVS-suffix map
             // sees the same key the snapshot writer used.
-            let dep_key =
-                spec.version.resolved_key(name).expect("File arm always produces a resolved_key");
+            let dep_key = spec
+                .version
+                .resolved_key(name)
+                .expect("File arm always produces a resolved_key");
             layout
                 .slot_dir(&dep_key)
                 .join("node_modules")

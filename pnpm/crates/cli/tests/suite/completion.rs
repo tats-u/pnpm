@@ -581,7 +581,13 @@ fn completion_server_respects_workspace_root_selection() {
     let project = TempDir::new().unwrap();
     let child = project.path().join("child");
     std::fs::create_dir(&child).unwrap();
-    std::fs::write(project.path().join("pnpm-workspace.yaml"), "packages:\n  - child\n").unwrap();
+    std::fs::write(
+        project
+            .path()
+            .join("pnpm-workspace.yaml"),
+        "packages:\n  - child\n",
+    )
+    .unwrap();
     std::fs::write(project.path().join("package.json"), r#"{"scripts":{"root":"echo root"}}"#)
         .unwrap();
     std::fs::write(child.join("package.json"), r#"{"scripts":{"child":"echo child"}}"#).unwrap();

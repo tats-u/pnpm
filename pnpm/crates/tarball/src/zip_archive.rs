@@ -91,10 +91,17 @@ impl ExtractedEntries {
     }
 
     fn insert(&mut self, entry_path: String, (file_path, file_attrs): (PathBuf, CafsFileInfo)) {
-        if let Some(previous) = self.cas_paths.insert(entry_path.clone(), file_path) {
+        if let Some(previous) = self
+            .cas_paths
+            .insert(entry_path.clone(), file_path)
+        {
             tracing::warn!(?previous, "Duplication detected. Old entry has been ejected");
         }
-        if let Some(previous) = self.files_index.files.insert(entry_path, file_attrs) {
+        if let Some(previous) = self
+            .files_index
+            .files
+            .insert(entry_path, file_attrs)
+        {
             tracing::warn!(?previous, "Duplication detected. Old entry has been ejected");
         }
     }
@@ -274,7 +281,9 @@ pub(crate) fn write_zip_entry_to_cas(
                 format!("failed to reserve {prealloc} bytes for zip entry: {err}"),
             ))
         })?;
-    bounded.read_to_end(&mut buffer).map_err(read_error)?;
+    bounded
+        .read_to_end(&mut buffer)
+        .map_err(read_error)?;
     if buffer.len() as u64 != declared_size {
         return Err(read_error(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
@@ -285,8 +294,9 @@ pub(crate) fn write_zip_entry_to_cas(
         )));
     }
 
-    let (file_path, file_hash) =
-        store_dir.write_cas_file(&buffer, executable).map_err(TarballError::WriteCasFile)?;
+    let (file_path, file_hash) = store_dir
+        .write_cas_file(&buffer, executable)
+        .map_err(TarballError::WriteCasFile)?;
     Ok((file_path, file_hash, declared_size))
 }
 
@@ -361,9 +371,8 @@ async fn download_zip_body<Reporter: self::Reporter>(
     let mut stream = response_head.bytes_stream();
     let mut progress = crate::download::BodyProgress::new(expected_size, package_id);
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|error| {
-            TarballError::FetchTarball(NetworkError::new(package_url, error))
-        })?;
+        let chunk = chunk
+            .map_err(|error| TarballError::FetchTarball(NetworkError::new(package_url, error)))?;
         check_zip_size(
             (buf.len() as u64).saturating_add(chunk.len() as u64),
             max_bytes,
@@ -401,8 +410,10 @@ impl ZipExtraction {
         self,
         store_dir: &'static StoreDir,
     ) -> Result<(HashMap<String, PathBuf>, PackageFilesIndex), TarballError> {
-        let permit =
-            post_download_semaphore().acquire().await.expect("post-download semaphore stays open");
+        let permit = post_download_semaphore()
+            .acquire()
+            .await
+            .expect("post-download semaphore stays open");
         crate::extraction_task::spawn_extraction(permit, move || self.extract(store_dir))
             .await
             .map_err(TarballError::TaskJoin)?
@@ -420,11 +431,9 @@ impl ZipExtraction {
         // The buffer + ZipArchive are released on return — large runtime
         // archives (Node.js for Windows is ~30 MB) would otherwise keep
         // the buffer alive through the whole read.
-        let mut archive = zip::ZipArchive::new(Cursor::new(self.buffer))
-            .map_err(|source| TarballError::ReadZipArchive {
-                url: self.package_url.clone(),
-                source,
-            })?;
+        let mut archive = zip::ZipArchive::new(Cursor::new(self.buffer)).map_err(|source| {
+            TarballError::ReadZipArchive { url: self.package_url.clone(), source }
+        })?;
         extract_zip_entries(
             &mut archive,
             &self.package_url,
@@ -529,10 +538,15 @@ impl IngestZipArchiveToStore<'_> {
         buffer: Vec<u8>,
     ) -> Result<HashMap<String, PathBuf>, TarballError> {
         let ingestion = self.ingestion();
-        if let Some(cached) = ingestion.load_cache::<Reporter>().await? {
+        if let Some(cached) = ingestion
+            .load_cache::<Reporter>()
+            .await?
+        {
             return Ok(cached.files);
         }
-        let paths = ingestion.ingest_zip_buffer(buffer).await?;
+        let paths = ingestion
+            .ingest_zip_buffer(buffer)
+            .await?;
         crate::download::emit_progress_fetched::<Reporter>(self.package.id, self.requester, None);
         Ok(paths)
     }

@@ -28,8 +28,15 @@ async fn trust_downgrade_at_resolve_time_fails_under_no_downgrade() {
         bare_specifier: Some("^1.0.0".to_string()),
         ..WantedDependency::default()
     };
-    let err = resolver.resolve(&wanted, &opts).await.expect_err("trust downgrade should fail");
-    assert!(err.to_string().contains("trust downgrade"), "got {err}");
+    let err = resolver
+        .resolve(&wanted, &opts)
+        .await
+        .expect_err("trust downgrade should fail");
+    assert!(
+        err.to_string()
+            .contains("trust downgrade"),
+        "got {err}"
+    );
 }
 
 #[tokio::test]
@@ -56,8 +63,15 @@ async fn trust_check_fails_at_resolve_time_when_the_registry_serves_no_time_fiel
         bare_specifier: Some("^1.0.0".to_string()),
         ..WantedDependency::default()
     };
-    let err = resolver.resolve(&wanted, &opts).await.expect_err("missing time should fail closed");
-    assert!(err.to_string().contains(r#"missing the "time" field"#), "got {err}");
+    let err = resolver
+        .resolve(&wanted, &opts)
+        .await
+        .expect_err("missing time should fail closed");
+    assert!(
+        err.to_string()
+            .contains(r#"missing the "time" field"#),
+        "got {err}"
+    );
 }
 
 #[tokio::test]
@@ -71,7 +85,9 @@ async fn trust_check_skipped_at_resolve_time_when_missing_time_is_ignored() {
         .await;
     let registry = format!("{}/", server.url());
     let (mut resolver, _tempdir) = build_resolver(&registry);
-    resolver.cache_policy.ignore_missing_time_field = true;
+    resolver
+        .cache_policy
+        .ignore_missing_time_field = true;
 
     let opts = ResolveOptions {
         policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
@@ -91,7 +107,9 @@ async fn trust_check_skipped_at_resolve_time_when_missing_time_is_ignored() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix
@@ -123,7 +141,9 @@ async fn trust_downgrade_ignored_when_trust_policy_off() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix

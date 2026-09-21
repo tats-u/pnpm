@@ -57,7 +57,9 @@ fn unpacked_wheel(root: &Path, mismatched_wheel_hash: bool) -> BTreeMap<String, 
 async fn unpacked_executables_keep_permissions_without_cas_names() {
     let temporary = tempfile::tempdir().unwrap();
     let files = unpacked_wheel(&temporary.path().join("wheel"), false);
-    let metadata = inspect("python3", &files).await.unwrap();
+    let metadata = inspect("python3", &files)
+        .await
+        .unwrap();
     let packages = serde_json::json!([{ "files": files, "metadata": metadata }]);
     for mode in [
         PackageImportMethod::Auto,
@@ -68,8 +70,13 @@ async fn unpacked_executables_keep_permissions_without_cas_names() {
         let root = temporary
             .path()
             .join(format!("{mode:?}"));
-        install("python3", &root, &packages, mode).await.unwrap();
-        let output = tokio::process::Command::new(root.join("bin/native")).output().await.unwrap();
+        install("python3", &root, &packages, mode)
+            .await
+            .unwrap();
+        let output = tokio::process::Command::new(root.join("bin/native"))
+            .output()
+            .await
+            .unwrap();
         assert!(output.status.success());
         assert_eq!(output.stdout, b"native");
         let output = tokio::process::Command::new(root.join("bin/python"))
@@ -83,7 +90,9 @@ async fn unpacked_executables_keep_permissions_without_cas_names() {
 async fn unpacked_wheels_tolerate_record_hash_mismatches() {
     let temporary = tempfile::tempdir().unwrap();
     let files = unpacked_wheel(&temporary.path().join("wheel"), true);
-    let metadata = inspect("python3", &files).await.unwrap();
+    let metadata = inspect("python3", &files)
+        .await
+        .unwrap();
     let packages = serde_json::json!([{ "files": files, "metadata": metadata }]);
     let wheel = fs::read_to_string(files["alpha-1.0.dist-info/WHEEL"].as_path()).unwrap();
     let hash = pnpm_crypto_hash::create_hash(&wheel);
@@ -104,7 +113,9 @@ async fn unpacked_wheels_tolerate_record_hash_mismatches() {
         let root = temporary
             .path()
             .join(format!("bad-record-{mode:?}"));
-        install("python3", &root, &packages, mode).await.unwrap();
+        install("python3", &root, &packages, mode)
+            .await
+            .unwrap();
         let output = tokio::process::Command::new(root.join("bin/python"))
             .args([
                 "-I",
@@ -115,7 +126,12 @@ async fn unpacked_wheels_tolerate_record_hash_mismatches() {
             .await
             .unwrap();
         assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
-        assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), expected);
+        assert_eq!(
+            String::from_utf8(output.stdout)
+                .unwrap()
+                .trim(),
+            expected
+        );
     }
 }
 
@@ -138,7 +154,11 @@ async fn unpacked_wheels_reject_malformed_record_hashes_and_sizes() {
         let (first, rest) = record.split_once('\n').unwrap();
         let name = first.split_once(',').unwrap().0;
         fs::write(record_path, format!("{name},{digest},{size}\n{rest}")).unwrap();
-        assert!(inspect("python3", &files).await.is_err());
+        assert!(
+            inspect("python3", &files)
+                .await
+                .is_err()
+        );
     }
 }
 
@@ -147,7 +167,9 @@ async fn large_wheel_files_are_hashed_during_import() {
     let temporary = tempfile::tempdir().unwrap();
     let mut files = unpacked_wheel(&temporary.path().join("wheel"), false);
     let size = 32 * 1024 * 1024;
-    let source = temporary.path().join("wheel/alpha/large.bin");
+    let source = temporary
+        .path()
+        .join("wheel/alpha/large.bin");
     fs::File::create(&source)
         .unwrap()
         .set_len(size)
@@ -165,13 +187,17 @@ async fn large_wheel_files_are_hashed_during_import() {
     let record = fs::read_to_string(record_path).unwrap();
     fs::write(record_path, format!("alpha/large.bin,sha256={},{}\n{record}", "A".repeat(43), size))
         .unwrap();
-    let metadata = inspect("python3", &files).await.unwrap();
+    let metadata = inspect("python3", &files)
+        .await
+        .unwrap();
     let packages = serde_json::json!([{ "files": files, "metadata": metadata }]);
     for mode in [PackageImportMethod::Auto, PackageImportMethod::Copy] {
         let root = temporary
             .path()
             .join(format!("large-{mode:?}"));
-        install("python3", &root, &packages, mode).await.unwrap();
+        install("python3", &root, &packages, mode)
+            .await
+            .unwrap();
         let script = format!(
             "import importlib.metadata as m, sysconfig; from pathlib import Path; p = Path(sysconfig.get_path('purelib')) / 'alpha/large.bin'; assert p.stat().st_size == {size}; print(next(row for row in m.distribution('alpha').read_text('RECORD').splitlines() if row.startswith('alpha/large.bin,')))",
         );
@@ -181,6 +207,11 @@ async fn large_wheel_files_are_hashed_during_import() {
             .await
             .unwrap();
         assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
-        assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), expected);
+        assert_eq!(
+            String::from_utf8(output.stdout)
+                .unwrap()
+                .trim(),
+            expected
+        );
     }
 }

@@ -23,8 +23,18 @@ async fn local_store_uses_the_cache_layout_and_round_trips_artifacts() {
     let request = publication_with_blob("dependency-side-effects:v1:deps=abc", "ci/linux");
     let integrity = request.blobs[0].integrity.clone();
 
-    assert!(store.publish("acme", request.clone()).await.unwrap());
-    assert!(!store.publish("acme", request).await.unwrap());
+    assert!(
+        store
+            .publish("acme", request.clone())
+            .await
+            .unwrap()
+    );
+    assert!(
+        !store
+            .publish("acme", request)
+            .await
+            .unwrap()
+    );
 
     let response = store
         .resolve("acme", &serde_json::to_vec(&lookup("acme")).unwrap())
@@ -64,7 +74,12 @@ async fn workspace_task_subjects_round_trip_through_the_store() {
     let store = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap();
     let request = workspace_task_publication();
 
-    assert!(store.publish("acme", request).await.unwrap());
+    assert!(
+        store
+            .publish("acme", request)
+            .await
+            .unwrap()
+    );
     let response = store
         .resolve(
             "acme",
@@ -110,9 +125,15 @@ async fn committed_envelope_writes_that_report_failure_remain_charged() {
     // The envelope reached the store while reporting failure, and the scope it
     // reaches stays claimed for it, so both are charged.
     let scope_marker = request.envelope.digest().unwrap().len() as u64;
-    let expected_usage = serde_json::to_vec(&request.envelope).unwrap().len() as u64 + scope_marker;
+    let expected_usage = serde_json::to_vec(&request.envelope)
+        .unwrap()
+        .len() as u64
+        + scope_marker;
 
-    store.publish("acme", request).await.unwrap_err();
+    store
+        .publish("acme", request)
+        .await
+        .unwrap_err();
 
     let usage_path = ObjectPath::from(".pnpr-artifacts/v0/quota.json");
     let usage: ArtifactUsage = serde_json::from_slice(
@@ -127,7 +148,8 @@ async fn committed_envelope_writes_that_report_failure_remain_charged() {
     .unwrap();
     assert_eq!(usage.global_bytes, expected_usage);
     assert_eq!(
-        usage.owner_bytes
+        usage
+            .owner_bytes
             .values()
             .copied()
             .sum::<u64>(),
@@ -176,7 +198,10 @@ async fn a_legacy_artifact_claims_its_slot_whatever_its_order_or_position() {
         let storage = TempDir::new().unwrap();
         let store = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap();
         let legacy = publication_tagged("ci/legacy", &tags);
-        let (payload, _) = legacy.envelope.decode_payload().unwrap();
+        let (payload, _) = legacy
+            .envelope
+            .decode_payload()
+            .unwrap();
         let owner = super::super::owner_key("acme", &payload.owner).unwrap();
         let entry = super::super::entry_digest(&legacy.key, &payload.subject);
         // Named to sort before the matching one, and more of them than a
@@ -248,7 +273,10 @@ async fn an_artifact_stored_under_the_older_name_still_claims_its_slot() {
 #[tokio::test]
 async fn losing_a_race_for_a_slot_is_not_reported_as_idempotent() {
     let winner = publication("ci/winner");
-    let (payload, _) = winner.envelope.decode_payload().unwrap();
+    let (payload, _) = winner
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&winner.key, &payload.subject);
     let slot = super::super::compatibility_slot(&payload.compatibility);
@@ -299,7 +327,10 @@ async fn a_backfill_that_did_not_finish_runs_again() {
     let storage = TempDir::new().unwrap();
     let store = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap();
     let stored = publication_tagged("ci/stored", &["pnpm:v1:linux-x64-node22-glibc2.17"]);
-    let (payload, _) = stored.envelope.decode_payload().unwrap();
+    let (payload, _) = stored
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&stored.key, &payload.subject);
     let slot = super::super::compatibility_slot(&payload.compatibility);
@@ -359,7 +390,12 @@ async fn a_stamp_survives_the_pass_that_refused_on_its_account() {
         .await
         .unwrap_err();
 
-    assert!(error.to_string().contains("concurrency limit reached"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("concurrency limit reached"),
+        "{error}"
+    );
 
     let usage: ArtifactUsage = serde_json::from_slice(
         &store
@@ -405,12 +441,18 @@ async fn a_backfill_writes_each_marker_once_however_many_variants_reach_it() {
     // floor — so they reach the same scope, which is the overlap markers stop.
     let floors = ["pnpm:v1:linux-x64-node22-glibc2.17", "pnpm:v1:linux-x64-node22-glibc2.31"];
     let stored = publication_tagged("ci/stored", &floors[..1]);
-    let (payload, _) = stored.envelope.decode_payload().unwrap();
+    let (payload, _) = stored
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&stored.key, &payload.subject);
     for floor in floors {
         let legacy = publication_tagged("ci/stored", &[floor]);
-        let (payload, _) = legacy.envelope.decode_payload().unwrap();
+        let (payload, _) = legacy
+            .envelope
+            .decode_payload()
+            .unwrap();
         let slot = super::super::compatibility_slot(&payload.compatibility);
         store
             .create_object(
@@ -424,7 +466,10 @@ async fn a_backfill_writes_each_marker_once_however_many_variants_reach_it() {
     let prepared = super::super::prepare_publication("acme", &ours).unwrap();
     usage_writes.store(0, Ordering::SeqCst);
 
-    store.backfill_scopes(&prepared).await.unwrap();
+    store
+        .backfill_scopes(&prepared)
+        .await
+        .unwrap();
 
     assert_eq!(
         usage_writes.load(Ordering::SeqCst),
@@ -439,7 +484,10 @@ async fn a_backfill_writes_each_marker_once_however_many_variants_reach_it() {
 #[tokio::test]
 async fn a_marker_written_by_a_failing_write_stays_charged() {
     let stored = publication_tagged("ci/stored", &["pnpm:v1:linux-arm64-node22-glibc2.17"]);
-    let (payload, _) = stored.envelope.decode_payload().unwrap();
+    let (payload, _) = stored
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&stored.key, &payload.subject);
     let slot = super::super::compatibility_slot(&payload.compatibility);
@@ -476,7 +524,10 @@ async fn a_marker_written_by_a_failing_write_stays_charged() {
     let ours = publication_tagged("ci/ours", &["pnpm:v1:linux-x64-node22-glibc2.17"]);
     let prepared = super::super::prepare_publication("acme", &ours).unwrap();
 
-    let error = store.backfill_scopes(&prepared).await.unwrap_err();
+    let error = store
+        .backfill_scopes(&prepared)
+        .await
+        .unwrap_err();
 
     assert!(matches!(error, RegistryError::ObjectStore(_)), "{error:?}");
     let usage: ArtifactUsage = serde_json::from_slice(
@@ -491,7 +542,8 @@ async fn a_marker_written_by_a_failing_write_stays_charged() {
     .unwrap();
     let marker_bytes = stored.envelope.digest().unwrap().len() as u64;
     assert_eq!(
-        usage.owner_bytes
+        usage
+            .owner_bytes
             .values()
             .copied()
             .sum::<u64>(),
@@ -506,7 +558,10 @@ async fn a_marker_written_by_a_failing_write_stays_charged() {
 #[tokio::test]
 async fn a_backfill_that_cannot_write_a_marker_gives_its_charge_back() {
     let stored = publication_tagged("ci/stored", &["pnpm:v1:linux-arm64-node22-glibc2.17"]);
-    let (payload, _) = stored.envelope.decode_payload().unwrap();
+    let (payload, _) = stored
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&stored.key, &payload.subject);
     let slot = super::super::compatibility_slot(&payload.compatibility);
@@ -541,7 +596,10 @@ async fn a_backfill_that_cannot_write_a_marker_gives_its_charge_back() {
     let ours = publication_tagged("ci/ours", &["pnpm:v1:linux-x64-node22-glibc2.17"]);
     let prepared = super::super::prepare_publication("acme", &ours).unwrap();
 
-    let error = store.backfill_scopes(&prepared).await.unwrap_err();
+    let error = store
+        .backfill_scopes(&prepared)
+        .await
+        .unwrap_err();
 
     assert!(matches!(error, RegistryError::ObjectStore(_)), "{error:?}");
     let usage: ArtifactUsage = serde_json::from_slice(
@@ -555,7 +613,8 @@ async fn a_backfill_that_cannot_write_a_marker_gives_its_charge_back() {
     )
     .unwrap();
     assert_eq!(
-        usage.owner_bytes
+        usage
+            .owner_bytes
             .values()
             .copied()
             .sum::<u64>(),
@@ -571,7 +630,10 @@ async fn an_owner_with_no_room_cannot_have_markers_written_for_them() {
     let storage = TempDir::new().unwrap();
     let store = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap();
     let stored = publication_tagged("ci/stored", &["pnpm:v1:linux-arm64-node22-glibc2.17"]);
-    let (payload, _) = stored.envelope.decode_payload().unwrap();
+    let (payload, _) = stored
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&stored.key, &payload.subject);
     let slot = super::super::compatibility_slot(&payload.compatibility);
@@ -583,14 +645,23 @@ async fn an_owner_with_no_room_cannot_have_markers_written_for_them() {
         .await
         .unwrap();
 
-    let full =
-        SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap().with_limits(1, 1);
+    let full = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path())
+        .unwrap()
+        .with_limits(1, 1);
     let ours = publication_tagged("ci/ours", &["pnpm:v1:linux-x64-node22-glibc2.17"]);
     let prepared = super::super::prepare_publication("acme", &ours).unwrap();
 
-    let error = full.backfill_scopes(&prepared).await.unwrap_err();
+    let error = full
+        .backfill_scopes(&prepared)
+        .await
+        .unwrap_err();
 
-    assert!(error.to_string().contains("quota exceeded"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("quota exceeded"),
+        "{error}"
+    );
     assert!(
         store
             .read_object_bounded(&format!("{owner}/entries/{entry}/scopes/linux-arm64-node22"), 128)

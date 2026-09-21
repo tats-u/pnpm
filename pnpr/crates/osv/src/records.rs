@@ -59,7 +59,8 @@ pub(super) fn ingest_record_bytes(
     // OSV sets `withdrawn` to a timestamp string only for withdrawn
     // records; a literal `null` is not a withdrawal, so don't drop the
     // advisory on it.
-    if record.withdrawn
+    if record
+        .withdrawn
         .as_ref()
         .is_some_and(|withdrawn| !withdrawn.is_null())
     {
@@ -96,7 +97,8 @@ pub(super) fn ingest_record_bytes(
 pub(super) fn exceeds_affected_limits(affected: &OsvAffected) -> bool {
     affected.versions.len() > MAX_VERSIONS_PER_AFFECTED
         || affected.ranges.len() > MAX_RANGES_PER_AFFECTED
-        || affected.ranges
+        || affected
+            .ranges
             .iter()
             .any(|range| range.events.len() > MAX_EVENTS_PER_RANGE)
 }
@@ -107,7 +109,10 @@ pub(super) fn exceeds_affected_limits(affected: &OsvAffected) -> bool {
 /// when a lockfile name and the OSV dump disagree on casing. Borrows
 /// when the name is already lowercase (the common case).
 pub(super) fn normalized_name(name: &str) -> Cow<'_, str> {
-    if name.bytes().any(|byte| byte.is_ascii_uppercase()) {
+    if name
+        .bytes()
+        .any(|byte| byte.is_ascii_uppercase())
+    {
         Cow::Owned(name.to_ascii_lowercase())
     } else {
         Cow::Borrowed(name)
@@ -115,7 +120,8 @@ pub(super) fn normalized_name(name: &str) -> Cow<'_, str> {
 }
 
 pub(super) fn advisory_from_affected(id: &str, affected: OsvAffected) -> Advisory {
-    let ranges = affected.ranges
+    let ranges = affected
+        .ranges
         .into_iter()
         .filter_map(semver_range_from_osv)
         .collect();
@@ -143,7 +149,8 @@ pub(super) fn semver_range_from_osv(range: OsvRange) -> Option<SemverRange> {
     if range.kind != "SEMVER" && range.kind != "ECOSYSTEM" {
         return None;
     }
-    let mut events = range.events
+    let mut events = range
+        .events
         .into_iter()
         .filter_map(semver_event_from_osv)
         .collect::<Vec<_>>();

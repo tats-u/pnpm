@@ -53,9 +53,16 @@ async fn manual_metadata_redirects_preserve_the_configured_guard() {
         )
         .await;
         if allow {
-            assert_eq!(result.expect("allowed redirect succeeds").body, b"ok");
+            assert_eq!(
+                result
+                    .expect("allowed redirect succeeds")
+                    .body,
+                b"ok"
+            );
         } else {
-            let error = result.err().expect("blocked redirect fails");
+            let error = result
+                .err()
+                .expect("blocked redirect fails");
             eprintln!("error={error:?}");
             assert!(error.is_redirect());
             assert!(error.to_string().contains("redirect"));
@@ -222,7 +229,9 @@ fn metadata_retry_diagnostics_do_not_include_response_body_or_url() {
 async fn metadata_retry_recovers_an_interrupted_response_body() {
     use tokio::{io::AsyncWriteExt, net::TcpListener};
 
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let url = format!("http://{}/metadata", listener.local_addr().unwrap());
     let server = tokio::spawn(async move {
         for response in [
@@ -231,7 +240,10 @@ async fn metadata_retry_recovers_an_interrupted_response_body() {
         ] {
             let (mut socket, _) = listener.accept().await.unwrap();
             read_request_headers(&mut socket).await;
-            socket.write_all(response).await.unwrap();
+            socket
+                .write_all(response)
+                .await
+                .unwrap();
             socket.shutdown().await.unwrap();
         }
     });

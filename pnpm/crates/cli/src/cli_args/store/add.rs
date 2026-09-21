@@ -224,7 +224,9 @@ async fn add_one<Reporter: self::Reporter>(args: AddOne<'_>) -> miette::Result<S
             index: args.store.index,
             index_writer: Some(Arc::clone(args.store.index_writer)),
             verify_integrity: args.config.verify_store_integrity,
-            strict_pkg_content_check: args.config.strict_store_pkg_content_check,
+            strict_pkg_content_check: args
+                .config
+                .strict_store_pkg_content_check,
             verified_files_cache: args.store.verified_files_cache,
             prefetched_cas_paths: None,
         },
@@ -247,7 +249,9 @@ fn store_wanted_dependency(package: &str) -> WantedDependency {
     let parsed = parse_wanted_dependency(package);
     WantedDependency {
         alias: parsed.alias,
-        bare_specifier: parsed.bare_specifier.filter(|spec| !spec.trim().is_empty()),
+        bare_specifier: parsed
+            .bare_specifier
+            .filter(|spec| !spec.trim().is_empty()),
         injected: None,
         prev_specifier: None,
         optional: None,

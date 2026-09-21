@@ -88,9 +88,12 @@ async fn a_filter_that_selects_no_project_at_all_ends_the_install() {
     fs::remove_file(root.path().join("pyproject.toml")).unwrap();
     requirements_project(root.path(), "a", &["alpha"]);
 
-    assert_no_projects_matched(
-        pacquet_in(root.path()).args(["install", "--filter", "missing", "--fail-if-no-match"]),
-    );
+    assert_no_projects_matched(pacquet_in(root.path()).args([
+        "install",
+        "--filter",
+        "missing",
+        "--fail-if-no-match",
+    ]));
     assert!(!installed(root.path(), "a"));
 }
 
@@ -129,9 +132,12 @@ async fn a_filter_scopes_a_python_project_by_the_npm_project_in_its_directory() 
 
     // The distribution the project declares does not name that directory:
     // the npm project in it does.
-    assert_no_projects_matched(
-        pacquet_in(root.path()).args(["install", "--filter", "webapp", "--fail-if-no-match"]),
-    );
+    assert_no_projects_matched(pacquet_in(root.path()).args([
+        "install",
+        "--filter",
+        "webapp",
+        "--fail-if-no-match",
+    ]));
 
     pacquet_in(root.path())
         .args(["install", "--filter", "api"])
@@ -195,7 +201,9 @@ async fn a_filtered_add_writes_the_requirement_to_the_selected_project_only() {
     let added = fs::read_to_string(root.path().join("a/pyproject.toml")).unwrap();
     assert!(added.contains("alpha>=1.0"), "pins what it resolved: {added}");
     assert!(
-        !fs::read_to_string(root.path().join("b/pyproject.toml")).unwrap().contains("alpha"),
+        !fs::read_to_string(root.path().join("b/pyproject.toml"))
+            .unwrap()
+            .contains("alpha"),
         "b was not selected",
     );
     assert!(installed(root.path(), "a"));
@@ -252,7 +260,12 @@ async fn a_production_filter_follows_a_source_a_backend_may_require() {
         "dynamic = ['dependencies']\n\n[dependency-groups]\ndev = ['tool']\n\n\
          [tool.uv.sources]\ntool = { workspace = true }\n",
     );
-    fs::write(root.path().join("packages/app/requirements.txt"), "tool\n").unwrap();
+    fs::write(
+        root.path()
+            .join("packages/app/requirements.txt"),
+        "tool\n",
+    )
+    .unwrap();
 
     pacquet_in(root.path())
         .args(["install", "--filter-prod", "app..."])
@@ -287,7 +300,9 @@ async fn a_recursive_add_leaves_the_workspace_root_alone() {
     let added = fs::read_to_string(root.path().join("a/pyproject.toml")).unwrap();
     assert!(added.contains("alpha"), "{added}");
     assert!(
-        !fs::read_to_string(root.path().join("pyproject.toml")).unwrap().contains("alpha"),
+        !fs::read_to_string(root.path().join("pyproject.toml"))
+            .unwrap()
+            .contains("alpha"),
         "the root is not part of a recursive add",
     );
 }

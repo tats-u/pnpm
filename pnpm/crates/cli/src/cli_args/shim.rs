@@ -142,8 +142,14 @@ struct VirtualShimPublication<'a> {
 impl ShimArgs {
     /// Returns what to print; the caller writes it.
     pub async fn run(self, config: &'static Config) -> miette::Result<String> {
-        let (subcommand, packages) = self.params.split_first().ok_or(ShimError::NoSubcommand)?;
-        let bin_dir = config.global_bin.clone().ok_or(ShimError::NoGlobalDir)?;
+        let (subcommand, packages) = self
+            .params
+            .split_first()
+            .ok_or(ShimError::NoSubcommand)?;
+        let bin_dir = config
+            .global_bin
+            .clone()
+            .ok_or(ShimError::NoGlobalDir)?;
         match subcommand.as_str() {
             "add" => add(config, &bin_dir, packages).await,
             "rm" | "remove" | "uninstall" => remove(config, &bin_dir, packages),
@@ -186,14 +192,19 @@ async fn add(
     let _global_bin_lock = acquire_global_bin_lock(bin_dir)?;
     // A legacy shim for the same package is only recognized as its own
     // once migrated, so migrate before the slot check.
-    migrate_legacy_shims(bin_dir).into_diagnostic().wrap_err("migrate the global shims")?;
+    migrate_legacy_shims(bin_dir)
+        .into_diagnostic()
+        .wrap_err("migrate the global shims")?;
     let mut report = String::new();
     for (package, bins) in bins_by_package {
         // A bin already in the global bin directory belongs to something
         // else — a globally installed package, or another shim. Replacing
         // it would take a working command away, and `pnpm shim rm` would
         // then delete it rather than give it back.
-        if let Some(bin) = bins.iter().find(|bin| taken_by_another(bin_dir, bin, package)) {
+        if let Some(bin) = bins
+            .iter()
+            .find(|bin| taken_by_another(bin_dir, bin, package))
+        {
             return Err(
                 ShimError::BinConflict { package: package.clone(), bin: bin.clone() }.into()
             );
@@ -227,7 +238,9 @@ fn remove(config: &Config, bin_dir: &Path, packages: &[String]) -> miette::Resul
     }
     let _global_bin_lock = acquire_global_bin_lock(bin_dir)?;
     // A legacy shim is only listed once migrated.
-    migrate_legacy_shims(bin_dir).into_diagnostic().wrap_err("migrate the global shims")?;
+    migrate_legacy_shims(bin_dir)
+        .into_diagnostic()
+        .wrap_err("migrate the global shims")?;
     let mut report = String::new();
     for package in packages {
         let bins = installed_shims(bin_dir, package);
@@ -329,7 +342,9 @@ fn virtual_shims(bin_dir: &Path) -> impl Iterator<Item = (String, String)> + use
         .unwrap_or_default()
         .into_iter()
         .filter_map(|bin| {
-            let package = virtual_shim_owner(&bin_dir.join(&bin)).ok().flatten()?;
+            let package = virtual_shim_owner(&bin_dir.join(&bin))
+                .ok()
+                .flatten()?;
             Some((bin, package))
         })
 }
@@ -341,8 +356,11 @@ pub(crate) fn virtual_shim_owner(path: &Path) -> io::Result<Option<String>> {
     else {
         return Ok(None);
     };
-    Ok(native_shim_target(bin_dir, name)?
-        .and_then(|target| target.virtual_package().map(str::to_string)))
+    Ok(native_shim_target(bin_dir, name)?.and_then(|target| {
+        target
+            .virtual_package()
+            .map(str::to_string)
+    }))
 }
 
 pub(crate) fn virtual_shim_bins_to_restore(

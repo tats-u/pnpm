@@ -112,8 +112,12 @@ fn wanted_loader_merges_git_conflicts_in_the_main_document() {
     let loaded = Lockfile::load_wanted_detailed(tmp.path(), &WantedLockfileSelection::default())
         .expect("merge conflicted wanted lockfile");
     assert_eq!(loaded.merged_conflict_files, 1);
-    let lockfile = loaded.lockfile.expect("wanted lockfile");
-    let react: PkgName = "react".parse().expect("parse package name");
+    let lockfile = loaded
+        .lockfile
+        .expect("wanted lockfile");
+    let react: PkgName = "react"
+        .parse()
+        .expect("parse package name");
     let dependency = &lockfile
         .root_project()
         .expect("root importer")
@@ -137,7 +141,9 @@ fn repair_loader_merges_git_conflicts() {
         .get()
         .expect("merge conflicted repair lockfile")
         .expect("repair lockfile");
-    let react: PkgName = "react".parse().expect("parse package name");
+    let react: PkgName = "react"
+        .parse()
+        .expect("parse package name");
     let dependency = &lockfile
         .root_project()
         .expect("root importer")
@@ -145,7 +151,12 @@ fn repair_loader_merges_git_conflicts() {
         .as_ref()
         .expect("root dependencies")[&react];
 
-    assert_eq!(source.merged_conflict_files().expect("read conflict state"), 1);
+    assert_eq!(
+        source
+            .merged_conflict_files()
+            .expect("read conflict state"),
+        1
+    );
     assert_eq!(dependency.version.to_string(), "18.2.0");
 }
 
@@ -174,7 +185,9 @@ fn an_unreadable_lockfile_is_an_error_for_both_the_strict_and_the_repair_loader(
     assert!(matches!(strict, LoadLockfileError::ReadFile(_)));
 
     let lazy = LazyLockfile::deferred(tmp.path().to_path_buf(), WantedLockfileSelection::default());
-    let repair = lazy.get_for_fix().expect_err("the repair loader reads the same file");
+    let repair = lazy
+        .get_for_fix()
+        .expect_err("the repair loader reads the same file");
     eprintln!("REPAIR:\n{repair}\n");
     assert!(matches!(repair, LoadLockfileError::ReadFile(_)));
 }
@@ -241,24 +254,49 @@ fn fix_loader_discards_broken_and_derived_package_fields() {
         .expect("load for repair")
         .expect("lockfile present");
     assert!(lockfile.settings.is_none());
-    let packages = lockfile.packages.as_ref().expect("packages present");
-    assert!(!packages.contains_key(&"broken@1.0.0".parse().expect("broken key")));
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages present");
+    assert!(
+        !packages.contains_key(
+            &"broken@1.0.0"
+                .parse()
+                .expect("broken key")
+        )
+    );
     let valid = packages
-        .get(&"valid@1.0.0".parse().expect("valid key"))
+        .get(
+            &"valid@1.0.0"
+                .parse()
+                .expect("valid key"),
+        )
         .expect("valid entry");
     assert!(valid.engines.is_none());
     assert!(valid.deprecated.is_none());
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots present");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots present");
     let valid = snapshots
-        .get(&"valid@1.0.0".parse().expect("valid snapshot key"))
+        .get(
+            &"valid@1.0.0"
+                .parse()
+                .expect("valid snapshot key"),
+        )
         .expect("valid snapshot");
     assert!(
-        valid.dependencies
+        valid
+            .dependencies
             .as_ref()
             .is_some_and(|deps| deps.len() == 1),
     );
-    assert!(valid.transitive_peer_dependencies.is_none());
+    assert!(
+        valid
+            .transitive_peer_dependencies
+            .is_none()
+    );
 }
 
 /// Regression test for <https://github.com/pnpm/pnpm/issues/13606>: a
@@ -337,7 +375,13 @@ fn parses_lockfile_larger_than_default_yaml_scalar_byte_budget() {
         .expect("large lockfile should be present");
 
     assert!(lockfile.pnpmfile_checksum.is_some());
-    assert_eq!(lockfile.pnpmfile_checksum.unwrap().len(), huge_string_len);
+    assert_eq!(
+        lockfile
+            .pnpmfile_checksum
+            .unwrap()
+            .len(),
+        huge_string_len
+    );
 }
 
 // A regression here makes every subsequent install re-resolve from
@@ -345,9 +389,8 @@ fn parses_lockfile_larger_than_default_yaml_scalar_byte_budget() {
 #[test]
 fn snapshot_key_over_simple_key_limit_round_trips() {
     let long_key = (0..40).fold(String::from("@scope/pkg@1.0.0"), |mut key, index| {
-        write!(key, "(@scope/very-long-peer-dependency-name-{index:02}@33.44.55)").expect(
-            "write peer suffix",
-        );
+        write!(key, "(@scope/very-long-peer-dependency-name-{index:02}@33.44.55)")
+            .expect("write peer suffix");
         key
     });
     assert!(long_key.len() > 1024, "fixture key must exceed the simple-key limit");
@@ -358,15 +401,20 @@ fn snapshot_key_over_simple_key_limit_round_trips() {
     let lockfile = Lockfile::parse(&content, Path::new(Lockfile::FILE_NAME))
         .expect("parse lockfile with explicit long key")
         .expect("lockfile should be present");
-    let key: PackageKey = long_key.parse().expect("parse long snapshot key");
+    let key: PackageKey = long_key
+        .parse()
+        .expect("parse long snapshot key");
     assert!(
-        lockfile.snapshots
+        lockfile
+            .snapshots
             .as_ref()
             .expect("snapshots")
             .contains_key(&key),
     );
 
-    let emitted = lockfile.to_yaml_string().expect("emit lockfile");
+    let emitted = lockfile
+        .to_yaml_string()
+        .expect("emit lockfile");
     assert!(emitted.contains("? '@scope/pkg@1.0.0"), "long key must be emitted in explicit form");
     let reparsed = Lockfile::parse(&emitted, Path::new(Lockfile::FILE_NAME))
         .expect("reparse emitted lockfile")
@@ -436,10 +484,17 @@ fn reconstructs_dropped_directory_resolution_for_pruned_file_peer_variant() {
         .expect("load pruned lockfile")
         .expect("pruned lockfile should be present");
 
-    let packages = lockfile.packages.as_ref().expect("packages synthesized for dir entry");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages synthesized for dir entry");
 
-    let dir_key: PackageKey = "dir@file:packages/dir".parse().expect("parse dir key");
-    let dir_metadata = packages.get(&dir_key).expect("dir entry synthesized");
+    let dir_key: PackageKey = "dir@file:packages/dir"
+        .parse()
+        .expect("parse dir key");
+    let dir_metadata = packages
+        .get(&dir_key)
+        .expect("dir entry synthesized");
     assert_eq!(
         dir_metadata.resolution,
         LockfileResolution::Directory(DirectoryResolution {
@@ -452,7 +507,9 @@ fn reconstructs_dropped_directory_resolution_for_pruned_file_peer_variant() {
         "upper@file:vendor/upper-1.0.0.TGZ",
         "mixed@file:vendor/mixed-1.0.0.Tar.Gz",
     ] {
-        let key: PackageKey = tarball_key.parse().expect("parse tarball key");
+        let key: PackageKey = tarball_key
+            .parse()
+            .expect("parse tarball key");
         assert!(
             packages.get(&key).is_none(),
             "tarball `{tarball_key}` must not get a synthesized directory resolution",
@@ -502,10 +559,19 @@ snapshots:
         .expect("load codeload-url lockfile")
         .expect("codeload-url lockfile should be present");
 
-    let importer = lockfile.root_project().expect("root importer present");
-    let deps = importer.dependencies.as_ref().expect("importer has dependencies");
-    let libsignal_name: PkgName = "libsignal".parse().expect("parse libsignal name");
-    let spec = deps.get(&libsignal_name).expect("libsignal dep present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
+    let deps = importer
+        .dependencies
+        .as_ref()
+        .expect("importer has dependencies");
+    let libsignal_name: PkgName = "libsignal"
+        .parse()
+        .expect("parse libsignal name");
+    let spec = deps
+        .get(&libsignal_name)
+        .expect("libsignal dep present");
     assert_eq!(spec.specifier, url);
     let regular = match &spec.version {
         ImporterDepVersion::Regular(ver_peer) => ver_peer,
@@ -513,10 +579,18 @@ snapshots:
     };
     assert_eq!(regular.to_string(), url);
 
-    let key: PackageKey = format!("libsignal@{url}").parse().expect("parse package key");
-    let packages = lockfile.packages.as_ref().expect("packages present");
+    let key: PackageKey = format!("libsignal@{url}")
+        .parse()
+        .expect("parse package key");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages present");
     assert!(packages.contains_key(&key));
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots present");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots present");
     assert!(snapshots.contains_key(&key));
 }
 
@@ -546,7 +620,10 @@ fn parses_pnpm_10_patched_dependencies_entries() {
         .expect("load lockfile with pnpm 10 patchedDependencies")
         .expect("lockfile should be present");
 
-    let patched = lockfile.patched_dependencies.as_ref().expect("patchedDependencies present");
+    let patched = lockfile
+        .patched_dependencies
+        .as_ref()
+        .expect("patchedDependencies present");
     assert_eq!(
         patched,
         &BTreeMap::from([
@@ -618,13 +695,25 @@ fn parses_link_dep_in_injected_snapshot() {
         .expect("load lockfile with link: snapshot dep")
         .expect("lockfile should be present");
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots present");
-    let b_key: PackageKey = "b@file:packages/b".parse().expect("parse b key");
-    let b_snapshot = snapshots.get(&b_key).expect("b snapshot present");
-    let deps = b_snapshot.dependencies.as_ref().expect("b deps present");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots present");
+    let b_key: PackageKey = "b@file:packages/b"
+        .parse()
+        .expect("parse b key");
+    let b_snapshot = snapshots
+        .get(&b_key)
+        .expect("b snapshot present");
+    let deps = b_snapshot
+        .dependencies
+        .as_ref()
+        .expect("b deps present");
 
     let c_name = PkgName::parse("c").expect("parse c");
-    let c_ref = deps.get(&c_name).expect("c entry present");
+    let c_ref = deps
+        .get(&c_name)
+        .expect("c entry present");
     assert_eq!(c_ref, &SnapshotDepRef::Link("packages/c".to_string()));
     assert_eq!(c_ref.resolve(&c_name), None);
 }

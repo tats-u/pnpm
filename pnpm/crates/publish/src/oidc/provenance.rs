@@ -63,7 +63,8 @@ where
 
     // The success path parses the response body unguarded, so a malformed body
     // is a hard error rather than a silent "not public".
-    let visibility = response.body
+    let visibility = response
+        .body
         .pipe_as_ref(serde_json::from_str::<Value>)
         .map_err(|error| DetermineProvenanceError::VisibilityParse(error.to_string()))?;
     let public = visibility
@@ -87,8 +88,12 @@ fn id_token_payload(id_token: &str) -> Result<Value, DetermineProvenanceError> {
 /// Whether the token proves a public GitHub Actions or GitLab project, the
 /// two setups provenance can be generated for.
 fn is_public_ci_project<Sys: EnvVar>(payload: &Value) -> bool {
-    let repository_visibility = payload.get("repository_visibility").and_then(Value::as_str);
-    let project_visibility = payload.get("project_visibility").and_then(Value::as_str);
+    let repository_visibility = payload
+        .get("repository_visibility")
+        .and_then(Value::as_str);
+    let project_visibility = payload
+        .get("project_visibility")
+        .and_then(Value::as_str);
 
     let github_public = is_github_actions::<Sys>() && repository_visibility == Some("public");
     let gitlab_public = is_gitlab::<Sys>()
@@ -144,20 +149,16 @@ impl ProvenanceError {
         registry: &str,
     ) -> Self {
         let parsed = serde_json::from_str::<Value>(body).ok();
-        let code = parsed
-            .as_ref()
-            .and_then(|json| {
-                json.get("code")?
-                    .as_str()
-                    .map(str::to_owned)
-            });
-        let detail = parsed
-            .as_ref()
-            .and_then(|json| {
-                json.get("message")?
-                    .as_str()
-                    .map(str::to_owned)
-            });
+        let code = parsed.as_ref().and_then(|json| {
+            json.get("code")?
+                .as_str()
+                .map(str::to_owned)
+        });
+        let detail = parsed.as_ref().and_then(|json| {
+            json.get("message")?
+                .as_str()
+                .map(str::to_owned)
+        });
         let message = match (code, detail) {
             (Some(code), Some(detail)) => format!("{code}: {detail}"),
             (Some(code), None) => code,

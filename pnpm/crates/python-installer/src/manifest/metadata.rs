@@ -10,17 +10,12 @@ impl Manifest {
         self.project
             .as_ref()
             .is_some_and(|project| {
-                project.dynamic
-                    .iter()
-                    .any(|field| {
-                        matches!(
-                            field.as_str(),
-                            "version"
-                                | "dependencies"
-                                | "optional-dependencies"
-                                | "requires-python",
-                        )
-                    })
+                project.dynamic.iter().any(|field| {
+                    matches!(
+                        field.as_str(),
+                        "version" | "dependencies" | "optional-dependencies" | "requires-python",
+                    )
+                })
             })
     }
 
@@ -29,18 +24,30 @@ impl Manifest {
         metadata: WheelMetadata,
         output: Option<std::sync::Arc<tempfile::TempDir>>,
     ) -> Result<()> {
-        let project = self.project.as_mut().expect("dynamic metadata belongs to a project");
-        if project.dynamic
+        let project = self
+            .project
+            .as_mut()
+            .expect("dynamic metadata belongs to a project");
+        if project
+            .dynamic
             .iter()
             .any(|field| field == "version")
         {
-            project.version = Some(metadata.version.parse().into_diagnostic()?);
+            project.version = Some(
+                metadata
+                    .version
+                    .parse()
+                    .into_diagnostic()?,
+            );
         }
-        if project.dynamic
+        if project
+            .dynamic
             .iter()
             .any(|field| field == "requires-python")
         {
-            project.requires_python.clone_from(&metadata.requires_python);
+            project
+                .requires_python
+                .clone_from(&metadata.requires_python);
         }
         self.metadata = Some(metadata);
         self.metadata_output = output;
@@ -51,17 +58,23 @@ impl Manifest {
         &self,
         metadata: &WheelMetadata,
     ) -> Result<()> {
-        let project = self.project.as_ref().expect("metadata belongs to a project");
-        if !project.dynamic
+        let project = self
+            .project
+            .as_ref()
+            .expect("metadata belongs to a project");
+        if !project
+            .dynamic
             .iter()
             .any(|field| field == "requires-python")
         {
-            let declared = project.requires_python
+            let declared = project
+                .requires_python
                 .as_deref()
                 .map(str::parse::<pep440_rs::VersionSpecifiers>)
                 .transpose()
                 .into_diagnostic()?;
-            let actual = metadata.requires_python
+            let actual = metadata
+                .requires_python
                 .as_deref()
                 .map(str::parse::<pep440_rs::VersionSpecifiers>)
                 .transpose()
@@ -70,7 +83,8 @@ impl Manifest {
                 bail!("Python backend metadata differs from static project requires-python");
             }
         }
-        if !project.dynamic
+        if !project
+            .dynamic
             .iter()
             .any(|field| field == "optional-dependencies")
             && crate::build::extra_set(project.optional_dependencies.keys())?
@@ -83,7 +97,8 @@ impl Manifest {
         if !declared.is_subset(&actual) {
             bail!("Python backend metadata omits static project dependencies");
         }
-        if !project.dynamic
+        if !project
+            .dynamic
             .iter()
             .any(|field| matches!(field.as_str(), "dependencies" | "optional-dependencies"))
             && declared != actual
@@ -97,12 +112,16 @@ impl Manifest {
         &self,
         selected: &BTreeSet<ExtraName>,
     ) -> Result<Vec<String>> {
-        let metadata = self.metadata.as_ref().expect("dynamic metadata was prepared");
+        let metadata = self
+            .metadata
+            .as_ref()
+            .expect("dynamic metadata was prepared");
         let mut requirements = Vec::new();
         for requirement in &metadata.requires_dist {
             let mut requirement = parse_requirement(requirement)?;
-            requirement.marker =
-                requirement.marker.simplify_extras_with(|extra| selected.contains(extra));
+            requirement.marker = requirement
+                .marker
+                .simplify_extras_with(|extra| selected.contains(extra));
             if requirement.marker.evaluate_extras(&[]) {
                 requirements.push(requirement.to_string());
             }

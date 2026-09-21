@@ -84,7 +84,9 @@ pub fn to_native_separators(path: &Path) -> Cow<'_, Path> {
 /// Returns an absolute path when no relative form exists between the
 /// two arguments.
 fn relative_target_for(original: &Path, link: &Path) -> PathBuf {
-    let parent = link.parent().unwrap_or_else(|| Path::new(""));
+    let parent = link
+        .parent()
+        .unwrap_or_else(|| Path::new(""));
     crate::relative_path(parent, original)
 }
 
@@ -264,17 +266,16 @@ fn create_symlink_parent(target: &Path, link: &Path) -> io::Result<()> {
     let Some(parent) = link.parent() else {
         return Ok(());
     };
-    create_dir_all_healing_reparse(parent)
-        .map_err(|mkdir_err| {
-            io::Error::new(
-                mkdir_err.kind(),
-                format!(
-                    "Error while trying to symlink {target:?} to {link:?}. \
+    create_dir_all_healing_reparse(parent).map_err(|mkdir_err| {
+        io::Error::new(
+            mkdir_err.kind(),
+            format!(
+                "Error while trying to symlink {target:?} to {link:?}. \
                  The error happened while trying to create the parent directory \
                  for the symlink target. Details: {mkdir_err}",
-                ),
-            )
-        })
+            ),
+        )
+    })
 }
 
 /// Like [`std::fs::create_dir_all`], but heals a dangling reparse point
@@ -488,7 +489,9 @@ mod windows {
     /// budget. Only the rename failure is returned as `Err`, so the retry
     /// never repeats a final verdict about the destination.
     fn attempt_commit(link: &Path, staging: &Path) -> io::Result<CommitAttempt> {
-        let _commit_guard = JUNCTION_COMMIT_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
+        let _commit_guard = JUNCTION_COMMIT_LOCK
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
         match inspect_destination(link) {
             Destination::Missing => {}
             Destination::Exists => return Ok(CommitAttempt::DestinationTaken),

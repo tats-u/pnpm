@@ -14,7 +14,8 @@ impl HostedBackend for S3Store {
         Some(crate::upload::RemoteUploadStore::new(
             Arc::clone(&self.store),
             &self.prefix,
-            self.cache_root.join(crate::upload::UPLOADS_DIR),
+            self.cache_root
+                .join(crate::upload::UPLOADS_DIR),
         ))
     }
 
@@ -26,7 +27,8 @@ impl HostedBackend for S3Store {
         &self,
         name: &CanonicalPackageName,
     ) -> Result<Option<HostedDocumentForUpdate>> {
-        Ok(S3Store::read_document_for_update(self, name).await?
+        Ok(S3Store::read_document_for_update(self, name)
+            .await?
             .map(|document| HostedDocumentForUpdate {
                 bytes: document.bytes,
                 version: HostedDocumentVersion::ObjectVersion(document.version),
@@ -96,7 +98,8 @@ impl HostedBackend for S3Store {
         name: &CanonicalPackageName,
         filename: &str,
     ) -> Result<PathBuf> {
-        self.staging_tmp_path(name, filename).await
+        self.staging_tmp_path(name, filename)
+            .await
     }
 
     async fn finalize_blob(
@@ -105,7 +108,9 @@ impl HostedBackend for S3Store {
         name: &CanonicalPackageName,
         filename: &str,
     ) -> Result<BlobFinalize> {
-        let outcome = self.upload_blob(tmp_path, name, filename).await?;
+        let outcome = self
+            .upload_blob(tmp_path, name, filename)
+            .await?;
         // Keep the staged tmp on a Conflict so journal roll-forward can
         // re-detect it and exclude the version whose bytes we don't own;
         // once the object is ours there is nothing left to promote.
@@ -134,7 +139,10 @@ impl HostedBackend for S3Store {
                     Ok(meta) => meta,
                     Err(error) => return Some(Err(error.into())),
                 };
-                let path = meta.location.as_ref().strip_prefix(&self.prefix)?;
+                let path = meta
+                    .location
+                    .as_ref()
+                    .strip_prefix(&self.prefix)?;
                 if path
                     .split('/')
                     .any(|part| part.starts_with('.'))

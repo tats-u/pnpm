@@ -183,7 +183,8 @@ fn lookup_config(config: &Config, key: &str, is_scoped: bool) -> Option<Value> {
         return Some(lookup_scoped_config(config, key));
     }
     if key == "globalconfig" {
-        let path = config.config_dir
+        let path = config
+            .config_dir
             .as_ref()
             .map(|dir| {
                 dir.join(GLOBAL_CONFIG_YAML_FILENAME)
@@ -240,11 +241,17 @@ fn lookup_typed_config(config: &Config, kebab: &str) -> Value {
     if let Some(value) = config.explicit_settings.get(&camel) {
         return value.clone();
     }
-    config.raw_auth_config.get(kebab).map_or(Value::Null, |value| Value::String(value.clone()))
+    config
+        .raw_auth_config
+        .get(kebab)
+        .map_or(Value::Null, |value| Value::String(value.clone()))
 }
 
 fn auth_value(config: &Config, key: &str) -> Value {
-    config.raw_auth_config.get(key).map_or(Value::Null, |value| Value::String(value.clone()))
+    config
+        .raw_auth_config
+        .get(key)
+        .map_or(Value::Null, |value| Value::String(value.clone()))
 }
 
 /// `lookupByPropertyPath`: resolve a (possibly nested) property path against the
@@ -320,7 +327,9 @@ fn config_to_record(config: &Config) -> Map<String, Value> {
     merge_default_catalog(&mut result);
     absolutize_patch_paths(&mut result, config);
     for (key, value) in &config.raw_auth_config {
-        result.entry(key.clone()).or_insert_with(|| Value::String(value.clone()));
+        result
+            .entry(key.clone())
+            .or_insert_with(|| Value::String(value.clone()));
     }
     // The `registry` / `@scope:registry` rows show the merged routes — the
     // values `config get` answers — so a raw `.npmrc` row cannot contradict

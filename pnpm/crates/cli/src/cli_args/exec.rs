@@ -259,10 +259,16 @@ fn configured_node_options(config: &Config) -> Option<String> {
         Some(node_options) => {
             Some(pnpm_config::esm_node_path_loader::keep_esm_node_path_loader_option(
                 node_options,
-                config.extra_env.get("NODE_OPTIONS").map(String::as_str),
+                config
+                    .extra_env
+                    .get("NODE_OPTIONS")
+                    .map(String::as_str),
             ))
         }
-        None => config.extra_env.get("NODE_OPTIONS").cloned(),
+        None => config
+            .extra_env
+            .get("NODE_OPTIONS")
+            .cloned(),
     }
 }
 
@@ -277,8 +283,16 @@ fn command_search_path(
     let mut prepend = Vec::with_capacity(2 + config.extra_bin_paths.len());
     prepend.push(dir.join("node_modules").join(".bin"));
     if project != dir {
-        prepend.push(project.join("node_modules").join(".bin"));
+        prepend.push(
+            project
+                .join("node_modules")
+                .join(".bin"),
+        );
     }
-    prepend.extend(pnpm_python_installer::execution_paths(config, project).iter().cloned());
+    prepend.extend(
+        pnpm_python_installer::execution_paths(config, project)
+            .iter()
+            .cloned(),
+    );
     prepend_dirs_to_path(&prepend).map_err(ExecError::from)
 }

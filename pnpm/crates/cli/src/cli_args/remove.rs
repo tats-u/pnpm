@@ -65,14 +65,8 @@ impl RemoveArgs {
         mut state: State,
     ) -> miette::Result<()> {
         let lockfile_path = state.lockfile_path();
-        let State {
-            tarball_mem_cache,
-            http_client,
-            config,
-            manifest,
-            lockfile,
-            resolved_packages,
-        } = &mut state;
+        let State { tarball_mem_cache, http_client, config, manifest, lockfile, resolved_packages } =
+            &mut state;
         let lockfile = command_lockfile(lockfile, &lockfile_path)?;
 
         Remove {
@@ -103,14 +97,8 @@ impl RemoveArgs {
         mut selection: InstallFamilySelection,
     ) -> miette::Result<()> {
         let lockfile_path = state.lockfile_path();
-        let State {
-            tarball_mem_cache,
-            http_client,
-            config,
-            manifest,
-            lockfile,
-            resolved_packages,
-        } = &mut state;
+        let State { tarball_mem_cache, http_client, config, manifest, lockfile, resolved_packages } =
+            &mut state;
         let lockfile = command_lockfile(lockfile, &lockfile_path)?;
 
         Remove {

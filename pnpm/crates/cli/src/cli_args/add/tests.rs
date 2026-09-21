@@ -63,7 +63,9 @@ fn allow_build_rejects_an_argument_that_names_no_package() {
 fn allow_build_rejects_a_package_the_root_disallows() {
     let dir = tempfile::tempdir().expect("temp dir");
     let mut config = Config::default();
-    config.allow_builds.insert("esbuild".to_string(), false);
+    config
+        .allow_builds
+        .insert("esbuild".to_string(), false);
 
     let err = apply_allow_build(&mut config, &["esbuild".to_string()], dir.path())
         .expect_err("disallowed package is rejected");
@@ -119,7 +121,10 @@ fn add_tilde_and_save_prefix_resolve_last_one_wins() {
 #[test]
 fn dependency_options_to_dependency_groups() {
     use DependencyGroup::{Dev, Optional, Peer, Prod};
-    let create_list = |opts: AddDependencyOptions| opts.dependency_groups().collect::<Vec<_>>();
+    let create_list = |opts: AddDependencyOptions| {
+        opts.dependency_groups()
+            .collect::<Vec<_>>()
+    };
 
     assert_eq!(
         create_list(AddDependencyOptions {
@@ -229,8 +234,18 @@ fn save_build_selects_only_the_cargo_build_table() {
         no_save_peer: false,
     };
 
-    assert_eq!(options.cargo_dependency_kind(false).unwrap(), CargoDependencyKind::Build);
-    assert_eq!(options.dependency_groups().collect::<Vec<_>>(), []);
+    assert_eq!(
+        options
+            .cargo_dependency_kind(false)
+            .unwrap(),
+        CargoDependencyKind::Build
+    );
+    assert_eq!(
+        options
+            .dependency_groups()
+            .collect::<Vec<_>>(),
+        []
+    );
 }
 
 #[test]
@@ -243,13 +258,21 @@ fn save_build_rejects_mixed_packages_and_conflicting_cargo_targets() {
         save_peer: false,
         no_save_peer: false,
     };
-    assert!(save_build.cargo_dependency_kind(true).is_err());
+    assert!(
+        save_build
+            .cargo_dependency_kind(true)
+            .is_err()
+    );
 
     for options in [
         AddDependencyOptions { save_prod: true, ..save_build.clone() },
         AddDependencyOptions { save_dev: true, ..save_build },
     ] {
-        assert!(options.cargo_dependency_kind(false).is_err());
+        assert!(
+            options
+                .cargo_dependency_kind(false)
+                .is_err()
+        );
     }
 }
 
@@ -294,7 +317,10 @@ fn workspace_selectors_reject_a_selector_without_a_package_name() {
 }
 
 fn add_args(argv: &[&str]) -> AddArgs {
-    match CliArgs::try_parse_from(argv).expect("parses").command {
+    match CliArgs::try_parse_from(argv)
+        .expect("parses")
+        .command
+    {
         CliCommand::Add(add) => add,
         other => panic!("expected add, got {other:?}"),
     }

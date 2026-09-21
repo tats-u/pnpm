@@ -96,7 +96,9 @@ pub fn prepare_package<Reporter: self::Reporter>(
     let Some(manifest) = manifest else {
         return Ok(PreparedPackage { pkg_dir, should_be_built: false, ignored_build: false });
     };
-    let scripts = manifest.get("scripts").and_then(Value::as_object);
+    let scripts = manifest
+        .get("scripts")
+        .and_then(Value::as_object);
     if scripts.is_none_or(serde_json::Map::is_empty)
         || !package_should_be_built(&manifest, &pkg_dir)
     {
@@ -350,7 +352,11 @@ fn host_can_prepare(wanted: &WantedPm) -> bool {
     // A panic while the cache was held says nothing about the answers
     // already in it, and refusing to prepare a dependency over it would
     // be a worse outcome than a stale entry could ever be.
-    let lock = || ANSWERS.lock().unwrap_or_else(PoisonError::into_inner);
+    let lock = || {
+        ANSWERS
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    };
 
     let key = (wanted.pm, wanted.version_spec.clone());
     if let Some(answer) = lock().get(&key) {
@@ -362,33 +368,36 @@ fn host_can_prepare(wanted: &WantedPm) -> bool {
 }
 
 fn probe_host(wanted: &WantedPm) -> bool {
-    let wanted_range = wanted.version_spec
+    let wanted_range = wanted
+        .version_spec
         .as_deref()
         .and_then(|range| node_semver::Range::parse(range).ok());
     // A dependency's scripts reach for any of the package manager's names
     // — `yarnpkg` as readily as `yarn` — and nothing says two of them on
     // one host are the same install, so each has to answer for itself.
-    shim_names(wanted.pm)
-        .all(|name| {
-            let Ok(program) = which::which(name) else {
-                return false;
-            };
-            let Some(wanted_range) = wanted_range.as_ref() else {
-                return true;
-            };
-            let Ok(output) = Command::new(program).arg("--version").output() else {
-                return false;
-            };
-            // A version printed by a command that then failed says nothing
-            // about what that command can do.
-            output.status.success()
-                && String::from_utf8_lossy(&output.stdout)
-                    .lines()
-                    .next()
-                    .map(str::trim)
-                    .and_then(|version| node_semver::Version::parse(version).ok())
-                    .is_some_and(|version| version.satisfies(wanted_range))
-        })
+    shim_names(wanted.pm).all(|name| {
+        let Ok(program) = which::which(name) else {
+            return false;
+        };
+        let Some(wanted_range) = wanted_range.as_ref() else {
+            return true;
+        };
+        let Ok(output) = Command::new(program)
+            .arg("--version")
+            .output()
+        else {
+            return false;
+        };
+        // A version printed by a command that then failed says nothing
+        // about what that command can do.
+        output.status.success()
+            && String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .next()
+                .map(str::trim)
+                .and_then(|version| node_semver::Version::parse(version).ok())
+                .is_some_and(|version| version.satisfies(wanted_range))
+    })
 }
 
 pub fn resolve_package_build_permission(
@@ -417,7 +426,10 @@ pub fn resolve_package_build_permission(
 
 /// Decide whether the package needs building.
 fn package_should_be_built(manifest: &Value, pkg_dir: &Path) -> bool {
-    let Some(scripts) = manifest.get("scripts").and_then(Value::as_object) else {
+    let Some(scripts) = manifest
+        .get("scripts")
+        .and_then(Value::as_object)
+    else {
         return false;
     };
     if scripts
@@ -427,14 +439,12 @@ fn package_should_be_built(manifest: &Value, pkg_dir: &Path) -> bool {
     {
         return true;
     }
-    let has_prepublish_script = PREPUBLISH_SCRIPTS
-        .iter()
-        .any(|name| {
-            scripts
-                .get(*name)
-                .and_then(Value::as_str)
-                .is_some_and(|script| !script.is_empty())
-        });
+    let has_prepublish_script = PREPUBLISH_SCRIPTS.iter().any(|name| {
+        scripts
+            .get(*name)
+            .and_then(Value::as_str)
+            .is_some_and(|script| !script.is_empty())
+    });
     if !has_prepublish_script {
         return false;
     }
@@ -460,7 +470,9 @@ pub(crate) fn safe_join_path(
         .unwrap_or("")
         .trim_start_matches(['/', '\\']);
     let joined = if sub.is_empty() { root.to_path_buf() } else { root.join(sub) };
-    let canonical_root = root.canonicalize().map_err(PreparePackageError::Io)?;
+    let canonical_root = root
+        .canonicalize()
+        .map_err(PreparePackageError::Io)?;
     let Ok(canonical_joined) = joined.canonicalize() else {
         return Err(PreparePackageError::InvalidPath { path: sub.to_string() });
     };
@@ -476,7 +488,9 @@ pub(crate) fn safe_join_path(
 /// Write `(stage, script)` into the working manifest's `scripts` map
 /// so the next `run_lifecycle_hook` invocation can look it up.
 fn inject_script(manifest: &mut Value, stage: &str, script: &str) {
-    let scripts = manifest.get_mut("scripts").and_then(Value::as_object_mut);
+    let scripts = manifest
+        .get_mut("scripts")
+        .and_then(Value::as_object_mut);
     if let Some(scripts) = scripts {
         scripts.insert(stage.to_string(), Value::String(script.to_string()));
     }

@@ -173,10 +173,20 @@ fn a_lockfile_answering_another_question_is_refused() {
         pnpm_python_resolver::Inputs::new(&requirements(&["demo", "extra"]), &target(), index);
     let error = accept_server_lockfile(&answered, &other_requirements, None)
         .expect_err("other requirements");
-    assert!(error.to_string().contains("for other inputs"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("for other inputs"),
+        "{error}"
+    );
     let error = accept_server_lockfile(&answered, &inputs, Some(">=3.12"))
         .expect_err("another requires-python");
-    assert!(error.to_string().contains("for other inputs"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("for other inputs"),
+        "{error}"
+    );
 }
 
 /// A server answers for the requirements alone, so the members that asked
@@ -191,8 +201,16 @@ fn a_server_lockfile_is_accepted_once_the_members_are_recorded() {
         serde_json::from_value(server_lockfile(index)).expect("lockfile fixture");
 
     let error = accept_server_lockfile(&answered, &inputs, None).expect_err("no members yet");
-    assert!(error.to_string().contains("for other inputs"), "{error}");
-    answered.tool.pnpm.set_members(inputs.members().to_vec());
+    assert!(
+        error
+            .to_string()
+            .contains("for other inputs"),
+        "{error}"
+    );
+    answered
+        .tool
+        .pnpm
+        .set_members(inputs.members().to_vec());
     accept_server_lockfile(&answered, &inputs, None).expect("the same question");
 }
 
@@ -277,7 +295,12 @@ fn two_shared_members_declaring_one_distribution_are_refused() {
     ])
     .err()
     .expect("refused");
-    assert!(error.to_string().contains("both declare `member`"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("both declare `member`"),
+        "{error}"
+    );
     // Unshared, each installs its own environment, so the names may clash.
     workspace_of(&[
         ("/repo", "[tool.uv.workspace]\nmembers = ['packages/*']\n"),
@@ -295,7 +318,12 @@ fn a_shared_environment_needs_a_workspace_to_share_it() {
     )])
     .err()
     .expect("refused");
-    assert!(error.to_string().contains("declares no [tool.uv.workspace]"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("declares no [tool.uv.workspace]"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -341,7 +369,12 @@ fn a_command_uses_the_environment_its_project_shares_or_its_own() {
     let environment_of = |dir: &std::path::Path| super::environment_dir(Some(root), dir);
     for project in ["packages/app", "packages/tool", "packages/nested/libs/x", "packages/inner"] {
         std::fs::create_dir_all(root.join(project).join("src")).expect("project directory");
-        std::fs::write(root.join(project).join("pyproject.toml"), MEMBER).expect("member");
+        std::fs::write(
+            root.join(project)
+                .join("pyproject.toml"),
+            MEMBER,
+        )
+        .expect("member");
     }
     let app = root.join("packages/app");
     std::fs::write(root.join("pyproject.toml"), UNSHARED_ROOT.replace("libs", "packages"))

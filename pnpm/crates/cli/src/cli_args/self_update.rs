@@ -150,7 +150,9 @@ fn enforce_resolution_policy(
     if violation.code != MINIMUM_RELEASE_AGE_VIOLATION_CODE {
         return Err(SelfUpdateError::ReleasePolicyViolation { version: version.to_string() }.into());
     }
-    if config.resolved_minimum_release_age().is_none()
+    if config
+        .resolved_minimum_release_age()
+        .is_none()
         || !config.resolved_minimum_release_age_strict()
     {
         return Ok(());
@@ -233,7 +235,9 @@ async fn handler<Reporter: self::Reporter + 'static>(
     }
 
     let manifest_value = super::package_manager::read_manifest_json(&dir.join("package.json"))?;
-    let wanted = manifest_value.as_ref().and_then(super::package_manager::wanted_package_manager);
+    let wanted = manifest_value
+        .as_ref()
+        .and_then(super::package_manager::wanted_package_manager);
 
     if let Some(hint) = crossed_major_hint(config, dir, wanted.as_ref(), &target_version) {
         warn::<Reporter>(&prefix, hint);
@@ -264,7 +268,10 @@ async fn verify_target_engine<Reporter: self::Reporter + 'static>(
     target_version: &str,
     prefix: &str,
 ) -> miette::Result<()> {
-    let env_root = config.global_pkg_dir.clone().ok_or(SelfUpdateError::NoGlobalDir)?;
+    let env_root = config
+        .global_pkg_dir
+        .clone()
+        .ok_or(SelfUpdateError::NoGlobalDir)?;
     // Resolve integrities into the env lockfile so the engine identity can
     // be verified before install.
     Box::pin(config_deps::sync_package_manager_dependencies(
@@ -318,7 +325,10 @@ fn crossed_major_hint(
         // read the resolved version from the env lockfile to drive the
         // hint — otherwise crossing a major would silently skip it.
         Some(pm) if pm.name == "pnpm" => {
-            let lockfile_dir = config.workspace_dir.as_deref().unwrap_or(dir);
+            let lockfile_dir = config
+                .workspace_dir
+                .as_deref()
+                .unwrap_or(dir);
             read_project_pinned_pnpm_version(lockfile_dir, pm.version.as_deref())
                 .filter(|version| version != target_version)
         }
@@ -364,8 +374,14 @@ fn link_into_global_bin(
     installed: &install_pnpm::InstallPnpmResult,
     version: &str,
 ) -> miette::Result<()> {
-    let global_bin = config.global_bin.clone().ok_or(SelfUpdateError::NoGlobalDir)?;
-    let global_pkg_dir = config.global_pkg_dir.clone().ok_or(SelfUpdateError::NoGlobalDir)?;
+    let global_bin = config
+        .global_bin
+        .clone()
+        .ok_or(SelfUpdateError::NoGlobalDir)?;
+    let global_pkg_dir = config
+        .global_pkg_dir
+        .clone()
+        .ok_or(SelfUpdateError::NoGlobalDir)?;
     let _global_bin_lock = super::global_bin_lock::acquire_global_bin_lock(&global_bin)?;
 
     refresh_global_shims(&global_bin, installed, version)?;
@@ -418,7 +434,8 @@ fn registries_for_cache_key(config: &Config) -> Vec<(String, String)> {
     let bootstrap = &config.package_manager_bootstrap;
     let mut registries = vec![("default".to_string(), bootstrap.registry.clone())];
     registries.extend(
-        bootstrap.registries
+        bootstrap
+            .registries
             .iter()
             .map(|(key, value)| (key.clone(), value.clone())),
     );
@@ -449,7 +466,9 @@ fn is_executed_by_corepack() -> bool {
 }
 
 fn coerce_major(version: &str) -> Option<u64> {
-    node_semver::Version::parse(version).ok().map(|version| version.major)
+    node_semver::Version::parse(version)
+        .ok()
+        .map(|version| version.major)
 }
 
 pub(super) fn version_lt(left: &str, right: &str) -> bool {

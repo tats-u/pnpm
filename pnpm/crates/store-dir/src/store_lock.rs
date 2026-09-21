@@ -81,11 +81,9 @@ fn global_operation_lock_path() -> Result<PathBuf, StoreLockError> {
 }
 
 fn operation_lock_directory() -> Result<PathBuf, StoreLockError> {
-    pnpm_fs::secure_user_lock_dir("pnpm-store-operation-locks")
-        .map_err(|error| StoreLockError::Open {
-            path: PathBuf::from("pnpm-store-operation-locks"),
-            error,
-        })
+    pnpm_fs::secure_user_lock_dir("pnpm-store-operation-locks").map_err(|error| {
+        StoreLockError::Open { path: PathBuf::from("pnpm-store-operation-locks"), error }
+    })
 }
 
 fn operation_lock_path(store_dir: &StoreDir) -> Result<PathBuf, StoreLockError> {
@@ -93,11 +91,10 @@ fn operation_lock_path(store_dir: &StoreDir) -> Result<PathBuf, StoreLockError> 
     let normalized_root = if normalized_root.is_absolute() {
         normalized_root
     } else {
-        let current_dir = std::env::current_dir()
-            .map_err(|error| StoreLockError::Resolve {
-                path: store_dir.root().to_path_buf(),
-                error,
-            })?;
+        let current_dir = std::env::current_dir().map_err(|error| StoreLockError::Resolve {
+            path: store_dir.root().to_path_buf(),
+            error,
+        })?;
         pnpm_fs::lexical_normalize(&current_dir.join(normalized_root))
     };
     let root = pnpm_fs::realpath_missing(&normalized_root)

@@ -120,7 +120,9 @@ fn ignore_ghsas_are_added_to_a_flow_audit_config() {
 #[test]
 fn a_multiline_flow_mapping_is_refused_rather_than_flattened() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     let original = "allowBuilds: {\n  foo: true, # decided\n}\n";
     fs::write(&path, original).expect("seed manifest");
 
@@ -134,7 +136,9 @@ fn a_multiline_flow_mapping_is_refused_rather_than_flattened() {
 #[test]
 fn a_multiline_flow_sequence_is_refused_rather_than_rewritten() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     let original = "minimumReleaseAgeExclude: [\n  foo@1.0.0, # pinned\n  bar@2.0.0,\n]\n";
     fs::write(&path, original).expect("seed manifest");
 
@@ -155,7 +159,9 @@ fn a_multiline_flow_block_is_dropped_whole_when_it_empties() {
 #[test]
 fn a_multiline_flow_block_is_deleted_whole_by_config_delete() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     fs::write(&path, "overrides: {\n  foo: 1.0.0, # pinned\n}\npackages:\n  - '*'\n")
         .expect("seed manifest");
 
@@ -170,7 +176,9 @@ fn a_multiline_flow_block_is_deleted_whole_by_config_delete() {
 #[test]
 fn a_flow_collection_of_the_wrong_kind_fails_to_parse() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     let original = "allowBuilds: [ foo ]\n";
     fs::write(&path, original).expect("seed manifest");
 
@@ -184,7 +192,9 @@ fn a_flow_collection_of_the_wrong_kind_fails_to_parse() {
 #[test]
 fn a_whole_document_flow_mapping_is_refused_rather_than_corrupted() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     // The keys of a document written as one flow mapping are not
     // top-level lines, so no splice — nor a new top-level block — can
     // address them.
@@ -201,7 +211,9 @@ fn a_whole_document_flow_mapping_is_refused_rather_than_corrupted() {
 #[test]
 fn an_aliased_block_is_refused_rather_than_corrupted() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     let original = "catalog: &pins { foo: ^1.0.0 }\ncatalogs: { other: *pins }\n";
     fs::write(&path, original).expect("seed manifest");
 

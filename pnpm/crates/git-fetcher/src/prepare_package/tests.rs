@@ -251,7 +251,11 @@ fn prepare_rejection_keeps_resolution_id_credentials_out_of_the_diagnostic() {
         "git+https://s3cr3t-token:hunter2@github.com/foo/bar.git#0123456789abcdef";
 
     let err = prepare_package::<SilentReporter>(&opts, dir.path(), None).unwrap_err();
-    let rendered = format!("{err}{}", err.help().expect("NotAllowed carries a help message"));
+    let rendered = format!(
+        "{err}{}",
+        err.help()
+            .expect("NotAllowed carries a help message")
+    );
     for secret in ["s3cr3t-token", "hunter2"] {
         assert!(!rendered.contains(secret), "{secret:?} leaked into the diagnostic: {rendered}");
     }

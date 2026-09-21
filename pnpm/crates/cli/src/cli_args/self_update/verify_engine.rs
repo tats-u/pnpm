@@ -152,7 +152,8 @@ fn collect_engine_components(
             ),
         }
     })?;
-    let optional_deps = env.snapshots
+    let optional_deps = env
+        .snapshots
         .get(&snapshot_key)
         .and_then(|snapshot| snapshot.optional_dependencies.as_ref());
     if let Some((platform_name, version)) = optional_deps.and_then(host_platform_package) {
@@ -216,7 +217,9 @@ fn engine_component(
         .parse::<PackageKey>()
         .ok()
         .and_then(|key| {
-            env.packages.get(&key).map(|metadata| metadata.resolution.integrity())
+            env.packages
+                .get(&key)
+                .map(|metadata| metadata.resolution.integrity())
         })
         .flatten()
         .map(ToString::to_string);
@@ -271,7 +274,10 @@ fn report_identity_failures(
         .collect::<Vec<_>>()
         .join("; ");
 
-    if failures.iter().all(SignatureFailure::tolerable_without_signature) {
+    if failures
+        .iter()
+        .all(SignatureFailure::tolerable_without_signature)
+    {
         return Ok(Some(format!(
             "The authenticity of {label} could not be verified against npm's registry \
              signatures: {described}. Proceeding anyway, because the release was resolved through \
@@ -301,9 +307,14 @@ fn verify_engine_pin(
     engine: &EngineToVerify<'_>,
     package_label: &str,
 ) -> Result<(), SelfUpdateError> {
-    let pinned = env.importers
+    let pinned = env
+        .importers
         .get(EnvLockfile::ROOT_IMPORTER_KEY)
-        .and_then(|importer| importer.package_manager_dependencies.as_ref())
+        .and_then(|importer| {
+            importer
+                .package_manager_dependencies
+                .as_ref()
+        })
         .and_then(|pm_deps| pm_deps.get(engine.package));
     if pinned.is_none_or(|dep| dep.version != engine.version) {
         return Err(SelfUpdateError::EngineIdentityUnverifiable {

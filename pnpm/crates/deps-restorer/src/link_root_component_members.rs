@@ -136,7 +136,9 @@ fn collect_injected_members(
             if !seen.insert(name) || skipped.contains(&key) {
                 continue;
             }
-            let slot_modules_dir = layout.slot_dir(&key).join("node_modules");
+            let slot_modules_dir = layout
+                .slot_dir(&key)
+                .join("node_modules");
             let package_dir = slot_modules_dir.join(&dir_name);
             members.push(Member { name: dir_name, key, slot_modules_dir, package_dir });
         }
@@ -156,7 +158,8 @@ fn injected_member_key(
     match &spec.version {
         // Bare `file:<path>` — the resolved key reuses the importer-map
         // key as both the snapshot name and the `node_modules/` dir.
-        ImporterDepVersion::File(_) => spec.version
+        ImporterDepVersion::File(_) => spec
+            .version
             .resolved_key(name)
             .map(|key| (name.to_string(), key)),
         // `@scope/name@file:<path>(peers)` parses to `Alias`; it is an
@@ -277,16 +280,19 @@ fn link_sibling(host: &Member, sibling: &Member) -> Result<(), LinkRootComponent
     if sibling.name == host.name {
         return Ok(());
     }
-    let symlink_path = host.slot_modules_dir.join(&sibling.name);
+    let symlink_path = host
+        .slot_modules_dir
+        .join(&sibling.name);
     if std::fs::symlink_metadata(&symlink_path).is_ok() {
         return Ok(());
     }
-    symlink_package(&sibling.package_dir, &symlink_path)
-        .map_err(|source| LinkRootComponentMembersError::Symlink {
+    symlink_package(&sibling.package_dir, &symlink_path).map_err(|source| {
+        LinkRootComponentMembersError::Symlink {
             member: host.name.clone(),
             sibling: sibling.name.clone(),
             source,
-        })?;
+        }
+    })?;
     Ok(())
 }
 

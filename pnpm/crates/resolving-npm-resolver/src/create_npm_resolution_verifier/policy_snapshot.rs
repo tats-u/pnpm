@@ -45,7 +45,10 @@ pub(super) fn build_policy_snapshot(
     map.insert("integrityRequired".to_string(), JsonValue::Bool(true));
     map.insert(
         "namedRegistriesRouting".to_string(),
-        JsonValue::String(opts.named_registries_routing.to_string()),
+        JsonValue::String(
+            opts.named_registries_routing
+                .to_string(),
+        ),
     );
     map.insert("minimumReleaseAge".to_string(), JsonValue::from(opts.minimum_release_age));
     map.insert(
@@ -80,7 +83,9 @@ pub(super) fn minimum_release_age_cutoff(
     opts: &VerificationReleaseAgeOptions,
     now: Option<DateTime<Utc>>,
 ) -> Option<DateTime<Utc>> {
-    let age_check_active = opts.minimum_minutes.is_some_and(|minutes| minutes > 0);
+    let age_check_active = opts
+        .minimum_minutes
+        .is_some_and(|minutes| minutes > 0);
 
     if age_check_active {
         let minutes = opts.minimum_minutes.unwrap_or(0);

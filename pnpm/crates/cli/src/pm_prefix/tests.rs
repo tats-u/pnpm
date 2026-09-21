@@ -11,7 +11,11 @@ fn stripped(tokens: &[&str]) -> (Vec<String>, bool) {
     );
     let argv = argv
         .into_iter()
-        .map(|token| token.into_string().expect("test tokens are UTF-8"))
+        .map(|token| {
+            token
+                .into_string()
+                .expect("test tokens are UTF-8")
+        })
         .collect();
     (argv, forced)
 }

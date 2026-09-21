@@ -101,7 +101,10 @@ impl<'a> LatestPicker<'a> {
     ) -> Result<Arc<PackageVersion>, ResolveLatestError> {
         let registry = pick_registry_for_package(&self.registries, package_name, None);
         if self.policy.published_by.is_none()
-            && self.policy.published_by_exclude.is_none()
+            && self
+                .policy
+                .published_by_exclude
+                .is_none()
             && !self.config.offline
             && !self.config.prefer_offline
         {
@@ -116,7 +119,8 @@ impl<'a> LatestPicker<'a> {
             .map(Arc::new)
             .map_err(ResolveLatestError::Registry);
         }
-        self.pick_latest(package_name, dry_run, &registry).await
+        self.pick_latest(package_name, dry_run, &registry)
+            .await
     }
 
     async fn pick_latest(
@@ -136,7 +140,10 @@ impl<'a> LatestPicker<'a> {
             blocked_versions: None,
             policy: pnpm_resolving_npm_resolver::PackagePickPolicy {
                 published_by: self.policy.published_by,
-                published_by_exclude: self.policy.published_by_exclude.as_ref(),
+                published_by_exclude: self
+                    .policy
+                    .published_by_exclude
+                    .as_ref(),
                 trust_policy: Some(self.config.trust_policy),
             },
             request: pnpm_resolving_npm_resolver::MetadataPickRequest {
@@ -153,7 +160,8 @@ impl<'a> LatestPicker<'a> {
             &self.fetch_locker,
         );
 
-        let pick = pick_package(&ctx, &spec, &opts).await
+        let pick = pick_package(&ctx, &spec, &opts)
+            .await
             .map_err(|error| ResolveLatestError::Pick(Box::new(error)))?;
         if let Some(picked) = pick.picked_package {
             return Ok(picked);

@@ -23,7 +23,9 @@ pub fn generate_sh_shim(
     node_path: &[String],
     relocatable_root: Option<&Path>,
 ) -> String {
-    let shim_dir = shim_path.parent().unwrap_or_else(|| Path::new(""));
+    let shim_dir = shim_path
+        .parent()
+        .unwrap_or_else(|| Path::new(""));
     let mut sh = String::from(SH_SHIM_HEADER);
     let physical_basedir = is_within_root(relocatable_root, shim_dir, shim_dir);
     if physical_basedir {
@@ -126,12 +128,7 @@ struct ShExec<'a> {
 /// One `exec` block: a program that already names an executable runs directly,
 /// while a bare program name is probed in the bin directory, then on `PATH`.
 fn sh_exec_block(exec: &ShExec<'_>, exec_args: &str) -> String {
-    let ShExec {
-        prog,
-        prog_exe,
-        prog_has_exe,
-        quoted,
-    } = *exec;
+    let ShExec { prog, prog_exe, prog_has_exe, quoted } = *exec;
     let quoted_target = &quoted.posix;
     let quoted_target_win = &quoted.windows;
     let sh_long_prog_exe = format!(r#""$basedir/{prog_exe}""#);
@@ -228,7 +225,9 @@ pub(super) fn escape_msys_cmd_switches(args: &str) -> String {
         if ch == '/' && at_boundary {
             let mut lookahead = chars.clone();
             if let Some((_, switch @ ('C' | 'c' | 'K' | 'k'))) = lookahead.next()
-                && lookahead.next().is_none_or(|(_, next)| next.is_whitespace())
+                && lookahead
+                    .next()
+                    .is_none_or(|(_, next)| next.is_whitespace())
             {
                 escaped.push('/');
                 escaped.push('/');
@@ -268,7 +267,9 @@ fn shim_target_marker(target: &str) -> String {
 /// against the shim's directory.
 #[must_use]
 pub fn is_shim_pointing_at(shim_content: &str, shim_path: &Path, target_path: &Path) -> bool {
-    let target = target_path.to_string_lossy().replace('\\', "/");
+    let target = target_path
+        .to_string_lossy()
+        .replace('\\', "/");
     shim_target_markers(shim_content)
         .any(|marker| marker == target || marker == relative_target(target_path, shim_path))
 }

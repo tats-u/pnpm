@@ -45,7 +45,10 @@ pub(super) fn rewrite_tarball_urls_from_registry(
     public_url: &str,
 ) {
     let public_url = public_url.trim_end_matches('/');
-    if let Some(versions) = value.get_mut("versions").and_then(Value::as_object_mut) {
+    if let Some(versions) = value
+        .get_mut("versions")
+        .and_then(Value::as_object_mut)
+    {
         for manifest in versions.values_mut() {
             rewrite_dist_tarball(manifest, pkg, source_registry, public_url);
         }
@@ -69,15 +72,17 @@ pub(super) fn rewrite_dist_tarball(
         .get("version")
         .and_then(Value::as_str)
         .map(|version| pkg.tarball_name_for_version(version));
-    let Some(dist) = value.get_mut("dist").and_then(Value::as_object_mut) else {
+    let Some(dist) = value
+        .get_mut("dist")
+        .and_then(Value::as_object_mut)
+    else {
         return;
     };
     if let Some(source_registry) = source_registry {
         rewrite_upstream_revision_tarball_urls(dist, source_registry, public_url);
     }
-    let revision_url = source_registry.and_then(|source_registry| {
-        unique_revision_url(dist, source_registry, public_url)
-    });
+    let revision_url = source_registry
+        .and_then(|source_registry| unique_revision_url(dist, source_registry, public_url));
     if let Some(revision_url) = revision_url {
         let Some(tarball_value) = dist.get_mut("tarball") else { return };
         *tarball_value = Value::String(revision_url);
@@ -121,13 +126,19 @@ pub(super) fn unique_revision_url(
         .as_array()?
         .iter()
         .filter(|entry| {
-            entry.get("revision").and_then(Value::as_u64) == Some(revision)
+            entry
+                .get("revision")
+                .and_then(Value::as_u64)
+                == Some(revision)
                 && entry
                     .get("integrity")
                     .and_then(Value::as_str)
                     .and_then(|integrity| integrity.parse::<Integrity>().ok())
                     .is_some_and(|candidate| candidate == integrity)
-                && entry.get("tarball").and_then(Value::as_str) == Some(revision_url.as_str())
+                && entry
+                    .get("tarball")
+                    .and_then(Value::as_str)
+                    == Some(revision_url.as_str())
         })
         .count();
     (matches == 1).then_some(revision_url)
@@ -138,7 +149,10 @@ pub(super) fn rewrite_upstream_revision_tarball_urls(
     source_registry: &str,
     public_url: &str,
 ) {
-    let Some(revisions) = dist.get_mut("revisions").and_then(Value::as_array_mut) else {
+    let Some(revisions) = dist
+        .get_mut("revisions")
+        .and_then(Value::as_array_mut)
+    else {
         return;
     };
     revisions.retain_mut(|revision| {
@@ -155,10 +169,17 @@ pub(super) fn rewrite_revision_tarball(
     source_registry: &str,
     public_url: &str,
 ) -> bool {
-    let Some(number) = revision.get("revision").and_then(Value::as_u64) else {
+    let Some(number) = revision
+        .get("revision")
+        .and_then(Value::as_u64)
+    else {
         return false;
     };
-    if number > MAX_TARBALL_REVISION || !revision.get("manifest").is_some_and(Value::is_object) {
+    if number > MAX_TARBALL_REVISION
+        || !revision
+            .get("manifest")
+            .is_some_and(Value::is_object)
+    {
         return false;
     }
     let Some(integrity) = revision
@@ -318,14 +339,20 @@ pub fn abbreviate_packument(packument: &Value, now: DateTime<Utc>) -> Value {
     // Coarsen `time`, then synthesize `modified` from the coarsened map —
     // npm packuments nest `modified` under `time` and pacquet's resolver
     // reads it at the top level.
-    if let Some(time) = obj.get("time").and_then(Value::as_object) {
+    if let Some(time) = obj
+        .get("time")
+        .and_then(Value::as_object)
+    {
         let time = coarsen_time_map(time, now);
         if let Some(modified) = time.get("modified") {
             out.insert("modified".to_string(), modified.clone());
         }
         out.insert("time".to_string(), Value::Object(time));
     }
-    if let Some(versions) = obj.get("versions").and_then(Value::as_object) {
+    if let Some(versions) = obj
+        .get("versions")
+        .and_then(Value::as_object)
+    {
         out.insert("versions".to_string(), abbreviate_versions(versions));
     }
     Value::Object(out)
@@ -380,7 +407,10 @@ pub(super) fn copy_fields(
 /// queueing priority (the estimated pipeline work that starts the
 /// most expensive tarballs first).
 pub(super) fn trim_dist_fields(version: &mut serde_json::Map<String, Value>) {
-    let Some(dist) = version.get_mut("dist").and_then(Value::as_object_mut) else {
+    let Some(dist) = version
+        .get_mut("dist")
+        .and_then(Value::as_object_mut)
+    else {
         return;
     };
     dist.remove("npm-signature");
@@ -412,7 +442,9 @@ pub(super) fn coarsen_time_map(
     let horizon = now - chrono::Duration::days(TIME_PRECISION_HORIZON_DAYS);
     let mut out = serde_json::Map::with_capacity(time.len());
     for (key, value) in time {
-        let coarsened = value.as_str().and_then(|raw| coarsen_timestamp(raw, horizon));
+        let coarsened = value
+            .as_str()
+            .and_then(|raw| coarsen_timestamp(raw, horizon));
         out.insert(key.clone(), coarsened.map_or_else(|| value.clone(), Value::String));
     }
     out
@@ -428,15 +460,23 @@ pub(super) fn coarsen_time_map(
 /// looking mature). Returns `None` for strings that aren't RFC 3339 so
 /// the caller keeps the original verbatim.
 pub(super) fn coarsen_timestamp(raw: &str, horizon: DateTime<Utc>) -> Option<String> {
-    let parsed = DateTime::parse_from_rfc3339(raw).ok()?.with_timezone(&Utc);
+    let parsed = DateTime::parse_from_rfc3339(raw)
+        .ok()?
+        .with_timezone(&Utc);
     if parsed < horizon {
         let date = parsed.date_naive();
         let rounded =
             if parsed == date.and_hms_opt(0, 0, 0)?.and_utc() { date } else { date.succ_opt()? };
         Some(rounded.format("%Y-%m-%d").to_string())
     } else {
-        let minute = parsed.with_second(0)?.with_nanosecond(0)?;
+        let minute = parsed
+            .with_second(0)?
+            .with_nanosecond(0)?;
         let rounded = if parsed == minute { minute } else { minute + chrono::Duration::minutes(1) };
-        Some(rounded.format("%Y-%m-%dT%H:%MZ").to_string())
+        Some(
+            rounded
+                .format("%Y-%m-%dT%H:%MZ")
+                .to_string(),
+        )
     }
 }

@@ -119,8 +119,10 @@ async fn install_engine_from_env_with_config<Reporter: self::Reporter + 'static>
 ) -> miette::Result<PathBuf> {
     let package = registry_engine_packages(pm, version)?;
     let package_name = package.wrapper;
-    let _store_lock =
-        config.store_dir.lock_for_use().wrap_err("lock the package-manager engine store")?;
+    let _store_lock = config
+        .store_dir
+        .lock_for_use()
+        .wrap_err("lock the package-manager engine store")?;
     // An engine already in its slot skips both the signature check and the
     // install.
     if let Some(bin_dir) = cached_engine_bins(config, env, package, version) {
@@ -146,9 +148,11 @@ async fn install_engine_from_env_with_config<Reporter: self::Reporter + 'static>
     // Install into a throwaway directory with the global virtual store
     // enabled, so the engine itself materializes in `<store>/links/...`
     // and the temp directory holds only symlinks into it.
-    let tmp_install_dir = config.store_dir
-        .tmp()
-        .join(format!("{}-engine-{version}-{}", pm.name(), unique_suffix()));
+    let tmp_install_dir =
+        config
+            .store_dir
+            .tmp()
+            .join(format!("{}-engine-{version}-{}", pm.name(), unique_suffix()));
     fs::create_dir_all(&tmp_install_dir)
         .into_diagnostic()
         .wrap_err("create the temporary package manager install directory")?;
@@ -193,7 +197,10 @@ fn cached_engine_bins(
     version: &str,
 ) -> Option<PathBuf> {
     let slot = compute_engine_slot(config, env, package, version)?;
-    if !package_dir(&slot, package.wrapper).join("package.json").exists() {
+    if !package_dir(&slot, package.wrapper)
+        .join("package.json")
+        .exists()
+    {
         return None;
     }
     link_cached_engine_bins(&slot, package.wrapper, package.links_native_binary).ok()
@@ -209,7 +216,8 @@ fn engine_install_lock<Reporter: self::Reporter>(
     version: &str,
 ) -> Option<DirLock> {
     let name = format!("{}@{version}.lock", package_name.replace('/', "+"));
-    let path = config.store_dir
+    let path = config
+        .store_dir
         .tmp()
         .join("engine-locks")
         .join(name);
@@ -219,7 +227,10 @@ fn engine_install_lock<Reporter: self::Reporter>(
 async fn package_manager_env_lock<Reporter: self::Reporter>(
     config: &Config,
 ) -> miette::Result<Option<DirLock>> {
-    let path = config.store_dir.tmp().join("engine-locks/package-manager-env.lock");
+    let path = config
+        .store_dir
+        .tmp()
+        .join("engine-locks/package-manager-env.lock");
     tokio::task::spawn_blocking(move || {
         acquire_install_lock::<Reporter>(&path, "the package-manager environment")
     })
@@ -255,7 +266,10 @@ fn acquire_install_lock<Reporter: self::Reporter>(path: &Path, subject: &str) ->
 }
 
 fn package_manager_engine_config(config: &Config) -> miette::Result<Config> {
-    let global_pkg_dir = config.global_pkg_dir.as_ref().ok_or(EngineError::NoGlobalDir)?;
+    let global_pkg_dir = config
+        .global_pkg_dir
+        .as_ref()
+        .ok_or(EngineError::NoGlobalDir)?;
     let mut config = config.clone();
     config.store_dir = StoreDir::new(package_manager_engine_store_root(global_pkg_dir));
     config.global_virtual_store_dir = config.store_dir.links();
@@ -273,11 +287,16 @@ fn package_manager_engine_store_root(global_pkg_dir: &Path) -> PathBuf {
 /// releases already wrote it. The other package managers get a directory
 /// each, so resolving one never rewrites another's pins.
 pub(crate) fn engine_env_root(config: &Config, pm: PackageManager) -> miette::Result<PathBuf> {
-    let global_pkg_dir = config.global_pkg_dir.as_ref().ok_or(EngineError::NoGlobalDir)?;
+    let global_pkg_dir = config
+        .global_pkg_dir
+        .as_ref()
+        .ok_or(EngineError::NoGlobalDir)?;
     if pm == PackageManager::Pnpm {
         return Ok(global_pkg_dir.clone());
     }
-    Ok(package_manager_home(global_pkg_dir).join("package-manager-envs").join(pm.name()))
+    Ok(package_manager_home(global_pkg_dir)
+        .join("package-manager-envs")
+        .join(pm.name()))
 }
 
 /// The pnpm home directory, derived from the versioned global packages
@@ -313,8 +332,11 @@ fn compute_engine_slot(
     packages: EnginePackages,
     version: &str,
 ) -> Option<PathBuf> {
-    let wanted: PackageKey = format!("{}@{version}", packages.wrapper).parse().ok()?;
-    let key = env.snapshots
+    let wanted: PackageKey = format!("{}@{version}", packages.wrapper)
+        .parse()
+        .ok()?;
+    let key = env
+        .snapshots
         .keys()
         .find(|key| key.without_peer() == wanted)?
         .clone();
@@ -324,7 +346,8 @@ fn compute_engine_slot(
     cfg.global_virtual_store_dir = config.store_dir.links();
     cfg.allow_builds.clear();
     for name in packages.pinned {
-        cfg.allow_builds.insert((*name).to_string(), true);
+        cfg.allow_builds
+            .insert((*name).to_string(), true);
     }
     let policy = AllowBuildPolicy::from_config(&cfg).ok()?;
     let engine = detect_node_major().map(|major| engine_name(major, None, None));
@@ -366,10 +389,9 @@ fn resolve_slot(install_dir: &Path, package_name: &str) -> miette::Result<PathBu
             "the installed {package_name} at {real_display} did not materialize in the global virtual store"
         ));
     }
-    slot_from_package_dir(&real, package_name)
-        .ok_or_else(|| {
-            miette::miette!("could not locate the {package_name} global-virtual-store slot")
-        })
+    slot_from_package_dir(&real, package_name).ok_or_else(|| {
+        miette::miette!("could not locate the {package_name} global-virtual-store slot")
+    })
 }
 
 pub(crate) fn slot_from_package_dir(package_dir: &Path, package_name: &str) -> Option<PathBuf> {
@@ -422,8 +444,9 @@ fn remove_dir_if_not_symlink(path: &Path) -> std::io::Result<()> {
 /// name, so concurrent `pnpm with` invocations don't collide.
 fn unique_suffix() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos =
-        SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |elapsed| elapsed.as_nanos());
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_nanos());
     format!("{}-{nanos}", std::process::id())
 }
 
@@ -448,7 +471,8 @@ async fn verify_registry_engine<Reporter: self::Reporter>(
             PlatformBinaries::None
         },
     };
-    if let Some(warning) = verify_engine_identity(env, &engine, config).await
+    if let Some(warning) = verify_engine_identity(env, &engine, config)
+        .await
         .map_err(miette::Report::new)
         .wrap_err("verify the package manager identity")?
     {

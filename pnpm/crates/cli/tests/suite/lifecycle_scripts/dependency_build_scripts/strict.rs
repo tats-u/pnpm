@@ -12,13 +12,8 @@ use std::{fs, path::Path};
 /// `ERR_PNPM_IGNORED_BUILDS` after adding the dependency.
 #[test]
 fn add_fails_under_strict_dep_builds_when_a_build_is_ignored() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(workspace.join("package.json"), "{}\n").expect("write package.json");
@@ -57,8 +52,16 @@ fn add_fails_under_strict_dep_builds_when_a_build_is_ignored() {
              /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     assert!(pkg_dir.join("package.json").exists(), "dependency should be materialized");
-    assert!(!pkg_dir.join("generated-by-preinstall.js").exists());
-    assert!(!pkg_dir.join("generated-by-postinstall.js").exists());
+    assert!(
+        !pkg_dir
+            .join("generated-by-preinstall.js")
+            .exists()
+    );
+    assert!(
+        !pkg_dir
+            .join("generated-by-postinstall.js")
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
@@ -71,13 +74,8 @@ fn add_fails_under_strict_dep_builds_when_a_build_is_ignored() {
 /// pnpm's `--ignore-scripts`, which leaves `ignoredBuilds` empty.
 #[test]
 fn install_ignore_scripts_does_not_fail_under_strict_dep_builds() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -109,8 +107,16 @@ fn install_ignore_scripts_does_not_fail_under_strict_dep_builds() {
              /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     assert!(pkg_dir.join("package.json").exists(), "dependency should be materialized");
-    assert!(!pkg_dir.join("generated-by-preinstall.js").exists());
-    assert!(!pkg_dir.join("generated-by-postinstall.js").exists());
+    assert!(
+        !pkg_dir
+            .join("generated-by-preinstall.js")
+            .exists()
+    );
+    assert!(
+        !pkg_dir
+            .join("generated-by-postinstall.js")
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
@@ -120,13 +126,8 @@ fn install_ignore_scripts_does_not_fail_under_strict_dep_builds() {
 /// ignored-build-scripts warning box.
 #[test]
 fn add_warns_without_strict_dep_builds_when_a_build_is_ignored() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(workspace.join("package.json"), "{}\n").expect("write package.json");
@@ -149,7 +150,11 @@ fn add_warns_without_strict_dep_builds_when_a_build_is_ignored() {
         "node_modules/.pnpm/@pnpm.e2e+pre-and-postinstall-scripts-example@1.0.0\
              /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
-    assert!(!pkg_dir.join("generated-by-preinstall.js").exists());
+    assert!(
+        !pkg_dir
+            .join("generated-by-preinstall.js")
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
@@ -160,13 +165,8 @@ fn add_warns_without_strict_dep_builds_when_a_build_is_ignored() {
 /// fast path — otherwise rerunning install would bypass the gate.
 #[test]
 fn strict_install_keeps_failing_on_warm_rerun() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -187,9 +187,8 @@ fn strict_install_keeps_failing_on_warm_rerun() {
     // Warm rerun: the lockfile and `.modules.yaml` are unchanged, so
     // the up-to-date fast path would normally exit 0 — but strict mode
     // must keep failing until the build is approved.
-    let CommandTempCwd {
-        pacquet: rerun, root: rerun_root, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet: rerun, root: rerun_root, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let rerun_out = rerun
         .with_current_dir(&workspace)
         .with_arg("install")
@@ -220,13 +219,8 @@ fn strict_install_keeps_failing_on_warm_rerun() {
 /// fails again with `ERR_PNPM_IGNORED_BUILDS`.
 #[test]
 fn strict_install_keeps_failing_with_unreadable_modules_yaml() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -245,9 +239,8 @@ fn strict_install_keeps_failing_with_unreadable_modules_yaml() {
     fs::write(workspace.join("node_modules/.modules.yaml"), "}{ not: valid: yaml")
         .expect("corrupt .modules.yaml");
 
-    let CommandTempCwd {
-        pacquet: rerun, root: rerun_root, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet: rerun, root: rerun_root, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let rerun_out = rerun
         .with_current_dir(&workspace)
         .with_arg("install")
@@ -274,13 +267,8 @@ fn strict_install_keeps_failing_with_unreadable_modules_yaml() {
 /// rerun look clean.
 #[test]
 fn ignored_builds_are_preserved_after_a_repeat_install() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(workspace.join("package.json"), "{}\n").expect("write package.json");
@@ -306,9 +294,8 @@ fn ignored_builds_are_preserved_after_a_repeat_install() {
         String::from_utf8_lossy(&add_out.stderr),
     );
 
-    let CommandTempCwd {
-        pacquet: rerun, root: rerun_root, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet: rerun, root: rerun_root, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let rerun_out = rerun
         .with_current_dir(&workspace)
         .with_args(["install", "--config.optimistic-repeat-install=false"])
@@ -346,13 +333,8 @@ fn ignored_builds_are_preserved_after_a_repeat_install() {
 /// optimization, never an approval.
 #[test]
 fn strict_dep_builds_fails_for_packages_with_cached_side_effects() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -376,9 +358,8 @@ fn strict_dep_builds_fails_for_packages_with_cached_side_effects() {
 
     allow_builds(&workspace, &[]);
 
-    let CommandTempCwd {
-        pacquet: rerun, root: rerun_root, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet: rerun, root: rerun_root, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let rerun_out = rerun
         .with_current_dir(&workspace)
         .with_arg("install")

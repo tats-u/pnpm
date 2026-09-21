@@ -82,12 +82,20 @@ fn prompt_holds_redraws_and_resets_before_resuming() {
 
     sink.on_prompt_to(PromptAction::End, &mut writes);
     assert!(writes.len() > before_prompt);
-    assert!(String::from_utf8(writes.clone()).expect("utf8 output").contains("during"));
+    assert!(
+        String::from_utf8(writes.clone())
+            .expect("utf8 output")
+            .contains("during")
+    );
 
     let after_prompt = writes.len();
     sink.write_to(Output::Frame("after".to_string()), false, &mut writes);
     assert!(writes.len() > after_prompt);
-    assert!(String::from_utf8(writes).expect("utf8 output").contains("after"));
+    assert!(
+        String::from_utf8(writes)
+            .expect("utf8 output")
+            .contains("after")
+    );
 }
 
 #[test]
@@ -133,7 +141,11 @@ fn cursor_ups(output: &str) -> Vec<usize> {
             .take_while(char::is_ascii_digit)
             .collect();
         if !digits.is_empty() && rest[digits.len()..].starts_with('A') {
-            result.push(digits.parse().expect("parse the cursor-up distance"));
+            result.push(
+                digits
+                    .parse()
+                    .expect("parse the cursor-up distance"),
+            );
         }
     }
     result

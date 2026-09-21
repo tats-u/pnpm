@@ -37,7 +37,8 @@ impl WorkEnv {
             .output()
             .expect("git rev-parse");
         assert!(output.status.success());
-        output.stdout
+        output
+            .stdout
             .pipe(String::from_utf8)
             .expect("output of rev-parse is valid UTF-8")
             .trim()
@@ -59,7 +60,9 @@ impl WorkEnv {
     /// working; `pnpm` is the default. The build fns delete the sibling
     /// name after every build, so at most one candidate exists.
     pub(super) fn client_binary_in(source_dir: &Path) -> PathBuf {
-        let release = source_dir.join("target").join("release");
+        let release = source_dir
+            .join("target")
+            .join("release");
         let pnpm = release.join("pnpm");
         if pnpm.is_file() {
             return pnpm;
@@ -83,14 +86,12 @@ impl WorkEnv {
             if let Ok(content) = fs::read_to_string(&manifest) {
                 // Whitespace-tolerant match: taplo pads `name` keys for
                 // alignment in some tables.
-                let has_pnpm_bin = content
-                    .lines()
-                    .any(|line| {
-                        let mut parts = line.split_whitespace();
-                        parts.next() == Some("name")
-                            && parts.next() == Some("=")
-                            && parts.next() == Some(r#""pnpm""#)
-                    });
+                let has_pnpm_bin = content.lines().any(|line| {
+                    let mut parts = line.split_whitespace();
+                    parts.next() == Some("name")
+                        && parts.next() == Some("=")
+                        && parts.next() == Some(r#""pnpm""#)
+                });
                 return if has_pnpm_bin { "pnpm" } else { "pacquet" };
             }
         }
@@ -123,11 +124,16 @@ impl WorkEnv {
         // `pacquet` client binary, so a same-revision `pacquet@<rev>` can
         // reuse it (see [`Self::build_pacquet`]) instead of compiling the
         // identical commit a second time.
-        let pnpr_first = self.options.selection.targets
+        let pnpr_first = self
+            .options
+            .selection
+            .targets
             .iter()
             .filter(|target| target.kind == TargetKind::Pnpr)
             .chain(
-                self.options.selection.targets
+                self.options
+                    .selection
+                    .targets
                     .iter()
                     .filter(|target| target.kind != TargetKind::Pnpr),
             );
@@ -143,7 +149,12 @@ impl WorkEnv {
         let dest = self.pacquet_binary(revision);
 
         // Restored from the per-commit CI binary cache: nothing to build.
-        if self.options.build.reuse_prebuilt_binaries && dest.is_file() {
+        if self
+            .options
+            .build
+            .reuse_prebuilt_binaries
+            && dest.is_file()
+        {
             eprintln!("Revision: {revision:?} (pacquet) — reusing prebuilt binary");
             return;
         }
@@ -183,7 +194,10 @@ impl WorkEnv {
     }
     /// Reuse the client built by this revision's pnpr target, retaining its binary name.
     fn reuse_pnpr_client_binary(&self, revision: &str) -> bool {
-        if self.options.selection.targets
+        if self
+            .options
+            .selection
+            .targets
             .iter()
             .any(|target| target.kind == TargetKind::Pnpr && target.rev == revision)
         {
@@ -194,7 +208,9 @@ impl WorkEnv {
                 );
                 // Name the copy after the source so the copied binary keeps
                 // the bin name its revision declares.
-                let bin_name = from_pnpr.file_name().expect("client binary path has a file name");
+                let bin_name = from_pnpr
+                    .file_name()
+                    .expect("client binary path has a file name");
                 let dest = self
                     .pacquet_source_dir(revision)
                     .join("target")
@@ -204,7 +220,9 @@ impl WorkEnv {
                     fs::create_dir_all(parent).expect("create pacquet target/release dir");
                 }
                 fs::copy(&from_pnpr, &dest).expect("copy the client binary from the pnpr build");
-                let built = bin_name.to_str().expect("client bin name is UTF-8");
+                let built = bin_name
+                    .to_str()
+                    .expect("client bin name is UTF-8");
                 WorkEnv::remove_sibling_client_binary(&self.pacquet_source_dir(revision), built);
                 return true;
             }
@@ -218,9 +236,16 @@ impl WorkEnv {
     /// `<bench_dir>/pacquet/target/release/pnpr`.
     fn build_pnpr(&self, revision: &str) {
         // Restored from the per-commit CI binary cache: nothing to build.
-        if self.options.build.reuse_prebuilt_binaries
-            && self.pnpr_pacquet_binary(revision).is_file()
-            && self.pnpr_server_binary(revision).is_file()
+        if self
+            .options
+            .build
+            .reuse_prebuilt_binaries
+            && self
+                .pnpr_pacquet_binary(revision)
+                .is_file()
+            && self
+                .pnpr_server_binary(revision)
+                .is_file()
         {
             eprintln!("Revision: {revision:?} (pnpr) — reusing prebuilt binaries");
             return;
@@ -249,7 +274,10 @@ impl WorkEnv {
     }
     pub(super) fn build_pnpm(&self, revision: &str) {
         let revision_repo = self.pnpm_source_dir(revision);
-        if self.options.build.reuse_prebuilt_binaries
+        if self
+            .options
+            .build
+            .reuse_prebuilt_binaries
             && PNPM_BUNDLE_PATHS
                 .iter()
                 .any(|path| revision_repo.join(path).is_file())

@@ -83,7 +83,8 @@ pub async fn resolve_dependency(
         .map_err(|error| {
             napi::Error::from_reason(format!("failed to spawn resolve thread: {error}"))
         })?;
-    rx.await.map_err(|_| napi::Error::from_reason("resolve worker thread panicked"))?
+    rx.await
+        .map_err(|_| napi::Error::from_reason("resolve worker thread panicked"))?
 }
 
 fn normalize_wanted_dependency(wanted: WantedDependencyInput) -> WantedDependency {
@@ -93,7 +94,9 @@ fn normalize_wanted_dependency(wanted: WantedDependencyInput) -> WantedDependenc
         // resolver treated it like an absent pref (resolve the latest
         // matching version); passing it through verbatim would fall off
         // the resolver chain as ERR_PNPM_SPEC_NOT_SUPPORTED_BY_ANY_RESOLVER.
-        bare_specifier: wanted.bare_specifier.filter(|spec| !spec.trim().is_empty()),
+        bare_specifier: wanted
+            .bare_specifier
+            .filter(|spec| !spec.trim().is_empty()),
         injected: None,
         prev_specifier: None,
         optional: None,
@@ -152,7 +155,11 @@ fn run_resolve_blocking(
     // when no resolver in the chain claims the spec, rather than the
     // trait's `Ok(None)`.
     let resolved = runtime
-        .block_on(async { resolver.resolve(&wanted_dependency, &resolve_options).await })
+        .block_on(async {
+            resolver
+                .resolve(&wanted_dependency, &resolve_options)
+                .await
+        })
         // `Resolver::resolve` erases its error to `ResolveError`
         // (`Box<dyn Error>`), so the underlying miette `Diagnostic` — and its
         // `ERR_PNPM_*` code / hint — is already gone by the time it reaches
@@ -163,7 +170,10 @@ fn run_resolve_blocking(
 
     Ok(ResolveDependencyResult {
         id: resolved.id.to_string(),
-        manifest: resolved.package.manifest.map(|manifest| (*manifest).clone()),
+        manifest: resolved
+            .package
+            .manifest
+            .map(|manifest| (*manifest).clone()),
         resolved_via: resolved.resolved_via,
         normalized_bare_specifier: resolved.normalized_bare_specifier,
         latest: resolved.package.latest,
@@ -175,14 +185,22 @@ mod tests;
 
 fn resolve_overlay(options: &ResolveDependencyOptions) -> ConfigOverlay {
     ConfigOverlay {
-        store_dir: options.store_dir.as_ref().map(PathBuf::from),
-        cache_dir: options.cache_dir.as_ref().map(PathBuf::from),
-        registries: options.registries
+        store_dir: options
+            .store_dir
+            .as_ref()
+            .map(PathBuf::from),
+        cache_dir: options
+            .cache_dir
+            .as_ref()
+            .map(PathBuf::from),
+        registries: options
+            .registries
             .as_ref()
             .map(|map| map.clone().into_iter().collect()),
         offline: options.offline,
         prefer_offline: options.prefer_offline,
-        auth_header_by_uri: options.auth_header_by_uri
+        auth_header_by_uri: options
+            .auth_header_by_uri
             .clone()
             .map(|map| map.into_iter().collect()),
         ..ConfigOverlay::default()

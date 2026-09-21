@@ -92,8 +92,9 @@ pub(crate) async fn pick_from_registry_with_guard<Cache: PackageMetaCache>(
         };
 
         let version_str = version.version.to_string();
-        let PackageVersionGuardDecision::Reject { reason } =
-            guard.check(&opts.spec.name, &version_str).await?
+        let PackageVersionGuardDecision::Reject { reason } = guard
+            .check(&opts.spec.name, &version_str)
+            .await?
         else {
             return Ok(RegistryPick::Picked(PickedFromRegistry {
                 meta: pick_result.meta,
@@ -169,7 +170,11 @@ pub(super) fn blocked_packument_key(
     }
     meta.versions
         .keys()
-        .find(|key| meta.versions.get(key).is_some_and(|candidate| Arc::ptr_eq(&candidate, picked)))
+        .find(|key| {
+            meta.versions
+                .get(key)
+                .is_some_and(|candidate| Arc::ptr_eq(&candidate, picked))
+        })
         .cloned()
         .unwrap_or_else(|| version_str.to_string())
 }
@@ -184,9 +189,9 @@ pub(super) fn exhausted(
     reason: String,
     fail: impl FnOnce(String, String) -> ResolveError,
 ) -> Result<RegistryPick, ResolveError> {
-    let accepts_rejected = opts.package_version_guard.is_some_and(|guard| {
-        guard.exhaustion_policy() == GuardExhaustionPolicy::AcceptRejected
-    });
+    let accepts_rejected = opts
+        .package_version_guard
+        .is_some_and(|guard| guard.exhaustion_policy() == GuardExhaustionPolicy::AcceptRejected);
     match first_rejected.filter(|_| accepts_rejected) {
         Some(picked) => {
             tracing::debug!(
@@ -220,12 +225,17 @@ pub(super) fn map_pick_error<Cache: PackageMetaCache>(
     // `user:pass@` is exactly what `AuthHeaders` turns into a Basic header, so
     // redacting before the lookup would report "no authorization header was
     // set" for the registries that most certainly carry one.
-    let auth_header_value =
-        ctx.metadata.http.auth_headers.for_url_with_package(&url, Some(&opts.spec.name));
+    let auth_header_value = ctx
+        .metadata
+        .http
+        .auth_headers
+        .for_url_with_package(&url, Some(&opts.spec.name));
     Box::new(RegistryResponseError::new(RegistryResponseErrorOptions {
         url: &redact_and_sanitize(&url),
         status: status.as_u16(),
-        status_text: status.canonical_reason().unwrap_or_default(),
+        status_text: status
+            .canonical_reason()
+            .unwrap_or_default(),
         pkg_name: &opts.spec.name,
         auth_header_value: auth_header_value.as_deref(),
     }))

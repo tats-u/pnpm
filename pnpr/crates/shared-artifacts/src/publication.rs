@@ -14,15 +14,18 @@ impl SharedArtifactStore {
     pub async fn publish(&self, username: &str, request: PublishArtifactRequest) -> Result<bool> {
         let prepared = prepare_publication(username, &request)?;
         let publication = artifact_operation_id()?;
-        self.begin_publication(&publication).await?;
+        self.begin_publication(&publication)
+            .await?;
         let mut reclamation_needed = false;
-        let result = self.while_renewing(
-            &publication,
-            PUBLICATION_RENEWAL_INTERVAL,
-            self.publish_active(prepared, &publication, &mut reclamation_needed),
-        )
-        .await;
-        self.complete_publication(&publication, reclamation_needed, result).await
+        let result = self
+            .while_renewing(
+                &publication,
+                PUBLICATION_RENEWAL_INTERVAL,
+                self.publish_active(prepared, &publication, &mut reclamation_needed),
+            )
+            .await;
+        self.complete_publication(&publication, reclamation_needed, result)
+            .await
     }
 
     pub(super) async fn complete_publication<Outcome>(
@@ -31,9 +34,13 @@ impl SharedArtifactStore {
         reclamation_needed: bool,
         result: Result<Outcome>,
     ) -> Result<Outcome> {
-        let finish = self.finish_publication(publication, reclamation_needed).await;
+        let finish = self
+            .finish_publication(publication, reclamation_needed)
+            .await;
         if finish.is_ok()
-            && let Err(error) = self.try_reclaim_unreferenced_blobs().await
+            && let Err(error) = self
+                .try_reclaim_unreferenced_blobs()
+                .await
         {
             tracing::warn!(%error, "shared artifact reclamation failed");
         }
@@ -69,7 +76,10 @@ impl SharedArtifactStore {
                 // A renewal that cannot be written is not fatal on its own: the
                 // expiry is several renewals wide, and the publication recovers
                 // what it lost if it is written off anyway.
-                if let Err(error) = self.renew_publication(publication).await {
+                if let Err(error) = self
+                    .renew_publication(publication)
+                    .await
+                {
                     tracing::warn!(%error, "shared artifact publication could not renew");
                 }
             }
@@ -82,10 +92,15 @@ impl SharedArtifactStore {
 
     pub(super) async fn renew_publication(&self, publication: &str) -> Result<()> {
         self.mutate_usage(|usage| {
-            if !usage.active_publications.contains(publication) {
+            if !usage
+                .active_publications
+                .contains(publication)
+            {
                 return Ok(false);
             }
-            usage.active_publication_times.insert(publication.to_string(), registered_now());
+            usage
+                .active_publication_times
+                .insert(publication.to_string(), registered_now());
             Ok(true)
         })
         .await?;
@@ -98,8 +113,9 @@ impl SharedArtifactStore {
         publication: &str,
         reclamation_needed: &mut bool,
     ) -> Result<bool> {
-        let (stored, created) =
-            self.publish_claimed(prepared, publication, reclamation_needed).await;
+        let (stored, created) = self
+            .publish_claimed(prepared, publication, reclamation_needed)
+            .await;
         if stored.is_err() && !created.is_empty() {
             // The scopes stay claimed. Giving them back here cannot be ordered
             // against a publication of the same envelope, which recognises these
@@ -125,8 +141,9 @@ impl SharedArtifactStore {
         reclamation_needed: &mut bool,
     ) -> (Result<bool>, Vec<String>) {
         let mut created = Vec::new();
-        let stored =
-            self.publish_reserving(prepared, publication, reclamation_needed, &mut created).await;
+        let stored = self
+            .publish_reserving(prepared, publication, reclamation_needed, &mut created)
+            .await;
         (stored, created)
     }
 
@@ -141,21 +158,27 @@ impl SharedArtifactStore {
         added_bytes: u64,
         reclamation_needed: &mut bool,
     ) -> Result<Option<u64>> {
-        let claim = match self.claim_scopes(prepared, created).await {
+        let claim = match self
+            .claim_scopes(prepared, created)
+            .await
+        {
             Ok(claim) => claim,
             Err(error) => {
                 *reclamation_needed = matches!(&error, RegistryError::ObjectStore(_));
-                self.release_uncommitted(owner, added_bytes, 0).await?;
+                self.release_uncommitted(owner, added_bytes, 0)
+                    .await?;
                 return Err(error);
             }
         };
         match claim {
             SlotClaim::Held => {
-                self.release_uncommitted(owner, added_bytes, 0).await?;
+                self.release_uncommitted(owner, added_bytes, 0)
+                    .await?;
                 Ok(None)
             }
             SlotClaim::HeldByAnother => {
-                self.release_uncommitted(owner, added_bytes, 0).await?;
+                self.release_uncommitted(owner, added_bytes, 0)
+                    .await?;
                 Err(RegistryError::ArtifactAlreadyPublished {
                     owner: owner.to_string(),
                     entry: prepared.entry.clone(),
@@ -182,7 +205,10 @@ impl SharedArtifactStore {
         // and already holding its scopes writes nothing, so charging it for what
         // it will not store would refuse a retry an owner at their limit is
         // entitled to. Reads only, so nothing is written ahead of the quota.
-        if self.publication_is_complete(&prepared).await? {
+        if self
+            .publication_is_complete(&prepared)
+            .await?
+        {
             return Ok(false);
         }
         let started = prepared.started;
@@ -190,31 +216,35 @@ impl SharedArtifactStore {
         let envelope_size = prepared.envelope_bytes.len() as u64;
         let owner = prepared.owner.clone();
 
-        let new_blobs = self.resolve_new_blobs(&mut prepared, &owner).await?;
+        let new_blobs = self
+            .resolve_new_blobs(&mut prepared, &owner)
+            .await?;
 
         let added_bytes = publication_charge(&prepared, &new_blobs, envelope_size)?;
-        if let Err(error) = self.reserve_quota(&owner, added_bytes).await {
+        if let Err(error) = self
+            .reserve_quota(&owner, added_bytes)
+            .await
+        {
             *reclamation_needed = matches!(&error, RegistryError::ObjectStore(_));
             return Err(error);
         }
 
-        let Some(retained_bytes) = self.claim_publication_scopes(
-            &prepared,
-            created,
-            &owner,
-            added_bytes,
-            reclamation_needed,
-        )
-        .await?
+        let Some(retained_bytes) = self
+            .claim_publication_scopes(&prepared, created, &owner, added_bytes, reclamation_needed)
+            .await?
         else {
             return Ok(false);
         };
         let mut charge =
             PublicationQuota { owner: &owner, added_bytes, retained_bytes, reclamation_needed };
-        self.store_new_blobs(new_blobs, &mut charge).await?;
-        let created = self.store_publication_envelope(&prepared, charge).await?;
+        self.store_new_blobs(new_blobs, &mut charge)
+            .await?;
+        let created = self
+            .store_publication_envelope(&prepared, charge)
+            .await?;
         if created && started.elapsed() >= ACTIVE_PUBLICATION_EXPIRY {
-            self.recover_expired_publication(&prepared, publication, reclamation_needed).await?;
+            self.recover_expired_publication(&prepared, publication, reclamation_needed)
+                .await?;
         }
 
         Ok(created)
@@ -225,14 +255,16 @@ impl SharedArtifactStore {
         prepared: &PreparedPublication,
         mut charge: PublicationQuota<'_>,
     ) -> Result<bool> {
-        let created = self.store_envelope(
-            &prepared.variant_path,
-            prepared.envelope_bytes.clone(),
-            prepared.envelope_bytes.len() as u64,
-            &mut charge,
-        )
-        .await?;
-        if !self.settle_envelope(created, &prepared.variant_path, &prepared.envelope_bytes, charge)
+        let created = self
+            .store_envelope(
+                &prepared.variant_path,
+                prepared.envelope_bytes.clone(),
+                prepared.envelope_bytes.len() as u64,
+                &mut charge,
+            )
+            .await?;
+        if !self
+            .settle_envelope(created, &prepared.variant_path, &prepared.envelope_bytes, charge)
             .await?
         {
             return Err(RegistryError::ArtifactAlreadyPublished {
@@ -250,7 +282,10 @@ impl SharedArtifactStore {
         prepared: &mut PreparedPublication,
         owner: &str,
     ) -> Result<Vec<(String, Vec<u8>)>> {
-        let required: BTreeMap<String, u64> = prepared.payload.manifest.added
+        let required: BTreeMap<String, u64> = prepared
+            .payload
+            .manifest
+            .added
             .iter()
             .map(|file| (file.integrity.clone(), file.size))
             .collect();
@@ -261,7 +296,10 @@ impl SharedArtifactStore {
             let path = format!("{owner}/blobs/{id}");
             let upload = prepared.uploads.remove(integrity);
             verify_upload(&id, integrity, size, upload.as_deref())?;
-            let Some(stored) = self.read_object_bounded(&path, size).await? else {
+            let Some(stored) = self
+                .read_object_bounded(&path, size)
+                .await?
+            else {
                 let Some(bytes) = upload else {
                     return Err(bad_request(format!(
                         "signed manifest references blob {id} without uploading it",
@@ -289,7 +327,8 @@ impl SharedArtifactStore {
                 Ok(false) => {}
                 Err(error) => {
                     charge.retained_bytes += size;
-                    self.release_after_store_failure(charge).await?;
+                    self.release_after_store_failure(charge)
+                        .await?;
                     return Err(error);
                 }
             }
@@ -306,7 +345,10 @@ impl SharedArtifactStore {
         envelope_size: u64,
         charge: &mut PublicationQuota<'_>,
     ) -> Result<bool> {
-        match self.create_object(variant_path, envelope_bytes).await {
+        match self
+            .create_object(variant_path, envelope_bytes)
+            .await
+        {
             Ok(created) => {
                 if created {
                     charge.retained_bytes += envelope_size;
@@ -315,7 +357,8 @@ impl SharedArtifactStore {
             }
             Err(error) => {
                 charge.retained_bytes += envelope_size;
-                self.release_after_store_failure(charge).await?;
+                self.release_after_store_failure(charge)
+                    .await?;
                 Err(error)
             }
         }
@@ -343,10 +386,12 @@ impl SharedArtifactStore {
         let winner = if created {
             Ok(None)
         } else {
-            self.read_object_bounded(variant_path, MAX_RESOLVE_RESPONSE_SIZE as u64).await
+            self.read_object_bounded(variant_path, MAX_RESOLVE_RESPONSE_SIZE as u64)
+                .await
         };
-        let released =
-            self.release_uncommitted(charge.owner, charge.added_bytes, charge.retained_bytes).await;
+        let released = self
+            .release_uncommitted(charge.owner, charge.added_bytes, charge.retained_bytes)
+            .await;
         if let Err(error) = released {
             *charge.reclamation_needed = matches!(&error, RegistryError::ObjectStore(_));
             return Err(error);
@@ -368,6 +413,7 @@ impl SharedArtifactStore {
         charge: &mut PublicationQuota<'_>,
     ) -> Result<()> {
         *charge.reclamation_needed = true;
-        self.release_uncommitted(charge.owner, charge.added_bytes, charge.retained_bytes).await
+        self.release_uncommitted(charge.owner, charge.added_bytes, charge.retained_bytes)
+            .await
     }
 }

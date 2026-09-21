@@ -19,7 +19,9 @@ pub(super) async fn pick_latest_range(
     inputs: &AddResolveInputs<'_, '_>,
 ) -> Result<String, AddError> {
     let config = inputs.add.config;
-    let latest = inputs.resolution.latest_picker
+    let latest = inputs
+        .resolution
+        .latest_picker
         .get_or_try_init(|| {
             std::future::ready(
                 PickPolicy::from_config(config)
@@ -78,7 +80,9 @@ pub(super) async fn resolve_explicit_registry_spec(
     // an unlocked sibling declaration may still differ — never an
     // inconsistency, since the install resolves the rewritten range.
     let preferred_versions = get_preferred_versions_from_lockfile_and_manifests(
-        add.lockfile.document.and_then(|lockfile| lockfile.snapshots.as_ref()),
+        add.lockfile
+            .document
+            .and_then(|lockfile| lockfile.snapshots.as_ref()),
         &[manifest],
     );
     let ctx = pick_package_context(
@@ -95,7 +99,8 @@ pub(super) async fn resolve_explicit_registry_spec(
         preferred_versions.get(package_name),
     );
 
-    let pick = pick_package(&ctx, &spec_parsed, &opts).await
+    let pick = pick_package(&ctx, &spec_parsed, &opts)
+        .await
         .map_err(|error| AddError::ResolveSpec(Box::new(error)))?;
     let Some(picked) = pick.picked_package else {
         return Ok(None);
@@ -116,8 +121,12 @@ pub(super) fn parse_explicit_registry_spec(
     spec: &str,
     registry: &str,
 ) -> Option<pnpm_resolving_npm_resolver::RegistryPackageSpec> {
-    parse_bare_specifier(spec, Some(package_name), "latest", registry)
-        .filter(|parsed| parsed.normalized_bare_specifier.is_none() && parsed.name == package_name)
+    parse_bare_specifier(spec, Some(package_name), "latest", registry).filter(|parsed| {
+        parsed
+            .normalized_bare_specifier
+            .is_none()
+            && parsed.name == package_name
+    })
 }
 /// The explicit range is authoritative; including the latest tag could exceed its bounds.
 pub(super) fn explicit_registry_pick_options<'a>(
@@ -174,6 +183,9 @@ pub(super) fn is_registry_style_specifier(
     package_name: &str,
     registry: &str,
 ) -> bool {
-    parse_bare_specifier(specifier, Some(package_name), "latest", registry)
-        .is_some_and(|parsed| parsed.normalized_bare_specifier.is_none())
+    parse_bare_specifier(specifier, Some(package_name), "latest", registry).is_some_and(|parsed| {
+        parsed
+            .normalized_bare_specifier
+            .is_none()
+    })
 }

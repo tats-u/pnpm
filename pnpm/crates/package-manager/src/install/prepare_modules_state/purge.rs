@@ -105,7 +105,8 @@ pub(super) fn is_pnpm_owned_entry(
 ) -> bool {
     file_name == ".bin"
         || file_name == ".modules.yaml"
-        || config.virtual_store_dir
+        || config
+            .virtual_store_dir
             .file_name()
             .is_some_and(|name| name == file_name)
         || modules_manifest.is_some_and(|manifest| {
@@ -125,7 +126,9 @@ pub(super) fn recorded_virtual_store_name(
     if !recorded.starts_with(&config.modules_dir) {
         return None;
     }
-    recorded.file_name().map(std::ffi::OsStr::to_os_string)
+    recorded
+        .file_name()
+        .map(std::ffi::OsStr::to_os_string)
 }
 /// What decides whether direct links excluded by this run have to be pruned.
 pub(super) struct ExcludedGroupPrune<'a> {
@@ -173,11 +176,17 @@ pub(super) fn prune_excluded_direct_deps(
     crate::prune_manifest_link_deps(&crate::PruneManifestLinkDeps {
         workspace_root: context.workspace_root,
         project_manifests: context.manifest_links.manifests,
-        importers: context.current_lockfile.map(|current| &current.importers),
-        workspace_packages: context.manifest_links.workspace_packages,
+        importers: context
+            .current_lockfile
+            .map(|current| &current.importers),
+        workspace_packages: context
+            .manifest_links
+            .workspace_packages,
         previously_included,
         new_included: context.included,
-        modules_dir_name: context.config.modules_dir
+        modules_dir_name: context
+            .config
+            .modules_dir
             .file_name()
             .unwrap_or_else(|| std::ffi::OsStr::new("node_modules")),
         prunable_importer_ids: selected_prune_importer_ids.as_ref(),
@@ -201,19 +210,21 @@ fn previously_included(
 }
 
 fn selected_prune_importer_ids(context: &ExcludedGroupPrune<'_>) -> Option<HashSet<String>> {
-    context.requested_importer_ids.map(|requested| {
-        context.current_lockfile.map_or_else(
-            || requested.clone(),
-            |current| {
-                crate::materialization_closure(
-                    current,
-                    context.workspace_root,
-                    requested,
-                    context.included,
-                    &crate::SkippedSnapshots::new(),
-                )
-                .importer_ids
-            },
-        )
-    })
+    context
+        .requested_importer_ids
+        .map(|requested| {
+            context.current_lockfile.map_or_else(
+                || requested.clone(),
+                |current| {
+                    crate::materialization_closure(
+                        current,
+                        context.workspace_root,
+                        requested,
+                        context.included,
+                        &crate::SkippedSnapshots::new(),
+                    )
+                    .importer_ids
+                },
+            )
+        })
 }

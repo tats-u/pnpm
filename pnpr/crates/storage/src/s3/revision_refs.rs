@@ -7,7 +7,10 @@ use super::{
 
 impl S3Store {
     pub async fn read_revision_refs(&self, digest: &str) -> Result<Vec<Vec<u8>>> {
-        let Some((index, _)) = self.read_revision_ref_index(digest).await? else {
+        let Some((index, _)) = self
+            .read_revision_ref_index(digest)
+            .await?
+        else {
             return Ok(Vec::new());
         };
         Ok(index
@@ -24,7 +27,9 @@ impl S3Store {
         bytes: &[u8],
     ) -> Result<HostedRevisionRefWrite> {
         for attempt in 0..REVISION_REF_WRITE_RETRIES {
-            let current = self.read_revision_ref_index(digest).await?;
+            let current = self
+                .read_revision_ref_index(digest)
+                .await?;
             let (mut index, version) = match current {
                 Some((index, version)) => (index, Some(version)),
                 None => (HostedRevisionRefIndex::default(), None),
@@ -34,7 +39,10 @@ impl S3Store {
                 return Ok(outcome);
             }
             let mode = version.map_or(PutMode::Create, PutMode::Update);
-            if self.put_revision_ref_index(digest, &index, mode).await? {
+            if self
+                .put_revision_ref_index(digest, &index, mode)
+                .await?
+            {
                 return Ok(HostedRevisionRefWrite::Claimed);
             }
             if attempt + 1 < REVISION_REF_WRITE_RETRIES {
@@ -54,13 +62,19 @@ impl S3Store {
 
     pub async fn remove_revision_ref(&self, digest: &str, ref_id: &str, owner: &str) -> Result<()> {
         for attempt in 0..REVISION_REF_WRITE_RETRIES {
-            let Some((mut index, version)) = self.read_revision_ref_index(digest).await? else {
+            let Some((mut index, version)) = self
+                .read_revision_ref_index(digest)
+                .await?
+            else {
                 return Ok(());
             };
             if !index.remove_if_owned(ref_id, owner) {
                 return Ok(());
             }
-            if self.put_revision_ref_index(digest, &index, PutMode::Update(version)).await? {
+            if self
+                .put_revision_ref_index(digest, &index, PutMode::Update(version))
+                .await?
+            {
                 return Ok(());
             }
             if attempt + 1 < REVISION_REF_WRITE_RETRIES {
@@ -79,7 +93,10 @@ impl S3Store {
 
     pub async fn commit_revision_ref(&self, digest: &str, ref_id: &str, owner: &str) -> Result<()> {
         for attempt in 0..REVISION_REF_WRITE_RETRIES {
-            let Some((mut index, version)) = self.read_revision_ref_index(digest).await? else {
+            let Some((mut index, version)) = self
+                .read_revision_ref_index(digest)
+                .await?
+            else {
                 return Err(RegistryError::Internal {
                     reason: "hosted revision reference is missing during commit".to_string(),
                 });
@@ -87,14 +104,20 @@ impl S3Store {
             if !index.commit_if_owned(ref_id, owner)? {
                 return Ok(());
             }
-            if self.put_revision_ref_index(digest, &index, PutMode::Update(version)).await? {
+            if self
+                .put_revision_ref_index(digest, &index, PutMode::Update(version))
+                .await?
+            {
                 return Ok(());
             }
             if attempt + 1 < REVISION_REF_WRITE_RETRIES {
                 wait_after_document_write_conflict(attempt).await;
             }
         }
-        let Some((mut index, _)) = self.read_revision_ref_index(digest).await? else {
+        let Some((mut index, _)) = self
+            .read_revision_ref_index(digest)
+            .await?
+        else {
             return Err(RegistryError::Internal {
                 reason: "hosted revision reference is missing during commit".to_string(),
             });
@@ -114,12 +137,14 @@ impl S3Store {
         index: &HostedRevisionRefIndex,
         mode: PutMode,
     ) -> Result<bool> {
-        match self.store.put_opts(
-            &self.revision_ref_index_key(digest),
-            PutPayload::from(index.to_bytes()),
-            PutOptions { mode, ..PutOptions::default() },
-        )
-        .await
+        match self
+            .store
+            .put_opts(
+                &self.revision_ref_index_key(digest),
+                PutPayload::from(index.to_bytes()),
+                PutOptions { mode, ..PutOptions::default() },
+            )
+            .await
         {
             Ok(_) => Ok(true),
             Err(
@@ -135,7 +160,11 @@ impl S3Store {
         &self,
         digest: &str,
     ) -> Result<Option<(HostedRevisionRefIndex, UpdateVersion)>> {
-        match self.store.get(&self.revision_ref_index_key(digest)).await {
+        match self
+            .store
+            .get(&self.revision_ref_index_key(digest))
+            .await
+        {
             Ok(result) => {
                 let version = UpdateVersion {
                     e_tag: result.meta.e_tag.clone(),

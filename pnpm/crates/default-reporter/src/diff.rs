@@ -252,7 +252,9 @@ impl Line {
             return false;
         }
         move_to(out, col, row, left, self.row);
-        let changed: String = self_chars[left..left + changed_len].iter().collect();
+        let changed: String = self_chars[left..left + changed_len]
+            .iter()
+            .collect();
         out.push_str(&changed);
         *col = left + changed_len;
         true

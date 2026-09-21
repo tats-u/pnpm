@@ -57,7 +57,9 @@ async fn normal_range_fetches_when_trust_policy_is_active() {
     opts.preferred_version_selectors = Some(&selectors);
     opts.policy.trust_policy = Some(pnpm_config::TrustPolicy::NoDowngrade);
 
-    pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("ok");
+    pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("ok");
 
     mock.assert_async().await;
 }

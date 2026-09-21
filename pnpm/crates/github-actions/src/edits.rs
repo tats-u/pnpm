@@ -24,7 +24,11 @@ pub(super) fn planned_edits(
             .or_default()
             .push(WorkflowEdit {
                 range: plan.action.source.range.clone(),
-                expected: plan.action.source.original_value.clone(),
+                expected: plan
+                    .action
+                    .source
+                    .original_value
+                    .clone(),
                 replacement: render_target_value(&plan.action, update_target(plan, latest)),
             });
     }
@@ -36,7 +40,8 @@ pub(super) async fn apply_workflow_edits(
 ) -> miette::Result<()> {
     for (file, replacements) in edits {
         let file_display = file.display().to_string();
-        let text = fs::read_to_string(&file).await
+        let text = fs::read_to_string(&file)
+            .await
             .map_err(|error| miette::miette!("Failed to read {file_display}: {error}"))?;
         let text = apply_replacements(&file, text, replacements)?;
         tokio::task::spawn_blocking(move || pnpm_fs::write_atomic(&file, text.as_bytes()))

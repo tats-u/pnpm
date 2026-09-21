@@ -313,7 +313,10 @@ pub fn hoist(lockfile: &Lockfile, opts: &HoistOpts) -> Result<HoisterResult, Hoi
 
     let mut root_children: IndexSet<RcByPtr<HoisterTree>> = IndexSet::new();
 
-    if let Some(root) = lockfile.importers.get(Lockfile::ROOT_IMPORTER_KEY) {
+    if let Some(root) = lockfile
+        .importers
+        .get(Lockfile::ROOT_IMPORTER_KEY)
+    {
         collect_importer_deps(root, lockfile, opts, &mut cache, &mut root_children)?;
     }
 
@@ -360,9 +363,14 @@ pub fn hoist(lockfile: &Lockfile, opts: &HoistOpts) -> Result<HoisterResult, Hoi
     // Strip `externalDependencies` from the top-level result —
     // they exist only to reserve a name slot at the root.
     if !opts.external_dependencies.is_empty() {
-        result.dependencies
+        result
+            .dependencies
             .borrow_mut()
-            .retain(|dep| !opts.external_dependencies.contains(&dep.name));
+            .retain(|dep| {
+                !opts
+                    .external_dependencies
+                    .contains(&dep.name)
+            });
     }
 
     Ok(result)
@@ -441,7 +449,8 @@ fn hoist_to(
     let used = if is_top_root { HashMap::new() } else { get_used_dependencies(root) };
     hoist_into_root(root, &node_locator(root), opts, &used);
 
-    let children: Vec<RcByPtr<HoisterResult>> = root.dependencies
+    let children: Vec<RcByPtr<HoisterResult>> = root
+        .dependencies
         .borrow()
         .iter()
         .cloned()
@@ -480,7 +489,11 @@ fn get_used_dependencies(root: &Rc<HoisterResult>) -> HashMap<String, Rc<Hoister
         if !seen.insert(Rc::as_ptr(&node)) {
             continue;
         }
-        for (name, dep) in node.hoisted_dependencies.borrow().iter() {
+        for (name, dep) in node
+            .hoisted_dependencies
+            .borrow()
+            .iter()
+        {
             used.insert(name.clone(), Rc::clone(dep));
         }
         for dep in node.dependencies.borrow().iter() {
@@ -525,14 +538,13 @@ fn same_ident(left: &HoisterResult, right: &HoisterResult) -> bool {
 /// [`AbsorbDecision::PathShadow`](crate::absorption::AbsorbDecision::PathShadow)). `path[0]` is the hoist root —
 /// its slot is judged by the root-index decision, not here.
 fn path_shadowed(candidate: &HoisterResult, path: &[Rc<HoisterResult>]) -> bool {
-    path.iter()
-        .skip(1)
-        .any(|ancestor| {
-            ancestor.dependencies
-                .borrow()
-                .iter()
-                .any(|dep| dep.0.name == candidate.name && !same_ident(&dep.0, candidate))
-        })
+    path.iter().skip(1).any(|ancestor| {
+        ancestor
+            .dependencies
+            .borrow()
+            .iter()
+            .any(|dep| dep.0.name == candidate.name && !same_ident(&dep.0, candidate))
+    })
 }
 
 /// Whether two nodes are the same package — equal locators — without
@@ -568,11 +580,19 @@ fn decouple_child(
         references: RefCell::new(child.0.references.borrow().clone()),
         peer_names: child.0.peer_names.clone(),
         dependencies: RefCell::new(child.0.dependencies.borrow().clone()),
-        hoisted_dependencies: RefCell::new(child.0.hoisted_dependencies.borrow().clone()),
+        hoisted_dependencies: RefCell::new(
+            child
+                .0
+                .hoisted_dependencies
+                .borrow()
+                .clone(),
+        ),
         decoupled: Cell::new(true),
     }));
     let mut deps = parent.dependencies.borrow_mut();
-    let index = deps.get_index_of(child).expect("decoupled edge exists in its parent");
+    let index = deps
+        .get_index_of(child)
+        .expect("decoupled edge exists in its parent");
     deps.shift_remove_index(index);
     deps.shift_insert(index, clone.clone());
     clone
@@ -653,8 +673,10 @@ fn hoist_into_root(
     // equivalent since there's only one root locator. An empty
     // fallback set means the check is a no-op when no limits are set.
     let empty_set: BTreeSet<String> = BTreeSet::new();
-    let border_names: &BTreeSet<String> =
-        opts.hoisting_limits.get(root_locator).unwrap_or(&empty_set);
+    let border_names: &BTreeSet<String> = opts
+        .hoisting_limits
+        .get(root_locator)
+        .unwrap_or(&empty_set);
 
     loop {
         let ctx = HoistCtx { root, border_names, hoist_ident_map: &hoist_ident_map, used };
@@ -731,7 +753,8 @@ fn hoist_subtree(
     // Snapshot the current children so we can mutate
     // `node.dependencies` mid-iteration without invalidating the
     // borrow. `RcByPtr::clone` just bumps refcounts.
-    let children: Vec<RcByPtr<HoisterResult>> = node.dependencies
+    let children: Vec<RcByPtr<HoisterResult>> = node
+        .dependencies
         .borrow()
         .iter()
         .cloned()
@@ -747,7 +770,9 @@ fn hoist_subtree(
 
     for child in children {
         if is_cycle_edge(&child.0, &path_for_children) {
-            node.dependencies.borrow_mut().shift_remove(&child);
+            node.dependencies
+                .borrow_mut()
+                .shift_remove(&child);
             changed_in_subtree = true;
             continue;
         }
@@ -771,8 +796,9 @@ fn hoist_subtree(
         // paths that share the child. The child's current parent is
         // the last element of its recursion path — root for a
         // just-moved (or root-direct) child, `node` otherwise.
-        let parent =
-            child_recursion_path.last().expect("the recursion path ends at the child's parent");
+        let parent = child_recursion_path
+            .last()
+            .expect("the recursion path ends at the child's parent");
         let child = decouple_child(parent, &child);
         if Rc::ptr_eq(parent, ctx.root) {
             root_index.insert(child.0.name.clone(), child.clone());

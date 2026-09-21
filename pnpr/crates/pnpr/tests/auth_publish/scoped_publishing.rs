@@ -163,8 +163,16 @@ async fn unpublish_partial_writes_modified_packument() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
-    assert!(!storage.join("unpub-partial/unpub-partial-1.0.0.tgz").exists());
-    assert!(storage.join("unpub-partial/unpub-partial-2.0.0.tgz").exists());
+    assert!(
+        !storage
+            .join("unpub-partial/unpub-partial-1.0.0.tgz")
+            .exists()
+    );
+    assert!(
+        storage
+            .join("unpub-partial/unpub-partial-2.0.0.tgz")
+            .exists()
+    );
 
     // Second DELETE of the same tarball is a no-op — verdaccio
     // returns 201 here too (idempotent). The pnpm unpublish flow
@@ -205,7 +213,9 @@ async fn unpublish_tarball_also_clears_the_proxied_copy() {
 
     // Plant a stale proxied copy of the same tarball in the cache root,
     // as a `proxy:` rule would have left behind.
-    let cached = storage.join(".pnpr-cache").join("blend-pkg");
+    let cached = storage
+        .join(".pnpr-cache")
+        .join("blend-pkg");
     std::fs::create_dir_all(&cached).unwrap();
     std::fs::write(cached.join("blend-pkg-1.0.0.tgz"), b"stale-proxied-bytes").unwrap();
 
@@ -222,8 +232,17 @@ async fn unpublish_tarball_also_clears_the_proxied_copy() {
         StatusCode::CREATED,
     );
 
-    assert!(!storage.join("blend-pkg/blend-pkg-1.0.0.tgz").exists());
-    assert!(!cached.join("blend-pkg-1.0.0.tgz").exists(), "proxied copy must be removed too");
+    assert!(
+        !storage
+            .join("blend-pkg/blend-pkg-1.0.0.tgz")
+            .exists()
+    );
+    assert!(
+        !cached
+            .join("blend-pkg-1.0.0.tgz")
+            .exists(),
+        "proxied copy must be removed too"
+    );
 
     // With both stores cleared and no upstream, the version is gone.
     let response = app
@@ -254,7 +273,11 @@ async fn unpublish_force_removes_entire_package() {
         .oneshot(request)
         .await
         .unwrap();
-    assert!(storage.join("unpub-force/package.json").exists());
+    assert!(
+        storage
+            .join("unpub-force/package.json")
+            .exists()
+    );
 
     let request = Request::delete("/unpub-force/-rev/anything")
         .header("Authorization", format!("Bearer {token}"))
@@ -297,7 +320,11 @@ async fn unpublish_scoped_tarball_via_six_segment_route() {
         .oneshot(request)
         .await
         .unwrap();
-    assert!(storage.join("@scope/unpub/unpub-1.0.0.tgz").exists());
+    assert!(
+        storage
+            .join("@scope/unpub/unpub-1.0.0.tgz")
+            .exists()
+    );
 
     // pnpm reconstructs the DELETE URL from the rewritten tarball URL
     // in the packument, which uses literal `/` for the scope segment
@@ -308,7 +335,11 @@ async fn unpublish_scoped_tarball_via_six_segment_route() {
         .unwrap();
     let response = app.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
-    assert!(!storage.join("@scope/unpub/unpub-1.0.0.tgz").exists());
+    assert!(
+        !storage
+            .join("@scope/unpub/unpub-1.0.0.tgz")
+            .exists()
+    );
 }
 
 #[tokio::test]
@@ -350,7 +381,11 @@ async fn missing_unpublish_policy_denies_destructive_writes() {
             .status(),
         StatusCode::FORBIDDEN,
     );
-    assert!(storage.join("missing-unpublish/package.json").exists());
+    assert!(
+        storage
+            .join("missing-unpublish/package.json")
+            .exists()
+    );
 }
 
 #[tokio::test]
@@ -443,7 +478,8 @@ async fn concurrent_publishes_of_distinct_versions_all_survive() {
                 .header("Authorization", format!("Bearer {token}"))
                 .body(Body::from(serde_json::to_vec(&body).unwrap()))
                 .unwrap();
-            app.oneshot(request).await
+            app.oneshot(request)
+                .await
                 .unwrap()
                 .status()
         })

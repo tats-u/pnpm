@@ -86,7 +86,9 @@ pub fn parse_jsr_specifier(
         // `rest` starts with `@`, so `rfind` is guaranteed to return
         // at least `0`. `last_at == 0` discriminates the no-selector
         // case from the selector case.
-        let last_at = rest.rfind('@').expect("rest starts with '@'");
+        let last_at = rest
+            .rfind('@')
+            .expect("rest starts with '@'");
 
         // Syntax: jsr:@<scope>/<name>
         if last_at == 0 {

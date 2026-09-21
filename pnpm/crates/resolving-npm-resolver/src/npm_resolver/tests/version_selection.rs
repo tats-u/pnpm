@@ -27,7 +27,11 @@ async fn range_specifier_picks_max_in_range() {
         .await
         .unwrap()
         .unwrap();
-    let name_ver = result.package.name_ver.as_ref().expect("npm resolver fills name_ver");
+    let name_ver = result
+        .package
+        .name_ver
+        .as_ref()
+        .expect("npm resolver fills name_ver");
     assert_eq!(name_ver.name.to_string(), "acme");
     assert_eq!(name_ver.suffix.to_string(), "1.1.0");
     assert_eq!(result.id.as_str(), "acme@1.1.0");
@@ -58,7 +62,9 @@ async fn missing_bare_specifier_synthesizes_default_tag_query() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix
@@ -92,7 +98,9 @@ async fn resolve_latest_returns_picked_manifest() {
         .await
         .unwrap()
         .expect("latest info");
-    let manifest = info.latest_manifest.expect("manifest present");
+    let manifest = info
+        .latest_manifest
+        .expect("manifest present");
     assert_eq!(manifest["version"].as_str(), Some("1.1.0"));
 }
 
@@ -128,7 +136,9 @@ async fn resolve_latest_under_compatible_does_not_override_update_to_latest() {
         .await
         .unwrap()
         .expect("latest info");
-    let manifest = info.latest_manifest.expect("manifest present");
+    let manifest = info
+        .latest_manifest
+        .expect("manifest present");
     assert_eq!(manifest["version"].as_str(), Some("1.1.0"));
 }
 
@@ -158,7 +168,9 @@ async fn jsr_specifier_without_selector_uses_default_tag() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("npm resolver fills name_ver")
             .suffix
@@ -208,7 +220,10 @@ async fn revision_refresh_revalidates_a_warm_packument_without_update_checksums(
         },
         ..ResolveOptions::default()
     };
-    resolver.resolve(&wanted, &opts).await.unwrap();
+    resolver
+        .resolve(&wanted, &opts)
+        .await
+        .unwrap();
 
     refresh_mock.assert_async().await;
 }
@@ -227,7 +242,11 @@ async fn latest_is_suppressed_when_all_versions_are_immature_fallback_case() {
 
     // Cutoff 2023-12-01 is before both versions → the pick falls back to the
     // lowest version; latest stays suppressed because the raw tag is immature.
-    let published_by = Some(chrono::Utc.with_ymd_and_hms(2023, 12, 1, 0, 0, 0).unwrap());
+    let published_by = Some(
+        chrono::Utc
+            .with_ymd_and_hms(2023, 12, 1, 0, 0, 0)
+            .unwrap(),
+    );
     let opts = ResolveOptions {
         policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
             published_by,
@@ -246,7 +265,9 @@ async fn latest_is_suppressed_when_all_versions_are_immature_fallback_case() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix

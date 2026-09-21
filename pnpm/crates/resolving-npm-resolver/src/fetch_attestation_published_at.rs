@@ -44,11 +44,15 @@ pub async fn fetch_attestation_published_at(
     }
     // Verification-only lookup: queue in the background class so it
     // never outranks resolution-gating fetches.
-    let mut request = opts.http_client
+    let mut request = opts
+        .http_client
         .acquire_for_url_with_priority(&url, pnpm_network::BACKGROUND)
         .await
         .get(&url);
-    if let Some(value) = opts.auth_headers.for_url_with_package(&url, Some(pkg_name)) {
+    if let Some(value) = opts
+        .auth_headers
+        .for_url_with_package(&url, Some(pkg_name))
+    {
         request = request.header("authorization", value);
     }
     let response = match request.send().await {
@@ -98,7 +102,9 @@ fn extract_published_at(body: &serde_json::Value) -> Option<String> {
 fn read_earliest_integrated_time(attestation: &serde_json::Value) -> Option<i64> {
     let bundle = attestation.get("bundle")?;
     let verification_material = bundle.get("verificationMaterial")?;
-    let tlog_entries = verification_material.get("tlogEntries")?.as_array()?;
+    let tlog_entries = verification_material
+        .get("tlogEntries")?
+        .as_array()?;
     let mut earliest: Option<i64> = None;
     for entry in tlog_entries {
         let seconds = parse_integrated_time_seconds(entry.get("integratedTime")?)?;

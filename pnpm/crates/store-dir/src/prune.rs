@@ -84,7 +84,9 @@ impl StoreDir {
     ///
     /// [#344]: https://github.com/pnpm/pacquet/issues/344
     pub fn prune(&self) -> Result<(), PruneError> {
-        let _store_lock = self.lock_for_prune().map_err(PruneError::StoreLock)?;
+        let _store_lock = self
+            .lock_for_prune()
+            .map_err(PruneError::StoreLock)?;
         self.prune_global_virtual_store()?;
         let stats = crate::prune_cas::prune_cas(self).map_err(PruneError::PruneCas)?;
         eprintln!(
@@ -250,7 +252,9 @@ fn next_walk_dir(
     let file_type = entry.file_type().ok()?;
     if file_type.is_symlink() {
         let slot = linked_store_slot(&entry.path(), canonical_links)?;
-        let inner_modules = canonical_links.join(&slot).join("node_modules");
+        let inner_modules = canonical_links
+            .join(&slot)
+            .join("node_modules");
         reachable.insert(slot);
         return Some(inner_modules);
     }
@@ -286,7 +290,9 @@ fn linked_store_slot(entry_path: &Path, canonical_links: &Path) -> Option<PathBu
     // the first `node_modules` component. Layout:
     //   <links>/<scope>/<name>/<version>/<hash>/node_modules/<pkg>
     // We want `<scope>/<name>/<version>/<hash>`.
-    let rel = canonical_target.strip_prefix(canonical_links).ok()?;
+    let rel = canonical_target
+        .strip_prefix(canonical_links)
+        .ok()?;
     let parts: Vec<_> = rel.components().collect();
     let node_modules = parts
         .iter()
@@ -389,7 +395,10 @@ fn list_subdirs(dir: &Path) -> Result<Vec<std::ffi::OsString>, PruneError> {
     };
     let mut out = Vec::new();
     for entry in entries.flatten() {
-        if entry.file_type().is_ok_and(|t| t.is_dir()) {
+        if entry
+            .file_type()
+            .is_ok_and(|t| t.is_dir())
+        {
             out.push(entry.file_name());
         }
     }

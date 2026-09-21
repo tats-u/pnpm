@@ -85,7 +85,9 @@ fn detect_node_version_raw() -> Option<String> {
 fn parse_node_version_output(stdout: &str) -> Option<u32> {
     // Tolerate a missing leading `v` for alternative Node-compat
     // runtimes that omit it.
-    let after_v = stdout.strip_prefix('v').unwrap_or(stdout);
+    let after_v = stdout
+        .strip_prefix('v')
+        .unwrap_or(stdout);
     let major = after_v.split('.').next()?;
     major.parse().ok()
 }

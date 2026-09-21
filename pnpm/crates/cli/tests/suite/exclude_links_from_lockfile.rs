@@ -55,7 +55,10 @@ fn plain_range_workspace_link_is_materialized_when_excluded_from_lockfile() {
     let lockfile_text =
         fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read pnpm-lock.yaml");
     let lockfile: Lockfile = serde_saphyr::from_str(&lockfile_text).expect("parse pnpm-lock.yaml");
-    let app = lockfile.importers.get("packages/app").expect("app importer");
+    let app = lockfile
+        .importers
+        .get("packages/app")
+        .expect("app importer");
     assert!(
         app.dependencies
             .as_ref()
@@ -139,8 +142,9 @@ fn excluded_dependency_groups_do_not_materialize_plain_range_workspace_links() {
             .with_args(args)
             .assert()
             .success();
-        for (name, should_exist) in
-            ["prod-dep", "dev-dep", "optional-dep"].into_iter().zip(expected)
+        for (name, should_exist) in ["prod-dep", "dev-dep", "optional-dep"]
+            .into_iter()
+            .zip(expected)
         {
             assert_eq!(
                 workspace
@@ -182,7 +186,10 @@ fn workspace_internal_link_peer_is_unaffected_by_exclude_links_from_lockfile() {
     .expect("parse the expected snapshot key");
     let peer_name = PkgName::parse("@pnpm.e2e/peer-a").expect("parse the peer name");
     for (lockfile, exclude_links) in [(&with_setting, true), (&without_setting, false)] {
-        let snapshots = lockfile.snapshots.as_ref().expect("the lockfile has snapshots");
+        let snapshots = lockfile
+            .snapshots
+            .as_ref()
+            .expect("the lockfile has snapshots");
         dbg!(snapshots.keys().collect::<Vec<_>>());
         let snapshot = snapshots
             .get(&snapshot_key)
@@ -193,7 +200,8 @@ fn workspace_internal_link_peer_is_unaffected_by_exclude_links_from_lockfile() {
                 )
             });
         assert_eq!(
-            snapshot.dependencies
+            snapshot
+                .dependencies
                 .as_ref()
                 .and_then(|deps| deps.get(&peer_name)),
             Some(&SnapshotDepRef::Link("packages/peer-a".to_string())),
@@ -204,7 +212,10 @@ fn workspace_internal_link_peer_is_unaffected_by_exclude_links_from_lockfile() {
 
     // Structural rather than textual: the invariant is that the setting
     // changes nothing else, not that the two files serialize identically.
-    let settings = with_setting.settings.as_mut().expect("the lockfile records its settings");
+    let settings = with_setting
+        .settings
+        .as_mut()
+        .expect("the lockfile records its settings");
     settings.exclude_links_from_lockfile = false;
     dbg!(&with_setting, &without_setting);
     assert_eq!(with_setting, without_setting, "only the recorded setting itself may differ");
@@ -214,13 +225,8 @@ fn workspace_internal_link_peer_is_unaffected_by_exclude_links_from_lockfile() {
 /// peer dependencies, one of which is provided by the sibling workspace
 /// package `packages/peer-a`. Returns the resulting `pnpm-lock.yaml`.
 fn install_workspace_with_linked_peer(exclude_links_from_lockfile: bool) -> Lockfile {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(

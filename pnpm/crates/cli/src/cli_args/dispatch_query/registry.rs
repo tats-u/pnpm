@@ -250,10 +250,17 @@ pub(in super::super) fn logout<'a>(
     args: LogoutArgs,
 ) -> miette::Result<CommandFuture<'a>> {
     let config: &Config = (ctx.loaders.config)()?;
-    let prefix = ctx.locations.dir.to_string_lossy().into_owned();
+    let prefix = ctx
+        .locations
+        .dir
+        .to_string_lossy()
+        .into_owned();
     macro_rules! run_logout {
         ($reporter:ty) => {
-            Box::pin(async move { args.run::<$reporter>(config, &prefix).await })
+            Box::pin(async move {
+                args.run::<$reporter>(config, &prefix)
+                    .await
+            })
         };
     }
     Ok(match ctx.reporter {

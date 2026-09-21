@@ -262,8 +262,12 @@ fn no_bail_reports_failures_in_selection_order() {
         .clone();
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("Some scripts failed: 2 of 2"), "got: {stderr}");
-    let slow = stderr.find("check:slow-fail: exit").expect("slow-fail is listed");
-    let fast = stderr.find("check:fast-fail: exit").expect("fast-fail is listed");
+    let slow = stderr
+        .find("check:slow-fail: exit")
+        .expect("slow-fail is listed");
+    let fast = stderr
+        .find("check:fast-fail: exit")
+        .expect("fast-fail is listed");
     assert!(slow < fast, "failures should follow the selection order, got: {stderr}");
 
     drop(root);

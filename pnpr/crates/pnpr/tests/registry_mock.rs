@@ -32,7 +32,10 @@ fn static_config(storage: PathBuf) -> Config {
 }
 
 async fn body_bytes(body: Body) -> Vec<u8> {
-    to_bytes(body, usize::MAX).await.expect("read body").to_vec()
+    to_bytes(body, usize::MAX)
+        .await
+        .expect("read body")
+        .to_vec()
 }
 
 #[tokio::test]
@@ -79,7 +82,9 @@ async fn serves_scoped_packument_from_storage() {
 #[tokio::test]
 async fn serves_scoped_tarball_from_storage() {
     let storage = common::build_storage();
-    let on_disk = storage.path().join("@foo/no-deps/no-deps-1.0.0.tgz");
+    let on_disk = storage
+        .path()
+        .join("@foo/no-deps/no-deps-1.0.0.tgz");
     let expected_bytes = std::fs::read(&on_disk).expect("fixture tarball");
 
     let app = router(static_config(storage.path().to_path_buf()));
@@ -145,9 +150,19 @@ async fn abbreviated_accept_header_strips_packument() {
     // `contributors`, etc. on each version. The abbreviated form
     // should drop them but keep the install-relevant fields.
     let version_obj = &doc["versions"]["1.0.0"];
-    assert!(version_obj.get("_nodeVersion").is_none(), "abbreviated form should drop _nodeVersion");
+    assert!(
+        version_obj
+            .get("_nodeVersion")
+            .is_none(),
+        "abbreviated form should drop _nodeVersion"
+    );
     assert!(version_obj.get("_id").is_none(), "abbreviated form should drop per-version _id");
-    assert!(version_obj.get("contributors").is_none(), "abbreviated form should drop contributors");
+    assert!(
+        version_obj
+            .get("contributors")
+            .is_none(),
+        "abbreviated form should drop contributors"
+    );
     assert_eq!(version_obj["name"], "@foo/no-deps");
     assert_eq!(version_obj["version"], "1.0.0");
     assert_eq!(
@@ -318,7 +333,12 @@ async fn serves_a_single_npm_ecosystem_at_the_root() {
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(
         body_bytes(response.into_body()).await,
-        std::fs::read(storage.path().join("@foo/no-deps/no-deps-1.0.0.tgz")).unwrap(),
+        std::fs::read(
+            storage
+                .path()
+                .join("@foo/no-deps/no-deps-1.0.0.tgz")
+        )
+        .unwrap(),
     );
     let response = app
         .oneshot(

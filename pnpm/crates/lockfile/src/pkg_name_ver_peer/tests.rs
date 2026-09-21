@@ -42,8 +42,9 @@ fn parse() {
 /// A `file:` tarball key parses and round-trips.
 #[test]
 fn parse_local_tarball_file_protocol() {
-    let key: PkgNameVerPeer =
-        "tar-pkg@file:../tar-pkg-1.0.0.tgz".parse().expect("parse file: tarball key");
+    let key: PkgNameVerPeer = "tar-pkg@file:../tar-pkg-1.0.0.tgz"
+        .parse()
+        .expect("parse file: tarball key");
     assert_eq!(key.to_string(), "tar-pkg@file:../tar-pkg-1.0.0.tgz");
 }
 
@@ -52,7 +53,9 @@ fn parse_local_tarball_file_protocol() {
 #[test]
 fn parse_patch_hash_and_peer_suffix_round_trip() {
     let raw = "foo@1.0.0(patch_hash=0000)(@types/babel__core@7.1.14)";
-    let key: PkgNameVerPeer = raw.parse().expect("parse patch-hash + peer-variant key");
+    let key: PkgNameVerPeer = raw
+        .parse()
+        .expect("parse patch-hash + peer-variant key");
     assert_eq!(key.to_string(), raw);
 }
 
@@ -61,7 +64,9 @@ fn parse_patch_hash_and_peer_suffix_round_trip() {
 #[test]
 fn parse_scope_with_parens_round_trip() {
     let raw = "@(-.-)/foo@1.0.0(@types/babel__core@7.1.14)(foo@1.0.0)";
-    let key: PkgNameVerPeer = raw.parse().expect("parse scope-with-parens key");
+    let key: PkgNameVerPeer = raw
+        .parse()
+        .expect("parse scope-with-parens key");
     assert_eq!(key.to_string(), raw);
     assert_eq!(
         key.without_peer().to_string(),
@@ -106,8 +111,9 @@ fn to_virtual_store_name() {
 
 #[test]
 fn without_peer_strips_peer_suffix() {
-    let key: PkgNameVerPeer =
-        "react-dom@17.0.2(react@17.0.2)".parse().expect("parse react-dom peer-variant key");
+    let key: PkgNameVerPeer = "react-dom@17.0.2(react@17.0.2)"
+        .parse()
+        .expect("parse react-dom peer-variant key");
     let bare = key.without_peer();
     assert_eq!(bare.to_string(), "react-dom@17.0.2");
 }
@@ -148,8 +154,9 @@ fn without_peer_strips_peer_with_nested_parens() {
 /// dropping it would unhook the snapshot from its metadata.
 #[test]
 fn without_peer_preserves_runtime_prefix() {
-    let key: PkgNameVerPeer =
-        "node@runtime:22.0.0(react@17.0.2)".parse().expect("parse runtime peer-variant key");
+    let key: PkgNameVerPeer = "node@runtime:22.0.0(react@17.0.2)"
+        .parse()
+        .expect("parse runtime peer-variant key");
     let bare = key.without_peer();
     assert_eq!(bare.to_string(), "node@runtime:22.0.0");
 }
@@ -219,9 +226,14 @@ fn to_virtual_store_name_shortens_user_reported_vitest_case() {
         .unwrap();
     let received = input.to_virtual_store_name(DEFAULT_MAX_LENGTH);
     assert_eq!(received.len(), DEFAULT_MAX_LENGTH);
-    let (_, hash) = received.rsplit_once('_').expect("hash suffix");
+    let (_, hash) = received
+        .rsplit_once('_')
+        .expect("hash suffix");
     assert_eq!(hash.len(), 32);
-    assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+    assert!(
+        hash.chars()
+            .all(|c| c.is_ascii_hexdigit())
+    );
 }
 
 /// The store index is a contract shared with the TypeScript CLI, which
@@ -231,7 +243,9 @@ fn to_virtual_store_name_shortens_user_reported_vitest_case() {
 fn pkg_id_strips_the_name_prefix_from_non_registry_keys() {
     fn case(input: &'static str, expected: &str) {
         eprintln!("CASE: {input:?}");
-        let key: PkgNameVerPeer = input.parse().expect("parse package key");
+        let key: PkgNameVerPeer = input
+            .parse()
+            .expect("parse package key");
         assert_eq!(key.pkg_id(), expected);
     }
 

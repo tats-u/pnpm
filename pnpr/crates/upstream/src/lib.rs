@@ -217,7 +217,9 @@ impl Upstream {
             conditional_headers.insert(header::IF_MODIFIED_SINCE, value);
         }
         let sent_conditional = !conditional_headers.is_empty();
-        let (response, _guard) = self.get_with_scoped_headers(&url, &conditional_headers).await?;
+        let (response, _guard) = self
+            .get_with_scoped_headers(&url, &conditional_headers)
+            .await?;
         if response.status() == StatusCode::NOT_FOUND {
             // A 404 is an authoritative answer, not an upstream failure.
             self.breaker.record_success();
@@ -259,7 +261,9 @@ impl Upstream {
         let started = Instant::now();
         self.ensure_available()?;
         let url = format!("{}/{}/-/{}", self.base.trim_end_matches('/'), name.as_str(), filename);
-        let (response, guard) = self.get_with_scoped_headers(&url, &HeaderMap::new()).await?;
+        let (response, guard) = self
+            .get_with_scoped_headers(&url, &HeaderMap::new())
+            .await?;
         if response.status() == StatusCode::NOT_FOUND {
             self.breaker.record_success();
             return Ok(FetchOutcome::NotFound);
@@ -269,10 +273,14 @@ impl Upstream {
         // the caller's to observe. Recording success on a clean status is
         // what verdaccio does too.
         self.breaker.record_success();
-        Ok(FetchOutcome::Ok(guard.retain_for_body(
-            response,
-            self.http.timeout.saturating_sub(started.elapsed()),
-        )))
+        Ok(FetchOutcome::Ok(
+            guard.retain_for_body(
+                response,
+                self.http
+                    .timeout
+                    .saturating_sub(started.elapsed()),
+            ),
+        ))
     }
 
     /// Fetch a document by path relative to the upstream's base URL — a Cargo
@@ -300,14 +308,17 @@ impl Upstream {
         {
             headers.insert(header::ACCEPT, value);
         }
-        let (response, _guard) = self.get_with_scoped_headers(&url, &headers).await?;
+        let (response, _guard) = self
+            .get_with_scoped_headers(&url, &headers)
+            .await?;
         if response.status() == StatusCode::NOT_FOUND {
             self.breaker.record_success();
             return Ok(FetchOutcome::NotFound);
         }
         let response = self.checked(response, &url).await?;
         let final_url = response.url().to_string();
-        let body = read_limited_body(response, limit).await
+        let body = read_limited_body(response, limit)
+            .await
             .map_err(|err| {
                 self.breaker.record_failure();
                 RegistryError::UpstreamResponse { url: url.clone(), reason: err.to_string() }
@@ -338,17 +349,23 @@ impl Upstream {
     ) -> Result<FetchOutcome<ThrottledResponse>> {
         let started = Instant::now();
         self.ensure_available()?;
-        let (response, guard) = self.get_with_scoped_headers(url, &HeaderMap::new()).await?;
+        let (response, guard) = self
+            .get_with_scoped_headers(url, &HeaderMap::new())
+            .await?;
         if response.status() == StatusCode::NOT_FOUND {
             self.breaker.record_success();
             return Ok(FetchOutcome::NotFound);
         }
         let response = self.checked(response, url).await?;
         self.breaker.record_success();
-        Ok(FetchOutcome::Ok(guard.retain_for_body(
-            response,
-            self.http.timeout.saturating_sub(started.elapsed()),
-        )))
+        Ok(FetchOutcome::Ok(
+            guard.retain_for_body(
+                response,
+                self.http
+                    .timeout
+                    .saturating_sub(started.elapsed()),
+            ),
+        ))
     }
 
     /// Fetch an immutable sha512 registry artifact without following redirects.
@@ -358,8 +375,11 @@ impl Upstream {
     ) -> Result<FetchOutcome<ThrottledResponse>> {
         self.ensure_available()?;
         let url = format!("{}/-/tarballs/sha512/{digest}", self.base.trim_end_matches('/'));
-        let client =
-            self.http.client.acquire_for_url_without_redirects_with_priority(&url, 0).await;
+        let client = self
+            .http
+            .client
+            .acquire_for_url_without_redirects_with_priority(&url, 0)
+            .await;
         let started = Instant::now();
         let request = client
             .get(&url)
@@ -372,17 +392,22 @@ impl Upstream {
         }
         let response = self.checked(response, &url).await?;
         self.breaker.record_success();
-        Ok(FetchOutcome::Ok(client.retain_for_body(
-            response,
-            self.http.timeout.saturating_sub(started.elapsed()),
-        )))
+        Ok(FetchOutcome::Ok(
+            client.retain_for_body(
+                response,
+                self.http
+                    .timeout
+                    .saturating_sub(started.elapsed()),
+            ),
+        ))
     }
 
     /// Query an upstream npm search endpoint with the caller's already-encoded
     /// query string. The upstream client contributes only configured headers,
     /// never headers supplied by the browser caller.
     pub async fn fetch_search(&self, query_string: &str) -> Result<FetchOutcome<SearchResponse>> {
-        self.fetch_discovery_json(&format!("/-/v1/search?{query_string}")).await
+        self.fetch_discovery_json(&format!("/-/v1/search?{query_string}"))
+            .await
     }
 
     /// Fetch the npm organization package map for one validated scope.
@@ -390,7 +415,8 @@ impl Upstream {
         &self,
         scope: &str,
     ) -> Result<FetchOutcome<Map<String, Value>>> {
-        self.fetch_discovery_json(&format!("/-/org/{scope}/package")).await
+        self.fetch_discovery_json(&format!("/-/org/{scope}/package"))
+            .await
     }
 
     async fn fetch_discovery_json<Payload: DeserializeOwned>(
@@ -399,9 +425,11 @@ impl Upstream {
     ) -> Result<FetchOutcome<Payload>> {
         self.ensure_available()?;
         let url = format!("{}{path_and_query}", self.base.trim_end_matches('/'));
-        let client =
-            self.http.client.acquire_for_url_without_redirects_with_priority(&url, UNPRIORITIZED)
-                .await;
+        let client = self
+            .http
+            .client
+            .acquire_for_url_without_redirects_with_priority(&url, UNPRIORITIZED)
+            .await;
         let request = client
             .get(&url)
             .timeout(self.http.timeout)
@@ -427,11 +455,10 @@ impl Upstream {
                 ),
             });
         }
-        let parsed = serde_json::from_slice(&body.bytes)
-            .map_err(|err| {
-                self.breaker.record_failure();
-                RegistryError::UpstreamResponse { url, reason: err.to_string() }
-            })?;
+        let parsed = serde_json::from_slice(&body.bytes).map_err(|err| {
+            self.breaker.record_failure();
+            RegistryError::UpstreamResponse { url, reason: err.to_string() }
+        })?;
         self.breaker.record_success();
         Ok(FetchOutcome::Ok(parsed))
     }
@@ -457,13 +484,10 @@ impl Upstream {
     /// [`RegistryError::Upstream`] and counting it against the breaker.
     async fn run(&self, request: reqwest::RequestBuilder, url: &str) -> Result<reqwest::Response> {
         self.ensure_allowed_url(url)?;
-        request
-            .send()
-            .await
-            .map_err(|source| {
-                self.breaker.record_failure();
-                RegistryError::Upstream { url: url.to_string(), source }
-            })
+        request.send().await.map_err(|source| {
+            self.breaker.record_failure();
+            RegistryError::Upstream { url: url.to_string(), source }
+        })
     }
 
     async fn get_with_scoped_headers(
@@ -473,10 +497,15 @@ impl Upstream {
     ) -> Result<(reqwest::Response, ThrottledClientGuard<'_>)> {
         self.ensure_allowed_url(url)?;
         let started = Instant::now();
-        self.http.client
+        self.http
+            .client
             .get_response_with_scoped_headers(url, |request, destination| {
                 request
-                    .timeout(self.http.timeout.saturating_sub(started.elapsed()))
+                    .timeout(
+                        self.http
+                            .timeout
+                            .saturating_sub(started.elapsed()),
+                    )
                     .headers(self.request_headers(destination))
                     .headers(headers.clone())
             })

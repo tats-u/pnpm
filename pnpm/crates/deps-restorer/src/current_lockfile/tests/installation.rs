@@ -263,7 +263,11 @@ fn materialization_closure_excludes_transitive_optional_shared_snapshot_when_dis
     );
 
     assert_eq!(closure.importer_ids, HashSet::from([selected_id]));
-    let snapshots = closure.lockfile.snapshots.as_ref().unwrap();
+    let snapshots = closure
+        .lockfile
+        .snapshots
+        .as_ref()
+        .unwrap();
     assert!(snapshots.contains_key(&key("parent", "1.0.0")));
     assert!(!snapshots.contains_key(&key("shared", "1.0.0")));
 }

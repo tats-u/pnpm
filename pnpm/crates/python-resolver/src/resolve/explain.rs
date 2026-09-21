@@ -69,7 +69,8 @@ fn insert_unoffered<'a>(
 /// Why a distribution had no version to offer, or `None` when nothing
 /// this resolution read says anything about it.
 fn describe(name: &PackageName, packages: &Packages) -> Option<String> {
-    if let Some(offered) = packages.candidates
+    if let Some(offered) = packages
+        .candidates
         .get(name)
         .filter(|offered| !offered.is_empty())
     {
@@ -92,7 +93,10 @@ fn describe(name: &PackageName, packages: &Packages) -> Option<String> {
         "{name} publishes {releases} releases ({}), none of which publishes a wheel this \
          interpreter installs or a source distribution pnpm can build.",
         named_releases(
-            excluded.other_targets.newest().chain(excluded.other_interpreters.newest()),
+            excluded
+                .other_targets
+                .newest()
+                .chain(excluded.other_interpreters.newest()),
             releases,
         ),
     );

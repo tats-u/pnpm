@@ -72,17 +72,30 @@ impl PythonPrepare<'_> {
                 requirements,
                 local: Arc::clone(&local),
             };
-            if let Some(lock) = self.replay_lockfile::<Reporter>(registry, replay).await? {
+            if let Some(lock) = self
+                .replay_lockfile::<Reporter>(registry, replay)
+                .await?
+            {
                 return Ok(lock);
             }
         }
-        if registry.resolution.packages.overrides.is_empty()
-            && registry.resolution.packages.constraints.is_empty()
-            && let Some(lock) =
-                self.resolve_remotely(requirements, (&inputs, requires_python.as_deref()), &local)
-                    .await?
+        if registry
+            .resolution
+            .packages
+            .overrides
+            .is_empty()
+            && registry
+                .resolution
+                .packages
+                .constraints
+                .is_empty()
+            && let Some(lock) = self
+                .resolve_remotely(requirements, (&inputs, requires_python.as_deref()), &local)
+                .await?
         {
-            return self.accept_lockfile::<Reporter>(registry, lock, requirements, &local).await;
+            return self
+                .accept_lockfile::<Reporter>(registry, lock, requirements, &local)
+                .await;
         }
         let solved =
             resolver::resolve_all::<Reporter>(registry, requirements, &self.environments.list)
@@ -110,11 +123,9 @@ impl PythonPrepare<'_> {
     ) -> Result<Option<Lockfile>> {
         if self.environments.declared
             || !local.is_empty()
-            || requirements
-                .iter()
-                .any(|requirement| {
-                    matches!(requirement.version_or_url, Some(pep508_rs::VersionOrUrl::Url(_)))
-                })
+            || requirements.iter().any(|requirement| {
+                matches!(requirement.version_or_url, Some(pep508_rs::VersionOrUrl::Url(_)))
+            })
             || !self.index.can_resolve_remotely()
         {
             return Ok(None);
@@ -132,7 +143,9 @@ impl PythonPrepare<'_> {
         };
         // A server answers for the requirements, not for which projects
         // asked them together: the members are this install's to record.
-        lock.tool.pnpm.set_members(inputs.members().to_vec());
+        lock.tool
+            .pnpm
+            .set_members(inputs.members().to_vec());
         accept_server_lockfile(&lock, inputs, requires_python)?;
         Ok(Some(lock))
     }
@@ -147,19 +160,20 @@ impl PythonPrepare<'_> {
     async fn replay_lockfile<Reporter: self::Reporter + 'static>(
         &self,
         registry: &mut Registry<'_>,
-        LockfileReplay {
-            lock,
-            lock_path,
-            requirements,
-            local,
-            same_target,
-        }: LockfileReplay<'_>,
+        LockfileReplay { lock, lock_path, requirements, local, same_target }: LockfileReplay<'_>,
     ) -> Result<Option<Lockfile>> {
-        registry.resolution.packages.candidates.clear();
+        registry
+            .resolution
+            .packages
+            .candidates
+            .clear();
         lock.seed(&mut registry.resolution.packages, &self.interpreter.target)?;
         workspace::offer_locked(&mut registry.resolution.packages, &local, &lock);
         registry.record_sources(requirements)?;
-        let replayed = match registry.fetch_wheels::<Reporter>(requirements).await {
+        let replayed = match registry
+            .fetch_wheels::<Reporter>(requirements)
+            .await
+        {
             Ok(()) => resolver::validate_locked(&registry.resolution, requirements),
             Err(error) if same_target => return Err(error),
             Err(error) => Err(error),
@@ -174,11 +188,31 @@ impl PythonPrepare<'_> {
             level: LogLevel::Warn,
             message: format!("Ignoring Python lockfile {}: {error}", lock_path.display()),
         }));
-        registry.resolution.packages.candidates.clear();
-        registry.resolution.packages.excluded.clear();
-        registry.resolution.packages.metadata.clear();
-        registry.resolution.packages.direct_urls.clear();
-        registry.resolution.packages.rejected_sources.clear();
+        registry
+            .resolution
+            .packages
+            .candidates
+            .clear();
+        registry
+            .resolution
+            .packages
+            .excluded
+            .clear();
+        registry
+            .resolution
+            .packages
+            .metadata
+            .clear();
+        registry
+            .resolution
+            .packages
+            .direct_urls
+            .clear();
+        registry
+            .resolution
+            .packages
+            .rejected_sources
+            .clear();
         workspace::offer(&mut registry.resolution.packages, &local);
         Ok(None)
     }
@@ -192,11 +226,17 @@ impl PythonPrepare<'_> {
         requirements: &[pep508_rs::Requirement],
         local: &[workspace::LocalProject],
     ) -> Result<Lockfile> {
-        registry.resolution.packages.candidates.clear();
+        registry
+            .resolution
+            .packages
+            .candidates
+            .clear();
         lock.seed(&mut registry.resolution.packages, &self.interpreter.target)?;
         workspace::offer_locked(&mut registry.resolution.packages, local, &lock);
         registry.record_sources(requirements)?;
-        registry.fetch_wheels::<Reporter>(requirements).await?;
+        registry
+            .fetch_wheels::<Reporter>(requirements)
+            .await?;
         resolver::validate_locked(&registry.resolution, requirements)?;
         Ok(lock)
     }

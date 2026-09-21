@@ -20,11 +20,15 @@ async fn resolves_a_package() {
         .await
         .expect("install should succeed");
 
-    let packages = outcome.lockfile.packages.as_ref().expect("lockfile has packages");
+    let packages = outcome
+        .lockfile
+        .packages
+        .as_ref()
+        .expect("lockfile has packages");
     assert!(
-        packages
-            .keys()
-            .any(|key| key.to_string().starts_with("@foo/no-deps@1.0.0")),
+        packages.keys().any(|key| key
+            .to_string()
+            .starts_with("@foo/no-deps@1.0.0")),
         "lockfile should contain @foo/no-deps@1.0.0, got: {:?}",
         packages
             .keys()
@@ -46,8 +50,15 @@ async fn handshake_rejects_a_non_pnpr_server() {
         .await;
 
     let client = PnprClient::new(server.url());
-    let err = client.handshake().await.expect_err("a non-pnpr server should be rejected");
-    assert!(err.to_string().contains("not a pnpr server"), "got: {err}");
+    let err = client
+        .handshake()
+        .await
+        .expect_err("a non-pnpr server should be rejected");
+    assert!(
+        err.to_string()
+            .contains("not a pnpr server"),
+        "got: {err}"
+    );
     mock.assert_async().await;
 }
 
@@ -56,12 +67,19 @@ async fn artifact_capability_is_disabled_by_default() {
     let (pnpr_url, _pnpr_auth, _storage) =
         start_pnpr_inner(None, Vec::new(), Vec::new(), false).await;
     let client = PnprClient::new(pnpr_url);
-    client.handshake().await.expect("resolver capability");
+    client
+        .handshake()
+        .await
+        .expect("resolver capability");
     let error = client
         .handshake_artifacts()
         .await
         .expect_err("artifact capability must require an explicit opt-in");
-    assert!(error.to_string().contains("does not advertise shared artifact protocol"));
+    assert!(
+        error
+            .to_string()
+            .contains("does not advertise shared artifact protocol")
+    );
 }
 
 #[tokio::test]
@@ -86,7 +104,10 @@ async fn artifact_handshake_is_independent_from_the_resolver_protocol() {
 async fn publishes_resolves_and_verifies_an_organization_artifact() {
     let (pnpr_url, pnpr_auth, _storage) = start_pnpr_artifacts().await;
     let client = PnprClient::new(pnpr_url);
-    client.handshake_artifacts().await.expect("artifact capability");
+    client
+        .handshake_artifacts()
+        .await
+        .expect("artifact capability");
 
     let (publish, public_key, expected_blob) = signed_artifact_fixture();
     client
@@ -167,7 +188,9 @@ async fn publishes_resolves_and_verifies_an_organization_artifact() {
         })
         .await
         .expect("resolve signed artifact");
-    let artifact = selected.get(&publish.key).expect("trusted compatible variant selected");
+    let artifact = selected
+        .get(&publish.key)
+        .expect("trusted compatible variant selected");
     assert_eq!(artifact.payload.owner, OwnerScope::organization("pnpr-client"));
     assert_eq!(artifact.envelope_digest.len(), 64);
     let quarantined_digest = artifact.envelope_digest.clone();
@@ -195,7 +218,9 @@ async fn publishes_resolves_and_verifies_an_organization_artifact() {
         .download_artifact_blob(
             &ArtifactBlobRequest {
                 owner: candidate.owner,
-                integrity: artifact.payload.manifest.added[0].integrity.clone(),
+                integrity: artifact.payload.manifest.added[0]
+                    .integrity
+                    .clone(),
             },
             Some(&pnpr_auth),
         )
@@ -251,7 +276,10 @@ async fn concurrent_artifact_publications_apply_the_variant_limit_at_read_time()
 
     let (pnpr_url, pnpr_auth, _storage) = start_pnpr_artifacts().await;
     let (fixture, _, _) = signed_artifact_fixture_for_platform(0);
-    let (payload, _) = fixture.envelope.decode_payload().expect("decode fixture payload");
+    let (payload, _) = fixture
+        .envelope
+        .decode_payload()
+        .expect("decode fixture payload");
     let candidate =
         ArtifactCandidate { key: fixture.key, subject: payload.subject, owner: payload.owner };
     let barrier = Arc::new(Barrier::new(PUBLICATIONS + 1));
@@ -263,13 +291,18 @@ async fn concurrent_artifact_publications_apply_the_variant_limit_at_read_time()
         let (publish, _, _) = signed_artifact_fixture_for_platform(index);
         publications.push(tokio::spawn(async move {
             barrier.wait().await;
-            PnprClient::new(pnpr_url).publish_artifact(&publish, Some(&pnpr_auth)).await
+            PnprClient::new(pnpr_url)
+                .publish_artifact(&publish, Some(&pnpr_auth))
+                .await
         }));
     }
     barrier.wait().await;
 
     for publication in publications {
-        publication.await.expect("publication task").expect("publish artifact variant");
+        publication
+            .await
+            .expect("publication task")
+            .expect("publish artifact variant");
     }
 
     let response = reqwest::Client::new()
@@ -284,8 +317,9 @@ async fn concurrent_artifact_publications_apply_the_variant_limit_at_read_time()
         .json::<serde_json::Value>()
         .await
         .expect("artifact resolve JSON");
-    let variants =
-        response["artifacts"][0]["variants"].as_array().expect("artifact variants array");
+    let variants = response["artifacts"][0]["variants"]
+        .as_array()
+        .expect("artifact variants array");
     assert_eq!(variants.len(), pnpm_shared_artifact_protocol::MAX_VARIANTS_PER_CANDIDATE);
 }
 
@@ -391,13 +425,20 @@ async fn resolves_a_scope_from_the_registry_declared_for_it() {
         },
     )]);
 
-    let outcome = PnprClient::new(pnpr_url).resolve(opts).await.expect("install should succeed");
+    let outcome = PnprClient::new(pnpr_url)
+        .resolve(opts)
+        .await
+        .expect("install should succeed");
 
-    let packages = outcome.lockfile.packages.as_ref().expect("lockfile has packages");
+    let packages = outcome
+        .lockfile
+        .packages
+        .as_ref()
+        .expect("lockfile has packages");
     assert!(
-        packages
-            .keys()
-            .any(|key| key.to_string().starts_with("@foo/no-deps@1.0.0")),
+        packages.keys().any(|key| key
+            .to_string()
+            .starts_with("@foo/no-deps@1.0.0")),
         "the declared registry should have served the scope, got: {:?}",
         packages
             .keys()
@@ -423,13 +464,19 @@ async fn a_declared_registry_the_resolve_never_reaches_is_not_rejected() {
         },
     )]);
 
-    let outcome = PnprClient::new(pnpr_url).resolve(opts).await.expect("install should succeed");
-    let packages = outcome.lockfile.packages.as_ref().expect("lockfile has packages");
-    assert!(
-        packages
-            .keys()
-            .any(|key| key.to_string().starts_with("@foo/no-deps@1.0.0")),
-    );
+    let outcome = PnprClient::new(pnpr_url)
+        .resolve(opts)
+        .await
+        .expect("install should succeed");
+    let packages = outcome
+        .lockfile
+        .packages
+        .as_ref()
+        .expect("lockfile has packages");
+    assert!(packages.keys().any(|key| {
+        key.to_string()
+            .starts_with("@foo/no-deps@1.0.0")
+    }),);
 }
 
 /// The SSRF boundary still holds where it matters: a scope the resolve *does*
@@ -448,7 +495,10 @@ async fn a_declared_registry_the_resolve_reaches_is_refused() {
         },
     )]);
 
-    let Err(error) = PnprClient::new(pnpr_url).resolve(opts).await else {
+    let Err(error) = PnprClient::new(pnpr_url)
+        .resolve(opts)
+        .await
+    else {
         panic!("an off-allowlist registry the resolve reaches must be refused")
     };
     let error = error.to_string();

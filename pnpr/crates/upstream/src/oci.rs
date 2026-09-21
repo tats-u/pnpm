@@ -21,7 +21,8 @@ impl Upstream {
         endpoint: &str,
         accept: &str,
     ) -> Result<FetchOutcome<ThrottledResponse>> {
-        self.fetch_oci_request(repository, endpoint, accept, reqwest::Method::GET).await
+        self.fetch_oci_request(repository, endpoint, accept, reqwest::Method::GET)
+            .await
     }
 
     /// Read OCI object headers without transferring the body.
@@ -31,7 +32,8 @@ impl Upstream {
         endpoint: &str,
         accept: &str,
     ) -> Result<FetchOutcome<ThrottledResponse>> {
-        self.fetch_oci_request(repository, endpoint, accept, reqwest::Method::HEAD).await
+        self.fetch_oci_request(repository, endpoint, accept, reqwest::Method::HEAD)
+            .await
     }
 
     async fn fetch_oci_request(
@@ -48,14 +50,18 @@ impl Upstream {
         let mut negotiated = false;
         for _ in 0..8 {
             self.ensure_allowed_url(url.as_str())?;
-            let guard = self.http.client.acquire_for_url_without_redirects_with_priority(
-                url.as_str(),
-                UNPRIORITIZED,
-            )
-            .await;
+            let guard = self
+                .http
+                .client
+                .acquire_for_url_without_redirects_with_priority(url.as_str(), UNPRIORITIZED)
+                .await;
             let request = guard
                 .request(method.clone(), url.clone())
-                .timeout(self.http.timeout.saturating_sub(started.elapsed()))
+                .timeout(
+                    self.http
+                        .timeout
+                        .saturating_sub(started.elapsed()),
+                )
                 .header(header::ACCEPT, accept);
             let request = self.with_oci_credentials(request, &url, &base, bearer.as_deref());
             let response = self.run(request, url.as_str()).await?;
@@ -66,7 +72,10 @@ impl Upstream {
                 let challenge = self.oci_challenge(&response)?;
                 drop(response);
                 drop(guard);
-                bearer = Some(self.oci_token(&base, repository, challenge).await?);
+                bearer = Some(
+                    self.oci_token(&base, repository, challenge)
+                        .await?,
+                );
                 negotiated = true;
                 continue;
             }
@@ -74,7 +83,9 @@ impl Upstream {
                 url = self.oci_redirect_target(&response, &url, &base)?;
                 continue;
             }
-            return self.finish_oci_fetch(response, guard, &url, started).await;
+            return self
+                .finish_oci_fetch(response, guard, &url, started)
+                .await;
         }
         Err(self.oci_error("too many OCI redirects"))
     }
@@ -90,12 +101,18 @@ impl Upstream {
             self.breaker.record_success();
             return Ok(FetchOutcome::NotFound);
         }
-        let response = self.checked(response, url.as_str()).await?;
+        let response = self
+            .checked(response, url.as_str())
+            .await?;
         self.breaker.record_success();
-        Ok(FetchOutcome::Ok(guard.retain_for_body(
-            response,
-            self.http.timeout.saturating_sub(started.elapsed()),
-        )))
+        Ok(FetchOutcome::Ok(
+            guard.retain_for_body(
+                response,
+                self.http
+                    .timeout
+                    .saturating_sub(started.elapsed()),
+            ),
+        ))
     }
 
     fn oci_object_url(&self, repository: &str, endpoint: &str) -> Result<(Url, Url)> {
@@ -179,11 +196,11 @@ impl Upstream {
             .query_pairs_mut()
             .append_pair("service", &challenge.service)
             .append_pair("scope", &format!("repository:{repository}:pull"));
-        let guard = self.http.client.acquire_for_url_without_redirects_with_priority(
-            realm.as_str(),
-            UNPRIORITIZED,
-        )
-        .await;
+        let guard = self
+            .http
+            .client
+            .acquire_for_url_without_redirects_with_priority(realm.as_str(), UNPRIORITIZED)
+            .await;
         let headers = self.oci_token_headers(base, &realm);
         let response = guard
             .get(realm.clone())
@@ -195,7 +212,8 @@ impl Upstream {
         if !response.status().is_success() {
             return Err(self.oci_error("OCI token service refused authentication"));
         }
-        let body = read_limited_body(response, 64 * 1024).await
+        let body = read_limited_body(response, 64 * 1024)
+            .await
             .map_err(|source| RegistryError::Upstream { url: self.base.clone(), source })?;
         if body.truncated {
             return Err(self.oci_error("OCI token response is too large"));
@@ -209,7 +227,10 @@ impl Upstream {
         let mut headers = self.request_headers(realm.as_str());
         if realm.origin() != base.origin()
             && is_url_secure_for_credentials(realm.as_str())
-            && let Some(authorization) = self.http.headers.get(header::AUTHORIZATION)
+            && let Some(authorization) = self
+                .http
+                .headers
+                .get(header::AUTHORIZATION)
         {
             headers.insert(header::AUTHORIZATION, authorization.clone());
         }
@@ -218,11 +239,15 @@ impl Upstream {
 
     fn cache_oci_token(&self, repository: &str, token: TokenResponse) -> Result<String> {
         let expires_in = token.expires_in.unwrap_or(60).min(3600);
-        let token = token.token
+        let token = token
+            .token
             .or(token.access_token)
             .filter(|token| !token.is_empty())
             .ok_or_else(|| self.oci_error("OCI token response contains no token"))?;
-        let mut cache = self.oci_tokens.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut cache = self
+            .oci_tokens
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         cache.retain(|_, token| token.expires > Instant::now());
         if cache.len() >= 256 {
             cache.clear();

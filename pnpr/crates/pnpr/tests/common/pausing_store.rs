@@ -53,7 +53,9 @@ impl ObjectStore for PausingStore {
             self.started.notify_one();
             self.resume.notified().await;
         }
-        self.inner.get_opts(location, options).await
+        self.inner
+            .get_opts(location, options)
+            .await
     }
 
     async fn put_opts(
@@ -76,7 +78,9 @@ impl ObjectStore for PausingStore {
             self.started.notify_one();
             self.resume.notified().await;
         }
-        self.inner.put_opts(location, payload, options).await
+        self.inner
+            .put_opts(location, payload, options)
+            .await
     }
 
     async fn put_multipart_opts(
@@ -84,7 +88,9 @@ impl ObjectStore for PausingStore {
         location: &Path,
         options: PutMultipartOptions,
     ) -> object_store::Result<Box<dyn MultipartUpload>> {
-        self.inner.put_multipart_opts(location, options).await
+        self.inner
+            .put_multipart_opts(location, options)
+            .await
     }
 
     fn delete_stream(
@@ -99,7 +105,9 @@ impl ObjectStore for PausingStore {
     }
 
     async fn list_with_delimiter(&self, prefix: Option<&Path>) -> object_store::Result<ListResult> {
-        self.inner.list_with_delimiter(prefix).await
+        self.inner
+            .list_with_delimiter(prefix)
+            .await
     }
 
     async fn copy_opts(
@@ -108,6 +116,8 @@ impl ObjectStore for PausingStore {
         to: &Path,
         options: CopyOptions,
     ) -> object_store::Result<()> {
-        self.inner.copy_opts(from, to, options).await
+        self.inner
+            .copy_opts(from, to, options)
+            .await
     }
 }

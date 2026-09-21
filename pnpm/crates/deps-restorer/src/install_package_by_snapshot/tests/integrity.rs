@@ -16,8 +16,9 @@ fn remote_tarball_resolution_without_integrity_is_refused() {
         git_hosted: None,
         path: None,
     });
-    let package_key: PackageKey =
-        format!("pkg-from-tarball@{tarball}").parse().expect("parse package key");
+    let package_key: PackageKey = format!("pkg-from-tarball@{tarball}")
+        .parse()
+        .expect("parse package key");
 
     let err = tarball_url_and_integrity(&resolution, &package_key, &config)
         .expect_err("a remote tarball without an integrity is not fetchable");
@@ -37,7 +38,9 @@ fn remote_tarball_resolution_without_integrity_is_refused() {
 #[test]
 fn empty_integrity_is_refused_like_a_missing_one() {
     let config = Config::new();
-    let empty = "".parse::<ssri::Integrity>().expect("empty integrity parses");
+    let empty = ""
+        .parse::<ssri::Integrity>()
+        .expect("empty integrity parses");
     let tarball = "https://example.com/pkg-from-tarball-1.0.0.tgz";
     let cases = [
         (

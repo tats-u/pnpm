@@ -114,13 +114,18 @@ impl LazyLockfile {
     pub fn pre_merge_importers(
         &self,
     ) -> Result<Option<&HashMap<String, ProjectSnapshot>>, LoadLockfileError> {
-        Ok(self.load()?.pre_merge_importers.as_ref())
+        Ok(self
+            .load()?
+            .pre_merge_importers
+            .as_ref())
     }
 
     fn pre_merge_importers_for_fix(
         &self,
     ) -> Result<Option<&HashMap<String, ProjectSnapshot>>, LoadLockfileError> {
-        Ok(self.load_for_fix()?.pre_merge_importers())
+        Ok(self
+            .load_for_fix()?
+            .pre_merge_importers())
     }
 
     fn merged_conflict_files(&self) -> Result<usize, LoadLockfileError> {
@@ -128,7 +133,9 @@ impl LazyLockfile {
     }
 
     fn merged_conflict_files_for_fix(&self) -> Result<usize, LoadLockfileError> {
-        Ok(self.load_for_fix()?.merged_conflict_files())
+        Ok(self
+            .load_for_fix()?
+            .merged_conflict_files())
     }
 
     fn load(&self) -> Result<&LoadedWantedLockfile, LoadLockfileError> {

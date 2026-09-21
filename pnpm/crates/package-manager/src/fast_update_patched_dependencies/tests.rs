@@ -5,7 +5,9 @@ fn try_fast_update_patched_dependencies(lockfile: &Lockfile, config: &Config) ->
     {
         // As the caller does: an unreadable patch file declines the whole
         // attempt rather than reading as no patches at all.
-        let hashes = config.patched_dependency_hashes().ok()?;
+        let hashes = config
+            .patched_dependency_hashes()
+            .ok()?;
         crate::fast_update_compose::try_compose_fast_updates(
             lockfile,
             &[],
@@ -187,7 +189,8 @@ fn lockfile(source: &str) -> Lockfile {
 }
 
 fn snapshot_keys(lockfile: &Lockfile) -> Vec<String> {
-    let mut keys: Vec<_> = lockfile.snapshots
+    let mut keys: Vec<_> = lockfile
+        .snapshots
         .as_ref()
         .expect("snapshots")
         .keys()
@@ -198,7 +201,8 @@ fn snapshot_keys(lockfile: &Lockfile) -> Vec<String> {
 }
 
 fn package_keys(lockfile: &Lockfile) -> Vec<String> {
-    let mut keys: Vec<_> = lockfile.packages
+    let mut keys: Vec<_> = lockfile
+        .packages
         .as_ref()
         .expect("packages")
         .keys()
@@ -209,7 +213,10 @@ fn package_keys(lockfile: &Lockfile) -> Vec<String> {
 }
 
 fn snapshot_dependency(lockfile: &Lockfile, key: &str, alias: &str) -> String {
-    lockfile.snapshots.as_ref().expect("snapshots")[&key.parse().expect("parse snapshot key")]
+    lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots")[&key.parse().expect("parse snapshot key")]
         .dependencies
         .as_ref()
         .expect("snapshot dependencies")[&alias.parse().expect("parse alias")]
@@ -217,8 +224,10 @@ fn snapshot_dependency(lockfile: &Lockfile, key: &str, alias: &str) -> String {
 }
 
 fn importer_version(lockfile: &Lockfile, alias: &str) -> String {
-    lockfile.importers["."].dependencies.as_ref().expect("importer dependencies")
-        [&alias.parse().expect("parse alias")]
+    lockfile.importers["."]
+        .dependencies
+        .as_ref()
+        .expect("importer dependencies")[&alias.parse().expect("parse alias")]
         .version
         .to_string()
 }
@@ -259,7 +268,10 @@ fn config(workspace_dir: &Path, keys: &[&str], allow_unused_patches: bool) -> Co
 }
 
 fn recorded(lockfile: &Lockfile) -> &BTreeMap<String, String> {
-    lockfile.patched_dependencies.as_ref().expect("the candidate records patchedDependencies")
+    lockfile
+        .patched_dependencies
+        .as_ref()
+        .expect("the candidate records patchedDependencies")
 }
 
 #[test]
@@ -272,7 +284,12 @@ fn records_a_patch_that_matches_no_locked_package() {
     )
     .expect("a patch matching nothing in the lockfile cannot change the graph");
 
-    assert_eq!(recorded(&updated).keys().collect::<Vec<_>>(), vec!["bar@2.0.0"]);
+    assert_eq!(
+        recorded(&updated)
+            .keys()
+            .collect::<Vec<_>>(),
+        vec!["bar@2.0.0"]
+    );
 }
 
 #[test]
@@ -459,7 +476,12 @@ fn recognizes_a_git_patch_while_absorbing_unrelated_settings_drift() {
     let updated = try_fast_update_patched_dependencies(&subject, &config)
         .expect("the git patch remains applied while the settings update is absorbed");
 
-    assert!(updated.settings.expect("settings").exclude_links_from_lockfile);
+    assert!(
+        updated
+            .settings
+            .expect("settings")
+            .exclude_links_from_lockfile
+    );
 }
 
 #[test]
@@ -495,8 +517,9 @@ fn rejects_an_unchanged_configuration() {
     let dir = workspace(&["bar@2.0.0"]);
     let config = config(dir.path(), &["bar@2.0.0"], true);
     let mut lockfile = lockfile(LOCKFILE);
-    lockfile.patched_dependencies =
-        config.patched_dependency_hashes().expect("hash the patch files");
+    lockfile.patched_dependencies = config
+        .patched_dependency_hashes()
+        .expect("hash the patch files");
 
     assert!(
         try_fast_update_patched_dependencies(&lockfile, &config).is_none(),

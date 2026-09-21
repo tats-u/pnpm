@@ -75,7 +75,10 @@ impl Environments {
             );
         }
         let mut list = Vec::<Environment>::new();
-        for ((_, version), target) in declarations.iter().zip(&interpreter.targets) {
+        for ((_, version), target) in declarations
+            .iter()
+            .zip(&interpreter.targets)
+        {
             let environment = Environment {
                 target: target.clone(),
                 declared: vec![
@@ -88,12 +91,9 @@ impl Environments {
             // Two spellings of one platform, such as `linux-x64` and the
             // baseline it defaults to, are one environment, which is
             // what the interpreter reports them as.
-            if !list
-                .iter()
-                .any(|kept| {
-                    kept.target == environment.target && kept.declared == environment.declared
-                })
-            {
+            if !list.iter().any(|kept| {
+                kept.target == environment.target && kept.declared == environment.declared
+            }) {
                 list.push(environment);
             }
         }
@@ -105,11 +105,14 @@ impl Environments {
 /// The marker naming an environment, which is what decides whether an
 /// interpreter is the one the environment stands for.
 fn marker(environment: &Environment) -> Result<MarkerTree> {
-    let keys = environment.declared
+    let keys = environment
+        .declared
         .iter()
         .cloned()
         .collect::<BTreeSet<_>>();
-    environment_marker(&environment.target.environment, &keys)?.parse().into_diagnostic()
+    environment_marker(&environment.target.environment, &keys)?
+        .parse()
+        .into_diagnostic()
 }
 
 /// Every declared platform paired with every declared Python version.
@@ -161,12 +164,15 @@ pub(super) fn platform_values_without_python(supported: &SupportedArchitectures)
 /// prepares for, so `pylock.toml` is resolved for those. A repeat, and a
 /// second spelling of one platform, is one environment.
 fn named(config: &Config) -> (Vec<NamedPlatform>, Vec<String>) {
-    let platforms = config.supported_architectures
+    let platforms = config
+        .supported_architectures
         .as_ref()
         .map(SupportedArchitectures::host_platforms)
         .unwrap_or_default();
     let mut seen = BTreeSet::new();
-    let python_versions = config.python.versions
+    let python_versions = config
+        .python
+        .versions
         .iter()
         .filter(|version| seen.insert(*version))
         .cloned()
@@ -192,7 +198,9 @@ fn interpreter_platform(platform: &NamedPlatform) -> String {
             format!("{architecture}-{baseline}")
         }
         (Os::Linux, libc) => {
-            let family = libc.as_ref().map_or(LibcFamily::Glibc, |libc| libc.family);
+            let family = libc
+                .as_ref()
+                .map_or(LibcFamily::Glibc, |libc| libc.family);
             let abi = if family == LibcFamily::Musl { "musl" } else { "gnu" };
             format!("{architecture}-unknown-linux-{abi}")
         }

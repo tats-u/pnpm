@@ -11,9 +11,19 @@ fn locked_solutions_reject_sources_declared_only_by_inactive_requirements() {
             .map(|requirement| requirement.parse().unwrap())
             .collect();
     let error = locked_solution(&packages, &requirements, &target().environment).unwrap_err();
-    assert!(error.to_string().contains("inactive source"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("inactive source"),
+        "{error}"
+    );
     let error = validate_locked(&packages, &requirements, &target().environment).unwrap_err();
-    assert!(error.to_string().contains("inactive source"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("inactive source"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -34,7 +44,9 @@ fn source_packages() -> (Packages, String) {
         .unwrap()
         .url
         .clone();
-    packages.direct_urls.insert(name("demo"), source.clone());
+    packages
+        .direct_urls
+        .insert(name("demo"), source.clone());
     packages.metadata.insert(
         (name("demo"), version("1.0.0")),
         WheelMetadata::parse("Name: demo\nVersion: 1.0.0\n").unwrap(),

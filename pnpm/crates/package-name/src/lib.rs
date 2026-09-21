@@ -52,12 +52,10 @@ fn matches_ignore_ascii_case(input: &str, target: &str) -> bool {
 /// characters JS leaves unescaped is ASCII alphanumerics plus
 /// `- _ . ! ~ * ' ( )`.
 fn is_url_friendly(string: &str) -> bool {
-    string
-        .chars()
-        .all(|ch| {
-            ch.is_ascii_alphanumeric()
-                || matches!(ch, '-' | '_' | '.' | '!' | '~' | '*' | '\'' | '(' | ')')
-        })
+    string.chars().all(|ch| {
+        ch.is_ascii_alphanumeric()
+            || matches!(ch, '-' | '_' | '.' | '!' | '~' | '*' | '\'' | '(' | ')')
+    })
 }
 
 /// Match upstream's

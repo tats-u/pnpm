@@ -76,7 +76,10 @@ fn static_config_with_packages(dir: &TempDir, packages_block: &str) -> (Config, 
 }
 
 async fn body_bytes(body: Body) -> Vec<u8> {
-    to_bytes(body, usize::MAX).await.expect("read body").to_vec()
+    to_bytes(body, usize::MAX)
+        .await
+        .expect("read body")
+        .to_vec()
 }
 
 async fn body_json(body: Body) -> Value {

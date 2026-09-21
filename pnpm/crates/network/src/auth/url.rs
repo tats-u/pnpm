@@ -119,11 +119,15 @@ fn is_loopback_host(host: &str) -> bool {
 /// network link. HTTPS and loopback HTTP endpoints are accepted.
 #[must_use]
 pub fn is_url_secure_for_credentials(url: &str) -> bool {
-    ParsedUrl::parse(url)
-        .is_some_and(|parsed| {
-            parsed.scheme.eq_ignore_ascii_case("https")
-                || (parsed.scheme.eq_ignore_ascii_case("http") && is_loopback_host(parsed.host))
-        })
+    ParsedUrl::parse(url).is_some_and(|parsed| {
+        parsed
+            .scheme
+            .eq_ignore_ascii_case("https")
+            || (parsed
+                .scheme
+                .eq_ignore_ascii_case("http")
+                && is_loopback_host(parsed.host))
+    })
 }
 
 /// Local base64 encode so this crate doesn't pull in `base64` just for

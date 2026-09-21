@@ -9,26 +9,36 @@ impl Provider<'_> {
         requirement: &Requirement,
         extras: &[ExtraName],
     ) -> std::result::Result<Ranges<Version>, Needed> {
-        let overrides = self.packages.overrides
+        let overrides = self
+            .packages
+            .overrides
             .iter()
             .filter(|replacement| {
                 replacement.name == requirement.name
-                    && replacement.marker.evaluate(self.environment, extras)
+                    && replacement
+                        .marker
+                        .evaluate(self.environment, extras)
             });
         let overridden = overrides.clone().next().is_some();
         let specifiers = overrides
             .chain(std::iter::once(requirement).filter(|_| !overridden))
             .map(requirement_specifiers)
             .collect::<std::result::Result<Vec<_>, _>>()?;
-        let additional = self.packages.constraints
+        let additional = self
+            .packages
+            .constraints
             .iter()
             .filter(|constraint| {
                 constraint.name == requirement.name
-                    && constraint.marker.evaluate(self.environment, extras)
+                    && constraint
+                        .marker
+                        .evaluate(self.environment, extras)
             })
             .map(requirement_specifiers)
             .collect::<std::result::Result<Vec<_>, _>>()?;
-        let candidates = self.packages.candidates
+        let candidates = self
+            .packages
+            .candidates
             .get(&requirement.name)
             .ok_or_else(|| Needed::Candidates(requirement.name.clone()))?;
         let matched = candidates
@@ -36,7 +46,9 @@ impl Provider<'_> {
             .filter(|version| matches_specifiers(version, &specifiers, &additional))
             .collect::<Vec<_>>();
         let allow_prerelease = permits_prereleases(&specifiers, &additional)
-            || matched.iter().all(|version| version.any_prerelease());
+            || matched
+                .iter()
+                .all(|version| version.any_prerelease());
         Ok(matched
             .into_iter()
             .filter(|version| allow_prerelease || !version.any_prerelease())
@@ -50,11 +62,15 @@ impl Provider<'_> {
         requirement: &Requirement,
         extras: &[ExtraName],
     ) -> Vec<ExtraName> {
-        let overrides = self.packages.overrides
+        let overrides = self
+            .packages
+            .overrides
             .iter()
             .filter(|replacement| {
                 replacement.name == requirement.name
-                    && replacement.marker.evaluate(self.environment, extras)
+                    && replacement
+                        .marker
+                        .evaluate(self.environment, extras)
             });
         if overrides.clone().next().is_none() {
             return requirement.extras.clone();
@@ -86,7 +102,9 @@ fn permits_prereleases(
         .chain(additional)
         .any(|specifiers| {
             specifiers.is_some_and(|specifiers| {
-                specifiers.iter().any(pep440_rs::VersionSpecifier::any_prerelease)
+                specifiers
+                    .iter()
+                    .any(pep440_rs::VersionSpecifier::any_prerelease)
             })
         })
 }

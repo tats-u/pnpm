@@ -108,8 +108,18 @@ fn depends_on_runs_the_tasks_a_task_depends_on_in_dependency_order() {
     // The tasks `dependsOn` pulled in get `#`-qualified summary keys; the
     // requested tasks keep the bare project directory.
     let statuses = summary_statuses(&workspace);
-    assert_eq!(statuses.get("project-a").map(String::as_str), Some("passed"));
-    assert_eq!(statuses.get("project-a#build").map(String::as_str), Some("passed"));
+    assert_eq!(
+        statuses
+            .get("project-a")
+            .map(String::as_str),
+        Some("passed")
+    );
+    assert_eq!(
+        statuses
+            .get("project-a#build")
+            .map(String::as_str),
+        Some("passed")
+    );
 
     drop(root);
 }
@@ -213,9 +223,24 @@ fn missing_script_is_reported_skipped_and_does_not_sever_the_chain() {
     let order = fs::read_to_string(workspace.join("order.log")).expect("read order log");
     assert_eq!(order, "project-c\nproject-a\n");
     let statuses = summary_statuses(&workspace);
-    assert_eq!(statuses.get("project-a").map(String::as_str), Some("passed"));
-    assert_eq!(statuses.get("project-b").map(String::as_str), Some("skipped"));
-    assert_eq!(statuses.get("project-c").map(String::as_str), Some("passed"));
+    assert_eq!(
+        statuses
+            .get("project-a")
+            .map(String::as_str),
+        Some("passed")
+    );
+    assert_eq!(
+        statuses
+            .get("project-b")
+            .map(String::as_str),
+        Some("skipped")
+    );
+    assert_eq!(
+        statuses
+            .get("project-c")
+            .map(String::as_str),
+        Some("passed")
+    );
 
     drop(root);
 }
@@ -267,9 +292,24 @@ fn no_bail_skips_dependents_of_a_failed_task_and_runs_unrelated_ones() {
     let order = fs::read_to_string(workspace.join("order.log")).expect("read order log");
     assert_eq!(order, "project-c\n");
     let statuses = summary_statuses(&workspace);
-    assert_eq!(statuses.get("project-a").map(String::as_str), Some("skipped"));
-    assert_eq!(statuses.get("project-b").map(String::as_str), Some("failure"));
-    assert_eq!(statuses.get("project-c").map(String::as_str), Some("passed"));
+    assert_eq!(
+        statuses
+            .get("project-a")
+            .map(String::as_str),
+        Some("skipped")
+    );
+    assert_eq!(
+        statuses
+            .get("project-b")
+            .map(String::as_str),
+        Some("failure")
+    );
+    assert_eq!(
+        statuses
+            .get("project-c")
+            .map(String::as_str),
+        Some("passed")
+    );
 
     drop(root);
 }
@@ -435,7 +475,9 @@ fn dry_run_json_emits_the_tasks_and_their_resolved_edges() {
         .expect("dry run");
     assert!(output.status.success(), "dry run failed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let json_start = stdout.find('{').expect("stdout carries a JSON document");
+    let json_start = stdout
+        .find('{')
+        .expect("stdout carries a JSON document");
     let document: Value = serde_json::from_str(&stdout[json_start..]).expect("parse dry-run JSON");
     assert_eq!(
         document,
@@ -520,8 +562,18 @@ fn failed_upstream_task_is_reported_as_the_failure_not_a_missing_script() {
     assert!(!stderr.contains("RECURSIVE_RUN_NO_SCRIPT"), "stderr: {stderr}");
 
     let statuses = summary_statuses(&workspace);
-    assert_eq!(statuses.get("project-a").map(String::as_str), Some("skipped"));
-    assert_eq!(statuses.get("project-a#build").map(String::as_str), Some("failure"));
+    assert_eq!(
+        statuses
+            .get("project-a")
+            .map(String::as_str),
+        Some("skipped")
+    );
+    assert_eq!(
+        statuses
+            .get("project-a#build")
+            .map(String::as_str),
+        Some("failure")
+    );
 
     drop(root);
 }

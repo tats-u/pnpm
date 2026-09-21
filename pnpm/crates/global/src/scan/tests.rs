@@ -10,7 +10,11 @@ use std::{io, path::Path};
 use tempfile::TempDir;
 
 fn write_json(path: &Path, value: &serde_json::Value) {
-    std::fs::create_dir_all(path.parent().expect("json path has a parent")).unwrap();
+    std::fs::create_dir_all(
+        path.parent()
+            .expect("json path has a parent"),
+    )
+    .unwrap();
     std::fs::write(path, serde_json::to_string_pretty(value).unwrap()).unwrap();
 }
 
@@ -92,7 +96,8 @@ fn ordinary_engines_node_range_is_not_reified() {
 fn installed_bin_names_accepts_a_readable_binless_manifest() {
     let tmp = TempDir::new().unwrap();
     write_json(
-        &tmp.path().join("node_modules/binless/package.json"),
+        &tmp.path()
+            .join("node_modules/binless/package.json"),
         &json!({ "name": "binless", "version": "1.0.0" }),
     );
     let info = package_group(tmp.path(), &["binless"]);
@@ -111,7 +116,9 @@ fn installed_bin_names_treats_a_wholly_missing_modules_dir_as_binless() {
 #[test]
 fn installed_bin_names_rejects_a_malformed_declared_alias_manifest() {
     let tmp = TempDir::new().unwrap();
-    let manifest_path = tmp.path().join("node_modules/malformed/package.json");
+    let manifest_path = tmp
+        .path()
+        .join("node_modules/malformed/package.json");
     std::fs::create_dir_all(manifest_path.parent().unwrap()).unwrap();
     std::fs::write(manifest_path, "{ not valid JSON").unwrap();
     let info = package_group(tmp.path(), &["malformed"]);
@@ -123,7 +130,8 @@ fn installed_bin_names_rejects_a_malformed_declared_alias_manifest() {
 fn installed_bin_names_does_not_return_a_partial_set_when_one_manifest_is_missing() {
     let tmp = TempDir::new().unwrap();
     write_json(
-        &tmp.path().join("node_modules/readable/package.json"),
+        &tmp.path()
+            .join("node_modules/readable/package.json"),
         &json!({
             "name": "readable",
             "version": "1.0.0",
@@ -135,7 +143,8 @@ fn installed_bin_names_does_not_return_a_partial_set_when_one_manifest_is_missin
     assert!(get_installed_bin_names(&info).is_err());
 
     write_json(
-        &tmp.path().join("node_modules/missing/package.json"),
+        &tmp.path()
+            .join("node_modules/missing/package.json"),
         &json!({
             "name": "missing",
             "version": "1.0.0",
@@ -235,7 +244,11 @@ fn scan_finds_a_globally_installed_runtime() {
     assert!(groups[0].has_alias("node"));
     assert_eq!(get_installed_bin_names(&groups[0]).unwrap(), vec!["node".to_string()]);
 
-    assert!(find_global_package(global_dir.path(), "node").unwrap().is_some());
+    assert!(
+        find_global_package(global_dir.path(), "node")
+            .unwrap()
+            .is_some()
+    );
 }
 
 #[cfg(windows)]
@@ -249,5 +262,9 @@ fn scan_finds_a_junction_backed_global_install() {
     let groups = scan_global_packages(global_dir.path()).unwrap();
     assert_eq!(groups.len(), 1);
     assert!(groups[0].has_alias("node"));
-    assert!(find_global_package(global_dir.path(), "node").unwrap().is_some());
+    assert!(
+        find_global_package(global_dir.path(), "node")
+            .unwrap()
+            .is_some()
+    );
 }

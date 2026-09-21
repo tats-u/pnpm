@@ -11,7 +11,8 @@ fn project_with_deps(names: &[&str]) -> ProjectSnapshot {
         // `get_hoisting_limits` reads only the alias keys; the spec
         // value is filled in just to satisfy the map's value type.
         deps.insert(
-            name.parse::<PkgName>().expect("valid pkg name"),
+            name.parse::<PkgName>()
+                .expect("valid pkg name"),
             ResolvedDependencySpec {
                 specifier: "1.0.0".to_string(),
                 version: "1.0.0"

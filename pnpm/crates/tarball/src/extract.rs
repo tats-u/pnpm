@@ -44,7 +44,8 @@ pub(crate) fn allocate_tarball_buffer(
 
     let capacity = usize::try_from(size).map_err(|_| too_large())?;
     let mut buf = Vec::new();
-    buf.try_reserve_exact(capacity).map_err(|_| too_large())?;
+    buf.try_reserve_exact(capacity)
+        .map_err(|_| too_large())?;
     Ok(buf)
 }
 
@@ -509,7 +510,9 @@ impl<'a> StreamingExtract<'a> {
         meta: EntryMeta,
     ) -> Result<(), TarballError> {
         let mut data = Vec::with_capacity(meta.size as usize);
-        entry.read_to_end(&mut data).map_err(TarballError::ReadTarballEntries)?;
+        entry
+            .read_to_end(&mut data)
+            .map_err(TarballError::ReadTarballEntries)?;
         if data.len() as u64 != meta.size {
             return Err(truncated_entry_error());
         }
@@ -540,7 +543,8 @@ impl<'a> StreamingExtract<'a> {
         // `Some(size)` makes the store writer reject a short stream
         // before anything is committed to a content-addressed path, so a
         // truncated archive leaves no orphan blob behind.
-        let (file_path, file_hash, streamed_size) = self.store_dir
+        let (file_path, file_hash, streamed_size) = self
+            .store_dir
             .write_cas_file_from_reader(entry, meta.executable, Some(meta.size))
             .map_err(|error| match error {
                 WriteCasFileFromReaderError::Read(error) => TarballError::ReadTarballEntries(error),

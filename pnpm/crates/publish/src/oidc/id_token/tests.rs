@@ -112,7 +112,11 @@ fn github_request_env(name: &str) -> Option<String> {
 async fn fetches_and_returns_github_id_token() {
     github_actions_env!(Sys, github_request_env, |request: OidcRequest<'_>| {
         // The audience query param is derived from the registry hostname.
-        assert!(request.url.contains("audience=npm%3Aregistry.npmjs.org"));
+        assert!(
+            request
+                .url
+                .contains("audience=npm%3Aregistry.npmjs.org")
+        );
         assert_eq!(request.authorization, "Bearer request-token");
         Ok(OidcResponse { ok: true, status: 200, body: r#"{"value":"gh-id-token"}"#.to_owned() })
     });

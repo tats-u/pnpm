@@ -120,7 +120,9 @@ fn runtime_platform_selector_reads_current_in_a_list_as_the_host() {
 
 #[test]
 fn synthesize_runtime_manifest_emits_name_version_and_bin_single() {
-    let key: PackageKey = "node@22.0.0".parse().expect("parse node key");
+    let key: PackageKey = "node@22.0.0"
+        .parse()
+        .expect("parse node key");
     let binary = BinaryResolution {
         url: "https://nodejs.org/dist/v22.0.0/node-v22.0.0-darwin-arm64.tar.gz".to_string(),
         integrity: "sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa==".parse().expect("parse integrity"),
@@ -144,7 +146,9 @@ fn synthesize_runtime_manifest_emits_name_version_and_bin_single() {
 }
 #[test]
 fn synthesize_runtime_manifest_emits_name_version_and_bin_map() {
-    let key: PackageKey = "node@22.0.0".parse().expect("parse node key");
+    let key: PackageKey = "node@22.0.0"
+        .parse()
+        .expect("parse node key");
     let mut bin_map = std::collections::BTreeMap::new();
     bin_map.insert("node".to_string(), "bin/node".to_string());
     bin_map.insert("node-mips".to_string(), "bin/node-mips".to_string());
@@ -173,7 +177,9 @@ fn synthesize_runtime_manifest_emits_name_version_and_bin_map() {
 /// `@deno/runtime`) so pin the shape now rather than catch it later.
 #[test]
 fn synthesize_runtime_manifest_preserves_scoped_name() {
-    let key: PackageKey = "@foo/bar@1.2.3".parse().expect("parse scoped key");
+    let key: PackageKey = "@foo/bar@1.2.3"
+        .parse()
+        .expect("parse scoped key");
     let binary = BinaryResolution {
         url: "https://example.test/foo-bar-1.2.3.tar.gz".to_string(),
         integrity: "sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa==".parse().expect("parse integrity"),
@@ -206,7 +212,9 @@ async fn installing_a_runtime_persists_the_synthesized_manifest_into_the_store_i
     use std::sync::atomic::AtomicU8;
 
     let archive_tmp = tempfile::tempdir().expect("tempdir");
-    let tarball_path = archive_tmp.path().join("node-fixture.tar.gz");
+    let tarball_path = archive_tmp
+        .path()
+        .join("node-fixture.tar.gz");
     let tarball_bytes = build_runtime_tarball_fixture();
     std::fs::write(&tarball_path, &tarball_bytes).expect("write the fixture tarball");
     let integrity = ssri::IntegrityOpts::new()
@@ -220,7 +228,9 @@ async fn installing_a_runtime_persists_the_synthesized_manifest_into_the_store_i
     let config = leaked_offline_config("https://registry.test", store_tmp.path());
     let (writer, writer_task) = StoreIndexWriter::spawn(&config.store_dir);
 
-    let package_key: PackageKey = "node@runtime:22.0.0".parse().expect("parse runtime key");
+    let package_key: PackageKey = "node@runtime:22.0.0"
+        .parse()
+        .expect("parse runtime key");
     let metadata = pnpm_lockfile::PackageMetadata {
         resolution: LockfileResolution::Binary(BinaryResolution {
             url: format!("file:{}", tarball_path.display()),
@@ -295,13 +305,18 @@ async fn installing_a_runtime_persists_the_synthesized_manifest_into_the_store_i
     .await
     .expect("cold runtime install");
     assert!(
-        cold_cas_paths.cas_paths.contains_key("package.json"),
+        cold_cas_paths
+            .cas_paths
+            .contains_key("package.json"),
         "the cold slot gets the manifest",
     );
 
     // Flush the store-index writer so the row is durable before read-back.
     drop(writer);
-    writer_task.await.expect("join the writer task").expect("flush the store index");
+    writer_task
+        .await
+        .expect("join the writer task")
+        .expect("flush the store index");
 
     // The persisted row must carry the synthesized `package.json` in both
     // its `files` map and its bundled `manifest` — this is the copy a warm
@@ -319,7 +334,9 @@ async fn installing_a_runtime_persists_the_synthesized_manifest_into_the_store_i
         .expect("read the runtime row")
         .expect("the runtime row was persisted");
     assert!(row.files.contains_key("package.json"), "the row records the synthesized package.json");
-    let manifest = row.manifest.expect("the row records a bundled manifest");
+    let manifest = row
+        .manifest
+        .expect("the row records a bundled manifest");
     assert_eq!(
         manifest
             .get("bin")
@@ -379,7 +396,9 @@ async fn installing_a_runtime_persists_the_synthesized_manifest_into_the_store_i
     .await
     .expect("warm runtime reinstall reads the store, not the network");
     assert!(
-        warm_cas_paths.cas_paths.contains_key("package.json"),
+        warm_cas_paths
+            .cas_paths
+            .contains_key("package.json"),
         "the warm reinstall re-materializes the manifest from the persisted row",
     );
 

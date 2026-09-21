@@ -97,8 +97,11 @@ impl DependencyProvider for Provider<'_> {
         range: &Self::VS,
     ) -> std::result::Result<Option<Version>, Needed> {
         let Package::Distribution(name, _) = package else { return Ok(Some(Version::new([0]))) };
-        let versions =
-            self.packages.candidates.get(name).ok_or_else(|| Needed::Candidates(name.clone()))?;
+        let versions = self
+            .packages
+            .candidates
+            .get(name)
+            .ok_or_else(|| Needed::Candidates(name.clone()))?;
         Ok(versions
             .keys()
             .rev()
@@ -115,7 +118,9 @@ impl DependencyProvider for Provider<'_> {
         let result = match package {
             Package::Root => self.constraints(self.requirements, &[], &mut constraints),
             Package::Distribution(name, extra) => {
-                let metadata = self.packages.metadata
+                let metadata = self
+                    .packages
+                    .metadata
                     .get(&(name.clone(), version.clone()))
                     .ok_or_else(|| Needed::Metadata(name.clone(), version.clone()))?;
                 if let Some(unusable) = self.incompatible_interpreter(metadata) {
@@ -159,7 +164,8 @@ fn source_dependencies(
 }
 
 fn provides_extra(metadata: &WheelMetadata, extra: &ExtraName) -> bool {
-    metadata.provides_extra
+    metadata
+        .provides_extra
         .iter()
         .any(|provided| {
             provided
@@ -210,7 +216,10 @@ impl Provider<'_> {
     fn check_source(&self, requirement: &Requirement) -> std::result::Result<(), Needed> {
         let Some(VersionOrUrl::Url(url)) = &requirement.version_or_url else { return Ok(()) };
         let source = url.as_str();
-        if self.packages.rejected_sources.contains(&(requirement.name.clone(), source.to_string()))
+        if self
+            .packages
+            .rejected_sources
+            .contains(&(requirement.name.clone(), source.to_string()))
         {
             return Err(Needed::RejectedSource(format!(
                 "unavailable Python source for {}",
@@ -219,7 +228,11 @@ impl Provider<'_> {
         }
         let parsed =
             crate::Source::parse(source).map_err(|error| Needed::Invalid(error.to_string()))?;
-        if let Some(chosen) = self.packages.direct_urls.get(&requirement.name) {
+        if let Some(chosen) = self
+            .packages
+            .direct_urls
+            .get(&requirement.name)
+        {
             let chosen_source =
                 crate::Source::parse(chosen).map_err(|error| Needed::Invalid(error.to_string()))?;
             if !chosen_source.compatible_with(&parsed) {
@@ -229,7 +242,9 @@ impl Provider<'_> {
                 )));
             }
         }
-        if self.packages.candidates
+        if self
+            .packages
+            .candidates
             .get(&requirement.name)
             .is_some_and(|versions| {
                 !versions.is_empty()
@@ -246,10 +261,12 @@ impl Provider<'_> {
     /// Why this interpreter cannot use the wheel, when it cannot: a
     /// `Requires-Python` the running interpreter is outside of.
     fn incompatible_interpreter(&self, metadata: &WheelMetadata) -> Option<String> {
-        let specifier = metadata.requires_python.as_deref().and_then(declared_range)?;
-        (!specifier.contains(self.environment.python_full_version())).then(|| {
-            "incompatible Python interpreter".to_string()
-        })
+        let specifier = metadata
+            .requires_python
+            .as_deref()
+            .and_then(declared_range)?;
+        (!specifier.contains(self.environment.python_full_version()))
+            .then(|| "incompatible Python interpreter".to_string())
     }
 
     fn constraints(
@@ -270,18 +287,19 @@ impl Provider<'_> {
                     .filter(|requirement| !is_url(requirement)),
             )
         {
-            if !requirement.marker.evaluate(self.environment, extras) {
+            if !requirement
+                .marker
+                .evaluate(self.environment, extras)
+            {
                 continue;
             }
             self.check_source(requirement)?;
             let range = self.requirement_range(requirement, extras)?;
-            for extra in std::iter::once(None)
-                .chain(
-                    self.requirement_extras(requirement, extras)
-                        .into_iter()
-                        .map(Some),
-                )
-            {
+            for extra in std::iter::once(None).chain(
+                self.requirement_extras(requirement, extras)
+                    .into_iter()
+                    .map(Some),
+            ) {
                 let package = Package::Distribution(requirement.name.clone(), extra);
                 constraints
                     .entry(package)

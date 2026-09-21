@@ -26,7 +26,8 @@ pub fn detect_dep_types(lockfile: &Lockfile) -> DepTypes {
     let group_dep_paths = |group: fn(
         &pnpm_lockfile::ProjectSnapshot,
     ) -> Option<&pnpm_lockfile::ResolvedDependencyMap>| {
-        lockfile.importers
+        lockfile
+            .importers
             .values()
             .filter_map(group)
             .flat_map(|deps| {
@@ -37,8 +38,7 @@ pub fn detect_dep_types(lockfile: &Lockfile) -> DepTypes {
     };
 
     let dev_dep_paths = group_dep_paths(|importer| importer.dev_dependencies.as_ref());
-    let optional_dep_paths =
-        group_dep_paths(|importer| importer.optional_dependencies.as_ref());
+    let optional_dep_paths = group_dep_paths(|importer| importer.optional_dependencies.as_ref());
     let prod_dep_paths = group_dep_paths(|importer| importer.dependencies.as_ref());
 
     detect_in_subgraph(&mut ctx, &dev_dep_paths, true);
@@ -63,10 +63,15 @@ fn detect_in_subgraph_at(ctx: &mut Ctx<'_>, dep_paths: &[PkgNameVerPeer], dev: b
         return;
     }
     for dep_path in dep_paths {
-        if !ctx.walked.insert((dep_path.clone(), dev)) {
+        if !ctx
+            .walked
+            .insert((dep_path.clone(), dev))
+        {
             continue;
         }
-        let Some(snapshot) = ctx.lockfile.snapshots
+        let Some(snapshot) = ctx
+            .lockfile
+            .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.get(dep_path))
         else {
@@ -90,11 +95,15 @@ fn detect_in_subgraph_at(ctx: &mut Ctx<'_>, dep_paths: &[PkgNameVerPeer], dev: b
 /// dependency stays `DevOnly` however often it is seen again.
 fn record_dep_type(ctx: &mut Ctx<'_>, dep_path: &PkgNameVerPeer, dev: bool) {
     if dev {
-        ctx.not_prod_only.insert(dep_path.clone());
-        ctx.dep_types.insert(dep_path.clone(), DepType::DevOnly);
+        ctx.not_prod_only
+            .insert(dep_path.clone());
+        ctx.dep_types
+            .insert(dep_path.clone(), DepType::DevOnly);
     } else if ctx.dep_types.get(dep_path) == Some(&DepType::DevOnly) {
-        ctx.dep_types.insert(dep_path.clone(), DepType::DevAndProd);
+        ctx.dep_types
+            .insert(dep_path.clone(), DepType::DevAndProd);
     } else if !ctx.dep_types.contains_key(dep_path) && !ctx.not_prod_only.contains(dep_path) {
-        ctx.dep_types.insert(dep_path.clone(), DepType::ProdOnly);
+        ctx.dep_types
+            .insert(dep_path.clone(), DepType::ProdOnly);
     }
 }

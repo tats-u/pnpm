@@ -178,9 +178,9 @@ pub(super) fn extract_license_homepage(manifest: &serde_json::Value) -> Option<S
 
     let repository = match manifest.get("repository")? {
         serde_json::Value::String(repository) => repository,
-        serde_json::Value::Object(repository) => {
-            repository.get("url").and_then(serde_json::Value::as_str)?
-        }
+        serde_json::Value::Object(repository) => repository
+            .get("url")
+            .and_then(serde_json::Value::as_str)?,
         _ => return None,
     };
     super::HostedGit::package_docs_url(repository)

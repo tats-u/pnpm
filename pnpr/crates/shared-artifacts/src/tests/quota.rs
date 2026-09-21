@@ -20,7 +20,10 @@ async fn compiler_cache_survives_side_effects_reclamation_and_shares_quota() {
         .await
         .unwrap();
     let before = store.load_usage().await.unwrap().0;
-    let after = store.reclaim_unreferenced_blobs().await.unwrap();
+    let after = store
+        .reclaim_unreferenced_blobs()
+        .await
+        .unwrap();
     assert_eq!(after.global_bytes, before.global_bytes);
     assert_eq!(after.owner_bytes.len(), 1);
     assert_eq!(
@@ -56,8 +59,9 @@ async fn compiler_cache_failed_writes_reconcile_quota_even_after_remote_commit()
         let directory = TempDir::new().unwrap();
         let store = SharedArtifactStore::new(&hosted, directory.path()).unwrap();
         let key = CompilerCacheKey::try_from("cache-key".to_string()).unwrap();
-        let result =
-            store.publish_compiler_cache("acme", &key, bytes::Bytes::from_static(b"a")).await;
+        let result = store
+            .publish_compiler_cache("acme", &key, bytes::Bytes::from_static(b"a"))
+            .await;
         assert!(result.is_err(), "write failure must surface: {result:?}");
         let usage = store.load_usage().await.unwrap().0;
         assert_eq!(usage.global_bytes, if commit_before_error { 65 } else { 0 });
@@ -164,7 +168,9 @@ async fn concurrent_replicas_update_quota_without_lost_writes() {
         publications.push(tokio::spawn(async move {
             let scratch = TempDir::new().unwrap();
             let store = SharedArtifactStore::new(&config, scratch.path()).unwrap();
-            store.publish("acme", publication_for_platform(index)).await
+            store
+                .publish("acme", publication_for_platform(index))
+                .await
         }));
     }
     for publication in publications {
@@ -187,8 +193,11 @@ async fn concurrent_replicas_update_quota_without_lost_writes() {
     let expected = (0..PUBLICATIONS)
         .map(|index| {
             let publication = publication_for_platform(index);
-            serde_json::to_vec(&publication.envelope).unwrap().len()
-                + publication.envelope
+            serde_json::to_vec(&publication.envelope)
+                .unwrap()
+                .len()
+                + publication
+                    .envelope
                     .digest()
                     .unwrap()
                     .len()
@@ -200,20 +209,30 @@ async fn concurrent_replicas_update_quota_without_lost_writes() {
 #[tokio::test]
 async fn quota_is_reserved_before_objects_are_written() {
     let storage = TempDir::new().unwrap();
-    let store =
-        SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap().with_limits(1, 1);
+    let store = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path())
+        .unwrap()
+        .with_limits(1, 1);
 
     let error = store
         .publish("acme", publication("ci/too-large"))
         .await
         .unwrap_err();
 
-    assert!(error.to_string().contains("quota exceeded"), "{error}");
-    let entries = std::fs::read_dir(storage.path().join("shared-artifacts/v0"))
-        .unwrap()
-        .filter_map(std::result::Result::ok)
-        .filter(|entry| entry.file_name() != ".locks")
-        .collect::<Vec<_>>();
+    assert!(
+        error
+            .to_string()
+            .contains("quota exceeded"),
+        "{error}"
+    );
+    let entries = std::fs::read_dir(
+        storage
+            .path()
+            .join("shared-artifacts/v0"),
+    )
+    .unwrap()
+    .filter_map(std::result::Result::ok)
+    .filter(|entry| entry.file_name() != ".locks")
+    .collect::<Vec<_>>();
     assert!(entries.is_empty(), "quota rejection wrote objects: {entries:?}");
 }
 
@@ -257,7 +276,8 @@ async fn failed_object_writes_reconcile_quota_to_physical_storage() {
     .unwrap();
     assert_eq!(usage.global_bytes, 0);
     assert_eq!(
-        usage.owner_bytes
+        usage
+            .owner_bytes
             .values()
             .copied()
             .sum::<u64>(),
@@ -289,10 +309,16 @@ async fn publication_finish_retries_a_transient_quota_write_failure() {
     let scratch = TempDir::new().unwrap();
     let store = SharedArtifactStore::new(&config, scratch.path()).unwrap();
     let publication = artifact_operation_id().unwrap();
-    store.begin_publication(&publication).await.unwrap();
+    store
+        .begin_publication(&publication)
+        .await
+        .unwrap();
     fail_next_quota_write.store(true, Ordering::SeqCst);
 
-    store.finish_publication(&publication, true).await.unwrap();
+    store
+        .finish_publication(&publication, true)
+        .await
+        .unwrap();
 
     let usage_path = ObjectPath::from(".pnpr-artifacts/v0/quota.json");
     let usage: ArtifactUsage = serde_json::from_slice(
@@ -315,7 +341,10 @@ async fn publication_finish_retries_a_transient_quota_write_failure() {
 #[tokio::test]
 async fn a_failed_reread_after_a_lost_race_still_releases_the_quota() {
     let winner = publication("ci/winner");
-    let (payload, _) = winner.envelope.decode_payload().unwrap();
+    let (payload, _) = winner
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&winner.key, &payload.subject);
     let slot = super::super::compatibility_slot(&payload.compatibility);
@@ -383,8 +412,9 @@ async fn a_retry_of_a_stored_artifact_needs_no_quota() {
             .unwrap(),
     );
 
-    let full =
-        SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap().with_limits(1, 1);
+    let full = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path())
+        .unwrap()
+        .with_limits(1, 1);
 
     assert!(
         !full
@@ -404,7 +434,10 @@ async fn publishing_into_an_entry_that_needs_markers_keeps_its_quota_straight() 
     let storage = TempDir::new().unwrap();
     let store = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap();
     let stored = publication_tagged("ci/stored", &["pnpm:v1:linux-arm64-node22-glibc2.17"]);
-    let (payload, _) = stored.envelope.decode_payload().unwrap();
+    let (payload, _) = stored
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&stored.key, &payload.subject);
     let slot = super::super::compatibility_slot(&payload.compatibility);
@@ -419,7 +452,12 @@ async fn publishing_into_an_entry_that_needs_markers_keeps_its_quota_straight() 
     // Reaches machines the stored one does not, so it is published rather than
     // refused, and its release runs with the backfill's markers already written.
     let ours = publication_tagged("ci/ours", &["pnpm:v1:linux-x64-node22-glibc2.17"]);
-    assert!(store.publish("acme", ours).await.unwrap());
+    assert!(
+        store
+            .publish("acme", ours)
+            .await
+            .unwrap()
+    );
 
     assert!(
         store

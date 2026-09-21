@@ -8,7 +8,10 @@ mod higher_direct_dep_version {
     fn direct(name: &str, versions: &[&str]) -> DirectDepVersions {
         let parsed = versions
             .iter()
-            .map(|raw| raw.parse::<Version>().expect("parse version"))
+            .map(|raw| {
+                raw.parse::<Version>()
+                    .expect("parse version")
+            })
             .collect();
         HashMap::from_iter([(name.to_string(), parsed)])
     }

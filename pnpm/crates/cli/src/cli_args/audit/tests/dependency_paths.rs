@@ -35,8 +35,16 @@ fn lockfile_to_audit_request_respects_prod_and_no_optional() {
     assert_eq!(request.request["transitive"], vec!["2.0.0"]);
     assert_eq!(request.request["config-dep"], vec!["1.0.0"]);
     assert!(!request.request.contains_key("dev-only"));
-    assert!(!request.request.contains_key("optional-only"));
-    assert!(!request.request.contains_key("transitive-optional"));
+    assert!(
+        !request
+            .request
+            .contains_key("optional-only")
+    );
+    assert!(
+        !request
+            .request
+            .contains_key("transitive-optional")
+    );
     assert_eq!(request.total_dependencies, 3);
     assert_eq!(request.dependencies, 3);
     assert_eq!(request.dev_dependencies, 0);
@@ -100,12 +108,12 @@ snapshots:
             SpecifierAndResolution { specifier: "9.0.0".to_string(), version: "9.0.0".to_string() },
         )]));
     }
-    env.snapshots.insert(
-        "my-config@2.0.0".parse().unwrap(),
-        snapshot(&[("config-util", "1.0.0")], &[]),
-    );
-    env.snapshots.insert("config-util@1.0.0".parse().unwrap(), SnapshotEntry::default());
-    env.snapshots.insert("pnpm@9.0.0".parse().unwrap(), SnapshotEntry::default());
+    env.snapshots
+        .insert("my-config@2.0.0".parse().unwrap(), snapshot(&[("config-util", "1.0.0")], &[]));
+    env.snapshots
+        .insert("config-util@1.0.0".parse().unwrap(), SnapshotEntry::default());
+    env.snapshots
+        .insert("pnpm@9.0.0".parse().unwrap(), SnapshotEntry::default());
 
     let request = lockfile_to_audit_request(&lockfile, Some(&env), all_dependencies());
 
@@ -119,7 +127,8 @@ snapshots:
 fn lockfile_to_audit_request_includes_optional_dependencies_from_env_snapshots() {
     let lockfile = empty_lockfile();
     let mut env = EnvLockfile::create();
-    env.root_importer_mut().config_dependencies
+    env.root_importer_mut()
+        .config_dependencies
         .insert(
             "my-tool".to_string(),
             SpecifierAndResolution { specifier: "1.0.0".to_string(), version: "1.0.0".to_string() },
@@ -128,8 +137,10 @@ fn lockfile_to_audit_request_includes_optional_dependencies_from_env_snapshots()
         "my-tool@1.0.0".parse().unwrap(),
         snapshot(&[("required-dep", "1.0.0")], &[("optional-dep", "2.0.0")]),
     );
-    env.snapshots.insert("required-dep@1.0.0".parse().unwrap(), SnapshotEntry::default());
-    env.snapshots.insert("optional-dep@2.0.0".parse().unwrap(), SnapshotEntry::default());
+    env.snapshots
+        .insert("required-dep@1.0.0".parse().unwrap(), SnapshotEntry::default());
+    env.snapshots
+        .insert("optional-dep@2.0.0".parse().unwrap(), SnapshotEntry::default());
 
     let request = lockfile_to_audit_request(&lockfile, Some(&env), all_dependencies());
 
@@ -139,25 +150,40 @@ fn lockfile_to_audit_request_includes_optional_dependencies_from_env_snapshots()
     let without_optional =
         lockfile_to_audit_request(&lockfile, Some(&env), prod_without_optional());
     assert_eq!(without_optional.request["required-dep"], vec!["1.0.0"]);
-    assert!(!without_optional.request.contains_key("optional-dep"));
+    assert!(
+        !without_optional
+            .request
+            .contains_key("optional-dep")
+    );
 }
 
 #[test]
 fn lockfile_to_audit_request_ignores_unreachable_env_packages() {
     let lockfile = empty_lockfile();
     let mut env = EnvLockfile::create();
-    env.root_importer_mut().config_dependencies
+    env.root_importer_mut()
+        .config_dependencies
         .insert(
             "my-config".to_string(),
             SpecifierAndResolution { specifier: "1.0.0".to_string(), version: "1.0.0".to_string() },
         );
-    env.snapshots.insert("my-config@1.0.0".parse().unwrap(), SnapshotEntry::default());
-    env.snapshots.insert("orphan-pkg@3.0.0".parse().unwrap(), SnapshotEntry::default());
+    env.snapshots
+        .insert("my-config@1.0.0".parse().unwrap(), SnapshotEntry::default());
+    env.snapshots
+        .insert("orphan-pkg@3.0.0".parse().unwrap(), SnapshotEntry::default());
 
     let request = lockfile_to_audit_request(&lockfile, Some(&env), all_dependencies());
 
-    assert!(request.request.contains_key("my-config"));
-    assert!(!request.request.contains_key("orphan-pkg"));
+    assert!(
+        request
+            .request
+            .contains_key("my-config")
+    );
+    assert!(
+        !request
+            .request
+            .contains_key("orphan-pkg")
+    );
 }
 
 #[test]
@@ -226,7 +252,9 @@ snapshots:
     let index =
         build_audit_path_index(&lockfile, None, &vulnerable_names(&["lodash"]), all_dependencies());
 
-    let mut paths = path_info(&index, "lodash", "4.0.0").paths.clone();
+    let mut paths = path_info(&index, "lodash", "4.0.0")
+        .paths
+        .clone();
     paths.sort();
     assert_eq!(paths, vec![".>a>lodash", ".>b>lodash"]);
 }
@@ -282,7 +310,12 @@ snapshots:
     let index =
         build_audit_path_index(&lockfile, None, &vulnerable_names(&["vuln"]), all_dependencies());
 
-    assert_eq!(path_info(&index, "vuln", "1.0.0").paths.len(), 50);
+    assert_eq!(
+        path_info(&index, "vuln", "1.0.0")
+            .paths
+            .len(),
+        50
+    );
     assert!(!index.contains_key("cold"));
     assert!(!index.contains_key("cold-leaf"));
 }
@@ -318,7 +351,12 @@ snapshots:
     let index =
         build_audit_path_index(&lockfile, None, &vulnerable_names(&["vuln"]), all_dependencies());
 
-    assert_eq!(path_info(&index, "vuln", "1.0.0").paths.len(), MAX_PATHS_PER_FINDING);
+    assert_eq!(
+        path_info(&index, "vuln", "1.0.0")
+            .paths
+            .len(),
+        MAX_PATHS_PER_FINDING
+    );
 }
 
 #[test]
@@ -499,7 +537,9 @@ snapshots:
     let index =
         build_audit_path_index(&lockfile, None, &vulnerable_names(&["x"]), all_dependencies());
 
-    let mut paths = path_info(&index, "x", "1.0.0").paths.clone();
+    let mut paths = path_info(&index, "x", "1.0.0")
+        .paths
+        .clone();
     paths.sort();
     assert_eq!(paths, vec![".>b>c>x", ".>c>x"]);
 }
@@ -621,9 +661,15 @@ snapshots:
 #[test]
 fn build_audit_path_index_prunes_layered_diamonds_after_finding_is_saturated() {
     let mut lockfile = empty_lockfile();
-    lockfile.importers.get_mut(".").unwrap().dependencies =
+    lockfile
+        .importers
+        .get_mut(".")
+        .unwrap()
+        .dependencies =
         Some(serde_saphyr::from_str("a0: {specifier: '1.0.0', version: '1.0.0'}").unwrap());
-    let snapshots = lockfile.snapshots.get_or_insert_with(Default::default);
+    let snapshots = lockfile
+        .snapshots
+        .get_or_insert_with(Default::default);
     for i in 0..28 {
         for prefix in ["a", "b"] {
             let children = if i == 27 {
@@ -636,7 +682,9 @@ fn build_audit_path_index_prunes_layered_diamonds_after_finding_is_saturated() {
                 .map(|(name, version)| (name.as_str(), *version))
                 .collect::<Vec<_>>();
             snapshots.insert(
-                format!("{prefix}{i}@1.0.0").parse().unwrap(),
+                format!("{prefix}{i}@1.0.0")
+                    .parse()
+                    .unwrap(),
                 snapshot(&children, &[]),
             );
         }
@@ -649,8 +697,18 @@ fn build_audit_path_index_prunes_layered_diamonds_after_finding_is_saturated() {
         &vulnerable_names(&["vuln", "other"]),
         all_dependencies(),
     );
-    assert_eq!(path_info(&index, "vuln", "1.0.0").paths.len(), MAX_PATHS_PER_FINDING);
-    assert_eq!(path_info(&index, "other", "2.0.0").paths.len(), MAX_PATHS_PER_FINDING);
+    assert_eq!(
+        path_info(&index, "vuln", "1.0.0")
+            .paths
+            .len(),
+        MAX_PATHS_PER_FINDING
+    );
+    assert_eq!(
+        path_info(&index, "other", "2.0.0")
+            .paths
+            .len(),
+        MAX_PATHS_PER_FINDING
+    );
 
     let index =
         build_audit_path_index(&lockfile, None, &vulnerable_names(&["a0"]), all_dependencies());
@@ -712,7 +770,9 @@ fn build_audit_path_index_handles_deep_chain_with_many_vulnerable_targets() {
     let mut lockfile = parse_lockfile(
         "lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n      n0: {specifier: '1.0.0', version: '1.0.0'}\n",
     );
-    let snapshots = lockfile.snapshots.get_or_insert_with(Default::default);
+    let snapshots = lockfile
+        .snapshots
+        .get_or_insert_with(Default::default);
     let mut names = Vec::new();
     for i in 0..size {
         let name = format!("n{i}");
@@ -732,10 +792,20 @@ fn build_audit_path_index_handles_deep_chain_with_many_vulnerable_targets() {
     );
     assert_eq!(index.len(), size);
     for name in &names {
-        assert_eq!(path_info(&index, name, "1.0.0").paths.len(), 1);
+        assert_eq!(
+            path_info(&index, name, "1.0.0")
+                .paths
+                .len(),
+            1
+        );
     }
     assert_eq!(path_info(&index, "n0", "1.0.0").paths, vec![".>n0"]);
-    assert_eq!(path_info(&index, "n1499", "1.0.0").paths[0].split('>').count(), size + 1);
+    assert_eq!(
+        path_info(&index, "n1499", "1.0.0").paths[0]
+            .split('>')
+            .count(),
+        size + 1
+    );
 }
 
 #[test]
@@ -744,14 +814,21 @@ fn build_audit_path_index_bounds_paths_across_many_peer_contexts_of_one_finding(
     let mut lockfile = parse_lockfile(
         "lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n      vuln: {specifier: '1.0.0', version: '1.0.0(peer@0.0.0)'}\n",
     );
-    let snapshots = lockfile.snapshots.get_or_insert_with(Default::default);
+    let snapshots = lockfile
+        .snapshots
+        .get_or_insert_with(Default::default);
     for i in 0..size {
         let entry = if i + 1 < size {
             snapshot(&[("vuln", &format!("1.0.0(peer@0.0.{})", i + 1))], &[])
         } else {
             SnapshotEntry::default()
         };
-        snapshots.insert(format!("vuln@1.0.0(peer@0.0.{i})").parse().unwrap(), entry);
+        snapshots.insert(
+            format!("vuln@1.0.0(peer@0.0.{i})")
+                .parse()
+                .unwrap(),
+            entry,
+        );
     }
     let index =
         build_audit_path_index(&lockfile, None, &vulnerable_names(&["vuln"]), all_dependencies());
@@ -777,7 +854,9 @@ fn build_audit_path_index_handles_sequential_saturation_of_many_versions() {
         write!(importers, "\n  project-{i}:\n    dependencies:\n      vuln: {{specifier: '1.0.0', version: '1.0.0'}}\n").unwrap();
     }
     let mut lockfile = parse_lockfile(&format!("lockfileVersion: '9.0'\nimporters:\n{importers}"));
-    let snapshots = lockfile.snapshots.get_or_insert_with(Default::default);
+    let snapshots = lockfile
+        .snapshots
+        .get_or_insert_with(Default::default);
     for i in 0..size {
         let entry = if i + 1 < size {
             snapshot(&[("vuln", &format!("1.0.{}", i + 1))], &[])
@@ -791,7 +870,9 @@ fn build_audit_path_index_handles_sequential_saturation_of_many_versions() {
     assert_eq!(index["vuln"].len(), size);
     for i in 0..size {
         assert_eq!(
-            path_info(&index, "vuln", &format!("1.0.{i}")).paths.len(),
+            path_info(&index, "vuln", &format!("1.0.{i}"))
+                .paths
+                .len(),
             MAX_PATHS_PER_FINDING,
         );
     }
@@ -822,6 +903,16 @@ snapshots:
         &vulnerable_names(&["a", "vuln"]),
         all_dependencies(),
     );
-    assert_eq!(path_info(&index, "a", "1.0.0").paths.len(), MAX_PATHS_PER_FINDING);
-    assert_eq!(path_info(&index, "vuln", "1.0.0").paths.len(), MAX_PATHS_PER_FINDING);
+    assert_eq!(
+        path_info(&index, "a", "1.0.0")
+            .paths
+            .len(),
+        MAX_PATHS_PER_FINDING
+    );
+    assert_eq!(
+        path_info(&index, "vuln", "1.0.0")
+            .paths
+            .len(),
+        MAX_PATHS_PER_FINDING
+    );
 }

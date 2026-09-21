@@ -33,7 +33,9 @@ importers:
     else {
         panic!("compatible catalog update should succeed");
     };
-    let entry = &updated.catalogs.expect("catalog snapshots")["default"]["foo"];
+    let entry = &updated
+        .catalogs
+        .expect("catalog snapshots")["default"]["foo"];
     assert_eq!(entry.specifier, ">=1 <2");
     assert_eq!(entry.version, "1.1.0");
 }

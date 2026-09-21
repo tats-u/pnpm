@@ -167,7 +167,8 @@ impl AuthSqlBackend for SlowWriteBackend {
 #[async_trait]
 impl AuthSqlBackend for CountingLookupBackend {
     async fn stored_user(&self, _username: &str) -> Result<Option<StoredUser>> {
-        self.stored_user_calls.fetch_add(1, Ordering::SeqCst);
+        self.stored_user_calls
+            .fetch_add(1, Ordering::SeqCst);
         Ok(None)
     }
 
@@ -220,7 +221,8 @@ impl AuthSqlBackend for CappedBackend {
     }
 
     async fn reconcile_user_counter_overcount(&self) -> Result<bool> {
-        self.reconcile_calls.fetch_add(1, Ordering::SeqCst);
+        self.reconcile_calls
+            .fetch_add(1, Ordering::SeqCst);
         Ok(false)
     }
 
@@ -267,7 +269,10 @@ async fn add_or_login_propagates_corrupt_hash_errors() {
         Duration::from_secs(30),
     );
 
-    let err = auth.add_or_login("alice", "secret").await.unwrap_err();
+    let err = auth
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap_err();
 
     assert!(matches!(err, RegistryError::Bcrypt(_)), "got {err:?}");
 }
@@ -281,7 +286,10 @@ async fn add_or_login_returns_the_stored_username_for_existing_users() {
         Duration::from_secs(30),
     );
 
-    let outcome = auth.add_or_login("alice", "secret").await.unwrap();
+    let outcome = auth
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap();
 
     assert!(matches!(outcome, (UpsertOutcome::LoggedIn, _)));
     assert_eq!(outcome.1, "Alice");
@@ -298,14 +306,20 @@ async fn add_or_login_rejects_invalid_usernames_without_db_lookup() {
     let overlong = "a".repeat(MAX_USERNAME_CHARS + 1);
 
     for username in ["", " alice", "alice ", "#alice", "alice:admin", "alice\nadmin"] {
-        let err = auth.add_or_login(username, "secret").await.unwrap_err();
+        let err = auth
+            .add_or_login(username, "secret")
+            .await
+            .unwrap_err();
         assert_eq!(
             err.status_code(),
             axum::http::StatusCode::BAD_REQUEST,
             "expected {username:?} to be rejected",
         );
     }
-    let err = auth.add_or_login(&overlong, "secret").await.unwrap_err();
+    let err = auth
+        .add_or_login(&overlong, "secret")
+        .await
+        .unwrap_err();
     assert_eq!(err.status_code(), axum::http::StatusCode::BAD_REQUEST);
     assert_eq!(stored_user_calls.load(Ordering::SeqCst), 0);
 }
@@ -320,7 +334,10 @@ async fn add_or_login_rate_limits_capped_reconciliation() {
     );
 
     for username in ["alice", "bob", "carol"] {
-        let err = auth.add_or_login(username, "secret").await.unwrap_err();
+        let err = auth
+            .add_or_login(username, "secret")
+            .await
+            .unwrap_err();
         assert!(matches!(err, RegistryError::TooManyUsers { max: 1 }));
     }
 

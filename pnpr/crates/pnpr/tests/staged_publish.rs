@@ -27,7 +27,10 @@ fn static_config(storage: PathBuf) -> Config {
 }
 
 async fn body_bytes(body: Body) -> Vec<u8> {
-    to_bytes(body, usize::MAX).await.expect("read body").to_vec()
+    to_bytes(body, usize::MAX)
+        .await
+        .expect("read body")
+        .to_vec()
 }
 
 async fn body_json(body: Body) -> Value {
@@ -134,7 +137,12 @@ async fn staged_publish_is_held_back_until_approved() {
     assert_eq!(listed["items"][0]["actor"], "alice");
     assert_eq!(listed["items"][0]["actorType"], "user");
     assert_eq!(listed["items"][0]["shasum"], Value::String(sha1_hex(tarball)));
-    assert!(listed["items"][0].get("registry").is_none(), "routing state must not be served");
+    assert!(
+        listed["items"][0]
+            .get("registry")
+            .is_none(),
+        "routing state must not be served"
+    );
 
     let view = app
         .clone()

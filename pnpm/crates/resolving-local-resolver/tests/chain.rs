@@ -39,7 +39,10 @@ async fn dispatcher_routes_link_specifier_through_local_resolver() {
         bare_specifier: Some("link:..".to_string()),
         ..WantedDependency::default()
     };
-    let result = resolver.resolve(&wd, &opts).await.expect("resolve");
+    let result = resolver
+        .resolve(&wd, &opts)
+        .await
+        .expect("resolve");
     assert_eq!(result.id.as_str(), "link:..");
     assert_eq!(result.alias.as_deref(), Some("parent"));
     assert!(matches!(result.resolution, LockfileResolution::Directory(_)));
@@ -68,7 +71,11 @@ async fn dispatcher_falls_through_when_specifier_is_neither_local_nor_npm() {
         .resolve(&wd, &opts)
         .await
         .expect_err("chain with only the local resolver shouldn't claim a registry-shaped dep");
-    assert!(err.downcast_ref::<SpecNotSupportedByAnyResolverError>().is_some(), "got {err}");
+    assert!(
+        err.downcast_ref::<SpecNotSupportedByAnyResolverError>()
+            .is_some(),
+        "got {err}"
+    );
 }
 
 #[tokio::test]
@@ -92,6 +99,9 @@ async fn resolve_latest_claims_local_scheme_specifiers() {
         },
         compatible: false,
     };
-    let info = resolver.resolve_latest(&query, &opts).await.expect("resolve_latest");
+    let info = resolver
+        .resolve_latest(&query, &opts)
+        .await
+        .expect("resolve_latest");
     assert!(info.is_some(), "local resolver should claim link: specs in resolve_latest");
 }

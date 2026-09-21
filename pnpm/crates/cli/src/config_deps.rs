@@ -178,7 +178,8 @@ pub async fn resolve_engine_version(
         ..WantedDependency::default()
     };
     let opts = engine_resolve_options(config)?;
-    let result = context.resolver
+    let result = context
+        .resolver
         .resolve(&wanted, &opts)
         .await
         .map_err(|error| miette::miette!("{error}"))
@@ -199,10 +200,12 @@ pub async fn resolve_engine_version(
     Ok(Some(ResolvedEngine {
         version: name_ver.suffix.to_string(),
         manifest: result.package.manifest.clone(),
-        policy_violation: result.policy_violation.map(|violation| EnginePolicyViolation {
-            code: violation.code,
-            reason: violation.reason,
-        }),
+        policy_violation: result
+            .policy_violation
+            .map(|violation| EnginePolicyViolation {
+                code: violation.code,
+                reason: violation.reason,
+            }),
     }))
 }
 
@@ -214,7 +217,10 @@ fn engine_resolve_options(config: &Config) -> Result<ResolveOptions> {
     // maturity cutoff protects nothing — it only makes a dist-tag that points
     // at it fall back to an older release, downgrading the user
     // (pnpm/pnpm#13883).
-    let mut exclude_patterns = config.minimum_release_age_exclude.clone().unwrap_or_default();
+    let mut exclude_patterns = config
+        .minimum_release_age_exclude
+        .clone()
+        .unwrap_or_default();
     exclude_patterns.push(format!("pnpm@{PNPM_VERSION}"));
     let published_by_exclude =
         pnpm_config::version_policy::create_package_version_policy(&exclude_patterns)
@@ -225,7 +231,8 @@ fn engine_resolve_options(config: &Config) -> Result<ResolveOptions> {
         pnpm_config::TrustPolicy::Off => None,
         pnpm_config::TrustPolicy::NoDowngrade => Some(pnpm_config::TrustPolicy::NoDowngrade),
     };
-    let trust_policy_exclude = config.trust_policy_exclude
+    let trust_policy_exclude = config
+        .trust_policy_exclude
         .as_deref()
         .filter(|patterns| !patterns.is_empty())
         .map(pnpm_config::version_policy::create_package_version_policy)
@@ -259,12 +266,13 @@ pub async fn add_config_dependencies<Reporter: self::Reporter>(
     root_dir: &Path,
     added: &BTreeMap<String, String>,
 ) -> Result<()> {
-    let mut config_dependencies = config.config_dependencies.clone().unwrap_or_default();
+    let mut config_dependencies = config
+        .config_dependencies
+        .clone()
+        .unwrap_or_default();
     for (name, specifier) in added {
-        config_dependencies.insert(
-            name.clone(),
-            ConfigDependency::VersionWithIntegrity(specifier.clone()),
-        );
+        config_dependencies
+            .insert(name.clone(), ConfigDependency::VersionWithIntegrity(specifier.clone()));
     }
 
     resolve_and_install::<Reporter>(config, &config_dependencies, root_dir, false).await?;
@@ -304,7 +312,10 @@ async fn resolve_and_install<Reporter: self::Reporter>(
     }));
 
     let context = EnvInstallerContext::new(config)?;
-    context.network.http_client.set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+    context
+        .network
+        .http_client
+        .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
     let options = context.options(root_dir, frozen_lockfile);
 
     resolve_and_install_config_deps::<Reporter>(config_dependencies, &context.resolver, &options)

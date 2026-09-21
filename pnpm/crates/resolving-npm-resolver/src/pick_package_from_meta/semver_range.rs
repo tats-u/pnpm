@@ -23,7 +23,9 @@ pub(super) fn cached_range(range: &str) -> Option<Arc<Range>> {
         return entry.value().clone();
     }
     let normalized = normalize_partial_lte_comparators(range);
-    let parsed = Range::parse(&normalized).ok().map(Arc::new);
+    let parsed = Range::parse(&normalized)
+        .ok()
+        .map(Arc::new);
     RANGE_CACHE.insert(range.to_string(), parsed.clone());
     parsed
 }
@@ -76,7 +78,10 @@ pub(super) fn partial_lte_upper_bound(version: &str) -> Option<String> {
 }
 
 pub(super) fn is_digits(value: &str) -> bool {
-    !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit())
+    !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit())
 }
 
 /// Check whether `version` satisfies `range` under node-semver's

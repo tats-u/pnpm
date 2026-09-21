@@ -45,9 +45,15 @@ where
         options: InstallRunOptions<'a, '_>,
     ) -> Result<(), InstallError> {
         let _store_lock = if self.context.config.frozen_store {
-            self.context.config.store_dir.lock_for_frozen_use()
+            self.context
+                .config
+                .store_dir
+                .lock_for_frozen_use()
         } else {
-            self.context.config.store_dir.lock_for_use()
+            self.context
+                .config
+                .store_dir
+                .lock_for_use()
         }
         .map_err(InstallError::StoreLock)?;
         // The branch lockfiles become disposable only once the merge has
@@ -55,14 +61,19 @@ where
         // lockfile never merged them, and one that only reports what it
         // would do has its lockfile taken back afterwards — deleting them
         // in either case drops resolutions no file is left holding.
-        let merge_will_be_saved = self.context.config.merge_git_branch_lockfiles
+        let merge_will_be_saved = self
+            .context
+            .config
+            .merge_git_branch_lockfiles
             && self.context.config.lockfile
             && options.save_lockfile
             && !options.lockfile_check
             && !self.execution.dry_run;
         let branch_lockfiles_to_clean = merge_will_be_saved
             .then(|| {
-                let manifest_dir = self.context.manifest
+                let manifest_dir = self
+                    .context
+                    .manifest
                     .path()
                     .parent()
                     .expect("manifest path always has a parent dir");
@@ -101,8 +112,14 @@ where
             && options.save_lockfile
             && !options.lockfile_check
             && !self.execution.dry_run
-            && (self.context.config.minimum_release_age_exclude_prune
-                || self.context.config.trust_policy_exclude_prune)
+            && (self
+                .context
+                .config
+                .minimum_release_age_exclude_prune
+                || self
+                    .context
+                    .config
+                    .trust_policy_exclude_prune)
     }
 
     /// Separate what every phase reads from what one of them consumes.
@@ -117,11 +134,17 @@ where
                 tarball_mem_cache: self.fetching.tarball_mem_cache,
                 http_client_arc: self.fetching.http_client_arc,
                 projects: super::InstallProjects {
-                    dependency_groups: self.projects.dependency_groups.into_iter().collect(),
+                    dependency_groups: self
+                        .projects
+                        .dependency_groups
+                        .into_iter()
+                        .collect(),
                     supported_architectures: self.projects.supported_architectures,
                     catalogs_override: self.projects.catalogs_override,
                     pnpmfile_hook_override: self.projects.pnpmfile_hook_override,
-                    workspace_projects_override: self.projects.workspace_projects_override,
+                    workspace_projects_override: self
+                        .projects
+                        .workspace_projects_override,
                 },
                 resolution: self.resolution,
             },
@@ -133,13 +156,18 @@ where
         options: InstallRunOptions<'a, '_>,
     ) -> Result<InstallRunOutcome, InstallError> {
         let (install, mut owned) = self.split();
-        install.context.http_client.set_warning_handler(
-            pnpm_reporter::emit_global_warning::<Reporter>,
-        );
-        owned.http_client_arc.set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+        install
+            .context
+            .http_client
+            .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+        owned
+            .http_client_arc
+            .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
         let mode = RunMode::settle(install, &owned, &options)?;
         let mut workspace = InstallWorkspace::discover::<Reporter>(install, &mut owned, &options)?;
-        let loaded_workspace_projects = workspace.loaded_workspace_projects.take();
+        let loaded_workspace_projects = workspace
+            .loaded_workspace_projects
+            .take();
         Box::pin(
             RunExecution {
                 install,
@@ -299,14 +327,25 @@ impl RunMode {
             // neither may write `.modules.yaml`, the current lockfile, or workspace state.
             // The frozen path returns below; the fresh path returns in `complete_resolve_only`.
             resolve_only: lockfile_only || install.execution.dry_run,
-            prefer_frozen_lockfile: install.lockfile_policy.prefer_frozen.unwrap_or(
-                install.context.config.prefer_frozen_lockfile,
-            ),
+            prefer_frozen_lockfile: install
+                .lockfile_policy
+                .prefer_frozen
+                .unwrap_or(
+                    install
+                        .context
+                        .config
+                        .prefer_frozen_lockfile,
+                ),
             // The same set the dependency-graph walker observes, written to
             // `.modules.yaml` as `included`.
             included: super::included_dependencies(&owned.projects.dependency_groups),
-            can_prompt: options.prompt_eligibility_override.unwrap_or_else(prompts_are_answerable),
-            peer_issues_sink_is_none: owned.resolution.peer_issues_sink.is_none(),
+            can_prompt: options
+                .prompt_eligibility_override
+                .unwrap_or_else(prompts_are_answerable),
+            peer_issues_sink_is_none: owned
+                .resolution
+                .peer_issues_sink
+                .is_none(),
             effective_node_version: super::effective_node_version(
                 install.context.config,
                 install.context.manifest,
@@ -374,10 +413,20 @@ impl Verification {
             planned_canonical_fetches,
             resolution_verifiers,
             derived_lockfile_path: has_lockfile.then(|| {
-                install.context.lockfile_path.map_or_else(
-                    || workspace_root.join(install.context.config.wanted_lockfile_name()),
-                    Path::to_path_buf,
-                )
+                install
+                    .context
+                    .lockfile_path
+                    .map_or_else(
+                        || {
+                            workspace_root.join(
+                                install
+                                    .context
+                                    .config
+                                    .wanted_lockfile_name(),
+                            )
+                        },
+                        Path::to_path_buf,
+                    )
             }),
         })
     }

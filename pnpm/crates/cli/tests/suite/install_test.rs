@@ -4,13 +4,8 @@ use pnpm_testing_utils::bin::CommandTempCwd;
 
 #[test]
 fn install_test() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     // Create a package.json with a test script and a dependency
     std::fs::write(
@@ -49,13 +44,8 @@ fn install_test() {
 
 #[test]
 fn install_test_failure_prevents_test() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     std::fs::write(
         workspace.join("package.json"),
@@ -90,13 +80,8 @@ fn install_test_failure_prevents_test() {
 
 #[test]
 fn it_alias() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     std::fs::write(
         workspace.join("package.json"),

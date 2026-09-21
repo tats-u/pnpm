@@ -38,7 +38,8 @@ pub(super) fn importer_locked_peer_versions(
         let Some(key) = dependency.version.resolved_key(alias) else {
             continue;
         };
-        let snapshot = lockfile.snapshots
+        let snapshot = lockfile
+            .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.get(&key));
         for (name, version) in locked_peer_versions_for_key(lockfile, &key, snapshot) {
@@ -84,7 +85,8 @@ pub(super) fn locked_peer_versions_for_key(
     key: &pnpm_lockfile::PkgNameVerPeer,
     snapshot: Option<&pnpm_lockfile::SnapshotEntry>,
 ) -> Vec<(String, String)> {
-    let metadata = lockfile.packages
+    let metadata = lockfile
+        .packages
         .as_ref()
         .and_then(|packages| packages.get(&key.without_peer()));
     let mut explicit = peer_suffix_versions(key.suffix.peer()).collect::<Vec<_>>();
@@ -100,12 +102,14 @@ pub(super) fn locked_peer_versions_for_key(
     let (Some(snapshot), Some(metadata)) = (snapshot, metadata) else {
         return Vec::new();
     };
-    let peer_names = metadata.peer_dependencies
+    let peer_names = metadata
+        .peer_dependencies
         .iter()
         .flatten()
         .filter_map(|(name, _)| name.parse::<PkgName>().ok())
         .collect::<HashSet<_>>();
-    snapshot.dependencies
+    snapshot
+        .dependencies
         .iter()
         .chain(snapshot.optional_dependencies.iter())
         .flatten()
@@ -237,7 +241,8 @@ impl ProviderAliases {
 pub(super) fn dependency_edges(
     snapshot: &pnpm_lockfile::SnapshotEntry,
 ) -> impl Iterator<Item = (&PkgName, &pnpm_lockfile::SnapshotDepRef)> {
-    snapshot.dependencies
+    snapshot
+        .dependencies
         .iter()
         .chain(snapshot.optional_dependencies.iter())
         .flatten()
@@ -253,7 +258,10 @@ pub(super) fn is_hashed_peer_suffix(peer_suffix: &str) -> bool {
         .rsplit_once('(')
         .and_then(|(_, tail)| tail.strip_suffix(')'))
         .is_some_and(|hash| {
-            hash.len() == 32 && hash.chars().all(|character| character.is_ascii_hexdigit())
+            hash.len() == 32
+                && hash
+                    .chars()
+                    .all(|character| character.is_ascii_hexdigit())
         })
 }
 

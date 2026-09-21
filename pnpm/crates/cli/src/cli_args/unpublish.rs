@@ -137,7 +137,9 @@ impl UnpublishArgs {
         self,
         config: &Config,
     ) -> miette::Result<Option<String>> {
-        self.execute::<WebAuthHost, Reporter>(config).await.map(Some)
+        self.execute::<WebAuthHost, Reporter>(config)
+            .await
+            .map(Some)
     }
 
     /// Generic over the web-auth host `Sys` so tests can script the OTP
@@ -148,11 +150,11 @@ impl UnpublishArgs {
     ) -> miette::Result<String> {
         let context = DeprecateContext::new(config, self.registry.as_ref(), self.otp.clone())?;
 
-        let spec = self.params.first().ok_or(UnpublishError::PackageRequired)?;
-        let PackageSpec {
-            name: package_name,
-            version: version_range,
-        } = parse_package_spec(spec)?;
+        let spec = self
+            .params
+            .first()
+            .ok_or(UnpublishError::PackageRequired)?;
+        let PackageSpec { name: package_name, version: version_range } = parse_package_spec(spec)?;
 
         let registry_url = registry_for_package(&context, &package_name);
         let auth_header = auth_header_for_registry(&context, &registry_url, &package_name);
@@ -173,7 +175,9 @@ impl UnpublishArgs {
         };
 
         let Some(range) = version_range else {
-            return self.unpublish_all::<Sys, Reporter>(&mut mutation, &package_url, &pkg).await;
+            return self
+                .unpublish_all::<Sys, Reporter>(&mut mutation, &package_url, &pkg)
+                .await;
         };
 
         let versions_to_unpublish = versions_matching_range(&pkg.versions, &range);
@@ -183,7 +187,9 @@ impl UnpublishArgs {
 
         // Removing every version is a full unpublish, protections included.
         if versions_to_unpublish.len() == pkg.versions.len() {
-            return self.unpublish_all::<Sys, Reporter>(&mut mutation, &package_url, &pkg).await;
+            return self
+                .unpublish_all::<Sys, Reporter>(&mut mutation, &package_url, &pkg)
+                .await;
         }
 
         unpublish_versions::<Sys, Reporter>(
@@ -208,7 +214,8 @@ impl UnpublishArgs {
         if !self.force {
             return Err(UnpublishError::ConfirmRequired {
                 package_name: pkg.name.clone(),
-                versions_list: pkg.versions
+                versions_list: pkg
+                    .versions
                     .keys()
                     .cloned()
                     .collect::<Vec<_>>()
@@ -266,7 +273,9 @@ async fn unpublish_versions<Sys: UnpublishHost, Reporter: self::Reporter>(
     )
     .await?;
     if !response.status().is_success() {
-        return Err(registry_write_error(response, "unpublish".to_string()).await.into());
+        return Err(registry_write_error(response, "unpublish".to_string())
+            .await
+            .into());
     }
 
     let registry_origin = registry_origin(registry_url)?;
@@ -297,7 +306,8 @@ async fn unpublish_versions<Sys: UnpublishHost, Reporter: self::Reporter>(
 fn remove_versions(pkg: &mut Packument, versions: &[String]) -> Vec<String> {
     let mut tarballs: Vec<String> = Vec::new();
     for version in versions {
-        let tarball = pkg.versions
+        let tarball = pkg
+            .versions
             .get(version)
             .and_then(|data| data.get("dist"))
             .and_then(|dist| dist.get("tarball"))
@@ -317,7 +327,8 @@ fn retag_after_removal(pkg: &mut Packument, versions: &[String]) {
         .iter()
         .map(String::as_str)
         .collect();
-    let latest_was_removed = pkg.dist_tags
+    let latest_was_removed = pkg
+        .dist_tags
         .get("latest")
         .and_then(Value::as_str)
         .is_some_and(|latest| removed.contains(latest));
@@ -327,7 +338,8 @@ fn retag_after_removal(pkg: &mut Packument, versions: &[String]) {
             .is_some_and(|target| removed.contains(target))
     });
     if latest_was_removed && let Some(highest) = highest_version(&pkg.versions) {
-        pkg.dist_tags.insert("latest".to_string(), Value::String(highest));
+        pkg.dist_tags
+            .insert("latest".to_string(), Value::String(highest));
     }
 }
 

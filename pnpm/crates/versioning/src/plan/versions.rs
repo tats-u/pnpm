@@ -163,13 +163,11 @@ pub(super) fn apply_fixed_group_versions(
     lanes_by_dir: &BTreeMap<String, String>,
 ) {
     for group in fixed_groups {
-        let Some(group_bump) = max_bump_type_of(
-            group
-                .iter()
-                .filter_map(|dir| {
-                    state.get(dir).map(|entry| cumulative_bump(dir, entry.bump_type))
-                }),
-        ) else {
+        let Some(group_bump) = max_bump_type_of(group.iter().filter_map(|dir| {
+            state
+                .get(dir)
+                .map(|entry| cumulative_bump(dir, entry.bump_type))
+        })) else {
             continue;
         };
         let Some(shared_version) =
@@ -324,11 +322,14 @@ pub(super) fn enforce_epic_bands(
             let Some(member_version) = new_versions.get(member_dir) else {
                 continue;
             };
-            let member_major =
-                Version::parse(member_version).expect("participants have valid versions").major;
+            let member_major = Version::parse(member_version)
+                .expect("participants have valid versions")
+                .major;
             if !band.contains(member_major) {
                 return Err(VersioningError::EpicOutOfBand {
-                    pkg_name: participants[member_dir.as_str()].name.to_string(),
+                    pkg_name: participants[member_dir.as_str()]
+                        .name
+                        .to_string(),
                     new_version: member_version.clone(),
                     member_major,
                     lead: epic.lead_ref.clone(),
@@ -378,10 +379,12 @@ pub(super) fn enforce_max_bump(
         if effective_bump <= max_bump {
             continue;
         }
-        let intent_files: Vec<String> = release.intents
+        let intent_files: Vec<String> = release
+            .intents
             .iter()
             .filter(|intent| {
-                intent.releases
+                intent
+                    .releases
                     .values()
                     .any(|bump| bump.release() == Some(effective_bump))
             })
@@ -390,7 +393,8 @@ pub(super) fn enforce_max_bump(
         let raised_by = if intent_files.is_empty() {
             format!(
                 "constraint chain: {}",
-                release.causes
+                release
+                    .causes
                     .iter()
                     .map(ToString::to_string)
                     .collect::<Vec<String>>()

@@ -24,13 +24,8 @@ fn write_dependencies(workspace: &Path, dependencies: &serde_json::Value) {
 
 #[test]
 fn git_branch_lockfile_writes_the_lockfile_of_the_current_branch() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     set_branch(&workspace, "feature/Login");
@@ -43,11 +38,15 @@ fn git_branch_lockfile_writes_the_lockfile_of_the_current_branch() {
         .success();
 
     assert!(
-        workspace.join("pnpm-lock.feature!login.yaml").exists(),
+        workspace
+            .join("pnpm-lock.feature!login.yaml")
+            .exists(),
         "the branch lockfile is written under the sanitized branch name",
     );
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "the shared lockfile is left for the branches that have no lockfile of their own",
     );
 
@@ -58,13 +57,8 @@ fn git_branch_lockfile_writes_the_lockfile_of_the_current_branch() {
 /// lockfile already resolved, rather than from nothing.
 #[test]
 fn a_branch_without_a_lockfile_starts_from_the_shared_one() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     set_branch(&workspace, "main");
@@ -102,13 +96,8 @@ fn a_branch_without_a_lockfile_starts_from_the_shared_one() {
 
 #[test]
 fn merging_folds_the_branch_lockfiles_into_the_shared_one_and_deletes_them() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     set_branch(&workspace, "main");
@@ -128,7 +117,11 @@ fn merging_folds_the_branch_lockfiles_into_the_shared_one_and_deletes_them() {
         .with_arg("install")
         .assert()
         .success();
-    assert!(workspace.join("pnpm-lock.other.yaml").exists());
+    assert!(
+        workspace
+            .join("pnpm-lock.other.yaml")
+            .exists()
+    );
 
     set_branch(&workspace, "main");
     pacquet_in(&workspace)
@@ -137,7 +130,9 @@ fn merging_folds_the_branch_lockfiles_into_the_shared_one_and_deletes_them() {
         .success();
 
     assert!(
-        !workspace.join("pnpm-lock.other.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.other.yaml")
+            .exists(),
         "the merged branch lockfiles are deleted",
     );
     let shared = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read pnpm-lock.yaml");
@@ -150,13 +145,8 @@ fn merging_folds_the_branch_lockfiles_into_the_shared_one_and_deletes_them() {
 /// `--merge-git-branch-lockfiles` by hand.
 #[test]
 fn the_branch_pattern_merges_without_the_flag() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     set_branch(&workspace, "main");
@@ -184,7 +174,11 @@ fn the_branch_pattern_merges_without_the_flag() {
         .assert()
         .success();
 
-    assert!(!workspace.join("pnpm-lock.other.yaml").exists());
+    assert!(
+        !workspace
+            .join("pnpm-lock.other.yaml")
+            .exists()
+    );
     let shared = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read pnpm-lock.yaml");
     assert!(shared.contains("@pnpm.e2e/bar@100.0.0"), "{shared}");
 
@@ -196,13 +190,8 @@ fn the_branch_pattern_merges_without_the_flag() {
 /// so deleting them would drop resolutions no file is left holding.
 #[test]
 fn merging_keeps_the_branch_lockfiles_when_lockfiles_are_disabled() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     set_branch(&workspace, "other");
@@ -236,13 +225,8 @@ fn merging_keeps_the_branch_lockfiles_when_lockfiles_are_disabled() {
 /// the branch lockfiles it merged from have to survive it.
 #[test]
 fn merging_keeps_the_branch_lockfiles_on_a_check_only_dedupe() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     set_branch(&workspace, "main");
@@ -275,13 +259,8 @@ fn merging_keeps_the_branch_lockfiles_on_a_check_only_dedupe() {
 /// else takes it out again before the freshness check sees it.
 #[test]
 fn merging_drops_a_dependency_the_manifest_no_longer_declares() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let write_manifest = |dependencies: serde_json::Value| {
@@ -339,13 +318,8 @@ fn merging_drops_a_dependency_the_manifest_no_longer_declares() {
 #[test]
 fn merging_with_nothing_to_merge_still_rejects_an_outdated_lockfile() {
     for branch_lockfile_content in [None, Some(""), Some("lockfileVersion: '9.0'\n")] {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         set_branch(&workspace, "main");

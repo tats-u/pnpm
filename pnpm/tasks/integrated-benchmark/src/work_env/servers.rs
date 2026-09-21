@@ -74,7 +74,11 @@ impl WorkEnv {
         // The mock advertises its tarball URLs at the client-facing proxy
         // URL (`registry.url`), not its own loopback port, so downloads cross
         // the emulated registry link instead of bypassing it.
-        let cold = self.options.selection.scenario.is_some_and(BenchmarkScenario::cold_pnpr_cache);
+        let cold = self
+            .options
+            .selection
+            .scenario
+            .is_some_and(BenchmarkScenario::cold_pnpr_cache);
         let mut command = if cold {
             self.cold_revision_mock_command(revision, &binary, &bench_dir, mock_port, &registry.url)
         } else {
@@ -152,7 +156,11 @@ impl WorkEnv {
         let upstream = SocketAddr::from((Ipv4Addr::LOCALHOST, mock_port));
         let profile = LinkProfile {
             one_way: Duration::from_millis(self.options.network.registry_latency_ms) / 2,
-            rate_limit: mbps_to_bytes_per_sec(self.options.network.registry_bandwidth_mbps),
+            rate_limit: mbps_to_bytes_per_sec(
+                self.options
+                    .network
+                    .registry_bandwidth_mbps,
+            ),
             slow_start: self.options.network.registry_slow_start,
         };
         let proxy = LatencyProxy::spawn_with_listener(listener, upstream, profile)
@@ -160,7 +168,11 @@ impl WorkEnv {
         eprintln!(
             "Fronting mock for {revision} with {}ms round-trip latency + {} download cap (proxy at {})",
             self.options.network.registry_latency_ms,
-            match self.options.network.registry_bandwidth_mbps {
+            match self
+                .options
+                .network
+                .registry_bandwidth_mbps
+            {
                 mbps if mbps > 0.0 => format!("{mbps} Mbit/s"),
                 _ => "no".to_string(),
             },
@@ -253,10 +265,18 @@ impl WorkEnv {
             paths.bench_dir.display(),
             paths.port,
         );
-        let stdout = File::create(paths.bench_dir.join("pnpr-server.stdout.log"))
-            .expect("create pnpr server stdout log");
-        let stderr = File::create(paths.bench_dir.join("pnpr-server.stderr.log"))
-            .expect("create pnpr server stderr log");
+        let stdout = File::create(
+            paths
+                .bench_dir
+                .join("pnpr-server.stdout.log"),
+        )
+        .expect("create pnpr server stdout log");
+        let stderr = File::create(
+            paths
+                .bench_dir
+                .join("pnpr-server.stderr.log"),
+        )
+        .expect("create pnpr server stderr log");
         let mut command = Command::new(paths.binary);
         command
             .arg("--config")
@@ -309,7 +329,11 @@ impl WorkEnv {
     /// proxied in `main` so their advertised tarball URLs use the proxied
     /// public port.
     pub(super) fn start_client_registry_proxy(&self) -> Option<LatencyProxy> {
-        let rate_limit = mbps_to_bytes_per_sec(self.options.network.registry_bandwidth_mbps);
+        let rate_limit = mbps_to_bytes_per_sec(
+            self.options
+                .network
+                .registry_bandwidth_mbps,
+        );
         if (self.options.network.registry_latency_ms == 0 && rate_limit.is_none())
             || matches!(self.options.network.registry, RegistryMode::Npm | RegistryMode::Verdaccio)
         {
@@ -325,7 +349,11 @@ impl WorkEnv {
         eprintln!(
             "Fronting the registry with {}ms round-trip latency + {} download cap (proxy at {})",
             self.options.network.registry_latency_ms,
-            match self.options.network.registry_bandwidth_mbps {
+            match self
+                .options
+                .network
+                .registry_bandwidth_mbps
+            {
                 mbps if mbps > 0.0 => format!("{mbps} Mbit/s"),
                 _ => "no".to_string(),
             },
@@ -337,15 +365,22 @@ impl WorkEnv {
     /// The client still uses [`Self::start_client_registry_proxy`], which
     /// may have a higher latency and a bandwidth cap for tarball fetches.
     pub(super) fn start_pnpr_server_registry_proxy(&self) -> Option<LatencyProxy> {
-        if self.options.network.pnpr_server_registry_latency_ms == 0
+        if self
+            .options
+            .network
+            .pnpr_server_registry_latency_ms
+            == 0
             || matches!(self.options.network.registry, RegistryMode::Npm)
         {
             return None;
         }
         let upstream = SocketAddr::from((Ipv4Addr::LOCALHOST, self.options.network.registry_port));
         let profile = LinkProfile {
-            one_way: Duration::from_millis(self.options.network.pnpr_server_registry_latency_ms)
-                / 2,
+            one_way: Duration::from_millis(
+                self.options
+                    .network
+                    .pnpr_server_registry_latency_ms,
+            ) / 2,
             rate_limit: None,
             slow_start: false,
         };
@@ -353,7 +388,10 @@ impl WorkEnv {
             LatencyProxy::spawn(upstream, profile).expect("spawn pnpr server registry proxy");
         eprintln!(
             "Fronting the pnpr server registry link with {}ms round-trip latency (proxy at {})",
-            self.options.network.pnpr_server_registry_latency_ms, proxy.addr,
+            self.options
+                .network
+                .pnpr_server_registry_latency_ms,
+            proxy.addr,
         );
         Some(proxy)
     }

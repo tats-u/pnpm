@@ -188,13 +188,15 @@ impl ConfigArgs {
                 config_set(config, dir, flags, &key, Some(value))?;
             }
             ConfigSubcommand::Delete(args) => {
-                let key = args.key
+                let key = args
+                    .key
                     .filter(|key| !key.is_empty())
                     .ok_or_else(|| ConfigError::NoParams { subcommand: "delete".to_string() })?;
                 config_set(config, dir, flags, &key, None)?;
             }
             ConfigSubcommand::Get(args) => {
-                let output = match args.key
+                let output = match args
+                    .key
                     .as_deref()
                     .filter(|key| !key.is_empty())
                 {
@@ -384,7 +386,10 @@ fn get_config_file_info<'a>(
 }
 
 fn global_config_dir(config: &Config) -> Result<PathBuf, ConfigError> {
-    config.config_dir.clone().ok_or(ConfigError::NoGlobalConfigDir)
+    config
+        .config_dir
+        .clone()
+        .ok_or(ConfigError::NoGlobalConfigDir)
 }
 
 mod values;

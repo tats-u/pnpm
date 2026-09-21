@@ -45,7 +45,9 @@ impl MaterializationScope {
     }
 
     pub(super) fn lockfile<'l>(&'l self, built: &'l Lockfile) -> &'l Lockfile {
-        self.closure.as_ref().map_or(built, |closure| &closure.lockfile)
+        self.closure
+            .as_ref()
+            .map_or(built, |closure| &closure.lockfile)
     }
 
     pub(super) fn finalize(
@@ -55,7 +57,8 @@ impl MaterializationScope {
         built: &Lockfile,
         skipped: &SkippedSnapshots,
     ) -> FinalScope {
-        let closure = self.importer_ids
+        let closure = self
+            .importer_ids
             .as_ref()
             .map(|importer_ids| {
                 crate::materialization_closure(
@@ -66,17 +69,16 @@ impl MaterializationScope {
                     skipped,
                 )
             });
-        let materialized: HashSet<String> = closure
-            .as_ref()
-            .map_or_else(
-                || {
-                    built.importers
-                        .keys()
-                        .cloned()
-                        .collect()
-                },
-                |closure| closure.importer_ids.clone(),
-            );
+        let materialized: HashSet<String> = closure.as_ref().map_or_else(
+            || {
+                built
+                    .importers
+                    .keys()
+                    .cloned()
+                    .collect()
+            },
+            |closure| closure.importer_ids.clone(),
+        );
         let project_anchor_importer_ids =
             project_anchor_importer_ids(install.projects.selected_ids, is_hoisted, &materialized);
         FinalScope { closure, project_anchor_importer_ids }
@@ -84,7 +86,9 @@ impl MaterializationScope {
 }
 impl FinalScope {
     pub(super) fn lockfile<'l>(&'l self, built: &'l Lockfile) -> &'l Lockfile {
-        self.closure.as_ref().map_or(built, |closure| &closure.lockfile)
+        self.closure
+            .as_ref()
+            .map_or(built, |closure| &closure.lockfile)
     }
 }
 /// The lockfiles the materialization plan reads: the one the selected
@@ -123,11 +127,15 @@ pub(super) async fn plan_fresh_materialization<'l, 'a: 'l, Reporter: self::Repor
         (probe.node_version, install.projects.supported_architectures),
     )
     .await;
-    let host_node =
-        installability_host.as_ref().map(pnpm_deps_restorer::materialization_plan::HostNode::from);
+    let host_node = installability_host
+        .as_ref()
+        .map(pnpm_deps_restorer::materialization_plan::HostNode::from);
     let (engine_name, deferred_engine_name) =
         pnpm_deps_restorer::materialization_plan::resolve_engine_name(
-            install.drivers.config.enable_global_virtual_store,
+            install
+                .drivers
+                .config
+                .enable_global_virtual_store,
             lockfiles.initial.snapshots.as_ref(),
             host_node.as_ref(),
         )
@@ -159,7 +167,10 @@ pub(super) fn lay_out_slots<'l>(
     let phase_start = std::time::Instant::now();
     let layout = VirtualStoreLayout::new(
         install.drivers.config,
-        install.drivers.config.enable_global_virtual_store
+        install
+            .drivers
+            .config
+            .enable_global_virtual_store
             .then_some(engine_name.as_deref())
             .flatten(),
         initial.snapshots.as_ref(),
@@ -275,17 +286,17 @@ fn closure_importer_ids(
     is_hoisted: bool,
     built: &Lockfile,
 ) -> Option<HashSet<String>> {
-    materialization_importer_ids(install.projects.selected_ids, is_hoisted, built)
-        .or_else(|| {
-            install
-                .resolve_widened_groups()
-                .then(|| {
-                    built.importers
-                        .keys()
-                        .cloned()
-                        .collect()
-                })
-        })
+    materialization_importer_ids(install.projects.selected_ids, is_hoisted, built).or_else(|| {
+        install
+            .resolve_widened_groups()
+            .then(|| {
+                built
+                    .importers
+                    .keys()
+                    .cloned()
+                    .collect()
+            })
+    })
 }
 /// The importers a selected install materializes. A hoisted linker shares one
 /// tree, so it still materializes every importer.
@@ -297,7 +308,8 @@ pub(super) fn materialization_importer_ids(
     let selected_importer_ids = selected_importer_ids?;
     if is_hoisted {
         return Some(
-            built_lockfile.importers
+            built_lockfile
+                .importers
                 .keys()
                 .cloned()
                 .collect(),
@@ -315,10 +327,12 @@ pub(super) async fn installability_host(
 ) -> Option<pnpm_deps_restorer::InstallabilityHost> {
     let (node_version, supported_architectures) = host;
     let needed = !config.force
-        && lockfile.packages
+        && lockfile
+            .packages
             .as_ref()
             .is_some_and(|packages| {
-                lockfile.snapshots
+                lockfile
+                    .snapshots
                     .as_ref()
                     .is_some_and(|snapshots| {
                         crate::any_installability_constraint(snapshots, packages)

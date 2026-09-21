@@ -92,14 +92,13 @@ pub fn execute_token_helper(
     let Some(program) = command.first() else {
         return Err(TokenHelperError::EmptyToken { program: String::new() });
     };
-    let output = run(command)
-        .map_err(|source| {
-            if source.kind() == io::ErrorKind::TimedOut {
-                TokenHelperError::Timeout { program: program.clone() }
-            } else {
-                TokenHelperError::Spawn { program: program.clone(), source }
-            }
-        })?;
+    let output = run(command).map_err(|source| {
+        if source.kind() == io::ErrorKind::TimedOut {
+            TokenHelperError::Timeout { program: program.clone() }
+        } else {
+            TokenHelperError::Spawn { program: program.clone(), source }
+        }
+    })?;
     if !output.success {
         return Err(TokenHelperError::ErrorStatus { program: program.clone() });
     }
@@ -146,7 +145,10 @@ fn run_token_helper_command_with_timeout(
     // `thread::spawn` below) can't leak the process: `ChildGuard` kills it
     // on drop until we disarm it after reaping. std has no `kill_on_drop`.
     let mut guard = ChildGuard(Some(child));
-    let child = guard.0.as_mut().expect("child just spawned");
+    let child = guard
+        .0
+        .as_mut()
+        .expect("child just spawned");
 
     // Drain both pipes on their own threads: a helper that fills the
     // stdout (or stderr) buffer would otherwise block on the write while

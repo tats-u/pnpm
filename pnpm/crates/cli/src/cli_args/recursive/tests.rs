@@ -194,7 +194,8 @@ fn detects_a_cycle_that_passes_through_unselected_projects() {
     let result = sequence_graph(&select(&graph, &["a", "c"]), &graph);
     dbg!(&result);
     assert!(
-        result.cycles
+        result
+            .cycles
             .iter()
             .any(|cycle| cycle.len() > 1),
         "a -> b -> c -> a is a cycle once b is tunneled through",

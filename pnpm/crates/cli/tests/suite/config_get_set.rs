@@ -8,14 +8,14 @@ use pretty_assertions::assert_eq;
 use std::{fs, process::Command};
 
 fn pacquet_in(workspace: &std::path::Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 #[test]
 fn set_writes_the_setting_and_get_reads_it_back() {
-    let CommandTempCwd {
-        pacquet: _pacquet, root, workspace, ..
-    } = CommandTempCwd::init();
+    let CommandTempCwd { pacquet: _pacquet, root, workspace, .. } = CommandTempCwd::init();
     fs::write(workspace.join("pnpm-workspace.yaml"), "packages: []\n")
         .expect("write pnpm-workspace.yaml");
 

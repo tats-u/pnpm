@@ -26,8 +26,8 @@ pub(super) fn add_dir_to_windows_env_path(
 ) -> Result<Vec<EnvVariableChange>, PathExtenderError> {
     // `chcp` makes `reg` use UTF-8 for output. Otherwise non-ASCII
     // characters in environment variables become garbled.
-    let chcp_output =
-        run_capture_chcp(&[]).map_err(|err| PathExtenderError::Chcp { message: err.to_string() })?;
+    let chcp_output = run_capture_chcp(&[])
+        .map_err(|err| PathExtenderError::Chcp { message: err.to_string() })?;
     let cp_bak = first_number(&chcp_output)
         .ok_or_else(|| PathExtenderError::Chcp { message: chcp_output.clone() })?;
     run_capture_chcp(&["65001"])?;
@@ -149,7 +149,9 @@ fn get_registry_output() -> Result<String, PathExtenderError> {
 /// spawned or exits non-zero — rather than silently continuing with empty
 /// output.
 fn run_capture(program: &str, args: &[&str]) -> Result<String, PathExtenderError> {
-    let output = Command::new(program).args(args).output()?;
+    let output = Command::new(program)
+        .args(args)
+        .output()?;
     if !output.status.success() {
         return Err(PathExtenderError::CommandFailed {
             command: program.to_string(),
@@ -181,7 +183,9 @@ where
 }
 
 fn get_env_value_from_registry(registry_output: &str, env_var_name: &str) -> Option<String> {
-    registry_output.lines().find_map(|line| env_value_from_registry_line(line, env_var_name))
+    registry_output
+        .lines()
+        .find_map(|line| env_value_from_registry_line(line, env_var_name))
 }
 
 /// Parse a `reg query` line of the form `    <name>    <type>    <data>`

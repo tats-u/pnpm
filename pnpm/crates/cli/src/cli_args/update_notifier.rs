@@ -115,7 +115,10 @@ async fn latest_pnpm_version(config: &Config) -> miette::Result<Option<String>> 
 }
 
 fn read_state(state_file: &Path) -> Map<String, Value> {
-    match std::fs::read_to_string(state_file).ok().map(|text| serde_json::from_str(&text)) {
+    match std::fs::read_to_string(state_file)
+        .ok()
+        .map(|text| serde_json::from_str(&text))
+    {
         Some(Ok(Value::Object(fields))) => fields,
         _ => Map::new(),
     }
@@ -152,7 +155,8 @@ fn write_state(state_file: &Path, mut state: Map<String, Value>, now: DateTime<U
 
 /// JavaScript's `Date#toUTCString`, the format pnpm writes the timestamp in.
 fn to_utc_string(time: DateTime<Utc>) -> String {
-    time.format("%a, %d %b %Y %H:%M:%S GMT").to_string()
+    time.format("%a, %d %b %Y %H:%M:%S GMT")
+        .to_string()
 }
 
 #[cfg(test)]

@@ -10,7 +10,9 @@ fn resolves_symlinks_in_the_existing_ancestor() {
 
     assert_eq!(
         realpath_missing(&root.path().join("link/missing/child")).unwrap(),
-        dunce::canonicalize(real).unwrap().join("missing/child"),
+        dunce::canonicalize(real)
+            .unwrap()
+            .join("missing/child"),
     );
 }
 

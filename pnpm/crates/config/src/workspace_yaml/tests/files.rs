@@ -18,7 +18,8 @@ fn parses_ignore_compatibility_db_from_yaml_and_applies() {
 fn load_at_collects_no_issues_from_a_clean_file() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "nodeLinker: hoisted\npackages:\n  - apps/*\ncatalog:\n  react: ^18\n",
     )
     .unwrap();
@@ -82,7 +83,11 @@ changedFilesIgnorePattern:
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
     let mut config = Config::new();
     assert!(config.test_pattern.is_empty());
-    assert!(config.changed_files_ignore_pattern.is_empty());
+    assert!(
+        config
+            .changed_files_ignore_pattern
+            .is_empty()
+    );
 
     settings.apply_to(&mut config, Path::new("/irrelevant"));
 
@@ -97,7 +102,9 @@ fn find_walks_up_to_parent_dir() {
     fs::create_dir_all(&nested).unwrap();
     fs::write(tmp.path().join("pnpm-workspace.yaml"), "storeDir: /s\n").unwrap();
 
-    let (found, settings) = WorkspaceSettings::find_and_load(&nested).unwrap().unwrap();
+    let (found, settings) = WorkspaceSettings::find_and_load(&nested)
+        .unwrap()
+        .unwrap();
     assert_eq!(found, tmp.path().join("pnpm-workspace.yaml"));
     assert_eq!(settings.store_dir.as_deref(), Some("/s"));
 }
@@ -107,12 +114,15 @@ fn find_walks_up_to_parent_dir() {
 fn accepts_a_registry_key_with_an_at_sign_in_the_path() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  https://npm.example.com/scope@1/: {serverType: artifactory}\n",
     )
     .unwrap();
 
-    let settings = WorkspaceSettings::load_at(dir.path()).unwrap().expect("settings");
+    let settings = WorkspaceSettings::load_at(dir.path())
+        .unwrap()
+        .expect("settings");
     assert!(settings.registries.is_some());
 }
 
@@ -140,7 +150,8 @@ fn rejects_a_scheme_less_key_whose_path_contains_a_scheme_separator() {
 fn load_at_collects_no_issues_from_a_clean_file_carrying_a_schema_line() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "$schema: https://json.schemastore.org/pnpm-workspace.json\nnodeLinker: hoisted\n",
     )
     .unwrap();
@@ -157,7 +168,12 @@ fn load_at_collects_no_issues_from_a_clean_file_carrying_a_schema_line() {
 #[test]
 fn load_at_collects_issues_from_a_tab_indented_file() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join(WORKSPACE_MANIFEST_FILENAME), "\tzzzNotASettingZzz: 1\n").unwrap();
+    fs::write(
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
+        "\tzzzNotASettingZzz: 1\n",
+    )
+    .unwrap();
 
     let settings = WorkspaceSettings::load_at(dir.path())
         .expect("load pnpm-workspace.yaml")

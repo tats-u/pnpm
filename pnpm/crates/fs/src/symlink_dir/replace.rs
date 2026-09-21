@@ -55,7 +55,9 @@ pub(super) fn clear_symlink_occupant(
     link: &Path,
     rename_tried: bool,
 ) -> io::Result<Option<String>> {
-    let parent = link.parent().unwrap_or_else(|| Path::new(""));
+    let parent = link
+        .parent()
+        .unwrap_or_else(|| Path::new(""));
     let basename = link
         .file_name()
         .unwrap_or_default()

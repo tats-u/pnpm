@@ -77,7 +77,9 @@ async fn add_routes_scoped_packages_to_configured_scoped_registry() {
     config.modules_dir = modules_dir;
     config.virtual_store_dir = virtual_store_dir;
     config.registry = format!("{}/", default_registry.url());
-    config.registries_by_scope.insert("@private".to_string(), scoped_registry_url);
+    config
+        .registries_by_scope
+        .insert("@private".to_string(), scoped_registry_url);
     config.minimum_release_age = None;
     let config = config.leak();
 
@@ -191,7 +193,9 @@ async fn add_resolves_package_selectors_concurrently() {
         let package_name = format!("@{scope}/{name}");
         let mut server = mockito::Server::new_async().await;
         let registry_url = format!("{}/", server.url());
-        config.registries_by_scope.insert(format!("@{scope}"), registry_url.clone());
+        config
+            .registries_by_scope
+            .insert(format!("@{scope}"), registry_url.clone());
 
         let response_body = version_body(&package_name, &registry_url);
         let state = Arc::clone(&request_state);
@@ -315,7 +319,9 @@ async fn add_reports_catalog_warnings_in_selector_order() {
         let package_name = format!("@{scope}/{name}");
         let mut server = mockito::Server::new_async().await;
         let registry_url = format!("{}/", server.url());
-        config.registries_by_scope.insert(format!("@{scope}"), registry_url.clone());
+        config
+            .registries_by_scope
+            .insert(format!("@{scope}"), registry_url.clone());
 
         let response_body = package_body(&package_name, &registry_url);
         let packument_path = format!("/@{scope}%2F{name}");
@@ -371,7 +377,9 @@ async fn add_reports_catalog_warnings_in_selector_order() {
             .filter_map(|event| match event {
                 LogEvent::Pnpm(log)
                     if log.level == LogLevel::Warn
-                        && log.message.starts_with("Catalog version mismatch") =>
+                        && log
+                            .message
+                            .starts_with("Catalog version mismatch") =>
                 {
                     Some(log.message.as_str())
                 }
@@ -420,7 +428,9 @@ async fn add_reports_resolution_errors_in_selector_order() {
     for (scope, name, response_delay_ms) in packages {
         let package_name = format!("@{scope}/{name}");
         let mut server = mockito::Server::new_async().await;
-        config.registries_by_scope.insert(format!("@{scope}"), format!("{}/", server.url()));
+        config
+            .registries_by_scope
+            .insert(format!("@{scope}"), format!("{}/", server.url()));
         let latest_path = format!("/@{scope}%2F{name}/latest");
         let latest = server
             .mock("GET", latest_path.as_str())

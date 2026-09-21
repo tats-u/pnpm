@@ -18,7 +18,8 @@ pub(super) fn project_trust_meta(meta: &Package) -> Package {
     // packument it's about to discard. Only the fields downstream
     // reads are cloned out; the bulk of the document (per-version
     // dependency maps, scripts, README) drops on the original.
-    let versions = meta.versions
+    let versions = meta
+        .versions
         .iter()
         .map(|(version, manifest)| (version.clone(), project_trust_package_version(&manifest)))
         .collect();
@@ -39,7 +40,9 @@ pub(super) fn project_trust_meta(meta: &Package) -> Package {
 }
 
 pub(super) fn project_trust_package_version(version: &PackageVersion) -> PackageVersion {
-    let attestations = version.dist.attestations
+    let attestations = version
+        .dist
+        .attestations
         .as_ref()
         .and_then(|att| att.provenance.as_ref())
         .map(|prov| pnpm_registry::AttestationsDist { provenance: Some(prov.clone()), url: None });
@@ -48,9 +51,14 @@ pub(super) fn project_trust_package_version(version: &PackageVersion) -> Package
     // PII — including the approver's — so the projected cache entry
     // doesn't hold per-version publisher metadata that downstream
     // doesn't need.
-    let approver = version.npm_user.as_ref().and_then(|user| user.approver.as_ref());
-    let trusted_publisher =
-        version.npm_user.as_ref().and_then(|user| user.trusted_publisher.as_ref());
+    let approver = version
+        .npm_user
+        .as_ref()
+        .and_then(|user| user.approver.as_ref());
+    let trusted_publisher = version
+        .npm_user
+        .as_ref()
+        .and_then(|user| user.trusted_publisher.as_ref());
     let npm_user = (approver.is_some() || trusted_publisher.is_some()).then(|| NpmUser {
         name: None,
         email: None,
@@ -95,20 +103,21 @@ pub(super) fn project_abbreviated_meta(
     meta: &Package,
     include_time: bool,
 ) -> crate::lookup_context::AbbreviatedMetaProjection {
-    let version_artifacts = meta.versions
+    let version_artifacts = meta
+        .versions
         .iter()
         .map(|(version, manifest)| (version.clone(), project_artifact_history(&manifest.dist)))
         .collect();
-    let version_dist_stats = meta.versions
+    let version_dist_stats = meta
+        .versions
         .iter()
         .filter_map(|(version, manifest)| {
             let stats = DistStats {
                 unpacked_size: manifest.dist.unpacked_size,
                 file_count: manifest.dist.file_count,
             };
-            (stats.unpacked_size.is_some() || stats.file_count.is_some()).then(|| {
-                (version.clone(), stats)
-            })
+            (stats.unpacked_size.is_some() || stats.file_count.is_some())
+                .then(|| (version.clone(), stats))
         })
         .collect();
     // `time` also carries package-level `created`/`modified` keys; keeping
@@ -155,7 +164,8 @@ pub(super) async fn load_local_meta_time(
 pub(super) fn project_artifact_history(
     dist: &pnpm_registry::PackageDistribution,
 ) -> crate::lookup_context::RegistryArtifactHistory {
-    let revisions = dist.revisions
+    let revisions = dist
+        .revisions
         .as_ref()
         .and_then(JsonValue::as_array)
         .into_iter()

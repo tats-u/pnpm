@@ -8,7 +8,9 @@ use std::{fs, time::Duration};
 fn write_executable(path: &std::path::Path, body: &str) {
     use std::os::unix::fs::PermissionsExt;
     fs::write(path, body).expect("write executable");
-    let mut perms = fs::metadata(path).expect("stat executable").permissions();
+    let mut perms = fs::metadata(path)
+        .expect("stat executable")
+        .permissions();
     perms.set_mode(0o755);
     fs::set_permissions(path, perms).expect("chmod executable");
 }
@@ -642,11 +644,15 @@ fn assert_no_bail_lets_siblings_finish(workspace_concurrency: &str) {
         .get_output()
         .clone();
     assert!(
-        workspace.join("fast-fail-finished").exists(),
+        workspace
+            .join("fast-fail-finished")
+            .exists(),
         "the failing script should still run to completion under --no-bail",
     );
     assert!(
-        workspace.join("slow-ok-finished").exists(),
+        workspace
+            .join("slow-ok-finished")
+            .exists(),
         "the slow sibling must not be cancelled under --no-bail",
     );
     let stderr = String::from_utf8_lossy(&output.stderr);

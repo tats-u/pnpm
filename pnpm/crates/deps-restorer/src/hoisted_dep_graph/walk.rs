@@ -77,7 +77,10 @@ pub(super) fn root_direct_deps(
 ) -> BTreeMap<String, PathBuf> {
     let mut direct_deps = BTreeMap::new();
     for child_dir in root_hierarchy.0.keys() {
-        if let Some(alias) = graph.get(child_dir).and_then(|node| node.alias.as_deref()) {
+        if let Some(alias) = graph
+            .get(child_dir)
+            .and_then(|node| node.alias.as_deref())
+        {
             direct_deps.insert(alias.to_string(), child_dir.clone());
         }
     }
@@ -125,14 +128,19 @@ pub(super) fn fill_children(
 ) -> Result<(), HoistedDepGraphError> {
     let dirs: Vec<PathBuf> = graph.keys().cloned().collect();
     for dir in dirs {
-        let reference = graph[&dir].package.dep_path.as_str().to_string();
+        let reference = graph[&dir]
+            .package
+            .dep_path
+            .as_str()
+            .to_string();
         let pkg_key: PackageKey = match reference.parse() {
             Ok(key) => key,
             Err(source) => {
                 return Err(HoistedDepGraphError::BadReference { reference, source });
             }
         };
-        let snapshot = lockfile.snapshots
+        let snapshot = lockfile
+            .snapshots
             .as_ref()
             .and_then(|m| m.get(&pkg_key));
         let children = compute_children(snapshot, pkg_locations);
@@ -211,7 +219,9 @@ pub(super) fn walk_dep(
     // The hoister keeps every absorbed reference; the first
     // (alphabetically smallest) is the canonical depPath for this
     // node's location.
-    let Some(reference) = dep.0.references
+    let Some(reference) = dep
+        .0
+        .references
         .borrow()
         .iter()
         .next()
@@ -220,7 +230,11 @@ pub(super) fn walk_dep(
         return Ok(None);
     };
 
-    if state.result.skipped.contains(&reference) {
+    if state
+        .result
+        .skipped
+        .contains(&reference)
+    {
         return Ok(None);
     }
 
@@ -232,7 +246,9 @@ pub(super) fn walk_dep(
     let Some(resolved) = resolve_reference(state, &reference)? else {
         return Ok(None);
     };
-    let optional = resolved.snapshot.is_some_and(|snapshot| snapshot.optional);
+    let optional = resolved
+        .snapshot
+        .is_some_and(|snapshot| snapshot.optional);
 
     if installability_skip(state, &resolved.pkg_key, resolved.metadata, optional)? {
         state.result.skipped.insert(reference);
@@ -261,7 +277,9 @@ pub(super) fn walk_dep(
     // pre-recursion sites that mutate state are for graph/index
     // identity; this one is the user-visible location list that the
     // linker consumes.
-    state.result.hoisted_locations
+    state
+        .result
+        .hoisted_locations
         .entry(reference)
         .or_default()
         .push(dep_location);
@@ -277,7 +295,8 @@ fn record_injected_location(
     // every dir an injected dep lands in for the post-install re-mirror
     // step, so a future re-mirror pass has the input it needs.
     if let LockfileResolution::Directory(_) = &resolved.metadata.resolution {
-        result.injection_targets_by_dep_path
+        result
+            .injection_targets_by_dep_path
             .entry(reference.to_owned())
             .or_default()
             .push(dir.to_path_buf());
@@ -293,20 +312,31 @@ pub(super) fn package_is_reusable(
     modules: &Path,
     dir: &Path,
 ) -> bool {
-    let expected_version = resolved.metadata.version
+    let expected_version = resolved
+        .metadata
+        .version
         .clone()
-        .unwrap_or_else(|| resolved.pkg_key.suffix.version().to_string());
+        .unwrap_or_else(|| {
+            resolved
+                .pkg_key
+                .suffix
+                .version()
+                .to_string()
+        });
     !state.opts.force
         && !matches!(resolved.metadata.resolution, LockfileResolution::Directory(_))
         && !reference.contains("(patch_hash=")
-        && state.opts.current_hoisted_locations.is_some_and(|locations| {
-            locations
-                .get(reference)
-                .is_some_and(|dirs| {
-                    dirs.iter()
-                        .any(|dir| dir == dep_location)
-                })
-        })
+        && state
+            .opts
+            .current_hoisted_locations
+            .is_some_and(|locations| {
+                locations
+                    .get(reference)
+                    .is_some_and(|dirs| {
+                        dirs.iter()
+                            .any(|dir| dir == dep_location)
+                    })
+            })
         && !resolution_changed_at(state.prev_graph, dir, &resolved.metadata.resolution)
         && package_present_at(modules, dir, &expected_version)
 }
@@ -328,11 +358,16 @@ pub(super) fn walk_workspace_importer(
     let importer_root = state.lockfile_dir.join(importer_id);
     let importer_hierarchy =
         walk_deps(state, &importer_root.join("node_modules"), &dep.0.dependencies.borrow())?;
-    state.per_importer_hierarchies.insert(importer_root, importer_hierarchy);
+    state
+        .per_importer_hierarchies
+        .insert(importer_root, importer_hierarchy);
     // Reserve the importer's slot so [`WalkState::into_result`]'s
     // post-walk loop knows the importer was visited, even when it ends
     // up with zero direct deps.
-    state.per_importer_direct_deps.entry(importer_id.to_string()).or_default();
+    state
+        .per_importer_direct_deps
+        .entry(importer_id.to_string())
+        .or_default();
     Ok(())
 }
 /// The lockfile's metadata and snapshot for a hoister reference. `None`
@@ -359,7 +394,9 @@ pub(super) fn resolve_reference<'l>(
     let Some(metadata) = lookup_package_metadata(state.lockfile, &pkg_key) else {
         return Ok(None);
     };
-    let snapshot = state.lockfile.snapshots
+    let snapshot = state
+        .lockfile
+        .snapshots
         .as_ref()
         .and_then(|snapshots| snapshots.get(&pkg_key));
     Ok(Some(ResolvedReference { pkg_key, metadata, snapshot }))
@@ -380,9 +417,19 @@ pub(super) fn graph_node(
                 get_pkg_id_with_patch_hash(&resolved.pkg_key.to_string()).to_string(),
             ),
             name: resolved.pkg_key.name.to_string(),
-            version: resolved.pkg_key.suffix.version().to_string(),
-            has_bin: resolved.metadata.has_bin.unwrap_or(false),
-            has_bundled_dependencies: resolved.metadata.bundled_dependencies.is_some(),
+            version: resolved
+                .pkg_key
+                .suffix
+                .version()
+                .to_string(),
+            has_bin: resolved
+                .metadata
+                .has_bin
+                .unwrap_or(false),
+            has_bundled_dependencies: resolved
+                .metadata
+                .bundled_dependencies
+                .is_some(),
             patch: None,
             resolution: resolved.metadata.resolution.clone(),
         },
@@ -392,7 +439,8 @@ pub(super) fn graph_node(
         dir: dir.to_path_buf(),
         modules: modules.to_path_buf(),
         optional,
-        optional_dependencies: resolved.snapshot
+        optional_dependencies: resolved
+            .snapshot
             .and_then(|snap| snap.optional_dependencies.as_ref())
             .map(|map| {
                 map.keys()
@@ -416,10 +464,16 @@ pub(super) fn compute_children(
     let mut children: BTreeMap<String, PathBuf> = BTreeMap::new();
     let Some(snapshot) = snapshot else { return children };
 
-    let dep_iter = snapshot.dependencies
+    let dep_iter = snapshot
+        .dependencies
         .iter()
         .flatten()
-        .chain(snapshot.optional_dependencies.iter().flatten());
+        .chain(
+            snapshot
+                .optional_dependencies
+                .iter()
+                .flatten(),
+        );
     for (alias_name, dep_ref) in dep_iter {
         // `link:` deps return `None` here — they live outside the
         // virtual store and don't show up in `pkg_locations`.
@@ -436,7 +490,8 @@ pub(super) fn compute_children(
 }
 
 fn record_package_location(state: &mut WalkState<'_>, pkg_key: &PackageKey, dir: &Path) {
-    state.pkg_locations_by_pkg_id
+    state
+        .pkg_locations_by_pkg_id
         .entry(pnpm_real_hoist::pkg_id(pkg_key))
         .or_default()
         .push(dir.to_path_buf());

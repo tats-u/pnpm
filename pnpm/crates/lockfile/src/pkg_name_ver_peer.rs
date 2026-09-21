@@ -27,7 +27,9 @@ impl PkgNameVerPeer {
         let escape_for_fs = |character: char| {
             matches!(character, '\\' | '/' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '#')
         };
-        let mut filename = self.to_string().replace(escape_for_fs, "+");
+        let mut filename = self
+            .to_string()
+            .replace(escape_for_fs, "+");
         if filename.contains('(') {
             if filename.ends_with(')') {
                 filename.pop();

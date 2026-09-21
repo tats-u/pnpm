@@ -25,7 +25,9 @@ fn get_pkg_info_handles_missing_pkg_snapshot_without_crashing() {
         "lockfileVersion: '9.0'\n\nimporters:\n  .: {}\n",
     )
     .unwrap();
-    let lockfile = Lockfile::load_wanted_from_dir(dir.path()).unwrap().unwrap();
+    let lockfile = Lockfile::load_wanted_from_dir(dir.path())
+        .unwrap()
+        .unwrap();
 
     let env = PkgInfoEnv {
         registry_options_by_url: std::collections::BTreeMap::new(),
@@ -93,7 +95,9 @@ fn resolve_package_path_rejects_traversal_in_lockfile_derived_names() {
         "lockfileVersion: '9.0'\n\nimporters:\n  .: {}\n",
     )
     .unwrap();
-    let lockfile = Lockfile::load_wanted_from_dir(dir.path()).unwrap().unwrap();
+    let lockfile = Lockfile::load_wanted_from_dir(dir.path())
+        .unwrap()
+        .unwrap();
 
     let virtual_store_dir = dir
         .path()

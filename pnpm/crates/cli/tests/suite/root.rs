@@ -29,7 +29,12 @@ fn root_prints_the_local_node_modules_dir() {
 
     // Deliberately not trimmed, unlike `store path` — pnpm's `root` handler
     // emits the path with its trailing newline (`${path}\n`).
-    let expected = format!("{}\n", canonicalize(&workspace).join("node_modules").display());
+    let expected = format!(
+        "{}\n",
+        canonicalize(&workspace)
+            .join("node_modules")
+            .display()
+    );
     assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
 
     drop(root);
@@ -51,7 +56,12 @@ fn root_ignores_a_custom_modules_dir() {
     dbg!(&output);
     assert!(output.status.success(), "pacquet root should succeed");
 
-    let expected = format!("{}\n", canonicalize(&workspace).join("node_modules").display());
+    let expected = format!(
+        "{}\n",
+        canonicalize(&workspace)
+            .join("node_modules")
+            .display()
+    );
     assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
 
     drop(root);

@@ -143,11 +143,7 @@ impl PatchArgs {
         dir: &Path,
         state: State,
     ) -> Result<(), PatchError> {
-        let PatchArgs {
-            package_name,
-            edit_dir,
-            ignore_existing,
-        } = self;
+        let PatchArgs { package_name, edit_dir, ignore_existing } = self;
         let package_name = package_name.ok_or(PatchError::MissingPackageName)?;
         validate_custom_edit_dir(dir, edit_dir.as_deref())?;
         let current_lockfile =
@@ -255,8 +251,10 @@ fn target_from_candidate(
     candidate: &PatchCandidate,
     apply_to_all: bool,
 ) -> PatchTarget {
-    let bare_specifier =
-        candidate.git_tarball_url.clone().unwrap_or_else(|| candidate.version.clone());
+    let bare_specifier = candidate
+        .git_tarball_url
+        .clone()
+        .unwrap_or_else(|| candidate.version.clone());
     PatchTarget {
         alias: set.alias.clone(),
         version: candidate.version.clone(),

@@ -88,9 +88,16 @@ async fn deleting_a_tag_keeps_the_manifest_and_deleting_the_manifest_drops_the_t
             .status(),
         StatusCode::ACCEPTED,
     );
-    assert_eq!(get(&app, "/v2/acme/app/manifests/1.0").await.status(), StatusCode::NOT_FOUND);
     assert_eq!(
-        get(&app, &format!("/v2/acme/app/manifests/{manifest_digest}")).await.status(),
+        get(&app, "/v2/acme/app/manifests/1.0")
+            .await
+            .status(),
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        get(&app, &format!("/v2/acme/app/manifests/{manifest_digest}"))
+            .await
+            .status(),
         StatusCode::OK,
     );
 
@@ -107,7 +114,9 @@ async fn deleting_a_tag_keeps_the_manifest_and_deleting_the_manifest_drops_the_t
         StatusCode::ACCEPTED,
     );
     assert_eq!(
-        get(&app, &format!("/v2/acme/app/manifests/{manifest_digest}")).await.status(),
+        get(&app, &format!("/v2/acme/app/manifests/{manifest_digest}"))
+            .await
+            .status(),
         StatusCode::NOT_FOUND,
     );
 }
@@ -129,7 +138,12 @@ async fn a_delete_is_refused_unless_the_registry_opens_destructive_writes() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
-    assert_eq!(get(&app, "/v2/acme/app/manifests/1.0").await.status(), StatusCode::OK);
+    assert_eq!(
+        get(&app, "/v2/acme/app/manifests/1.0")
+            .await
+            .status(),
+        StatusCode::OK
+    );
 }
 
 #[tokio::test]
@@ -249,7 +263,12 @@ async fn an_index_child_must_be_a_manifest_this_repository_serves() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-    assert_eq!(get(&app, "/v2/acme/app/manifests/multi").await.status(), StatusCode::NOT_FOUND);
+    assert_eq!(
+        get(&app, "/v2/acme/app/manifests/multi")
+            .await
+            .status(),
+        StatusCode::NOT_FOUND
+    );
 }
 
 #[tokio::test]
@@ -331,7 +350,8 @@ async fn referrers_backfill_preexisting_manifests_on_both_backends() {
         )
         .unwrap();
         assert_eq!(
-            document.manifests()[0].referrer
+            document.manifests()[0]
+                .referrer
                 .as_ref()
                 .unwrap()
                 .subject
@@ -352,7 +372,11 @@ async fn referrer_migration_does_not_block_writers_or_restore_deleted_manifests(
         store: std::sync::Arc::<pausing_store::PausingStore>::clone(&objects),
         prefix: "migration/".into(),
     };
-    let hosted = config.routing.hosted.get_mut("images").unwrap();
+    let hosted = config
+        .routing
+        .hosted
+        .get_mut("images")
+        .unwrap();
     hosted.rules = std::mem::take(&mut hosted.rules)
         .with_default_unpublish(AccessList::from_tokens(["$authenticated"]));
     let storage = pnpr_storage::Storage::new(
@@ -467,7 +491,12 @@ async fn batch_publishes_an_oci_manifest_and_rolls_back_on_invalid_siblings() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-    assert_eq!(get(&app, "/v2/acme/app/manifests/release").await.status(), StatusCode::NOT_FOUND);
+    assert_eq!(
+        get(&app, "/v2/acme/app/manifests/release")
+            .await
+            .status(),
+        StatusCode::NOT_FOUND
+    );
     let response = app
         .clone()
         .oneshot(
@@ -480,7 +509,12 @@ async fn batch_publishes_an_oci_manifest_and_rolls_back_on_invalid_siblings() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
-    assert_eq!(get(&app, "/v2/acme/app/manifests/release").await.status(), StatusCode::OK);
+    assert_eq!(
+        get(&app, "/v2/acme/app/manifests/release")
+            .await
+            .status(),
+        StatusCode::OK
+    );
 }
 
 #[tokio::test]
@@ -498,7 +532,11 @@ async fn cold_manifest_head_forwards_headers_without_getting_or_caching_a_body()
             .await;
         let tmp = TempDir::new().unwrap();
         let mut config = oci_config(tmp.path().to_path_buf(), "$all");
-        let source = config.routing.upstreams.get_mut("dockerhub").unwrap();
+        let source = config
+            .routing
+            .upstreams
+            .get_mut("dockerhub")
+            .unwrap();
         source.url = format!("{}/", upstream.url());
         source.cache = cache;
         let app = router_with_auth(config, AuthState::in_memory());
@@ -519,7 +557,11 @@ async fn cold_manifest_head_forwards_headers_without_getting_or_caching_a_body()
                 pnpr_oci::media_type::OCI_IMAGE_MANIFEST,
             );
             assert_eq!(response.headers()["docker-content-digest"], digest);
-            assert!(body_bytes(response.into_body()).await.is_empty());
+            assert!(
+                body_bytes(response.into_body())
+                    .await
+                    .is_empty()
+            );
         }
         head.assert_async().await;
     }
@@ -541,7 +583,9 @@ async fn manifest_head_checks_digests_and_verifies_legacy_responses_without_a_he
     ] {
         let mut upstream = mockito::Server::new_async().await;
         let path = format!("/v2/other/app/manifests/{reference}");
-        let mut head = upstream.mock("HEAD", path.as_str()).expect(1);
+        let mut head = upstream
+            .mock("HEAD", path.as_str())
+            .expect(1);
         if let Some(declared) = declared {
             head = head.with_header("docker-content-digest", declared);
         }
@@ -554,7 +598,12 @@ async fn manifest_head_checks_digests_and_verifies_legacy_responses_without_a_he
             .await;
         let tmp = TempDir::new().unwrap();
         let mut config = oci_config(tmp.path().to_path_buf(), "$all");
-        config.routing.upstreams.get_mut("dockerhub").unwrap().url = format!("{}/", upstream.url());
+        config
+            .routing
+            .upstreams
+            .get_mut("dockerhub")
+            .unwrap()
+            .url = format!("{}/", upstream.url());
         let app = router_with_auth(config, AuthState::in_memory());
         let response = app
             .oneshot(
@@ -567,7 +616,11 @@ async fn manifest_head_checks_digests_and_verifies_legacy_responses_without_a_he
         assert_eq!(response.status(), expected, "declared digest: {declared:?}");
         if expected == StatusCode::OK {
             assert_eq!(response.headers()["docker-content-digest"], digest);
-            assert!(body_bytes(response.into_body()).await.is_empty());
+            assert!(
+                body_bytes(response.into_body())
+                    .await
+                    .is_empty()
+            );
         }
         head.assert_async().await;
         get.assert_async().await;

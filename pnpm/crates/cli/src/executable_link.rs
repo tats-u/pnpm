@@ -42,10 +42,9 @@ pub(crate) fn replace_executable(src: &Path, dest: &Path) -> std::io::Result<()>
         }
         swap_into_place(&staged, dest)
     };
-    publish()
-        .inspect_err(|_| {
-            let _ = fs::remove_file(&staged);
-        })
+    publish().inspect_err(|_| {
+        let _ = fs::remove_file(&staged);
+    })
 }
 
 fn staging_path(dest: &Path) -> std::path::PathBuf {

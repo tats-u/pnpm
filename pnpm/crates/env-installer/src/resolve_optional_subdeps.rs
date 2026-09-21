@@ -24,8 +24,9 @@ pub async fn resolve_optional_subdeps(
     opts: &ConfigDepsInstallOptions<'_>,
     env_lockfile: &mut EnvLockfile,
 ) -> Result<Option<HashMap<PkgName, SnapshotDepRef>>, ConfigDepError> {
-    let Some(optional_deps) =
-        parent_manifest.get("optionalDependencies").and_then(|value| value.as_object())
+    let Some(optional_deps) = parent_manifest
+        .get("optionalDependencies")
+        .and_then(|value| value.as_object())
     else {
         return Ok(None);
     };
@@ -36,7 +37,10 @@ pub async fn resolve_optional_subdeps(
     let mut resolved: HashMap<PkgName, SnapshotDepRef> = HashMap::new();
     for (subdep_name, subdep_spec) in optional_deps {
         let subdep_spec = subdep_spec.as_str().unwrap_or_default();
-        if subdep_spec.parse::<node_semver::Version>().is_err() {
+        if subdep_spec
+            .parse::<node_semver::Version>()
+            .is_err()
+        {
             return Err(ConfigDepError::OptionalNotExact {
                 parent_name: parent_name.to_string(),
                 subdep_name: subdep_name.clone(),
@@ -87,7 +91,8 @@ fn record_optional_subdep(
         package_metadata(subdep_name, subdep_version, result, registry, false)
             .map_err(ConfigDepError::LockfileForm)?,
     );
-    env_lockfile.snapshots
+    env_lockfile
+        .snapshots
         .entry(pkg_key)
         .or_insert_with(|| SnapshotEntry { optional: true, ..SnapshotEntry::default() });
     Ok(())
@@ -121,7 +126,9 @@ async fn resolve_subdep(
             error,
         })?
         .ok_or_else(no_integrity)?;
-    let version = result.package.name_ver
+    let version = result
+        .package
+        .name_ver
         .as_ref()
         .ok_or_else(no_integrity)?
         .suffix

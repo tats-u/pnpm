@@ -177,24 +177,34 @@ impl RouteContext {
         // credential for the same origin — public wins).
         let public_routes = [RouteMatcher::npmjs(), RouteMatcher::jsr()]
             .into_iter()
-            .chain(routing.route_policy.public.iter().filter_map(RouteMatcher::from_public_route))
+            .chain(
+                routing
+                    .route_policy
+                    .public
+                    .iter()
+                    .filter_map(RouteMatcher::from_public_route),
+            )
             .collect();
         // Proxied-route credentials come from `upstreams:` entries that declare
         // an `access:` policy. They are matched by registry origin and exposed
         // to clients at `/~<name>/`.
-        let aliases = routing.upstreams
+        let aliases = routing
+            .upstreams
             .iter()
             .filter_map(|(name, upstream)| ResolvedAlias::from_upstream(name, upstream))
             .collect();
-        let upstream_origins = routing.upstreams
+        let upstream_origins = routing
+            .upstreams
             .values()
             .filter_map(|upstream| nerf_prefix(&upstream.url))
             .collect();
-        let hosted_rules = routing.hosted
+        let hosted_rules = routing
+            .hosted
             .iter()
             .map(|(name, hosted)| (name.clone(), hosted.rules.clone()))
             .collect();
-        let upstream_rules = routing.upstreams
+        let upstream_rules = routing
+            .upstreams
             .iter()
             .map(|(name, upstream)| (name.clone(), upstream.rules.clone()))
             .collect();
@@ -211,7 +221,8 @@ impl RouteContext {
 
     #[must_use]
     pub fn is_only_ecosystem(&self, ecosystem: Ecosystem) -> bool {
-        self.registries.is_only_ecosystem(ecosystem)
+        self.registries
+            .is_only_ecosystem(ecosystem)
     }
 
     /// See [`Registries::base_path`].
@@ -228,7 +239,10 @@ impl RouteContext {
         let (Some(package), Some(rules)) = (package, self.upstream_rules.get(registry)) else {
             return true;
         };
-        rules.for_package(package).access.allows(identity)
+        rules
+            .for_package(package)
+            .access
+            .allows(identity)
     }
 
     /// The descriptor package qualifier for a proxied fetch: `Some(package)`
@@ -238,7 +252,10 @@ impl RouteContext {
     /// the common footprint one descriptor per alias.
     fn alias_package_qualifier(&self, alias: &str, package: Option<&str>) -> Option<String> {
         let (package, rules) = (package?, self.upstream_rules.get(alias)?);
-        rules.for_package(package).access_is_explicit.then(|| package.to_string())
+        rules
+            .for_package(package)
+            .access_is_explicit
+            .then(|| package.to_string())
     }
 
     /// Classify a single fetch to `url` for `package` (`None` for a
@@ -303,7 +320,10 @@ impl RouteContext {
         // Spelled out rather than built from `base_path`: this wants a path
         // segment with a trailing slash, not the `/<ecosystem>` prefix that
         // URL building uses.
-        let npm_endpoint = if self.registries.is_only_ecosystem(Ecosystem::Npm) {
+        let npm_endpoint = if self
+            .registries
+            .is_only_ecosystem(Ecosystem::Npm)
+        {
             hosted.to_string()
         } else {
             format!("{hosted}npm/")
@@ -320,15 +340,16 @@ impl RouteContext {
             // package data to key.
             return RouteClass::Public;
         };
-        match self.registries.resolve_default(pnpr_registry::Ecosystem::Npm, package) {
-            Resolved::Concrete {
-                registry,
-                kind: ConcreteKind::Hosted,
-            } => self.classify_hosted(identity, registry, Some(package)),
-            Resolved::Concrete {
-                registry,
-                kind: ConcreteKind::Upstream,
-            } => self.classify_upstream(identity, registry, package),
+        match self
+            .registries
+            .resolve_default(pnpr_registry::Ecosystem::Npm, package)
+        {
+            Resolved::Concrete { registry, kind: ConcreteKind::Hosted } => {
+                self.classify_hosted(identity, registry, Some(package))
+            }
+            Resolved::Concrete { registry, kind: ConcreteKind::Upstream } => {
+                self.classify_upstream(identity, registry, package)
+            }
             // Unclaimed or no default registry: the endpoint answers
             // not-found, so there is no private content to key.
             Resolved::Unclaimed | Resolved::UnknownRegistry => RouteClass::Public,
@@ -342,7 +363,10 @@ impl RouteContext {
         registry: &str,
         package: Option<&str>,
     ) -> RouteClass {
-        let Some(registry) = self.registries.addressed(registry, Ecosystem::Npm) else {
+        let Some(registry) = self
+            .registries
+            .addressed(registry, Ecosystem::Npm)
+        else {
             return RouteClass::Public;
         };
         if let Some(alias) = self.authorized_alias(identity, registry) {
@@ -419,13 +443,15 @@ impl RouteContext {
         if contains_dot_segment(&fetch) {
             return false;
         }
-        if self.hosted_origin
+        if self
+            .hosted_origin
             .as_deref()
             .is_some_and(|hosted| fetch.starts_with(hosted))
         {
             return true;
         }
-        if self.public_routes
+        if self
+            .public_routes
             .iter()
             .any(|route| route.allowlists(&fetch, scheme_of(url)))
         {
@@ -482,13 +508,11 @@ impl RouteContext {
         fetch: &str,
         package: Option<&str>,
     ) -> Option<&ResolvedAlias> {
-        self.aliases
-            .iter()
-            .find(|alias| {
-                fetch.starts_with(&alias.origin)
-                    && alias.access.allows(identity)
-                    && self.upstream_admits(&alias.name, identity, package)
-            })
+        self.aliases.iter().find(|alias| {
+            fetch.starts_with(&alias.origin)
+                && alias.access.allows(identity)
+                && self.upstream_admits(&alias.name, identity, package)
+        })
     }
 
     pub(crate) fn allows_descriptor(
@@ -530,9 +554,15 @@ impl RouteContext {
                 // descriptor that doesn't parse — including one written by a
                 // pre-registry-scoped build — fails closed and re-resolves.
                 match policy_id.split_once('\0') {
-                    Some((registry, package)) => self.hosted_rules
+                    Some((registry, package)) => self
+                        .hosted_rules
                         .get(registry)
-                        .is_some_and(|rules| rules.for_package(package).access.allows(identity)),
+                        .is_some_and(|rules| {
+                            rules
+                                .for_package(package)
+                                .access
+                                .allows(identity)
+                        }),
                     None => false,
                 }
             }
@@ -597,29 +627,17 @@ impl RouteMatcher {
     fn from_public_route(route: &PublicRoute) -> Option<Self> {
         let origin = match route.registry.as_deref() {
             None => None,
-            Some(registry) => Some(
-                nerf_prefix(registry)
-                    .or_else(|| {
-                        tracing::warn!(
-                            registry,
-                            "ignoring public route with an unparsable registry URL",
-                        );
-                        None
-                    })?,
-            ),
+            Some(registry) => Some(nerf_prefix(registry).or_else(|| {
+                tracing::warn!(registry, "ignoring public route with an unparsable registry URL",);
+                None
+            })?),
         };
         let package = match route.package.as_deref() {
             None => None,
-            Some(pattern) => Some(
-                compile_glob(pattern)
-                    .or_else(|| {
-                        tracing::warn!(
-                            pattern,
-                            "ignoring public route with an invalid package glob",
-                        );
-                        None
-                    })?,
-            ),
+            Some(pattern) => Some(compile_glob(pattern).or_else(|| {
+                tracing::warn!(pattern, "ignoring public route with an invalid package glob",);
+                None
+            })?),
         };
         Some(Self { origin, package, https_only: false })
     }
@@ -637,10 +655,12 @@ impl RouteMatcher {
     }
 
     fn matches(&self, fetch: &str, package: Option<&str>) -> bool {
-        let origin_ok = self.origin
+        let origin_ok = self
+            .origin
             .as_deref()
             .is_none_or(|origin| fetch.starts_with(origin));
-        let package_ok = self.package
+        let package_ok = self
+            .package
             .as_ref()
             .is_none_or(|glob| package.is_some_and(|name| glob.is_match(name)));
         origin_ok && package_ok
@@ -652,7 +672,9 @@ impl RouteMatcher {
 /// that `None` into a dropped (never-matching) rule, so an operator typo
 /// narrows matching instead of opening a private route up.
 fn compile_glob(pattern: &str) -> Option<Glob<'static>> {
-    Glob::new(pattern).ok().map(Glob::into_owned)
+    Glob::new(pattern)
+        .ok()
+        .map(Glob::into_owned)
 }
 
 #[cfg(test)]

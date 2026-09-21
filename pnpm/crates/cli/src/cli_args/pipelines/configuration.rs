@@ -31,7 +31,9 @@ pub(crate) fn derive_config_root(
     dir_ref: &Path,
     reporter: ReporterType,
 ) -> miette::Result<PathBuf> {
-    let config_root = cfg.root_project_manifest_dir(dir_ref).to_path_buf();
+    let config_root = cfg
+        .root_project_manifest_dir(dir_ref)
+        .to_path_buf();
     let root_manifest = read_manifest_json(&config_root.join("package.json"))
         .wrap_err("read package manager policy")?;
     // pnpm warns from config-reading, so the notice lands ahead of any
@@ -76,12 +78,22 @@ pub(crate) fn apply_install_cli_config(cfg: &mut Config, args: &InstallArgs) {
     // `mergeGitBranchLockfiles`, so a pattern given on the command line
     // still gets matched against the current branch — and an explicit
     // `--merge-git-branch-lockfiles` settles the question without it.
-    if args.lockfile_updates.merge_git_branch_lockfiles {
+    if args
+        .lockfile_updates
+        .merge_git_branch_lockfiles
+    {
         cfg.merge_git_branch_lockfiles = true;
-    } else if !args.lockfile_updates.merge_git_branch_lockfiles_branch_pattern.is_empty() {
-        cfg.merge_git_branch_lockfiles_branch_pattern.clone_from(
-            &args.lockfile_updates.merge_git_branch_lockfiles_branch_pattern,
-        );
+    } else if !args
+        .lockfile_updates
+        .merge_git_branch_lockfiles_branch_pattern
+        .is_empty()
+    {
+        cfg.merge_git_branch_lockfiles_branch_pattern
+            .clone_from(
+                &args
+                    .lockfile_updates
+                    .merge_git_branch_lockfiles_branch_pattern,
+            );
         cfg.apply_git_branch_lockfile_derivation::<Host>();
     }
 }
@@ -93,7 +105,9 @@ pub(super) fn active_manifest_is_standin(
     projects: &[pnpm_workspace::Project],
 ) -> miette::Result<bool> {
     let normalized_active_dir = pnpm_fs::lexical_normalize(active_dir);
-    Ok(!active_dir.join("package.json").is_file()
+    Ok(!active_dir
+        .join("package.json")
+        .is_file()
         && pnpm_workspace::try_read_project_manifest(active_dir)
             .map_err(miette::Report::new)?
             .is_none()

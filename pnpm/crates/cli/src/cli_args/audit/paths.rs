@@ -59,7 +59,11 @@ pub(crate) fn walk_for_paths(
             Rc::new(TrailNode { name: importer.path_segment.clone(), parent: None });
         let mut in_trail = HashSet::new();
         let mut stack: Vec<PathFrame> = Vec::new();
-        for (_, root) in importer.roots.iter().filter(|(kind, _)| root_included(*kind, include)) {
+        for (_, root) in importer
+            .roots
+            .iter()
+            .filter(|(kind, _)| root_included(*kind, include))
+        {
             open_path_node(
                 &mut walk,
                 root.key.clone(),
@@ -128,7 +132,8 @@ impl<'a> PathWalk<'a> {
     }
 
     fn prune_saturated_findings(&mut self, name: &str, version: &str, paths: &AuditPathIndex) {
-        let targets = self.pending
+        let targets = self
+            .pending
             .get_mut(name)
             .and_then(|versions| versions.get_mut(version))
             .expect("recorded finding has pending targets");
@@ -177,7 +182,8 @@ pub(crate) fn open_path_node(
     if walk.vulnerable_names.contains(&name)
         && let Some(version) = package_version(&key)
     {
-        let class = walk.classes
+        let class = walk
+            .classes
             .get(&key)
             .copied()
             .unwrap_or(DepClass { dev_only: false, optional_only: false });
@@ -195,7 +201,9 @@ pub(crate) fn open_path_node(
     if !walk.live.contains(&key) {
         return;
     }
-    let children = walk.graph.children(&key, walk.include.optional_dependencies);
+    let children = walk
+        .graph
+        .children(&key, walk.include.optional_dependencies);
     if children.is_empty() {
         return;
     }
@@ -212,7 +220,9 @@ pub(crate) fn record_path(
     is_dev: bool,
     is_optional: bool,
 ) -> bool {
-    let by_version = paths.entry(name.to_string()).or_default();
+    let by_version = paths
+        .entry(name.to_string())
+        .or_default();
     let info = by_version
         .entry(version.to_string())
         .or_insert_with(|| PathInfo { paths: Vec::new(), dev: is_dev, optional: is_optional });
@@ -242,5 +252,7 @@ pub(crate) fn join_trail(node: &Rc<TrailNode>) -> String {
 }
 
 pub(crate) fn package_version(key: &PackageKey) -> Option<String> {
-    key.suffix.version_semver().map(ToString::to_string)
+    key.suffix
+        .version_semver()
+        .map(ToString::to_string)
 }

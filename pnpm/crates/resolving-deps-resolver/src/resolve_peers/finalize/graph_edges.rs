@@ -34,10 +34,22 @@ pub(super) fn insert_graph_node(
                 return;
             }
             let edges = &mut candidate.edges;
-            edges.transitive_peer_dependencies.extend(
-                existing.edges.transitive_peer_dependencies.iter().cloned(),
+            edges
+                .transitive_peer_dependencies
+                .extend(
+                    existing
+                        .edges
+                        .transitive_peer_dependencies
+                        .iter()
+                        .cloned(),
+                );
+            edges.optional_children.extend(
+                existing
+                    .edges
+                    .optional_children
+                    .iter()
+                    .cloned(),
             );
-            edges.optional_children.extend(existing.edges.optional_children.iter().cloned());
             merge_preferred_child_edges(
                 &mut candidate,
                 existing.edges.children.clone(),
@@ -59,7 +71,10 @@ pub(super) fn transitive_peer_names(
     all_resolved_peers
         .keys()
         .chain(all_missing_peers.keys())
-        .filter(|peer_alias| !pkg.peer_dependencies.contains_key(peer_alias.as_str()))
+        .filter(|peer_alias| {
+            !pkg.peer_dependencies
+                .contains_key(peer_alias.as_str())
+        })
         .cloned()
         .collect()
 }
@@ -162,9 +177,8 @@ pub(super) fn unavailable_non_transitive_peer_segment_names(
             .into_iter()
             .filter(|name| {
                 !available_peer_names.contains(name)
-                    && transitive_peer_dependencies.is_none_or(|transitive| {
-                        !transitive.contains(name)
-                    })
+                    && transitive_peer_dependencies
+                        .is_none_or(|transitive| !transitive.contains(name))
             })
             .collect(),
     )
@@ -182,8 +196,10 @@ pub(super) struct PeerNameTarjan<'a> {
 
 impl<'a> PeerNameTarjan<'a> {
     pub(super) fn strongconnect(&mut self, name: &'a str) {
-        self.index_of.insert(name, self.next_index);
-        self.low_of.insert(name, self.next_index);
+        self.index_of
+            .insert(name, self.next_index);
+        self.low_of
+            .insert(name, self.next_index);
         self.next_index += 1;
         self.on_stack.insert(name);
         self.tarjan_stack.push(name);
@@ -198,11 +214,13 @@ impl<'a> PeerNameTarjan<'a> {
                 self.strongconnect(child);
                 let name_low = self.low_of[name];
                 let child_low = self.low_of[child];
-                self.low_of.insert(name, name_low.min(child_low));
+                self.low_of
+                    .insert(name, name_low.min(child_low));
             } else if self.on_stack.contains(child) {
                 let name_low = self.low_of[name];
                 let child_index = self.index_of[child];
-                self.low_of.insert(name, name_low.min(child_index));
+                self.low_of
+                    .insert(name, name_low.min(child_index));
             }
         }
     }
@@ -222,15 +240,14 @@ impl<'a> PeerNameTarjan<'a> {
                 break;
             }
         }
-        let self_loop = component
-            .first()
-            .is_some_and(|member| {
-                self.graph
-                    .get(*member)
-                    .is_some_and(|edges| edges.contains(member))
-            });
+        let self_loop = component.first().is_some_and(|member| {
+            self.graph
+                .get(*member)
+                .is_some_and(|edges| edges.contains(member))
+        });
         if component.len() > 1 || self_loop {
-            self.cyclic.extend(component.into_iter().map(str::to_owned));
+            self.cyclic
+                .extend(component.into_iter().map(str::to_owned));
         }
     }
 }
@@ -240,9 +257,17 @@ fn merge_additional_edges(
     candidate: DependenciesGraphNode,
     transitive_by_dep_path: &HashMap<DepPath, HashSet<String>>,
 ) {
-    existing.edges.transitive_peer_dependencies.extend(
-        candidate.edges.transitive_peer_dependencies,
-    );
-    existing.edges.optional_children.extend(candidate.edges.optional_children);
+    existing
+        .edges
+        .transitive_peer_dependencies
+        .extend(
+            candidate
+                .edges
+                .transitive_peer_dependencies,
+        );
+    existing
+        .edges
+        .optional_children
+        .extend(candidate.edges.optional_children);
     merge_preferred_child_edges(existing, candidate.edges.children, transitive_by_dep_path);
 }

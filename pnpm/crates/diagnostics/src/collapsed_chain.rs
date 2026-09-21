@@ -38,7 +38,8 @@ impl ReportHandler for CollapsingHandler {
         diagnostic: &dyn Diagnostic,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        self.inner.debug(&Collapsed::new(diagnostic), formatter)
+        self.inner
+            .debug(&Collapsed::new(diagnostic), formatter)
     }
 }
 

@@ -97,7 +97,8 @@ impl DenoResolver {
                 as ResolveError
         })?;
 
-        let variants = read_deno_assets(&self.http_client, &version).await
+        let variants = read_deno_assets(&self.http_client, &version)
+            .await
             .map_err(|err| Box::new(DenoResolverError::ReadAssets(err)) as ResolveError)?;
         let resolution = LockfileResolution::Variations(VariationsResolution { variants });
         let manifest = serde_json::json!({
@@ -135,19 +136,22 @@ impl DenoResolver {
         if !query.compatible {
             resolve_opts.refresh.update = UpdateBehavior::Latest;
         }
-        let npm_result = self.npm_resolver.resolve(
-            &WantedDependency {
-                alias: Some("deno".to_string()),
-                bare_specifier: Some(version_spec),
-                ..WantedDependency::default()
-            },
-            &resolve_opts,
-        )
-        .await?;
+        let npm_result = self
+            .npm_resolver
+            .resolve(
+                &WantedDependency {
+                    alias: Some("deno".to_string()),
+                    bare_specifier: Some(version_spec),
+                    ..WantedDependency::default()
+                },
+                &resolve_opts,
+            )
+            .await?;
         let Some(npm_result) = npm_result else {
             return Ok(Some(LatestInfo::default()));
         };
-        if npm_result.policy_violation
+        if npm_result
+            .policy_violation
             .as_ref()
             .is_some_and(|violation| violation.code == MINIMUM_RELEASE_AGE_VIOLATION_CODE)
         {
@@ -169,7 +173,8 @@ fn bare_runtime_spec<'a>(wanted: &'a WantedDependency, expected_alias: &str) -> 
     if wanted.alias.as_deref() != Some(expected_alias) {
         return None;
     }
-    wanted.bare_specifier
+    wanted
+        .bare_specifier
         .as_deref()
         .and_then(|spec| spec.strip_prefix(BARE_SPEC_PREFIX))
 }

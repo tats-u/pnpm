@@ -45,8 +45,9 @@ fn no_unused_patches_returns_ok_none() {
 #[test]
 fn unused_patches_with_allow_returns_warning_payload() {
     let groups = group_patched_dependencies(entries(&["foo@1.0.0", "bar"])).unwrap();
-    let applied: HashSet<String> =
-        std::iter::once(&"foo@1.0.0").map(std::string::ToString::to_string).collect();
+    let applied: HashSet<String> = std::iter::once(&"foo@1.0.0")
+        .map(std::string::ToString::to_string)
+        .collect();
     let result = verify_patches(&groups, &applied, true).unwrap();
     assert_eq!(result, Some(UnusedPatches { unused_patches: vec!["bar".to_string()] }));
 }
@@ -54,8 +55,9 @@ fn unused_patches_with_allow_returns_warning_payload() {
 #[test]
 fn unused_patches_without_allow_returns_err() {
     let groups = group_patched_dependencies(entries(&["foo@1.0.0", "bar"])).unwrap();
-    let applied: HashSet<String> =
-        std::iter::once(&"foo@1.0.0").map(std::string::ToString::to_string).collect();
+    let applied: HashSet<String> = std::iter::once(&"foo@1.0.0")
+        .map(std::string::ToString::to_string)
+        .collect();
     let err: UnusedPatchError = verify_patches(&groups, &applied, false).unwrap_err();
     assert_eq!(err.unused_patches, vec!["bar".to_string()]);
 }

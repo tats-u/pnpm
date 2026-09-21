@@ -17,7 +17,9 @@ use std::{
 };
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn empty_auth_file(root: &Path) -> PathBuf {
@@ -34,7 +36,9 @@ fn run_bugs(workspace: &Path, auth_file: &Path, args: &[&str]) -> std::process::
     for arg in args {
         command = command.with_arg(arg);
     }
-    command.output().expect("spawn pacquet bugs")
+    command
+        .output()
+        .expect("spawn pacquet bugs")
 }
 
 #[test]

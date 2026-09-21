@@ -69,5 +69,9 @@ fn scanning_lists_only_the_branch_lockfiles_and_cleaning_removes_exactly_those()
 #[test]
 fn scanning_a_missing_directory_finds_nothing() {
     let dir = TempDir::new().unwrap();
-    assert!(Lockfile::git_branch_lockfiles(&dir.path().join("absent")).unwrap().is_empty());
+    assert!(
+        Lockfile::git_branch_lockfiles(&dir.path().join("absent"))
+            .unwrap()
+            .is_empty()
+    );
 }

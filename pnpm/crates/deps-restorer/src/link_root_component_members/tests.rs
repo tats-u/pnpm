@@ -29,7 +29,9 @@ fn injected_member_key_matches_file_and_file_alias() {
     // `@scope/comp2@file:comp2(react@16.14.0)` → `Alias`, matched.
     let alias = ResolvedDependencySpec {
         specifier: "workspace:*".to_string(),
-        version: "@scope/comp2@file:comp2(react@16.14.0)".parse().unwrap(),
+        version: "@scope/comp2@file:comp2(react@16.14.0)"
+            .parse()
+            .unwrap(),
     };
     assert!(matches!(alias.version, ImporterDepVersion::Alias(_)));
     let (dir_name, key) = injected_member_key(&name, &alias).expect("file alias is a member");
@@ -69,7 +71,9 @@ fn injected_member_key_matches_file_and_file_alias() {
 fn file_member(name: &str, payload: &str) -> ResolvedDependencySpec {
     ResolvedDependencySpec {
         specifier: "workspace:*".to_string(),
-        version: format!("{name}@file:{payload}").parse().unwrap(),
+        version: format!("{name}@file:{payload}")
+            .parse()
+            .unwrap(),
     }
 }
 
@@ -82,9 +86,13 @@ fn member_slot_modules_dir(
 ) -> std::path::PathBuf {
     let key = PackageKey::new(
         name.parse::<PkgName>().unwrap(),
-        format!("file:{payload}").parse().unwrap(),
+        format!("file:{payload}")
+            .parse()
+            .unwrap(),
     );
-    layout.slot_dir(&key).join("node_modules")
+    layout
+        .slot_dir(&key)
+        .join("node_modules")
 }
 
 /// Materialize a member's own package directory — including a
@@ -322,7 +330,9 @@ fn member_without_manifest_links_snapshot_declared_siblings() {
     let snapshot_key = |name: &str, payload: &str| {
         PackageKey::new(
             name.parse::<PkgName>().unwrap(),
-            format!("file:{payload}").parse().unwrap(),
+            format!("file:{payload}")
+                .parse()
+                .unwrap(),
         )
     };
     // A sibling edge as the lockfile records it: alias name mapped to a
@@ -331,7 +341,11 @@ fn member_without_manifest_links_snapshot_declared_siblings() {
     let sibling_edge = |name: &str, payload: &str| {
         (
             name.parse::<PkgName>().unwrap(),
-            SnapshotDepRef::Plain(format!("file:{payload}").parse().unwrap()),
+            SnapshotDepRef::Plain(
+                format!("file:{payload}")
+                    .parse()
+                    .unwrap(),
+            ),
         )
     };
     let mut snapshots = HashMap::new();

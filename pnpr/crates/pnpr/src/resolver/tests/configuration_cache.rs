@@ -307,9 +307,15 @@ fn intern_config_applies_project_transforms() {
             .expect("patch hashes")["foo@1.0.0"],
         "abc123",
     );
-    let extensions = config.package_extensions.as_ref().expect("package extensions");
+    let extensions = config
+        .package_extensions
+        .as_ref()
+        .expect("package extensions");
     assert_eq!(
-        extensions["foo@1.0.0"].dependencies.as_ref().expect("extension dependencies")["bar"],
+        extensions["foo@1.0.0"]
+            .dependencies
+            .as_ref()
+            .expect("extension dependencies")["bar"],
         "1.0.0",
     );
 }

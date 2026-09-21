@@ -50,14 +50,18 @@ fn describe_published_versions(meta: &Package) -> String {
     let mut out = String::new();
     if let Some(latest) = meta.dist_tags.get("latest") {
         write!(out, r#"The latest release of {} is "{latest}"."#, meta.name).unwrap();
-        if let Some(published_at) = meta.published_at(latest).and_then(stringify_date) {
+        if let Some(published_at) = meta
+            .published_at(latest)
+            .and_then(stringify_date)
+        {
             write!(out, " Published at {published_at}").unwrap();
         }
         out.push('\n');
     }
     // The tags arrive in a `HashMap`, so they are sorted to keep the message
     // stable across runs rather than left in iteration order.
-    let mut other_tags: Vec<_> = meta.dist_tags
+    let mut other_tags: Vec<_> = meta
+        .dist_tags
         .iter()
         .filter(|(tag, _)| tag.as_str() != "latest")
         .collect();
@@ -66,7 +70,10 @@ fn describe_published_versions(meta: &Package) -> String {
         out.push_str("\nOther releases are:\n");
         for (tag, version) in other_tags {
             write!(out, "  * {tag}: {version}").unwrap();
-            if let Some(published_at) = meta.published_at(version).and_then(stringify_date) {
+            if let Some(published_at) = meta
+                .published_at(version)
+                .and_then(stringify_date)
+            {
                 write!(out, " published at {published_at}").unwrap();
             }
             out.push('\n');
@@ -89,7 +96,11 @@ fn stringify_date(timestamp: &str) -> Option<String> {
     let parsed = crate::parse_packument_timestamp(timestamp)?;
     let local = parsed.with_timezone(&Local);
     if Utc::now() - parsed < TimeDelta::days(1) {
-        return Some(local.format("%-m/%-d/%Y %-I:%M:%S %p").to_string());
+        return Some(
+            local
+                .format("%-m/%-d/%Y %-I:%M:%S %p")
+                .to_string(),
+        );
     }
     Some(local.format("%-m/%-d/%Y").to_string())
 }
@@ -137,13 +148,8 @@ pub struct RegistryResponseErrorOptions<'a> {
 impl RegistryResponseError {
     #[must_use]
     pub fn new(opts: RegistryResponseErrorOptions<'_>) -> Self {
-        let RegistryResponseErrorOptions {
-            url,
-            status,
-            status_text,
-            pkg_name,
-            auth_header_value,
-        } = opts;
+        let RegistryResponseErrorOptions { url, status, status_text, pkg_name, auth_header_value } =
+            opts;
         let mut hint = String::new();
         if status == 404 {
             write!(
@@ -228,7 +234,9 @@ fn consume_trailing_digits(bytes: &[u8], end: usize) -> usize {
 }
 
 fn is_semver(candidate: &str) -> bool {
-    candidate.parse::<node_semver::Version>().is_ok()
+    candidate
+        .parse::<node_semver::Version>()
+        .is_ok()
 }
 
 /// `ERR_PNPM_GIT_RESOLVE_FAILED`: a git specifier's `git ls-remote` failed —
@@ -292,7 +300,9 @@ fn https_transport_hint(repo: &str) -> Option<String> {
         .split('/')
         .next()
         .unwrap_or(authority);
-    let host = host.rsplit_once('@').map_or(host, |(_userinfo, host)| host);
+    let host = host
+        .rsplit_once('@')
+        .map_or(host, |(_userinfo, host)| host);
     if host.is_empty() {
         return None;
     }
@@ -300,12 +310,16 @@ fn https_transport_hint(repo: &str) -> Option<String> {
     // for after the closing bracket rather than at the first colon.
     let hostname = match host.split_once(']') {
         Some((address, _port)) if host.starts_with('[') => &host[..=address.len()],
-        _ => host.split_once(':').map_or(host, |(hostname, _port)| hostname),
+        _ => host
+            .split_once(':')
+            .map_or(host, |(hostname, _port)| hostname),
     };
     // The scheme's own port is dropped from the `insteadOf` prefix, matching
     // what git and the TypeScript CLI's `URL` both normalize the remote to.
     let default_port = if scheme == "https" { ":443" } else { ":80" };
-    let host = host.strip_suffix(default_port).unwrap_or(host);
+    let host = host
+        .strip_suffix(default_port)
+        .unwrap_or(host);
     let (host, hostname) = (redact_and_sanitize(host), redact_and_sanitize(hostname));
     Some(format!(
         r#"pnpm resolves this specifier over HTTPS because it does not ask for SSH, and the URL it records has to work on every machine that installs the lockfile.

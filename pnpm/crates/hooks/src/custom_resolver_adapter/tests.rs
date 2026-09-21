@@ -36,7 +36,8 @@ impl ScriptedResolver {
 #[async_trait]
 impl CustomResolver for ScriptedResolver {
     async fn can_resolve(&self, wanted_dependency: Value) -> Result<bool, HookError> {
-        self.can_resolve_calls.fetch_add(1, Ordering::SeqCst);
+        self.can_resolve_calls
+            .fetch_add(1, Ordering::SeqCst);
         self.seen_wanted
             .lock()
             .unwrap()
@@ -108,7 +109,8 @@ async fn returns_none_when_can_resolve_is_false() {
 
     assert!(result.is_none());
     assert!(
-        resolver.seen_opts
+        resolver
+            .seen_opts
             .lock()
             .unwrap()
             .is_empty(),
@@ -130,13 +132,23 @@ async fn caches_can_resolve_per_alias_and_specifier() {
         .resolve(&wanted("foo", "custom:foo"), &opts)
         .await
         .unwrap();
-    assert_eq!(resolver.can_resolve_calls.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        resolver
+            .can_resolve_calls
+            .load(Ordering::SeqCst),
+        1
+    );
 
     adapter
         .resolve(&wanted("foo", "custom:other"), &opts)
         .await
         .unwrap();
-    assert_eq!(resolver.can_resolve_calls.load(Ordering::SeqCst), 2);
+    assert_eq!(
+        resolver
+            .can_resolve_calls
+            .load(Ordering::SeqCst),
+        2
+    );
 }
 
 #[tokio::test]
@@ -176,7 +188,11 @@ async fn errors_when_resolution_has_invalid_shape() {
         .resolve(&wanted("foo", "custom:foo"), &ResolveOptions::default())
         .await
         .expect_err("invalid resolution must fail");
-    assert!(err.to_string().contains("invalid resolution"), "got: {err}");
+    assert!(
+        err.to_string()
+            .contains("invalid resolution"),
+        "got: {err}"
+    );
 }
 
 #[tokio::test]
@@ -193,7 +209,10 @@ async fn manifest_passes_through() {
         .unwrap()
         .expect("resolved");
 
-    let manifest = result.package.manifest.expect("manifest survives the adapter");
+    let manifest = result
+        .package
+        .manifest
+        .expect("manifest survives the adapter");
     assert_eq!(*manifest, json!({ "name": "foo", "version": "1.0.0" }));
 }
 
@@ -230,7 +249,10 @@ async fn sends_upstream_payload_shapes() {
         ..ResolveOptions::default()
     };
 
-    adapter.resolve(&wanted_dependency, &opts).await.unwrap();
+    adapter
+        .resolve(&wanted_dependency, &opts)
+        .await
+        .unwrap();
 
     let seen_wanted = resolver.seen_wanted.lock().unwrap();
     assert_eq!(

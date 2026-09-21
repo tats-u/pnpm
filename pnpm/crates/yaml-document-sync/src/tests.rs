@@ -179,7 +179,9 @@ fn batches_mixed_mapping_and_sequence_edits() {
     ] {
         for keep in 0..16 {
             let mut target = parse(source).unwrap();
-            let dependencies = target["dependencies"].as_object_mut().unwrap();
+            let dependencies = target["dependencies"]
+                .as_object_mut()
+                .unwrap();
             dependencies.retain(|key, value| {
                 *value = json!("new");
                 let index = "abcd".find(key.as_str()).unwrap();

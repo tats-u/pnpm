@@ -296,7 +296,9 @@ fn minimum_release_age_exclude_add_matches_the_blocks_crlf_line_endings() {
 #[test]
 fn set_overrides_refuses_to_clobber_a_non_scalar_value() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     // A hand-written parent-scoped (object) override at the same selector key.
     fs::write(&path, "overrides:\n  foo@<2.0.0:\n    bar: 1.0.0\n").expect("seed manifest");
 
@@ -312,7 +314,9 @@ fn set_overrides_refuses_to_clobber_a_non_scalar_value() {
 #[test]
 fn set_overrides_edits_an_inline_flow_block() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     fs::write(&path, "overrides: { foo: 1.0.0 } # pinned\n").expect("seed manifest");
 
     crate::set_overrides(dir.path(), [("bar", "^2.0.0")]).expect("set_overrides succeeds");
@@ -324,7 +328,9 @@ fn set_overrides_edits_an_inline_flow_block() {
 #[test]
 fn set_overrides_updates_an_entry_of_an_inline_flow_block() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     fs::write(&path, "overrides: { 'foo': \"1.0.0\", bar: 2.0.0 }\n").expect("seed manifest");
 
     crate::set_overrides(dir.path(), [("foo", "^3.0.0")]).expect("set_overrides succeeds");
@@ -336,7 +342,9 @@ fn set_overrides_updates_an_entry_of_an_inline_flow_block() {
 #[test]
 fn set_overrides_refuses_a_multiline_flow_block() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     let original = "overrides: {\n  foo: 1.0.0, # pinned\n}\n";
     fs::write(&path, original).expect("seed manifest");
 
@@ -351,7 +359,9 @@ fn set_overrides_refuses_a_multiline_flow_block() {
 #[test]
 fn set_allow_builds_rejects_control_characters() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
 
     // A newline in a package name (e.g. a crafted `--allow-build`) would
     // splice into a multi-line scalar and corrupt the block.

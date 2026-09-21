@@ -22,7 +22,9 @@ fn exact_group(version: &str, key: &str, hash: &str) -> PatchGroup {
     let info =
         ExtendedPatchInfo { hash: hash.to_string(), patch_file_path: None, key: key.to_string() };
     let mut group = PatchGroup::default();
-    group.exact.insert(version.to_string(), info);
+    group
+        .exact
+        .insert(version.to_string(), info);
     group
 }
 
@@ -58,12 +60,20 @@ async fn appends_patch_hash_to_pkg_id_and_records_applied_key() {
 
     assert_eq!(tree.direct.len(), 1);
     assert_eq!(tree.direct[0].id, "foo@1.0.0(patch_hash=abc123)");
-    assert!(tree.packages.contains_key("foo@1.0.0(patch_hash=abc123)"));
-    assert!(tree.applied_patches.contains("foo@1.0.0"));
+    assert!(
+        tree.packages
+            .contains_key("foo@1.0.0(patch_hash=abc123)")
+    );
+    assert!(
+        tree.applied_patches
+            .contains("foo@1.0.0")
+    );
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
     assert_eq!(
-        result.direct_dependencies_by_alias.get("foo"),
+        result
+            .direct_dependencies_by_alias
+            .get("foo"),
         Some(&DepPath::from("foo@1.0.0(patch_hash=abc123)".to_string())),
     );
 }
@@ -109,7 +119,10 @@ async fn patches_git_dependency_with_manifest_version() {
     .unwrap();
 
     assert_eq!(tree.direct[0].id, format!("foo@{git_ref}(patch_hash=abc123)"));
-    assert!(tree.applied_patches.contains("foo@1.0.0"));
+    assert!(
+        tree.applied_patches
+            .contains("foo@1.0.0")
+    );
 }
 
 #[tokio::test]
@@ -168,7 +181,9 @@ async fn range_match_applies_patch_and_records_user_key() {
         key: "foo@^1.0.0".to_string(),
     };
     let mut group = PatchGroup::default();
-    group.range.push(PatchGroupRangeItem { version: "^1.0.0".to_string(), patch: info });
+    group
+        .range
+        .push(PatchGroupRangeItem { version: "^1.0.0".to_string(), patch: info });
     let mut groups: PatchGroupRecord = PatchGroupRecord::new();
     groups.insert("foo".to_string(), group);
 
@@ -190,7 +205,10 @@ async fn range_match_applies_patch_and_records_user_key() {
     .unwrap();
 
     assert_eq!(tree.direct[0].id, "foo@1.2.0(patch_hash=deadbeef)");
-    assert!(tree.applied_patches.contains("foo@^1.0.0"));
+    assert!(
+        tree.applied_patches
+            .contains("foo@^1.0.0")
+    );
 }
 
 #[tokio::test]

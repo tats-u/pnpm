@@ -101,9 +101,16 @@ fn extends_peer_dependencies_and_meta() {
     let mut manifest = json!({ "name": "some-pkg", "version": "1.0.0" });
     extender.apply(&mut manifest);
 
-    assert_eq!(manifest.get("peerDependencies").unwrap(), &json!({ "react": ">=16" }));
     assert_eq!(
-        manifest.get("peerDependenciesMeta").unwrap(),
+        manifest
+            .get("peerDependencies")
+            .unwrap(),
+        &json!({ "react": ">=16" })
+    );
+    assert_eq!(
+        manifest
+            .get("peerDependenciesMeta")
+            .unwrap(),
         &json!({ "react": { "optional": true } }),
     );
 }

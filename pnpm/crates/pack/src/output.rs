@@ -19,7 +19,8 @@ pub fn to_pack_result_json(result: &PackResult) -> PackResultJson {
             .unwrap_or_default()
             .to_string(),
         filename: result.tarball_path.clone(),
-        files: result.contents
+        files: result
+            .contents
             .iter()
             .map(|path| PackFile { path: path.clone() })
             .collect(),
@@ -48,7 +49,8 @@ pub fn format_pack_output(results: &[PackResultJson], json: bool, unicode: bool)
             // manifest- and filesystem-derived, so strip control
             // characters before they reach the terminal — a file named
             // with raw ANSI escapes would otherwise spoof the output.
-            let files = result.files
+            let files = result
+                .files
                 .iter()
                 .map(|file| sanitize_for_terminal(&file.path))
                 .collect::<Vec<_>>()
@@ -89,7 +91,8 @@ fn sanitize_for_terminal(text: &str) -> std::borrow::Cow<'_, str> {
 /// match the JS `String.prototype.replace(string, ...)` semantics that
 /// build a tarball's default filename.
 pub(super) fn normalize_tarball_name(name: &str) -> String {
-    name.replacen('@', "", 1).replacen('/', "-", 1)
+    name.replacen('@', "", 1)
+        .replacen('/', "-", 1)
 }
 
 /// Resolve `(tarball_name, pack_destination)` from the `--out` template
@@ -123,7 +126,9 @@ fn resolve_output_values(
     if pack_destination.is_some() {
         return Err(PackError::OutAndPackDestination);
     }
-    let prepared = out.replace("%s", normalized_name).replace("%v", version);
+    let prepared = out
+        .replace("%s", normalized_name)
+        .replace("%v", version);
     let prepared_path = Path::new(&prepared);
     // `--out .`, `--out ..`, or `--out ""` resolve to no filename; the
     // join would then target a directory and the write would fail with a
@@ -191,7 +196,9 @@ pub(super) fn packed_tarball_path(
 
 /// `version` without its `+<build>` metadata segment.
 pub(super) fn strip_build_metadata(version: &str) -> &str {
-    version.split_once('+').map_or(version, |(base, _)| base)
+    version
+        .split_once('+')
+        .map_or(version, |(base, _)| base)
 }
 
 /// Resolve a path's realpath, falling back to the input when it doesn't

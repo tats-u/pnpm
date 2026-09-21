@@ -67,7 +67,11 @@ pub(crate) fn peer_shadowed_dependencies(
     auto_install_peers: bool,
 ) -> HashSet<String> {
     let Some(manifest) = manifest else { return HashSet::default() };
-    let object = |key| manifest.get(key).and_then(Value::as_object);
+    let object = |key| {
+        manifest
+            .get(key)
+            .and_then(Value::as_object)
+    };
     let (Some(peers), Some(deps)) = (object("peerDependencies"), object("dependencies")) else {
         return HashSet::default();
     };

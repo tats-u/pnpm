@@ -77,7 +77,11 @@ impl PipelineRunStore {
         }
         let document = serde_json::to_vec(&run)?;
         let key = format!("{}{RECORD_SUFFIX}", run.run_id);
-        if self.storage.create_pipeline_run(&run.workspace, &key, &document).await? {
+        if self
+            .storage
+            .create_pipeline_run(&run.workspace, &key, &document)
+            .await?
+        {
             return Ok(());
         }
         Err(RegistryError::BadRequest {
@@ -100,7 +104,10 @@ impl PipelineRunStore {
         let mut newest = BTreeSet::new();
         for workspace in workspaces {
             validate_name(workspace, "workspace")?;
-            let keys = self.storage.list_pipeline_runs(workspace).await?;
+            let keys = self
+                .storage
+                .list_pipeline_runs(workspace)
+                .await?;
             keep_newest_runs(&mut newest, workspace, keys, limit);
         }
         let mut entries = Vec::with_capacity(newest.len());
@@ -118,7 +125,11 @@ impl PipelineRunStore {
         validate_name(workspace, "workspace")?;
         validate_name(run_id, "runId")?;
         let key = format!("{run_id}{RECORD_SUFFIX}");
-        let Some(bytes) = self.storage.read_pipeline_run(workspace, &key).await? else {
+        let Some(bytes) = self
+            .storage
+            .read_pipeline_run(workspace, &key)
+            .await?
+        else {
             return Ok(None);
         };
         serde_json::from_slice(&bytes)

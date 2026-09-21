@@ -40,7 +40,12 @@ fn run_in_all_files_mode_returns_manifest_and_filesmap() {
     assert_eq!(rels, vec!["package.json".to_string(), "src/index.ts".into()]);
 
     let manifest = out.manifest.expect("manifest read");
-    assert_eq!(manifest.get("name").and_then(|v| v.as_str()), Some("x"));
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(|v| v.as_str()),
+        Some("x")
+    );
     assert!(!out.requires_build);
 }
 

@@ -272,12 +272,16 @@ impl ResolverChainInputs<'_> {
                 // upgrades per-call where `published_by` / `optional` demand it.
                 full_metadata: self.registry.full_metadata,
                 needs_full_metadata_for: Some(Arc::clone(&self.registry.needs_full_metadata)),
-                filter_metadata: self.config.requires_filtered_full_metadata(),
+                filter_metadata: self
+                    .config
+                    .requires_filtered_full_metadata(),
             },
             cache_policy: pnpm_resolving_npm_resolver::MetadataCachePolicy {
                 offline: self.config.offline,
                 prefer_offline: self.config.prefer_offline,
-                ignore_missing_time_field: self.config.minimum_release_age_ignore_missing_time,
+                ignore_missing_time_field: self
+                    .config
+                    .minimum_release_age_ignore_missing_time,
             },
         })
     }
@@ -338,9 +342,16 @@ impl ResolverChainInputs<'_> {
             Arc::clone(self.fetching.http_client),
             Arc::clone(self.fetching.auth_headers),
         );
-        node_resolver.node_download_mirrors.clone_from(&self.config.node_download_mirrors);
-        node_resolver.mirror = self.config.tool_mirror(Tool::Node).map(ToString::to_string);
-        node_resolver.channel_mirrors = self.config.tool_channel_mirrors(Tool::Node);
+        node_resolver
+            .node_download_mirrors
+            .clone_from(&self.config.node_download_mirrors);
+        node_resolver.mirror = self
+            .config
+            .tool_mirror(Tool::Node)
+            .map(ToString::to_string);
+        node_resolver.channel_mirrors = self
+            .config
+            .tool_channel_mirrors(Tool::Node);
         node_resolver.offline = self.config.offline;
         node_resolver.cache_dir = Some(self.config.cache_dir.clone());
         node_resolver
@@ -352,7 +363,9 @@ impl ResolverChainInputs<'_> {
     ) -> NamedRegistryResolver<InMemoryPackageMetaCache> {
         NamedRegistryResolver {
             registries_by_prefix: self.registry.by_prefix.clone(),
-            registry_names: self.registry.by_prefix
+            registry_names: self
+                .registry
+                .by_prefix
                 .keys()
                 .cloned()
                 .collect(),
@@ -369,12 +382,16 @@ impl ResolverChainInputs<'_> {
                 // Same rationale as `NpmResolver.full_metadata` above.
                 full_metadata: self.registry.full_metadata,
                 needs_full_metadata_for: Some(Arc::clone(&self.registry.needs_full_metadata)),
-                filter_metadata: self.config.requires_filtered_full_metadata(),
+                filter_metadata: self
+                    .config
+                    .requires_filtered_full_metadata(),
             },
             cache_policy: pnpm_resolving_npm_resolver::MetadataCachePolicy {
                 offline: self.config.offline,
                 prefer_offline: self.config.prefer_offline,
-                ignore_missing_time_field: self.config.minimum_release_age_ignore_missing_time,
+                ignore_missing_time_field: self
+                    .config
+                    .minimum_release_age_ignore_missing_time,
             },
         }
     }
@@ -415,7 +432,10 @@ impl ResolverChainInputs<'_> {
             ),
             Box::new(YarnResolver::new(
                 Arc::clone(self.fetching.http_client),
-                self.config.tls.strict_ssl.unwrap_or(true),
+                self.config
+                    .tls
+                    .strict_ssl
+                    .unwrap_or(true),
             )),
             Box::new(self.named_registry_resolver(caches)),
             Box::new(LocalPathResolver::new(local_ctx)),
@@ -502,8 +522,7 @@ async fn load_pnpmfile(
     Ok(PnpmfileLoad {
         hook: Some(hook),
         custom_resolvers,
-        custom_fetcher_session: (!fetchers.is_empty()).then(|| {
-            Arc::new(pnpm_deps_restorer::CustomFetcherSession::new(fetchers))
-        }),
+        custom_fetcher_session: (!fetchers.is_empty())
+            .then(|| Arc::new(pnpm_deps_restorer::CustomFetcherSession::new(fetchers))),
     })
 }

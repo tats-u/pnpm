@@ -26,7 +26,11 @@ fn side_effects_key_for_git_hosted_tarball_matches_warm_lookup() {
     let pkg_id = "https://codeload.github.com/pnpm/pnpm/tar.gz/abcdef";
     let resolution = pnpm_lockfile::LockfileResolution::Tarball(pnpm_lockfile::TarballResolution {
         tarball: pkg_id.to_string(),
-        integrity: Some(integrity.parse().expect("parse integrity")),
+        integrity: Some(
+            integrity
+                .parse()
+                .expect("parse integrity"),
+        ),
         revision: None,
         git_hosted: Some(true),
         path: None,
@@ -116,7 +120,9 @@ fn materialization_failure_on_incomplete_slot_is_fatal() {
     // Overlay points at a non-existent CAS blob, so materialization fails.
     let overlay = std::collections::HashMap::from([(
         "generated.txt".to_string(),
-        virtual_store_dir.path().join("missing-cas-blob"),
+        virtual_store_dir
+            .path()
+            .join("missing-cas-blob"),
     )]);
     let mut side_effects_maps = std::collections::HashMap::new();
     side_effects_maps.insert(
@@ -292,7 +298,9 @@ async fn write_path_populates_side_effects_row() {
             pnpm_lockfile::PackageMetadata {
                 resolution: pnpm_lockfile::LockfileResolution::Registry(
                     pnpm_lockfile::RegistryResolution {
-                        integrity: integrity_str.parse().expect("parse integrity"),
+                        integrity: integrity_str
+                            .parse()
+                            .expect("parse integrity"),
                         revision: None,
                     },
                 ),
@@ -431,16 +439,26 @@ async fn write_path_populates_side_effects_row() {
     // Drop our writer handle and wait for the task to flush the
     // queued WRITE-path mutation before reading the row back.
     drop(writer);
-    writer_task.await.expect("await writer").expect("writer succeeds");
+    writer_task
+        .await
+        .expect("await writer")
+        .expect("writer succeeds");
 
     let index = StoreIndex::open_readonly_in(&store_dir).expect("open index for read");
     let row = index
         .get(&files_index_file)
         .expect("get row")
         .expect("row present");
-    let side_effects = row.side_effects.expect("side_effects populated");
-    let diff = side_effects.get(&expected_cache_key).expect("entry for cache key");
-    let added = diff.added.as_ref().expect("added present");
+    let side_effects = row
+        .side_effects
+        .expect("side_effects populated");
+    let diff = side_effects
+        .get(&expected_cache_key)
+        .expect("entry for cache key");
+    let added = diff
+        .added
+        .as_ref()
+        .expect("added present");
     assert!(
         added.contains_key("generated.txt"),
         "added map should record the postinstall-created file: {added:?}",

@@ -42,7 +42,9 @@ fn engine_strict_rejects_an_incompatible_root_project() {
         "stderr must report the configured Node.js version: {stderr}",
     );
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "the engine check must fail before writing the lockfile",
     );
 

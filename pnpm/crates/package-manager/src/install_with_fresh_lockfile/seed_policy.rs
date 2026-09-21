@@ -159,7 +159,9 @@ pub(super) fn full_resolution_required<'a>(
                 let scope = if matches!(default_scope, UpdateReuseScope::None) {
                     default_scope
                 } else {
-                    scopes_by_importer.get(importer_id).unwrap_or(default_scope)
+                    scopes_by_importer
+                        .get(importer_id)
+                        .unwrap_or(default_scope)
                 };
                 matches!(scope, UpdateReuseScope::None)
             })

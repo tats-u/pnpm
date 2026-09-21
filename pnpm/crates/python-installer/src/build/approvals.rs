@@ -17,7 +17,11 @@ pub(crate) fn unapproved(
     let approvals = Approvals::of(config);
     let mut names = requires
         .iter()
-        .filter(|requirement| !approvals.any_version.contains(&requirement.name))
+        .filter(|requirement| {
+            !approvals
+                .any_version
+                .contains(&requirement.name)
+        })
         .map(|requirement| approvals.describe(&requirement.name))
         .collect::<Vec<_>>();
     names.sort();

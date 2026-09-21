@@ -200,9 +200,9 @@ impl LockfileVerificationGate {
 
     /// Block on the verdict.
     pub(crate) async fn wait(mut self) -> Result<(), pnpm_lockfile_verification::VerifyError> {
-        (&mut self.0).await.expect(
-            "the lockfile verification task is only aborted by dropping the gate unawaited",
-        )
+        (&mut self.0)
+            .await
+            .expect("the lockfile verification task is only aborted by dropping the gate unawaited")
     }
 }
 
@@ -219,7 +219,10 @@ impl Drop for LockfileVerificationGate {
 /// derive it identically or the pre-spawned host would disagree with
 /// the one the install would have detected.
 fn effective_node_version(config: &Config, manifest: &PackageManifest) -> Option<String> {
-    config.node_version.clone().or_else(|| node_version_from_engines_runtime(manifest.value()))
+    config
+        .node_version
+        .clone()
+        .or_else(|| node_version_from_engines_runtime(manifest.value()))
 }
 
 /// Shared out-map for [`ResolutionInputs::peer_issues_sink`]: importer id →
@@ -347,7 +350,9 @@ pub(crate) fn selected_project_indices(
         .filter(|dir| selected_dirs.contains(*dir))
         .map(|dir| {
             assert!(seen_dirs.insert(dir.as_path()), "selected project must be ordered once");
-            *project_indices.get(dir.as_path()).expect("every selected project must be discovered")
+            *project_indices
+                .get(dir.as_path())
+                .expect("every selected project must be discovered")
         })
         .collect::<Vec<_>>();
     assert_eq!(seen_dirs.len(), selected_dirs.len(), "every selected project must be ordered");

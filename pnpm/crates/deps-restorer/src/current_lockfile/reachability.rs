@@ -19,7 +19,8 @@ pub(super) fn collect_reachable<ShouldSkip>(
 where
     ShouldSkip: Fn(&PackageKey) -> bool,
 {
-    let mut known_importer_ids = lockfile.importers
+    let mut known_importer_ids = lockfile
+        .importers
         .keys()
         .cloned()
         .collect::<Vec<_>>();
@@ -74,18 +75,31 @@ pub(super) struct ReachableWalk<'a, ShouldSkip> {
 }
 impl<ShouldSkip: Fn(&PackageKey) -> bool> ReachableWalk<'_, ShouldSkip> {
     fn visit_importer(&mut self, importer_id: &str) {
-        if self.reached.importer_ids.contains(importer_id) {
+        if self
+            .reached
+            .importer_ids
+            .contains(importer_id)
+        {
             return;
         }
         let Some(importer) = self.lockfile.importers.get(importer_id) else {
             return;
         };
-        self.reached.importer_ids.insert(importer_id.to_owned());
+        self.reached
+            .importer_ids
+            .insert(importer_id.to_owned());
         let included = self.included;
         for map in [
-            included.dependencies.then_some(importer.dependencies.as_ref()).flatten(),
-            included.dev_dependencies.then_some(importer.dev_dependencies.as_ref()).flatten(),
-            included.optional_dependencies
+            included
+                .dependencies
+                .then_some(importer.dependencies.as_ref())
+                .flatten(),
+            included
+                .dev_dependencies
+                .then_some(importer.dev_dependencies.as_ref())
+                .flatten(),
+            included
+                .optional_dependencies
                 .then_some(importer.optional_dependencies.as_ref())
                 .flatten(),
         ]
@@ -101,10 +115,16 @@ impl<ShouldSkip: Fn(&PackageKey) -> bool> ReachableWalk<'_, ShouldSkip> {
     }
 
     fn visit_snapshot(&mut self, key: &PackageKey) {
-        if !self.reached.snapshot_keys.insert(key.clone()) {
+        if !self
+            .reached
+            .snapshot_keys
+            .insert(key.clone())
+        {
             return;
         }
-        let Some(snapshot) = self.lockfile.snapshots
+        let Some(snapshot) = self
+            .lockfile
+            .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.get(key))
         else {
@@ -112,7 +132,8 @@ impl<ShouldSkip: Fn(&PackageKey) -> bool> ReachableWalk<'_, ShouldSkip> {
         };
         for map in [
             snapshot.dependencies.as_ref(),
-            self.included.optional_dependencies
+            self.included
+                .optional_dependencies
                 .then_some(snapshot.optional_dependencies.as_ref())
                 .flatten(),
         ]
@@ -135,7 +156,9 @@ impl<ShouldSkip: Fn(&PackageKey) -> bool> ReachableWalk<'_, ShouldSkip> {
         if (self.should_skip)(&key) {
             return;
         }
-        if self.lockfile.snapshots
+        if self
+            .lockfile
+            .snapshots
             .as_ref()
             .is_some_and(|snapshots| snapshots.contains_key(&key))
         {
@@ -147,7 +170,8 @@ impl<ShouldSkip: Fn(&PackageKey) -> bool> ReachableWalk<'_, ShouldSkip> {
         if let Some(importer_id) =
             linked_importer_id(self.workspace_root, target, &self.known_importers)
         {
-            self.importer_queue.push_back(importer_id);
+            self.importer_queue
+                .push_back(importer_id);
         }
     }
 }

@@ -46,8 +46,9 @@ fn only_a_released_version_is_a_version_request() {
 #[test]
 fn dev_engines_reads_one_entry_or_a_list() {
     let single = json!({ "devEngines": { "packageManager": { "name": "yarn", "version": "4" } } });
-    let names: Vec<_> =
-        dev_engines_package_managers(&single).filter_map(engine_name_version).collect();
+    let names: Vec<_> = dev_engines_package_managers(&single)
+        .filter_map(engine_name_version)
+        .collect();
     assert_eq!(names, [("yarn", Some("4"))]);
 
     let list = json!({
@@ -58,8 +59,9 @@ fn dev_engines_reads_one_entry_or_a_list() {
             ],
         },
     });
-    let names: Vec<_> =
-        dev_engines_package_managers(&list).filter_map(engine_name_version).collect();
+    let names: Vec<_> = dev_engines_package_managers(&list)
+        .filter_map(engine_name_version)
+        .collect();
     assert_eq!(names, [("pnpm", Some("12")), ("yarn", None)]);
 
     assert_eq!(dev_engines_package_managers(&json!({})).count(), 0);

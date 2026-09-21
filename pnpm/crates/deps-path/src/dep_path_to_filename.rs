@@ -22,7 +22,9 @@ fn dep_path_to_filename_unescaped(dep_path: &str) -> String {
     if dep_path.starts_with("file:") {
         return dep_path.replacen(':', "+", 1);
     }
-    let trimmed = dep_path.strip_prefix('/').unwrap_or(dep_path);
+    let trimmed = dep_path
+        .strip_prefix('/')
+        .unwrap_or(dep_path);
     // Scan for the `@` from position 1 so a leading `@` on a scoped name
     // (`@scope/foo`) doesn't get treated as the version separator. The
     // `len() < 2` guard handles the case where there's nothing to

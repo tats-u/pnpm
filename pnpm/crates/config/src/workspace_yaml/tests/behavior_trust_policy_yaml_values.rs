@@ -52,16 +52,28 @@ update:
 
     let mut config = Config::new();
     assert!(config.update_config.changeset.is_none(), "default is unset");
-    assert!(config.update_config.ignore_dependencies.is_none(), "default is unset");
+    assert!(
+        config
+            .update_config
+            .ignore_dependencies
+            .is_none(),
+        "default is unset"
+    );
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert_eq!(config.update_config.changeset, Some(true));
     assert_eq!(
-        config.update_config.ignore_dependencies.as_deref(),
+        config
+            .update_config
+            .ignore_dependencies
+            .as_deref(),
         Some(&["@pnpm.e2e/foo".to_string(), "@pnpm.e2e/bar".to_string()][..]),
     );
     assert_eq!(config.update_config.github_actions, Some(true));
     assert_eq!(
-        config.update_config.github_actions_server.as_deref(),
+        config
+            .update_config
+            .github_actions_server
+            .as_deref(),
         Some("https://github.example.com"),
     );
 }
@@ -108,13 +120,15 @@ registries:
     let mut config = Config::new();
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert_eq!(
-        config.registry_options_by_url
+        config
+            .registry_options_by_url
             .get("https://artifactory.example/artifactory/api/npm/npm-virtual/")
             .map(|options| options.server_type),
         Some(Some(RegistryServerType::Artifactory)),
     );
     assert_eq!(
-        config.registry_options_by_url
+        config
+            .registry_options_by_url
             .get("https://npm.example.com/")
             .map(|options| options.server_type),
         Some(Some(RegistryServerType::Npm)),
@@ -126,7 +140,8 @@ registries:
 fn rejects_an_unknown_registry_declaration_field() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  https://npm.example.com/: {scope: '@acme'}\n",
     )
     .unwrap();
@@ -163,11 +178,17 @@ registries:
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert_eq!(config.registry, "https://npm.corp.example/");
     assert_eq!(
-        config.registries_by_scope.get("@foo").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@foo")
+            .map(String::as_str),
         Some("https://npm.corp.example/"),
     );
     assert_eq!(
-        config.registries_by_scope.get("@bar").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@bar")
+            .map(String::as_str),
         Some("https://npm.corp.example/"),
     );
 }
@@ -176,7 +197,8 @@ registries:
 fn rejects_a_scope_declared_without_its_at_sign() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  https://npm.corp.example/: {scopes: [foo]}\n",
     )
     .unwrap();
@@ -215,11 +237,15 @@ registries:
     let mut config = Config::new();
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert_eq!(
-        config.registries_by_prefix.get("work").map(String::as_str),
+        config
+            .registries_by_prefix
+            .get("work")
+            .map(String::as_str),
         Some("https://npm.corp.example"),
     );
     assert_eq!(
-        config.registry_options_by_url
+        config
+            .registry_options_by_url
             .get("https://npm.corp.example/")
             .map(|options| options.server_type),
         Some(Some(RegistryServerType::Artifactory)),
@@ -255,11 +281,17 @@ registries:
     let mut config = Config::new();
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert_eq!(
-        config.registries_by_prefix.get("work").map(String::as_str),
+        config
+            .registries_by_prefix
+            .get("work")
+            .map(String::as_str),
         Some("https://npm.corp.example/"),
     );
     assert_eq!(
-        config.registries_by_prefix.get("other").map(String::as_str),
+        config
+            .registries_by_prefix
+            .get("other")
+            .map(String::as_str),
         Some("https://other.example/"),
     );
 }
@@ -286,7 +318,8 @@ fn rejects_a_registries_map_that_mixes_both_shapes() {
 fn rejects_a_url_keyed_registries_entry_written_as_a_string() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  https://npm.example.com/: artifactory\n",
     )
     .unwrap();
@@ -395,8 +428,18 @@ fn resolved_registries_carry_the_builtin_jsr_route() {
 
     let registries = config.resolved_registries();
 
-    assert_eq!(registries.get("default").map(String::as_str), Some("https://npm.corp.example/"));
-    assert_eq!(registries.get("@jsr").map(String::as_str), Some("https://npm.jsr.io/"));
+    assert_eq!(
+        registries
+            .get("default")
+            .map(String::as_str),
+        Some("https://npm.corp.example/")
+    );
+    assert_eq!(
+        registries
+            .get("@jsr")
+            .map(String::as_str),
+        Some("https://npm.jsr.io/")
+    );
 }
 
 /// A declaration map survives the round trip through the lookups it is split
@@ -413,7 +456,10 @@ registries:
     scopes: ['@other']
 ";
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
-    let entries = settings.registries.clone().expect("registries present");
+    let entries = settings
+        .registries
+        .clone()
+        .expect("registries present");
     let mut config = Config::new();
     settings.apply_to(&mut config, Path::new("/irrelevant"));
 
@@ -480,7 +526,12 @@ fn no_filtered_mirror_without_a_reason_for_full_metadata() {
 #[test]
 fn load_at_collects_issues_from_a_key_it_cannot_scan() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join(WORKSPACE_MANIFEST_FILENAME), "{zzzNotASettingZzz: 1}\n").unwrap();
+    fs::write(
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
+        "{zzzNotASettingZzz: 1}\n",
+    )
+    .unwrap();
 
     let settings = WorkspaceSettings::load_at(dir.path())
         .expect("load pnpm-workspace.yaml")
@@ -495,7 +546,8 @@ fn load_at_collects_issues_from_a_key_it_cannot_scan() {
 fn load_at_collects_issues_from_an_indented_root_mapping() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "  zzzNotASettingZzz: 1\n  nodeLinker: hoisted\n",
     )
     .unwrap();
@@ -511,7 +563,8 @@ fn load_at_collects_issues_from_an_indented_root_mapping() {
 fn parses_a_valid_tasks_section_and_applies_it() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         concat!(
             "packages:\n  - packages/*\n",
             "tasks:\n",
@@ -530,16 +583,25 @@ fn parses_a_valid_tasks_section_and_applies_it() {
     let mut config = Config::default();
     settings.apply_to(&mut config, dir.path());
     assert_eq!(
-        config.tasks
+        config
+            .tasks
             .get("build")
             .unwrap()
             .depends_on
             .as_deref(),
         Some(&["^build".to_string()][..]),
     );
-    assert_eq!(config.tasks.get("build").unwrap().concurrency, Some(2));
     assert_eq!(
-        config.tasks
+        config
+            .tasks
+            .get("build")
+            .unwrap()
+            .concurrency,
+        Some(2)
+    );
+    assert_eq!(
+        config
+            .tasks
             .get("test")
             .unwrap()
             .depends_on
@@ -548,14 +610,22 @@ fn parses_a_valid_tasks_section_and_applies_it() {
     );
     // `lint: {}` declares an explicitly empty dependency list — a different
     // statement from omitting the entry.
-    assert_eq!(config.tasks.get("lint").unwrap().depends_on, None);
+    assert_eq!(
+        config
+            .tasks
+            .get("lint")
+            .unwrap()
+            .depends_on,
+        None
+    );
 }
 
 #[test]
 fn rejects_a_depends_on_entry_with_no_task_name() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "packages:\n  - packages/*\ntasks:\n  build:\n    dependsOn: ['^']\n",
     )
     .unwrap();
@@ -572,7 +642,8 @@ fn rejects_a_depends_on_entry_with_no_task_name() {
 fn rejects_zero_task_concurrency() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "packages:\n  - packages/*\ntasks:\n  build:\n    concurrency: 0\n",
     )
     .unwrap();
@@ -589,7 +660,8 @@ fn rejects_zero_task_concurrency() {
 fn rejects_negative_task_concurrency() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "packages:\n  - packages/*\ntasks:\n  build:\n    concurrency: -1\n",
     )
     .unwrap();
@@ -630,12 +702,18 @@ fn expanding_a_home_prefix_joins_the_way_pnpm_does() {
         settings.expand_global_dir_home_prefixes::<FakeHome>();
         let expected = Some(expected.as_path());
         assert_eq!(
-            settings.global_dir.as_deref().map(Path::new),
+            settings
+                .global_dir
+                .as_deref()
+                .map(Path::new),
             expected,
             "globalDir {configured}",
         );
         assert_eq!(
-            settings.global_bin_dir.as_deref().map(Path::new),
+            settings
+                .global_bin_dir
+                .as_deref()
+                .map(Path::new),
             expected,
             "globalBinDir {configured}",
         );

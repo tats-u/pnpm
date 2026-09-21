@@ -94,7 +94,9 @@ fn previews_a_manifest_reached_through_another_spelling_of_its_name() {
 
     let preview = preview_patch(patched.path(), &patch).expect("preview must succeed");
 
-    let manifest = preview.manifest.expect("the patch reaches the manifest");
+    let manifest = preview
+        .manifest
+        .expect("the patch reaches the manifest");
     assert!(manifest.contains("postinstall"), "manifest: {manifest:?}");
 }
 
@@ -146,7 +148,9 @@ fn previews_a_manifest_that_starts_with_a_byte_order_mark() {
 
     let preview = preview_patch(patched.path(), &patch).expect("preview must succeed");
 
-    let manifest = preview.manifest.expect("the patch modifies the manifest");
+    let manifest = preview
+        .manifest
+        .expect("the patch modifies the manifest");
     assert!(manifest.starts_with('\u{feff}'), "manifest: {manifest:?}");
     assert!(manifest.contains("postinstall"), "manifest: {manifest:?}");
 }

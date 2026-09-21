@@ -67,15 +67,21 @@ fn external_lockfile_dir_holds_the_lockfile_and_the_virtual_store() {
 
     assert_eq!(importer_ids(&lockfile_dir), ["project"]);
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "no lockfile may be written at the workspace root the pin moved away from",
     );
     assert!(
-        lockfile_dir.join("node_modules/.pnpm/is-positive@1.0.0").is_dir(),
+        lockfile_dir
+            .join("node_modules/.pnpm/is-positive@1.0.0")
+            .is_dir(),
         "the virtual store must live under the pinned lockfile dir",
     );
     assert!(
-        project_dir.join("node_modules/is-positive/package.json").is_file(),
+        project_dir
+            .join("node_modules/is-positive/package.json")
+            .is_file(),
         "the project keeps its own node_modules of symlinks into the virtual store",
     );
 
@@ -87,13 +93,8 @@ fn external_lockfile_dir_holds_the_lockfile_and_the_virtual_store() {
 /// without passing a flag on every command.
 #[test]
 fn lockfile_dir_setting_is_read_from_the_workspace_manifest() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(workspace.join("package.json"), r#"{"name":"project","version":"1.0.0"}"#)
@@ -108,15 +109,21 @@ fn lockfile_dir_setting_is_read_from_the_workspace_manifest() {
     let lockfile_dir = root.path();
     assert_eq!(importer_ids(lockfile_dir), ["workspace"]);
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "no lockfile may be written at the workspace root the setting moved away from",
     );
     assert!(
-        lockfile_dir.join("node_modules/.pnpm/is-positive@1.0.0").is_dir(),
+        lockfile_dir
+            .join("node_modules/.pnpm/is-positive@1.0.0")
+            .is_dir(),
         "the virtual store must live under the configured lockfile dir",
     );
     assert!(
-        workspace.join("node_modules/is-positive/package.json").is_file(),
+        workspace
+            .join("node_modules/is-positive/package.json")
+            .is_file(),
         "the project keeps its own node_modules of symlinks into the virtual store",
     );
 
@@ -152,13 +159,8 @@ fn lockfile_dir_conflicts_with_global() {
 /// date", but nothing has been written at the pin yet.
 #[test]
 fn adopting_lockfile_dir_re_installs_at_the_pin() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -176,7 +178,12 @@ fn adopting_lockfile_dir_re_installs_at_the_pin() {
         .with_arg("install")
         .assert()
         .success();
-    assert!(workspace.join("pnpm-lock.yaml").is_file(), "the first install writes in place");
+    assert!(
+        workspace
+            .join("pnpm-lock.yaml")
+            .is_file(),
+        "the first install writes in place"
+    );
 
     append_workspace_yaml_key(&workspace, "lockfileDir", "..");
     let output = pacquet_in(&workspace)
@@ -193,7 +200,9 @@ fn adopting_lockfile_dir_re_installs_at_the_pin() {
     let lockfile_dir = root.path();
     assert_eq!(importer_ids(lockfile_dir), ["workspace"]);
     assert!(
-        lockfile_dir.join("node_modules/.pnpm/is-positive@1.0.0").is_dir(),
+        lockfile_dir
+            .join("node_modules/.pnpm/is-positive@1.0.0")
+            .is_dir(),
         "the virtual store must be materialized under the pin",
     );
 
@@ -207,13 +216,8 @@ fn adopting_lockfile_dir_re_installs_at_the_pin() {
 #[cfg(unix)]
 #[test]
 fn a_pinned_install_is_current_for_repeat_installs_and_for_run() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let marker = workspace.join("marker.txt");
@@ -267,13 +271,8 @@ fn a_pinned_install_is_current_for_repeat_installs_and_for_run() {
 /// run with a `lockfileDir` through its shared-lockfile branch.
 #[test]
 fn a_pin_overrides_dedicated_per_project_lockfiles() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_dir = workspace.join("packages/a");
@@ -302,11 +301,18 @@ fn a_pin_overrides_dedicated_per_project_lockfiles() {
     let lockfile_dir = root.path();
     assert_eq!(importer_ids(lockfile_dir), ["workspace", "workspace/packages/a"]);
     assert!(
-        !package_dir.join("pnpm-lock.yaml").exists() && !workspace.join("pnpm-lock.yaml").exists(),
+        !package_dir
+            .join("pnpm-lock.yaml")
+            .exists()
+            && !workspace
+                .join("pnpm-lock.yaml")
+                .exists(),
         "the pin replaces the per-project lockfiles and leaves none at the workspace root",
     );
     assert!(
-        package_dir.join("node_modules/is-positive/package.json").is_file(),
+        package_dir
+            .join("node_modules/is-positive/package.json")
+            .is_file(),
         "the workspace package still links its dependency",
     );
 
@@ -356,7 +362,9 @@ fn frozen_replay_resolves_local_overrides_from_the_custom_lockfile_dir() {
         .success();
     assert_eq!(fs::read(&lockfile_path).unwrap(), lockfile);
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "frozen replay must keep the lockfile at the custom location",
     );
     for project in [".", "packages/a"] {

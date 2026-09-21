@@ -35,14 +35,19 @@ pub(super) fn cached_resolution(
     if ttl.is_zero() {
         return None;
     }
-    let mut cache = cache.lock().expect("resolution cache poisoned");
+    let mut cache = cache
+        .lock()
+        .expect("resolution cache poisoned");
     let candidates = cache.get_mut(key)?;
     candidates.retain(|candidate| candidate.inserted.elapsed() <= ttl);
     let Some((candidate_index, _)) = candidates
         .iter()
         .enumerate()
         .find(|(_, candidate)| {
-            candidate.footprint.is_public() || candidate.footprint.allows(route_context, identity)
+            candidate.footprint.is_public()
+                || candidate
+                    .footprint
+                    .allows(route_context, identity)
         })
     else {
         if candidates.is_empty() {
@@ -75,7 +80,9 @@ pub(super) fn store_resolution(
         footprint,
         descriptor_digest,
     };
-    let mut cache = cache.lock().expect("resolution cache poisoned");
+    let mut cache = cache
+        .lock()
+        .expect("resolution cache poisoned");
     prune_expired_resolution_cache(&mut cache, ttl);
     let candidates = cache.entry(key).or_default();
     if let Some(existing) = candidates
@@ -151,7 +158,10 @@ fn evict_lru_resolution_candidate(
     {
         candidates.remove(index);
     }
-    if cache.get(&key).is_some_and(Vec::is_empty) {
+    if cache
+        .get(&key)
+        .is_some_and(Vec::is_empty)
+    {
         cache.remove(&key);
     }
     true

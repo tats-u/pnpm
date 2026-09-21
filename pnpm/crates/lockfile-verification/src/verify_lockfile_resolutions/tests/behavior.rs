@@ -101,8 +101,12 @@ async fn mixed_code_batch_escalates() {
     assert!(breakdown.contains("[MINIMUM_RELEASE_AGE_VIOLATION]"));
     assert!(breakdown.contains("[TRUST_DOWNGRADE]"));
     // Sorted by name@version: acme before bravo.
-    let acme = breakdown.find("acme").expect("acme present");
-    let bravo = breakdown.find("bravo").expect("bravo present");
+    let acme = breakdown
+        .find("acme")
+        .expect("acme present");
+    let bravo = breakdown
+        .find("bravo")
+        .expect("bravo present");
     assert!(acme < bravo, "expected acme before bravo: {breakdown}");
 }
 
@@ -205,7 +209,11 @@ async fn rejected_verification_does_not_write_a_cache_record() {
     .await
     .expect_err("verification must reject");
 
-    assert!(!cache_dir.join(crate::CACHE_FILE_NAME).exists());
+    assert!(
+        !cache_dir
+            .join(crate::CACHE_FILE_NAME)
+            .exists()
+    );
 }
 
 #[tokio::test]

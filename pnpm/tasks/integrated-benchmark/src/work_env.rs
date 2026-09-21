@@ -172,14 +172,22 @@ impl WorkEnv {
     }
 
     fn target_ids(&self) -> impl Iterator<Item = BenchId<'_>> + '_ {
-        self.options.selection.targets.iter().map(BenchId::from)
+        self.options
+            .selection
+            .targets
+            .iter()
+            .map(BenchId::from)
     }
 
     /// Every bench dir the run will touch — every target plus, when
     /// requested, the system-pnpm sibling.
     fn benchmarked_ids(&self) -> impl Iterator<Item = BenchId<'_>> + '_ {
-        self.target_ids()
-            .chain(self.options.selection.with_pnpm.then_some(WorkEnv::SYSTEM_PNPM))
+        self.target_ids().chain(
+            self.options
+                .selection
+                .with_pnpm
+                .then_some(WorkEnv::SYSTEM_PNPM),
+        )
     }
 
     fn repository(&self) -> &'_ Path {
@@ -190,7 +198,11 @@ impl WorkEnv {
     /// pacquet repo when the caller didn't override it — useful when
     /// the same monorepo checkout contains both code bases.
     fn pnpm_repository(&self) -> &'_ Path {
-        self.options.build.pnpm_repository.as_deref().unwrap_or_else(|| self.repository())
+        self.options
+            .build
+            .pnpm_repository
+            .as_deref()
+            .unwrap_or_else(|| self.repository())
     }
 
     fn bench_dir(&self, id: BenchId) -> PathBuf {
@@ -267,8 +279,11 @@ impl WorkEnv {
     }
 
     fn init(&self, direct_registry: &str, revision_mocks: &HashMap<String, RevisionMockRegistry>) {
-        let scenario =
-            self.options.selection.scenario.expect("scenario set when init() is reached");
+        let scenario = self
+            .options
+            .selection
+            .scenario
+            .expect("scenario set when init() is reached");
         eprintln!("Initializing...");
         // The proxy-cache populator only runs against a local
         // verdaccio/virtual registry to warm its on-disk cache. With
@@ -283,25 +298,47 @@ impl WorkEnv {
         let id_list = self
             .target_ids()
             .chain(populate_proxy_cache.then_some(WorkEnv::INIT_PROXY_CACHE))
-            .chain(self.options.selection.with_pnpm.then_some(WorkEnv::SYSTEM_PNPM));
+            .chain(
+                self.options
+                    .selection
+                    .with_pnpm
+                    .then_some(WorkEnv::SYSTEM_PNPM),
+            );
         for id in id_list {
             eprintln!("ID: {id}");
             let dir = self.bench_dir(id);
             let registry = self.registry_for(id, direct_registry, revision_mocks);
             fs::create_dir_all(&dir).expect("create directory for the revision");
-            create_package_json(&dir, self.options.selection.fixture_dir.as_deref(), scenario);
+            create_package_json(
+                &dir,
+                self.options
+                    .selection
+                    .fixture_dir
+                    .as_deref(),
+                scenario,
+            );
             if scenario.uses_linked_workspace_fixture() {
                 linked_workspace::create_projects(&dir);
             }
             create_pnpm_workspace(
                 &dir,
-                self.options.selection.fixture_dir.as_deref(),
+                self.options
+                    .selection
+                    .fixture_dir
+                    .as_deref(),
                 registry,
                 scenario,
             );
             create_install_script(&dir, scenario, &WorkEnv::install_command(id), id);
             create_npmrc(&dir, registry, scenario);
-            may_create_lockfile(&dir, scenario, self.options.selection.fixture_dir.as_deref());
+            may_create_lockfile(
+                &dir,
+                scenario,
+                self.options
+                    .selection
+                    .fixture_dir
+                    .as_deref(),
+            );
             save_pristine_copies(&dir);
         }
 
@@ -318,8 +355,11 @@ impl WorkEnv {
         pnpr_server_registry: &str,
         revision_mocks: HashMap<String, RevisionMockRegistry>,
     ) {
-        let scenario =
-            self.options.selection.scenario.expect("scenario set when benchmark() is reached");
+        let scenario = self
+            .options
+            .selection
+            .scenario
+            .expect("scenario set when benchmark() is reached");
 
         // Pre-benchmark wipe of `node_modules`, `store-dir`, and
         // `cache-dir` for every benchmark target, regardless of scenario.
@@ -397,7 +437,10 @@ impl WorkEnv {
         // metadata mirror (a locked install fetches tarballs, not
         // packuments; an up-to-date `node_modules` short-circuits the
         // install outright).
-        if scenario.prewarm_install_args().is_some() {
+        if scenario
+            .prewarm_install_args()
+            .is_some()
+        {
             self.prewarm_caches(&cleanup_command);
         }
 
@@ -415,7 +458,9 @@ impl WorkEnv {
             .arg("--prepare")
             .arg(cleanup_command);
 
-        self.options.hyperfine_options.append_to(&mut command);
+        self.options
+            .hyperfine_options
+            .append_to(&mut command);
 
         for id in self.benchmarked_ids() {
             command
@@ -426,7 +471,10 @@ impl WorkEnv {
 
         command
             .arg("--export-json")
-            .arg(self.root().join("BENCHMARK_REPORT.json"))
+            .arg(
+                self.root()
+                    .join("BENCHMARK_REPORT.json"),
+            )
             .arg("--export-markdown")
             .arg(self.root().join("BENCHMARK_REPORT.md"));
 
@@ -495,12 +543,10 @@ impl WorkEnv {
         // separate resolve-registry URL so server-side metadata access can
         // be measured independently.
         let registry_proxy = self.start_client_registry_proxy();
-        let client_registry = registry_proxy
-            .as_ref()
-            .map_or_else(
-                || self.registry.client.clone(),
-                |proxy| format!("http://{}/", proxy.addr),
-            );
+        let client_registry = registry_proxy.as_ref().map_or_else(
+            || self.registry.client.clone(),
+            |proxy| format!("http://{}/", proxy.addr),
+        );
         let pnpr_server_registry_proxy = self.start_pnpr_server_registry_proxy();
         let pnpr_server_registry = pnpr_server_registry_proxy
             .as_ref()

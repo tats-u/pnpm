@@ -26,7 +26,12 @@ fn a_hung_command_is_killed_at_the_deadline() {
     let result = super::run_token_helper_command_with_timeout(&command, Duration::from_millis(200));
     let elapsed = started.elapsed();
 
-    assert_eq!(result.expect_err("must time out").kind(), io::ErrorKind::TimedOut);
+    assert_eq!(
+        result
+            .expect_err("must time out")
+            .kind(),
+        io::ErrorKind::TimedOut
+    );
     assert!(elapsed < Duration::from_secs(5), "returned only after {elapsed:?} — was it killed?");
 }
 

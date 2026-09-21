@@ -255,7 +255,9 @@ fn extract_zip_rejects_directory_entry_with_parent_component() {
             let mut writer = zip::ZipWriter::new(Cursor::new(&mut buf));
             let opts: zip::write::FileOptions<()> = zip::write::FileOptions::default()
                 .compression_method(zip::CompressionMethod::Stored);
-            writer.add_directory("../evil", opts).expect("add dir entry");
+            writer
+                .add_directory("../evil", opts)
+                .expect("add dir entry");
             writer.finish().expect("finalize zip");
         }
         buf
@@ -360,11 +362,15 @@ fn write_zip_entry_to_cas_streams_a_truthful_oversized_entry() {
 
     assert_eq!(size, declared_size);
     assert_eq!(
-        std::fs::metadata(&file_path).expect("stat the streamed entry").len(),
+        std::fs::metadata(&file_path)
+            .expect("stat the streamed entry")
+            .len(),
         declared_size,
     );
     assert!(
-        file_path.to_string_lossy().ends_with("-exec"),
+        file_path
+            .to_string_lossy()
+            .ends_with("-exec"),
         "executable entries must keep the -exec CAS suffix on the streaming branch",
     );
 
@@ -397,7 +403,9 @@ fn extract_joins_nested_entry_paths_with_forward_slashes() {
         header.set_size(3);
         header.set_mode(0o644);
         header.set_entry_type(tar::EntryType::Regular);
-        header.set_path("package/bin/nested/tool.js").expect("set entry path");
+        header
+            .set_path("package/bin/nested/tool.js")
+            .expect("set entry path");
         header.set_cksum();
         builder
             .append(&header, &b"hi\n"[..])
@@ -579,8 +587,12 @@ async fn streaming_download_extracts_a_big_pinned_tarball() {
         stream_extract_gzipped_tarball(&body, reference_store, None)
             .expect("the reference extraction of the same bytes must succeed");
     assert_eq!(
-        cas_paths.keys().collect::<std::collections::BTreeSet<_>>(),
-        reference_paths.keys().collect::<std::collections::BTreeSet<_>>(),
+        cas_paths
+            .keys()
+            .collect::<std::collections::BTreeSet<_>>(),
+        reference_paths
+            .keys()
+            .collect::<std::collections::BTreeSet<_>>(),
         "the streaming path must materialize the same entries",
     );
     // `checked_at` is stamped at write time; everything else must match.
@@ -707,7 +719,8 @@ fn extract_keeps_only_regular_file_entries() {
         file.set_size(3);
         file.set_mode(0o644);
         file.set_entry_type(tar::EntryType::Regular);
-        file.set_path("package/real.txt").expect("set file path");
+        file.set_path("package/real.txt")
+            .expect("set file path");
         file.set_cksum();
         builder
             .append(&file, &b"hi\n"[..])
@@ -717,7 +730,8 @@ fn extract_keeps_only_regular_file_entries() {
         dir.set_size(0);
         dir.set_mode(0o755);
         dir.set_entry_type(tar::EntryType::Directory);
-        dir.set_path("package/sub/").expect("set dir path");
+        dir.set_path("package/sub/")
+            .expect("set dir path");
         dir.set_cksum();
         builder
             .append(&dir, std::io::empty())
@@ -727,8 +741,10 @@ fn extract_keeps_only_regular_file_entries() {
         link.set_size(0);
         link.set_mode(0o777);
         link.set_entry_type(tar::EntryType::Symlink);
-        link.set_path("package/link.txt").expect("set link path");
-        link.set_link_name("real.txt").expect("set link target");
+        link.set_path("package/link.txt")
+            .expect("set link path");
+        link.set_link_name("real.txt")
+            .expect("set link target");
         link.set_cksum();
         builder
             .append(&link, std::io::empty())
@@ -758,7 +774,13 @@ fn extract_strips_only_one_component_from_a_dot_prefixed_entry_path() {
         extract_tarball_entries(&tar_bytes, store_path, None).expect("extract the tarball");
 
     assert_eq!(cas_paths.keys().collect::<Vec<_>>(), vec!["package/package.json"]);
-    assert_eq!(pkg_files_idx.files.keys().collect::<Vec<_>>(), vec!["package/package.json"]);
+    assert_eq!(
+        pkg_files_idx
+            .files
+            .keys()
+            .collect::<Vec<_>>(),
+        vec!["package/package.json"]
+    );
     assert!(pkg_files_idx.manifest.is_none());
 
     drop(tempdir);
@@ -781,7 +803,8 @@ fn extract_keys_a_root_level_entry_by_its_own_name() {
     keys.sort();
     assert_eq!(keys, vec!["._package", "README", "index.js", "package.json"]);
     assert_eq!(
-        pkg_files_idx.manifest
+        pkg_files_idx
+            .manifest
             .as_ref()
             .and_then(|manifest| manifest["name"].as_str()),
         Some("pkg-root-entry"),

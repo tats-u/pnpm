@@ -97,7 +97,9 @@ async fn published_by_triggers_upgrade_when_modified_after_cutoff() {
     // immature; the picker still returns a fall-back pick so the
     // call doesn't error.
     opts.policy.published_by = Some(parse_cutoff("2023-01-01T00:00:00Z"));
-    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("ok");
+    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("ok");
 
     abbrev_mock.assert_async().await;
     full_mock.assert_async().await;
@@ -168,9 +170,18 @@ async fn published_by_upgrades_metadata_with_partial_time_map() {
 
     let mut opts = default_opts(&registry);
     opts.policy.published_by = Some(parse_cutoff("2025-01-01T00:00:00Z"));
-    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("ok");
+    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("ok");
 
-    assert_eq!(result.picked_package.expect("picked").version.to_string(), "1.1.0");
+    assert_eq!(
+        result
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
+        "1.1.0"
+    );
     abbrev_mock.assert_async().await;
     full_mock.assert_async().await;
 }
@@ -226,7 +237,9 @@ async fn published_by_skips_upgrade_when_modified_equals_cutoff() {
 
     let mut opts = default_opts(&registry);
     opts.policy.published_by = Some(parse_cutoff("2024-12-01T00:00:00Z"));
-    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("ok");
+    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("ok");
 
     abbrev_mock.assert_async().await;
 }
@@ -283,9 +296,15 @@ async fn published_by_exclude_skips_upgrade_for_abbreviated_meta_without_time() 
     opts.policy.published_by = Some(parse_cutoff("2020-01-01T00:00:00Z"));
     opts.policy.published_by_exclude = Some(&policy);
 
-    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("ok");
+    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("ok");
     assert_eq!(
-        result.picked_package.expect("picked").version.to_string(),
+        result
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
         "1.0.0",
         "exclude policy should bypass release-age upgrade and pick from abbreviated meta",
     );
@@ -347,8 +366,12 @@ async fn published_by_upgrade_marker_is_scoped_to_install() {
     // Cutoff before `modified=2024-12-01`, so the upgrade trigger fires.
     opts.policy.published_by = Some(parse_cutoff("2023-01-01T00:00:00Z"));
 
-    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("first pick");
-    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("second pick");
+    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("first pick");
+    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("second pick");
 
     // A new install gets fresh fetch state but reuses the caller-owned metadata
     // cache. It must retry the upgrade instead of inheriting the first
@@ -434,10 +457,15 @@ async fn published_by_upgrade_answering_repeated_304_does_not_fail_the_pick() {
     let mut opts = default_opts(&registry);
     opts.policy.published_by = Some(parse_cutoff("2023-01-01T00:00:00Z"));
 
-    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await
+    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
         .expect("a registry with no fuller form must not fail the pick");
     assert_eq!(
-        result.picked_package.expect("picked").version.to_string(),
+        result
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
         "1.0.0",
         "the abbreviated document should still be picked from",
     );
@@ -503,8 +531,12 @@ async fn published_by_upgrade_answering_200_is_remembered_across_picks() {
     let mut opts = default_opts(&registry);
     opts.policy.published_by = Some(parse_cutoff("2023-01-01T00:00:00Z"));
 
-    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("first pick");
-    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("second pick");
+    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("first pick");
+    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("second pick");
 
     // One abbreviated fetch and one upgrade, not one upgrade per pick.
     abbrev_mock.assert_async().await;
@@ -583,7 +615,9 @@ async fn published_by_upgrade_marker_is_scoped_to_document() {
 
     let mut opts = default_opts(&registry);
     opts.policy.published_by = Some(parse_cutoff("2023-01-01T00:00:00Z"));
-    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("first pick");
+    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("first pick");
 
     let update_opts = PickPackageOptions {
         request: crate::MetadataPickRequest { update_checksums: true, ..opts.request },
@@ -681,9 +715,15 @@ async fn published_by_excluded_package_bypasses_mtime_shortcut_and_revalidates()
     opts.policy.published_by = Some(parse_cutoff("2020-01-01T00:00:00Z"));
     opts.policy.published_by_exclude = Some(&policy);
 
-    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("ok");
+    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("ok");
     assert_eq!(
-        result.picked_package.expect("picked").version.to_string(),
+        result
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
         "1.1.0",
         "excluded package should revalidate stale mirror and pick fresh latest",
     );

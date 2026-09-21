@@ -62,7 +62,9 @@ async fn cache_key_separates_abbreviated_from_full() {
         .expect("first");
     let mut opts = default_opts(&registry);
     opts.request.optional = true;
-    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("second");
+    let _ = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("second");
 
     abbrev_mock.assert_async().await;
     full_mock.assert_async().await;
@@ -197,7 +199,14 @@ async fn update_checksums_bypasses_warm_in_memory_cache() {
     let first = pick_package(&ctx, &version_spec("acme", "1.0.0"), &default_opts(&registry))
         .await
         .expect("ok");
-    assert_eq!(first.picked_package.expect("picked").version.to_string(), "1.0.0");
+    assert_eq!(
+        first
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
+        "1.0.0"
+    );
     assert!(
         meta_cache
             .get(&format!("{registry}\x00acme"))
@@ -217,7 +226,14 @@ async fn update_checksums_bypasses_warm_in_memory_cache() {
     let second = pick_package(&ctx, &version_spec("acme", "1.0.0"), &update_opts)
         .await
         .expect("ok");
-    assert_eq!(second.picked_package.expect("picked").version.to_string(), "1.0.0");
+    assert_eq!(
+        second
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
+        "1.0.0"
+    );
     mock.assert_async().await;
 }
 
@@ -415,10 +431,9 @@ async fn private_scope_writes_descriptor_namespaced_mirror() {
     let registry = format!("{}/", server.url());
     let cache_dir = TempDir::new().expect("tempdir");
     let http_client = ThrottledClient::default();
-    let auth_headers = AuthHeaders::default()
-        .with_route_hook(Arc::new(ScopeHook {
-            scope: MetadataCacheScope::Private { descriptor_id: "deadbeef".to_string() },
-        }) as Arc<dyn UpstreamRouteHook>);
+    let auth_headers = AuthHeaders::default().with_route_hook(Arc::new(ScopeHook {
+        scope: MetadataCacheScope::Private { descriptor_id: "deadbeef".to_string() },
+    }) as Arc<dyn UpstreamRouteHook>);
     let meta_cache = InMemoryPackageMetaCache::default();
     let fetch_locker = shared_packument_fetch_locker();
     let ctx = PickPackageContext {
@@ -503,6 +518,13 @@ async fn public_scope_falls_back_to_mirror_on_401() {
     let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &default_opts(&registry))
         .await
         .expect("ok");
-    assert_eq!(result.picked_package.expect("picked").version.to_string(), "1.1.0");
+    assert_eq!(
+        result
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
+        "1.1.0"
+    );
     mock.assert_async().await;
 }

@@ -26,7 +26,9 @@ fn extract_accepts_shamefully_hoist_cli_spellings() {
         let expected_public_hoist_pattern = expected.then(|| vec!["*".to_string()]);
         assert_eq!(config.public_hoist_pattern, expected_public_hoist_pattern);
         assert_eq!(
-            config.explicit_settings.get("shamefullyHoist"),
+            config
+                .explicit_settings
+                .get("shamefullyHoist"),
             Some(&serde_json::Value::Bool(expected)),
         );
     }
@@ -62,7 +64,11 @@ fn extract_leaves_invalid_shamefully_hoist_values_for_clap() {
 
         let mut config = Config::default();
         overrides.apply(&mut config, Path::new("/workspace"));
-        assert!(!config.explicit_settings.contains_key("shamefullyHoist"));
+        assert!(
+            !config
+                .explicit_settings
+                .contains_key("shamefullyHoist")
+        );
     }
 }
 
@@ -145,10 +151,9 @@ fn node_linker_override_rederives_prefer_symlinked_executables() {
     let (overrides, _) =
         ConfigOverrides::extract(argv(["pacquet", "--config.node-linker=hoisted", "install"]));
     let mut config = Config { prefer_symlinked_executables: Some(false), ..Config::default() };
-    config.explicit_settings.insert(
-        "preferSymlinkedExecutables".to_string(),
-        serde_json::Value::Bool(false),
-    );
+    config
+        .explicit_settings
+        .insert("preferSymlinkedExecutables".to_string(), serde_json::Value::Bool(false));
     overrides.apply(&mut config, Path::new("/workspace"));
     assert_eq!(config.node_linker, NodeLinker::Hoisted);
     assert_eq!(config.prefer_symlinked_executables, Some(false));
@@ -201,7 +206,12 @@ fn store_dir_override_resolves_from_workspace_root() {
     )
     .expect("resolve relative store directory");
 
-    assert_eq!(config.store_dir.root(), workspace_dir.join("relative-store").join(STORE_VERSION));
+    assert_eq!(
+        config.store_dir.root(),
+        workspace_dir
+            .join("relative-store")
+            .join(STORE_VERSION)
+    );
 }
 
 #[test]
@@ -242,7 +252,9 @@ fn store_dir_override_expands_quoted_home_path() {
 
     assert_eq!(
         config.store_dir.root(),
-        std::env::temp_dir().join("pacquet-store-dir-home/quoted-store").join(STORE_VERSION),
+        std::env::temp_dir()
+            .join("pacquet-store-dir-home/quoted-store")
+            .join(STORE_VERSION),
     );
     assert_eq!(
         config.explicit_settings.get("storeDir"),

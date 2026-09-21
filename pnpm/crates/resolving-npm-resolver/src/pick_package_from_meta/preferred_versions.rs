@@ -79,10 +79,14 @@ pub(super) fn selector_weights(
                 if semver_satisfies_loose(lockfile_version, selector) {
                     weights.guaranteed = weights.guaranteed.checked_add(weight)?;
                 }
-                weights.maximum_other = weights.maximum_other.checked_add(weight)?;
+                weights.maximum_other = weights
+                    .maximum_other
+                    .checked_add(weight)?;
             }
             VersionSelectorType::Tag => {
-                weights.maximum_other = weights.maximum_other.checked_add(weight)?;
+                weights.maximum_other = weights
+                    .maximum_other
+                    .checked_add(weight)?;
             }
         }
     }
@@ -103,7 +107,9 @@ pub(super) fn add_version_weight(
     if weight < u64::from(EXISTING_VERSION_SELECTOR_WEIGHT)
         && semver_satisfies_loose(selector, version_range)
     {
-        weights.maximum_other = weights.maximum_other.checked_add(weight)?;
+        weights.maximum_other = weights
+            .maximum_other
+            .checked_add(weight)?;
     }
     Some(())
 }
@@ -134,7 +140,10 @@ pub(super) fn prioritize_preferred_versions(
         }
     }
 
-    for (preferred_selector, entry) in preferred_version_selectors.into_iter().flatten() {
+    for (preferred_selector, entry) in preferred_version_selectors
+        .into_iter()
+        .flatten()
+    {
         if preferred_selector == version_range {
             continue;
         }
@@ -184,7 +193,10 @@ impl PreferredVersionsPrioritizer {
     }
 
     pub(super) fn add(&mut self, version: String, weight: u32) {
-        let entry = self.preferred_versions.entry(version).or_insert(0);
+        let entry = self
+            .preferred_versions
+            .entry(version)
+            .or_insert(0);
         if *entry == 0 {
             // JS truthiness: `0` is falsy, so a later positive
             // weight replaces the seed. Once non-zero, further

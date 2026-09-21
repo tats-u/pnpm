@@ -61,7 +61,10 @@ pub(super) async fn install_pnpm<Reporter: self::Reporter + 'static>(
 ) -> miette::Result<InstallPnpmResult> {
     let package = pnpm_package_to_install(version);
     let package_name = package.name;
-    let global_pkg_dir = base_config.global_pkg_dir.clone().ok_or(SelfUpdateError::NoGlobalDir)?;
+    let global_pkg_dir = base_config
+        .global_pkg_dir
+        .clone()
+        .ok_or(SelfUpdateError::NoGlobalDir)?;
     fs::create_dir_all(&global_pkg_dir)
         .into_diagnostic()
         .wrap_err("create the global packages directory")?;
@@ -118,7 +121,8 @@ pub(super) fn assert_pnpm_runs(
         Ok(output) if !output.status.success() => {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stderr = stderr.trim();
-            let code = output.status
+            let code = output
+                .status
                 .code()
                 .map_or_else(|| "a signal".to_string(), |code| format!("code {code}"));
             if stderr.is_empty() {
@@ -139,8 +143,11 @@ pub(super) fn assert_pnpm_runs(
 
 /// The native pnpm executable linked into an installed engine wrapper.
 pub(super) fn pnpm_executable_path(install_dir: &Path, package_name: &str) -> PathBuf {
-    package_dir(install_dir, package_name)
-        .join(if host_platform() == "win32" { "pnpm.exe" } else { "pnpm" })
+    package_dir(install_dir, package_name).join(if host_platform() == "win32" {
+        "pnpm.exe"
+    } else {
+        "pnpm"
+    })
 }
 
 /// The installed wrapper's recorded version, or `None` when the install is
@@ -167,8 +174,9 @@ pub(super) fn find_global_engines(
     global_pkg_dir: &Path,
     version: &str,
 ) -> miette::Result<Vec<(GlobalPackageInfo, &'static str)>> {
-    let packages =
-        scan_global_packages(global_pkg_dir).into_diagnostic().wrap_err("scan global packages")?;
+    let packages = scan_global_packages(global_pkg_dir)
+        .into_diagnostic()
+        .wrap_err("scan global packages")?;
     Ok(packages
         .into_iter()
         .filter_map(|pkg| engine_alias_at_version(&pkg, version).map(|alias| (pkg, alias)))
@@ -303,7 +311,9 @@ pub(crate) async fn run_install<Reporter: self::Reporter + 'static>(
     // package manager and how the engine signature is verified.
     apply_package_manager_bootstrap(&mut cfg, &base_config.package_manager_bootstrap);
     cfg.modules_dir = install_dir.join("node_modules");
-    cfg.virtual_store_dir = install_dir.join("node_modules").join(".pnpm");
+    cfg.virtual_store_dir = install_dir
+        .join("node_modules")
+        .join(".pnpm");
     cfg.enable_global_virtual_store = shared_engine_packages.is_some();
     cfg.lockfile = true;
     // Anchored (never `None`, which walks up and can adopt the global
@@ -323,7 +333,8 @@ pub(crate) async fn run_install<Reporter: self::Reporter + 'static>(
     if let Some(packages) = shared_engine_packages {
         cfg.global_virtual_store_dir = base_config.store_dir.links();
         for name in packages {
-            cfg.allow_builds.insert((*name).to_string(), true);
+            cfg.allow_builds
+                .insert((*name).to_string(), true);
         }
     }
     // Drop repo-controlled resolution-rewrite settings so a project's
@@ -364,11 +375,14 @@ mod tests;
 /// project settings. Mirrors the routing in
 /// [`crate::config_deps`]'s `for_package_manager` context.
 fn apply_package_manager_bootstrap(cfg: &mut Config, bootstrap: &PackageManagerBootstrap) {
-    cfg.registry.clone_from(&bootstrap.registry);
-    cfg.registries_by_scope.clone_from(&bootstrap.registries);
+    cfg.registry
+        .clone_from(&bootstrap.registry);
+    cfg.registries_by_scope
+        .clone_from(&bootstrap.registries);
     cfg.proxy.clone_from(&bootstrap.proxy);
     cfg.tls.clone_from(&bootstrap.tls);
-    cfg.tls_by_uri.clone_from(&bootstrap.tls_by_uri);
+    cfg.tls_by_uri
+        .clone_from(&bootstrap.tls_by_uri);
     cfg.auth_headers = std::sync::Arc::clone(&bootstrap.auth_headers);
 }
 

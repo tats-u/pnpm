@@ -114,8 +114,8 @@ async fn strips_credentials_from_web_auth_urls_on_non_interactive_error() {
                 body: Some(OtpErrorBody {
                     auth_url: Some("https://user:secret@registry.npmjs.org/auth/abc".to_owned()),
                     done_url: Some(
-                        "https://user:secret@registry.npmjs.org/auth/abc/done?authId=xyz".to_owned(
-                        ),
+                        "https://user:secret@registry.npmjs.org/auth/abc/done?authId=xyz"
+                            .to_owned(),
                     ),
                 }),
             })
@@ -570,7 +570,13 @@ fn synthetic_otp_error_stores_body() {
         done_url: Some("https://example.com/done".to_owned()),
     };
     let error = SyntheticOtpError::new(Some(body.clone()));
-    assert_eq!(error.as_otp_challenge().expect("a challenge").body, Some(body));
+    assert_eq!(
+        error
+            .as_otp_challenge()
+            .expect("a challenge")
+            .body,
+        Some(body)
+    );
 }
 
 #[test]
@@ -581,7 +587,10 @@ fn from_unknown_body_extracts_valid_string_auth_url_and_done_url() {
         &json!({ "authUrl": "https://example.com/auth", "doneUrl": "https://example.com/done" }),
     ));
     assert_eq!(
-        error.as_otp_challenge().expect("a challenge").body,
+        error
+            .as_otp_challenge()
+            .expect("a challenge")
+            .body,
         Some(OtpErrorBody {
             auth_url: Some("https://example.com/auth".to_owned()),
             done_url: Some("https://example.com/done".to_owned()),
@@ -594,7 +603,13 @@ fn from_unknown_body_returns_no_body_when_body_is_null() {
     web_auth_fake!(UnexpectedReporter);
     reset();
     let error = SyntheticOtpError::from_unknown_body::<UnexpectedReporter>(Some(&json!(null)));
-    assert_eq!(error.as_otp_challenge().expect("a challenge").body, None);
+    assert_eq!(
+        error
+            .as_otp_challenge()
+            .expect("a challenge")
+            .body,
+        None
+    );
 }
 
 #[test]
@@ -603,7 +618,13 @@ fn from_unknown_body_returns_no_body_when_body_is_not_an_object() {
     reset();
     let error =
         SyntheticOtpError::from_unknown_body::<UnexpectedReporter>(Some(&json!("not an object")));
-    assert_eq!(error.as_otp_challenge().expect("a challenge").body, None);
+    assert_eq!(
+        error
+            .as_otp_challenge()
+            .expect("a challenge")
+            .body,
+        None
+    );
 }
 
 #[test]
@@ -690,7 +711,10 @@ fn from_unknown_body_returns_empty_body_when_no_auth_url_or_done_url() {
         &json!({ "something": "else" }),
     ));
     assert_eq!(
-        error.as_otp_challenge().expect("a challenge").body,
+        error
+            .as_otp_challenge()
+            .expect("a challenge")
+            .body,
         Some(OtpErrorBody { auth_url: None, done_url: None }),
     );
 }

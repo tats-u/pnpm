@@ -67,7 +67,9 @@ pub(super) async fn prepare_modules_state<'install, Reporter: self::Reporter + '
 
     prepare_modules_layout(&inputs, modules_manifest, is_inconsistent)?;
 
-    let recorded_state = load_workspace_state(inputs.tree.workspace_root).ok().flatten();
+    let recorded_state = load_workspace_state(inputs.tree.workspace_root)
+        .ok()
+        .flatten();
     let recorded = recorded_workspace(
         recorded_state.as_ref(),
         modules_manifest.is_some() || inputs.lockfiles.current.is_some(),
@@ -276,7 +278,8 @@ fn modules_layout_drifted(
 ) -> bool {
     let Some(modules) = modules_manifest else {
         // Treat existence-check errors conservatively as inconsistent.
-        return config.modules_dir
+        return config
+            .modules_dir
             .join(pnpm_modules_yaml::MODULES_FILENAME)
             .try_exists()
             .unwrap_or(true);

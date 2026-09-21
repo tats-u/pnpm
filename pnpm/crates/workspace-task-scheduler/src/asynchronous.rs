@@ -49,7 +49,12 @@ pub async fn schedule_graph_async<Node, Run, Skip, Fut>(
         // further progress.
         let Some((index, completion)) = in_flight.next().await else { break };
         state.settle(index, completion, &dependents, policy, |dependent| {
-            (options.on_node_skipped)(graph.get_index(dependent).expect("graph index exists").0);
+            (options.on_node_skipped)(
+                graph
+                    .get_index(dependent)
+                    .expect("graph index exists")
+                    .0,
+            );
         });
     }
 }

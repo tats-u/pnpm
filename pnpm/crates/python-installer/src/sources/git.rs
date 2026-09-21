@@ -32,30 +32,48 @@ impl Registry<'_> {
         vcs.commit_id = commit;
         let root = project_root(checkout.path(), vcs.subdirectory.as_deref())?;
         let manifest = read_manifest(&root).await?;
-        let built = Box::pin(self.sources.prepare.build::<Reporter>(Buildable {
-            root: &root,
-            manifest: &manifest,
-            editable: false,
-            contract: Contract::ResolutionSource,
-        }))
+        let built = Box::pin(
+            self.sources
+                .prepare
+                .build::<Reporter>(Buildable {
+                    root: &root,
+                    manifest: &manifest,
+                    editable: false,
+                    contract: Contract::ResolutionSource,
+                }),
+        )
         .await?;
         let build::Build::Made(mut built) = built else {
             bail!(
                 "the build requirements of Python git dependency {name} are not approved under allowBuilds",
             );
         };
-        if built.wheel.metadata.name.parse::<PackageName>().into_diagnostic()? != *name {
+        if built
+            .wheel
+            .metadata
+            .name
+            .parse::<PackageName>()
+            .into_diagnostic()?
+            != *name
+        {
             bail!("Python git dependency {name} built a wheel of {}", built.wheel.metadata.name);
         }
-        let version: pep440_rs::Version = built.wheel.metadata.version.parse().into_diagnostic()?;
+        let version: pep440_rs::Version = built
+            .wheel
+            .metadata
+            .version
+            .parse()
+            .into_diagnostic()?;
         self.check_source_wheel(&built.wheel, name, &version)?;
         built.wheel.direct_url = Some(host::DirectUrl::git(&vcs));
-        self.resolution.packages.candidates.insert(
-            name.clone(),
-            BTreeMap::from([(version.clone(), Candidate::Vcs(vcs))]),
-        );
+        self.resolution
+            .packages
+            .candidates
+            .insert(name.clone(), BTreeMap::from([(version.clone(), Candidate::Vcs(vcs))]));
         self.remember(name.clone(), version.clone(), built.wheel.clone());
-        self.sources.built.insert((name.clone(), version), *built);
+        self.sources
+            .built
+            .insert((name.clone(), version), *built);
         Ok(())
     }
 }
@@ -74,11 +92,14 @@ async fn checkout(
     vcs: &LockedVcs,
 ) -> Result<(tempfile::TempDir, String)> {
     let vcs = vcs.clone();
-    tokio::task::spawn_blocking(move || checkout_source(config, &vcs)).await.into_diagnostic()?
+    tokio::task::spawn_blocking(move || checkout_source(config, &vcs))
+        .await
+        .into_diagnostic()?
 }
 
 fn cache_path(config: &pnpm_config::Config, vcs: &LockedVcs, commit: &str) -> PathBuf {
-    config.cache_dir
+    config
+        .cache_dir
         .join("python-git-v2")
         .join(pnpm_crypto_hash::create_hex_hash(&format!("{}@{commit}", vcs.url)))
 }
@@ -126,7 +147,9 @@ fn cache_checkout(checkout: &Path, cache: &Path) -> Result<()> {
     if cache.is_dir() {
         return Ok(());
     }
-    let parent = cache.parent().expect("cache has parent");
+    let parent = cache
+        .parent()
+        .expect("cache has parent");
     std::fs::create_dir_all(parent).into_diagnostic()?;
     let cached = tempfile::tempdir_in(parent).into_diagnostic()?;
     pnpm_git_fetcher::cache_checkout_bundles(checkout, cached.path()).into_diagnostic()?;

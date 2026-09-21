@@ -65,13 +65,19 @@ async fn workspace_link_node_is_short_circuited_in_tree() {
 
     assert_eq!(tree.direct.len(), 1);
     let link_node_id = &tree.direct[0].node_id;
-    let link_node = tree.dependencies_tree.get(link_node_id).expect("link tree node");
+    let link_node = tree
+        .dependencies_tree
+        .get(link_node_id)
+        .expect("link tree node");
     assert_eq!(link_node.depth, -1, "link node must carry depth = -1");
     assert!(
         link_node.children.realized().is_empty(),
         "link node must have empty children — link target resolves its own deps separately",
     );
-    let pkg = tree.packages.get(link_id).expect("link package entry");
+    let pkg = tree
+        .packages
+        .get(link_id)
+        .expect("link package entry");
     assert!(
         pkg.peer_dependencies.is_empty(),
         "link node's ResolvedPackage must carry no peer_dependencies — peer matching is the linked importer's responsibility",

@@ -106,7 +106,9 @@ pub fn pnpr_command_with_binary(bin: &Path, port: u16, public_url: Option<&str>)
     // `PNPR_DISABLE_REGISTRY` — would quietly reconfigure the mock. The
     // arguments below are the only thing allowed to.
     for (name, _) in env::vars_os() {
-        let key = name.to_string_lossy().to_ascii_uppercase();
+        let key = name
+            .to_string_lossy()
+            .to_ascii_uppercase();
         if key.starts_with("PNPR_") {
             cmd.env_remove(&name);
         }

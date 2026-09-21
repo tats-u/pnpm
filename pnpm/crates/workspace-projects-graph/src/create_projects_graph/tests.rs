@@ -64,7 +64,8 @@ fn project(root: &str, name: &str, version: &str, prod: &[(&str, &str)]) -> Test
 }
 
 fn edges(graph: &crate::ProjectGraph<TestProject>, key: &str) -> Vec<String> {
-    graph[Path::new(key)].dependencies
+    graph[Path::new(key)]
+        .dependencies
         .iter()
         .map(|path| path.to_string_lossy().into_owned())
         .collect()

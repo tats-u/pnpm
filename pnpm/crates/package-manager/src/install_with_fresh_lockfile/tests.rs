@@ -58,7 +58,8 @@ async fn filtered_repair_verifies_the_merged_lockfile() {
     )
     .expect("parse lockfile");
 
-    let error = verify_merged_repair::<SilentReporter>(&lockfile, &[]).await
+    let error = verify_merged_repair::<SilentReporter>(&lockfile, &[])
+        .await
         .expect_err("the merged lockfile must pass structural verification");
     assert!(matches!(
         error,
@@ -177,7 +178,9 @@ fn workspace_manifests(
     projects
         .iter()
         .map(|(importer_id, manifest)| {
-            let path = std::path::PathBuf::from("/repo").join(importer_id).join("package.json");
+            let path = std::path::PathBuf::from("/repo")
+                .join(importer_id)
+                .join("package.json");
             (
                 (*importer_id).to_string(),
                 pnpm_package_manifest::PackageManifest::from_value(path, manifest.clone()),

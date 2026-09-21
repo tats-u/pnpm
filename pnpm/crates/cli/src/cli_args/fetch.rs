@@ -53,9 +53,14 @@ impl FetchArgs {
                 .chain(include_prod.then_some(DependencyGroup::Optional)),
         );
         base_install.lockfile_policy.frozen = true;
-        base_install.lockfile_policy.ignore_manifest_check = true;
+        base_install
+            .lockfile_policy
+            .ignore_manifest_check = true;
         base_install.execution.mutation = ProjectMutation::NoInstall;
         base_install.context.lockfile_path = Some(&lockfile_path);
-        base_install.run::<Reporter>().await.wrap_err("fetching dependencies")
+        base_install
+            .run::<Reporter>()
+            .await
+            .wrap_err("fetching dependencies")
     }
 }

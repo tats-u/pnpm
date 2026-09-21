@@ -33,10 +33,12 @@ pub(super) fn parse_metadata(
 ) -> Result<WheelMetadata, String> {
     let metadata =
         WheelMetadata::parse(document).map_err(|err| super::super::report_message(&err))?;
-    let named = metadata.name
+    let named = metadata
+        .name
         .parse::<pep508_rs::PackageName>()
         .map_err(|err| format!("read the distribution the metadata of {filename} names: {err}"))?;
-    let versioned = metadata.version
+    let versioned = metadata
+        .version
         .parse::<pep440_rs::Version>()
         .map_err(|err| format!("read the version the metadata of {filename} names: {err}"))?;
     if named != *name || versioned != *version {

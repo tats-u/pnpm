@@ -33,7 +33,12 @@ fn walker_empty_lockfile_produces_empty_result() {
 
     assert!(result.graph.is_empty(), "graph should be empty");
     assert!(result.hoisted_locations.is_empty(), "no locations recorded");
-    assert_eq!(result.direct_dependencies_by_importer_id.len(), 1);
+    assert_eq!(
+        result
+            .direct_dependencies_by_importer_id
+            .len(),
+        1
+    );
     assert!(result.direct_dependencies_by_importer_id[Lockfile::ROOT_IMPORTER_KEY].is_empty());
 }
 // --- prev_graph tests ------------------------------------------------
@@ -171,10 +176,16 @@ fn prev_graph_contains_orphan_from_current_only_lockfile() {
     let result = lockfile_to_hoisted_dep_graph(&wanted_lockfile, Some(&current_lockfile), &opts)
         .expect("walker succeeds");
 
-    let orphan_dir = lockfile_dir.join("node_modules").join("orphan");
-    let a_dir = lockfile_dir.join("node_modules").join("a");
+    let orphan_dir = lockfile_dir
+        .join("node_modules")
+        .join("orphan");
+    let a_dir = lockfile_dir
+        .join("node_modules")
+        .join("a");
 
-    let prev = result.prev_graph.expect("prev_graph populated");
+    let prev = result
+        .prev_graph
+        .expect("prev_graph populated");
     assert!(prev.contains_key(&orphan_dir), "orphan present in prev_graph");
     assert!(prev.contains_key(&a_dir), "carried-over dep also in prev_graph");
     assert!(result.graph.contains_key(&a_dir), "wanted graph carries a");

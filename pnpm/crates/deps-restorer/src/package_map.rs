@@ -106,8 +106,14 @@ pub fn write_package_map(
     // Hardened atomic write (temp file + rename): never follows a symlink an
     // attacker (or a crashed prior install) may have pre-seeded at the target,
     // and never leaves a torn file a concurrent reader could observe.
-    pnpm_fs::ensure_file(&opts.modules_dir.join(PACKAGE_MAP_FILENAME), &contents, None)
-        .map_err(WritePackageMapError::Write)
+    pnpm_fs::ensure_file(
+        &opts
+            .modules_dir
+            .join(PACKAGE_MAP_FILENAME),
+        &contents,
+        None,
+    )
+    .map_err(WritePackageMapError::Write)
 }
 
 pub fn write_hoisted_package_map(
@@ -123,8 +129,14 @@ pub fn write_hoisted_package_map(
     // Hardened atomic write (temp file + rename): never follows a symlink an
     // attacker (or a crashed prior install) may have pre-seeded at the target,
     // and never leaves a torn file a concurrent reader could observe.
-    pnpm_fs::ensure_file(&opts.modules_dir.join(PACKAGE_MAP_FILENAME), &contents, None)
-        .map_err(WritePackageMapError::Write)
+    pnpm_fs::ensure_file(
+        &opts
+            .modules_dir
+            .join(PACKAGE_MAP_FILENAME),
+        &contents,
+        None,
+    )
+    .map_err(WritePackageMapError::Write)
 }
 
 pub fn lockfile_to_package_map(lockfile: &Lockfile, opts: &PackageMapOptions<'_>) -> PackageMap {
@@ -143,7 +155,9 @@ pub fn lockfile_to_package_map(lockfile: &Lockfile, opts: &PackageMapOptions<'_>
             opts,
             importer_id,
             importer,
-            importer_names.get(importer_id).and_then(Option::as_ref),
+            importer_names
+                .get(importer_id)
+                .and_then(Option::as_ref),
         );
     }
 
@@ -153,7 +167,8 @@ pub fn lockfile_to_package_map(lockfile: &Lockfile, opts: &PackageMapOptions<'_>
 
     // A package with metadata but no snapshot still needs a map entry:
     // it resolves to its own slot and to nothing else.
-    for key in lockfile.packages
+    for key in lockfile
+        .packages
         .iter()
         .flatten()
         .map(|(key, _)| key)
@@ -204,8 +219,12 @@ fn add_importer_package(
         opts.modules_dir,
     );
     let Some(loose_index) = loose_index.as_mut() else { return };
-    let importer_modules_dir =
-        lexical_normalize(&opts.lockfile_dir.join(importer_id).join("node_modules"));
+    let importer_modules_dir = lexical_normalize(
+        &opts
+            .lockfile_dir
+            .join(importer_id)
+            .join("node_modules"),
+    );
     for group in [
         importer.dependencies.as_ref(),
         importer.optional_dependencies.as_ref(),
@@ -238,7 +257,10 @@ fn add_snapshot_package(
         add_snapshot_dependencies(packages, &mut dependencies, lockfile, opts, group);
     }
     let package_dir = pnpm_fs::join_slash_separated_path(
-        &opts.layout.slot_dir(key).join("node_modules"),
+        &opts
+            .layout
+            .slot_dir(key)
+            .join("node_modules"),
         &key.name.to_string(),
     );
     add_package(packages, id, package_dirs, &package_dir, dependencies, opts.modules_dir);
@@ -267,11 +289,15 @@ fn add_metadata_only_package(
     let id = key.to_string();
     let package_dir = || {
         pnpm_fs::join_slash_separated_path(
-            &opts.layout.slot_dir(key).join("node_modules"),
+            &opts
+                .layout
+                .slot_dir(key)
+                .join("node_modules"),
             &key.name.to_string(),
         )
     };
-    accum.packages
+    accum
+        .packages
         .entry(id.clone())
         .or_insert_with(|| {
             let mut dependencies = BTreeMap::new();
@@ -282,15 +308,19 @@ fn add_metadata_only_package(
             }
         });
     if let Some(package_dirs) = accum.package_dirs.as_mut() {
-        package_dirs.entry(id).or_insert_with(package_dir);
+        package_dirs
+            .entry(id)
+            .or_insert_with(package_dir);
     }
 }
 
 fn has_package_entry(lockfile: &Lockfile, key: &PackageKey) -> bool {
-    lockfile.snapshots
+    lockfile
+        .snapshots
         .as_ref()
         .is_some_and(|snapshots| snapshots.contains_key(key))
-        || lockfile.packages
+        || lockfile
+            .packages
             .as_ref()
             .is_some_and(|packages| packages.contains_key(key))
 }
@@ -414,7 +444,8 @@ fn encode_url_path(path: &str) -> String {
 }
 
 fn normalize_path(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
+    path.to_string_lossy()
+        .replace('\\', "/")
 }
 
 #[cfg(test)]

@@ -105,12 +105,13 @@ where
     Args: IntoIterator<Item = Arg>,
     Arg: AsRef<std::ffi::OsStr>,
 {
-    let bin_dir = bin_dirs.first().expect("an installed engine has a bin directory");
-    let program = engine_bin(bin_dir, "pnpm")
-        .ok_or_else(|| EngineError::MissingEngineBin {
-            name: "pnpm",
-            dir: bin_dir.display().to_string(),
-        })?;
+    let bin_dir = bin_dirs
+        .first()
+        .expect("an installed engine has a bin directory");
+    let program = engine_bin(bin_dir, "pnpm").ok_or_else(|| EngineError::MissingEngineBin {
+        name: "pnpm",
+        dir: bin_dir.display().to_string(),
+    })?;
 
     let mut cmd = Command::new(program);
     cmd.args(args);

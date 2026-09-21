@@ -23,16 +23,23 @@ fn injected_workspace_dep_flips_to_file_when_update_targets_it() {
     let lockfile = dependencies_graph_to_lockfile({
         let mut base_options =
             single_importer_opts(&manifest, &graph, direct, false, false, None, None);
-        base_options.metadata_sources.registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
-        base_options.metadata_sources.registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
+        base_options
+            .metadata_sources
+            .registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
+        base_options
+            .metadata_sources
+            .registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
         base_options.reuse.previous_importers = Some(&previous);
         base_options.reuse.scope =
             UpdateReuseScope::Except(std::iter::once(("n".to_string(), None)).collect());
         base_options
     });
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(&PkgName::parse("n").unwrap()))
         .expect("n entry");
@@ -54,15 +61,22 @@ fn injected_workspace_dep_flips_to_file_when_specifier_changed() {
     let lockfile = dependencies_graph_to_lockfile({
         let mut base_options =
             single_importer_opts(&manifest, &graph, direct, false, false, None, None);
-        base_options.metadata_sources.registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
-        base_options.metadata_sources.registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
+        base_options
+            .metadata_sources
+            .registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
+        base_options
+            .metadata_sources
+            .registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
         base_options.reuse.previous_importers = Some(&previous);
         base_options.reuse.scope = UpdateReuseScope::All;
         base_options
     });
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(&PkgName::parse("n").unwrap()))
         .expect("n entry");
@@ -90,16 +104,23 @@ fn injected_workspace_dep_flips_to_file_when_recursive_update_targets_it_per_imp
     let lockfile = dependencies_graph_to_lockfile({
         let mut base_options =
             single_importer_opts(&manifest, &graph, direct, false, false, None, None);
-        base_options.metadata_sources.registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
-        base_options.metadata_sources.registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
+        base_options
+            .metadata_sources
+            .registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
+        base_options
+            .metadata_sources
+            .registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
         base_options.reuse.previous_importers = Some(&previous);
         base_options.reuse.scope = UpdateReuseScope::All;
         base_options.reuse.scopes_by_importer = scopes_by_importer;
         base_options
     });
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(&PkgName::parse("n").unwrap()))
         .expect("n entry");
@@ -128,16 +149,23 @@ fn injected_workspace_dep_keeps_link_when_recursive_update_targets_other_pkg() {
     let lockfile = dependencies_graph_to_lockfile({
         let mut base_options =
             single_importer_opts(&manifest, &graph, direct, false, false, None, None);
-        base_options.metadata_sources.registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
-        base_options.metadata_sources.registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
+        base_options
+            .metadata_sources
+            .registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
+        base_options
+            .metadata_sources
+            .registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
         base_options.reuse.previous_importers = Some(&previous);
         base_options.reuse.scope = UpdateReuseScope::All;
         base_options.reuse.scopes_by_importer = scopes_by_importer;
         base_options
     });
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(&PkgName::parse("n").unwrap()))
         .expect("n entry");
@@ -157,15 +185,22 @@ fn injected_workspace_dep_flips_to_file_on_scope_wide_update() {
     let lockfile = dependencies_graph_to_lockfile({
         let mut base_options =
             single_importer_opts(&manifest, &graph, direct, false, false, None, None);
-        base_options.metadata_sources.registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
-        base_options.metadata_sources.registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
+        base_options
+            .metadata_sources
+            .registries_by_prefix = &EMPTY_NAMED_REGISTRIES;
+        base_options
+            .metadata_sources
+            .registry_options_by_url = &EMPTY_REGISTRY_OPTIONS;
         base_options.reuse.previous_importers = Some(&previous);
         base_options.reuse.scope = UpdateReuseScope::None;
         base_options
     });
 
-    let importer = lockfile.root_project().expect("root importer");
-    let entry = importer.dependencies
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let entry = importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(&PkgName::parse("n").unwrap()))
         .expect("n entry");
@@ -216,8 +251,12 @@ fn every_importer_of_a_workspace_is_recorded() {
 
     let lockfile = dependencies_graph_to_lockfile(opts);
     for id in [".", "packages/a", "packages/b"] {
-        let importer = lockfile.importers.get(id).expect("every importer must be recorded");
-        let recorded = importer.dependencies
+        let importer = lockfile
+            .importers
+            .get(id)
+            .expect("every importer must be recorded");
+        let recorded = importer
+            .dependencies
             .as_ref()
             .and_then(|deps| deps.get(&PkgName::parse("dep").expect("parse alias")))
             .expect("the direct dependency must be recorded");

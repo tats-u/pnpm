@@ -109,7 +109,9 @@ fn installed_version(name: &std::ffi::OsStr) -> Option<pep440_rs::Version> {
 /// python-build-standalone archive holds under one `python` directory.
 pub(super) fn interpreter_in(directory: &Path) -> PathBuf {
     if cfg!(windows) {
-        directory.join("python").join("python.exe")
+        directory
+            .join("python")
+            .join("python.exe")
     } else {
         directory
             .join("python")
@@ -143,14 +145,13 @@ pub(super) fn path_outside(workspace: Option<&Path>) -> OsString {
             .iter()
             .any(|workspace| directory.starts_with(workspace))
     };
-    let outside = env::split_paths(&path)
-        .filter(|directory| {
-            // An empty entry names the directory pnpm runs in, which for an
-            // install is the workspace itself.
-            !directory.as_os_str().is_empty()
-                && !inside(directory)
-                && !dunce::canonicalize(directory).is_ok_and(|directory| inside(&directory))
-        });
+    let outside = env::split_paths(&path).filter(|directory| {
+        // An empty entry names the directory pnpm runs in, which for an
+        // install is the workspace itself.
+        !directory.as_os_str().is_empty()
+            && !inside(directory)
+            && !dunce::canonicalize(directory).is_ok_and(|directory| inside(&directory))
+    });
     env::join_paths(outside).expect("a PATH this process was given joins back together")
 }
 
@@ -195,7 +196,12 @@ pub(super) fn interpreters_in(directory: &Path) -> Vec<(u64, String)> {
 
 pub(super) fn interpreter_minor(name: &std::ffi::OsStr) -> Option<u64> {
     let name = name.to_str()?;
-    let name = if cfg!(windows) { name.strip_suffix(".exe").unwrap_or(name) } else { name };
+    let name = if cfg!(windows) {
+        name.strip_suffix(".exe")
+            .unwrap_or(name)
+    } else {
+        name
+    };
     name.strip_prefix("python3.")?
         .parse()
         .ok()
@@ -235,7 +241,9 @@ pub(super) async fn launcher_interpreters(path: &OsString) -> Vec<InterpreterCom
 /// Windows would also look for beside the process and in the directory it
 /// runs from.
 pub(super) fn locate(name: &str, path: &OsString) -> Option<String> {
-    let located = which::which_in_global(name, Some(path)).ok()?.next()?;
+    let located = which::which_in_global(name, Some(path))
+        .ok()?
+        .next()?;
     dunce::canonicalize(located)
         .ok()?
         .to_str()

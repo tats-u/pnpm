@@ -225,7 +225,9 @@ fn run_pipeline_in_checkout(
     child.arg("--dir").arg(&dirs.checkout);
     match last_built {
         Some(last_built) => {
-            child.arg("--base").arg(last_built.trim());
+            child
+                .arg("--base")
+                .arg(last_built.trim());
         }
         None => {
             child.arg("--full");
@@ -241,7 +243,9 @@ fn run_pipeline_in_checkout(
         child.arg("--report-to").arg(report_to);
     }
     if let Some(auth_file) = &invocation.npmrc_auth_file {
-        child.arg("--npmrc-auth-file").arg(auth_file);
+        child
+            .arg("--npmrc-auth-file")
+            .arg(auth_file);
     }
     match child.status() {
         Ok(status) if status.success() => {}
@@ -264,7 +268,8 @@ fn lock_agent(directory: &Path) -> std::io::Result<fs::File> {
         .create(true)
         .truncate(false)
         .open(directory.join("lock"))?;
-    file.try_lock().map_err(std::io::Error::other)?;
+    file.try_lock()
+        .map_err(std::io::Error::other)?;
     Ok(file)
 }
 

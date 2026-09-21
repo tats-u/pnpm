@@ -52,7 +52,10 @@ pub fn boundary(content_type: &str) -> Result<&str, MultipartError> {
     }
     let boundary = params
         .filter_map(|param| param.trim().split_once('='))
-        .find(|(key, _)| key.trim().eq_ignore_ascii_case("boundary"))
+        .find(|(key, _)| {
+            key.trim()
+                .eq_ignore_ascii_case("boundary")
+        })
         .map(|(_, value)| value.trim().trim_matches('"'))
         .filter(|value| !value.is_empty())
         .ok_or(MultipartError::MissingBoundary)?;
@@ -72,7 +75,9 @@ pub fn parse_form(content_type: &str, body: &[u8]) -> Result<Vec<FormPart>, Mult
     let boundary = boundary(content_type)?;
     let matcher = Regex::new(&format!(r"(?-u)(?:\A|\r\n)--{}(?:\r\n|--)", regex::escape(boundary)))
         .expect("escaped ASCII boundary forms a valid byte regex");
-    let opening = matcher.find(body).ok_or(MultipartError::MissingOpeningBoundary)?;
+    let opening = matcher
+        .find(body)
+        .ok_or(MultipartError::MissingOpeningBoundary)?;
     let mut cursor = opening.end() - 2;
     let mut parts = Vec::new();
     loop {
@@ -87,8 +92,9 @@ pub fn parse_form(content_type: &str, body: &[u8]) -> Result<Vec<FormPart>, Mult
         let (headers, data_start) = split_part_headers(rest)?;
         let (name, filename) = content_disposition(headers)?;
         let data_offset = body.len() - (rest.len() - data_start);
-        let next =
-            matcher.find_at(body, data_offset).ok_or(MultipartError::MissingClosingBoundary)?;
+        let next = matcher
+            .find_at(body, data_offset)
+            .ok_or(MultipartError::MissingClosingBoundary)?;
         if !body[next.start()..].starts_with(b"\r\n") {
             return Err(MultipartError::MissingClosingBoundary);
         }
@@ -109,7 +115,11 @@ fn content_disposition(headers: &str) -> Result<(String, Option<String>), Multip
     let disposition = headers
         .split("\r\n")
         .filter_map(|line| line.split_once(':'))
-        .find(|(header, _)| header.trim().eq_ignore_ascii_case("Content-Disposition"))
+        .find(|(header, _)| {
+            header
+                .trim()
+                .eq_ignore_ascii_case("Content-Disposition")
+        })
         .map(|(_, value)| value)
         .ok_or(MultipartError::MissingName)?;
     let mut name = None;

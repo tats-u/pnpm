@@ -36,7 +36,9 @@ pub(super) struct HyperfineCommand {
 }
 impl HyperfineCommand {
     pub(super) fn name(&self) -> &str {
-        self.command_name.as_deref().unwrap_or(&self.command)
+        self.command_name
+            .as_deref()
+            .unwrap_or(&self.command)
     }
 }
 #[derive(Debug, Serialize, Deserialize)]
@@ -106,7 +108,10 @@ pub(super) fn read_phase_events(path: &Path) -> Vec<PhaseEvent> {
     text.lines()
         .filter_map(|line| serde_json::from_str::<Value>(line).ok())
         .filter(|value| {
-            value.get("target").and_then(Value::as_str) == Some("pacquet::install::phase")
+            value
+                .get("target")
+                .and_then(Value::as_str)
+                == Some("pacquet::install::phase")
         })
         .filter_map(|value| {
             let phase = event_str(&value, "phase")?.to_string();
@@ -124,26 +129,22 @@ pub(super) fn read_phase_events(path: &Path) -> Vec<PhaseEvent> {
         .collect()
 }
 pub(super) fn event_field<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
-    value
-        .get(key)
-        .or_else(|| {
-            value
-                .get("fields")
-                .and_then(|fields| fields.get(key))
-        })
+    value.get(key).or_else(|| {
+        value
+            .get("fields")
+            .and_then(|fields| fields.get(key))
+    })
 }
 pub(super) fn event_str<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     event_field(value, key).and_then(Value::as_str)
 }
 pub(super) fn event_u64(value: &Value, key: &str) -> Option<u64> {
     let value = event_field(value, key)?;
-    value
-        .as_u64()
-        .or_else(|| {
-            value
-                .as_str()
-                .and_then(|text| text.parse().ok())
-        })
+    value.as_u64().or_else(|| {
+        value
+            .as_str()
+            .and_then(|text| text.parse().ok())
+    })
 }
 pub(super) fn summarize_phase_events(events: &[PhaseEvent]) -> PhaseSummary {
     let partition = latest_partition_metric(events);
@@ -237,7 +238,8 @@ pub(super) fn requires_fresh_pnpr_cold_batch_metrics(target_id: &str) -> bool {
 /// cross-engine comparison. This is the same statistic the workflow reports to
 /// Bencher, for the same reason.
 pub(super) fn benchmark_target_min(diagnostics: &BenchmarkDiagnostics, target_id: &str) -> f64 {
-    diagnostics.targets
+    diagnostics
+        .targets
         .iter()
         .find(|target| target.id == target_id)
         .and_then(|target| target.hyperfine_min_seconds)
@@ -270,12 +272,19 @@ pub(super) fn render_diagnostics_markdown(
             format_u64(partition.map(|metric| metric.warm)),
             format_u64(partition.map(|metric| metric.cold)),
             format_u64(partition.map(|metric| metric.skipped)),
-            format_ms(target.phase_summary.create_virtual_store_mean_ms),
+            format_ms(
+                target
+                    .phase_summary
+                    .create_virtual_store_mean_ms
+            ),
             format_ms(link_slots_mean(&target.phase_summary, "warm")),
             format_ms(link_slots_mean(&target.phase_summary, "cold")),
         );
     }
-    if !diagnostics.pnpr_direct_ratios.is_empty() {
+    if !diagnostics
+        .pnpr_direct_ratios
+        .is_empty()
+    {
         out.push_str("\n| Ratio | value |\n| --- | ---: |\n");
         for ratio in &diagnostics.pnpr_direct_ratios {
             let _ = writeln!(
@@ -288,12 +297,14 @@ pub(super) fn render_diagnostics_markdown(
     out
 }
 pub(super) fn contains_uninstrumented_pnpr_main(diagnostics: &BenchmarkDiagnostics) -> bool {
-    diagnostics.targets
+    diagnostics
+        .targets
         .iter()
         .any(|target| target.id == "pnpr@main" && target.phase_summary.partition.is_none())
 }
 pub(super) fn link_slots_mean(summary: &PhaseSummary, batch: &str) -> Option<f64> {
-    summary.link_slots
+    summary
+        .link_slots
         .iter()
         .find(|metric| metric.batch == batch)
         .map(|metric| metric.mean_ms)

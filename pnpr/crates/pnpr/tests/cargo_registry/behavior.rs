@@ -7,7 +7,11 @@ use super::{
 async fn search_lists_hosted_crates_by_newest_version_and_description() {
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(
         cargo_config(tmp.path().to_path_buf(), "http://upstream.invalid/", "$all"),
         auth,
@@ -94,7 +98,9 @@ async fn cargo_advertises_auth_for_package_specific_private_access() {
     use pnpr::{AccessList, Ecosystem, PackagePattern, PackageRule};
     let tmp = TempDir::new().unwrap();
     let mut config = cargo_config(tmp.path().to_path_buf(), "http://upstream.invalid/", "$all");
-    config.routing.hosted
+    config
+        .routing
+        .hosted
         .get_mut("crates")
         .unwrap()
         .rules

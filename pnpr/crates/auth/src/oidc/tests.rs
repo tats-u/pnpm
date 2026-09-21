@@ -26,7 +26,9 @@ fn signing_key() -> SigningKey {
 }
 
 fn jwks(key: &SigningKey) -> Value {
-    let point = key.verifying_key().to_encoded_point(false);
+    let point = key
+        .verifying_key()
+        .to_encoded_point(false);
     json!({"keys": [{"kty": "EC", "crv": "P-256", "alg": "ES256", "use": "sig", "kid": "test",
         "x": BASE64_URL_SAFE_NO_PAD.encode(point.x().unwrap()),
         "y": BASE64_URL_SAFE_NO_PAD.encode(point.y().unwrap())}]})
@@ -149,7 +151,9 @@ struct DiscoveryGate {
 }
 
 async fn mock_provider() -> (Arc<MockProvider>, tokio::task::JoinHandle<()>) {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let state = Arc::new(MockProvider {
         issuer: format!("http://{}", listener.local_addr().unwrap()),
         key: signing_key(),
@@ -188,7 +192,9 @@ async fn mock_provider() -> (Arc<MockProvider>, tokio::task::JoinHandle<()>) {
             Json(json!({"access_token": "access", "token_type": "Bearer", "id_token": sign(&claims, &state.key)}))
         })).with_state(Arc::clone(&state));
     let task = tokio::spawn(async move {
-        axum::serve(listener, router).await.unwrap();
+        axum::serve(listener, router)
+            .await
+            .unwrap();
     });
     (state, task)
 }
@@ -254,15 +260,27 @@ async fn browser_login_uses_pkce_nonce_cookie_binding_and_single_use_state() {
     assert_eq!(query["redirect_uri"], "https://registry.example/-/oidc/example/callback");
     *provider.nonce.lock().unwrap() = Some(query["nonce"].clone());
     *provider.challenge.lock().unwrap() = Some(query["code_challenge"].clone());
-    let session =
-        state.finish("example", &start.state, &start.browser_secret, "code").await.unwrap();
+    let session = state
+        .finish("example", &start.state, &start.browser_secret, "code")
+        .await
+        .unwrap();
     assert_eq!(state.session(&session.token).unwrap(), Some("ci".to_string()));
     assert!(session.expires <= Utc::now().timestamp() + 300);
-    assert!(state.finish("example", &start.state, &start.browser_secret, "code").await.is_err());
+    assert!(
+        state
+            .finish("example", &start.state, &start.browser_secret, "code")
+            .await
+            .is_err()
+    );
     assert!(state.revoke_session(&session.token));
     assert!(state.session(&session.token).is_err());
     let start = state.start("example").await.unwrap();
-    assert!(state.finish("example", &start.state, "other-browser", "code").await.is_err());
+    assert!(
+        state
+            .finish("example", &start.state, "other-browser", "code")
+            .await
+            .is_err()
+    );
     let query: HashMap<_, _> = Url::parse(&start.url)
         .unwrap()
         .query_pairs()
@@ -270,7 +288,10 @@ async fn browser_login_uses_pkce_nonce_cookie_binding_and_single_use_state() {
         .collect();
     *provider.nonce.lock().unwrap() = Some(query["nonce"].clone());
     *provider.challenge.lock().unwrap() = Some(query["code_challenge"].clone());
-    state.finish("example", &start.state, &start.browser_secret, "code").await.unwrap();
+    state
+        .finish("example", &start.state, &start.browser_secret, "code")
+        .await
+        .unwrap();
     task.abort();
 }
 
@@ -281,7 +302,8 @@ fn sessions_expire_and_configuration_fails_closed() {
     let session = state
         .issue_session("alice", Utc::now().timestamp() + 60)
         .unwrap();
-    state.sessions
+    state
+        .sessions
         .lock()
         .unwrap()
         .values_mut()
@@ -299,17 +321,30 @@ async fn refresh_is_bounded_and_recovers_after_expiration() {
     let (provider, task) = mock_provider().await;
     let state = OidcState::new(&[config(&provider.issuer)], "https://registry.example").unwrap();
     let configured = state.providers.get("example").unwrap();
-    state.metadata(configured, false).await.unwrap();
+    state
+        .metadata(configured, false)
+        .await
+        .unwrap();
     for _ in 0..3 {
-        state.metadata(configured, true).await.unwrap();
+        state
+            .metadata(configured, true)
+            .await
+            .unwrap();
     }
     assert_eq!(*provider.key_requests.lock().unwrap(), 1);
-    configured.metadata.lock().await.attempted_at = Some(
+    configured
+        .metadata
+        .lock()
+        .await
+        .attempted_at = Some(
         Instant::now()
             .checked_sub(Duration::from_secs(31))
             .unwrap(),
     );
-    state.metadata(configured, true).await.unwrap();
+    state
+        .metadata(configured, true)
+        .await
+        .unwrap();
     assert_eq!(*provider.key_requests.lock().unwrap(), 2);
     task.abort();
 }
@@ -331,8 +366,9 @@ fn verifies_rs256_workload_tokens() {
     let header = BASE64_URL_SAFE_NO_PAD.encode(br#"{"alg":"RS256"}"#);
     let payload = BASE64_URL_SAFE_NO_PAD.encode(serde_json::to_vec(&payload(issuer)).unwrap());
     let message = format!("{header}.{payload}");
-    let signature =
-        key.sign(&CoreJwsSigningAlgorithm::RsaSsaPkcs1V15Sha256, message.as_bytes()).unwrap();
+    let signature = key
+        .sign(&CoreJwsSigningAlgorithm::RsaSsaPkcs1V15Sha256, message.as_bytes())
+        .unwrap();
     let token = format!("{message}.{}", BASE64_URL_SAFE_NO_PAD.encode(signature));
     verify_workload(&config(issuer), &metadata, &token).unwrap();
 }
@@ -352,18 +388,31 @@ async fn rejects_expired_state_and_wrong_nonce() {
         .collect();
     *provider.nonce.lock().unwrap() = Some("wrong-nonce".to_string());
     *provider.challenge.lock().unwrap() = Some(query["code_challenge"].clone());
-    assert!(state.finish("example", &start.state, &start.browser_secret, "code").await.is_err());
     assert!(
-        state.sessions
+        state
+            .finish("example", &start.state, &start.browser_secret, "code")
+            .await
+            .is_err()
+    );
+    assert!(
+        state
+            .sessions
             .lock()
             .unwrap()
             .is_empty(),
     );
     let start = state.start("example").await.unwrap();
-    let mut login = state.open_login(&start.browser_secret).unwrap();
+    let mut login = state
+        .open_login(&start.browser_secret)
+        .unwrap();
     login.expires = Utc::now().timestamp() - 1;
     let expired_cookie = state.seal_login(&login).unwrap();
-    assert!(state.finish("example", &start.state, &expired_cookie, "code").await.is_err());
+    assert!(
+        state
+            .finish("example", &start.state, &expired_cookie, "code")
+            .await
+            .is_err()
+    );
     task.abort();
 }
 
@@ -385,7 +434,10 @@ async fn selects_client_secret_post_from_discovery() {
         .collect();
     *provider.nonce.lock().unwrap() = Some(query["nonce"].clone());
     *provider.challenge.lock().unwrap() = Some(query["code_challenge"].clone());
-    state.finish("example", &start.state, &start.browser_secret, "code").await.unwrap();
+    state
+        .finish("example", &start.state, &start.browser_secret, "code")
+        .await
+        .unwrap();
     task.abort();
 }
 
@@ -408,13 +460,22 @@ async fn anonymous_login_starts_cannot_exhaust_or_evict_active_flows() {
         state.start("example").await.unwrap();
     }
     assert!(
-        state.consumed
+        state
+            .consumed
             .lock()
             .unwrap()
             .is_empty(),
     );
-    state.finish("example", &start.state, &start.browser_secret, "code").await.unwrap();
-    assert!(state.finish("example", &start.state, &start.browser_secret, "code").await.is_err());
+    state
+        .finish("example", &start.state, &start.browser_secret, "code")
+        .await
+        .unwrap();
+    assert!(
+        state
+            .finish("example", &start.state, &start.browser_secret, "code")
+            .await
+            .is_err()
+    );
     task.abort();
 }
 
@@ -425,22 +486,38 @@ async fn valid_workloads_do_not_wait_for_a_forced_network_refresh() {
         Arc::new(OidcState::new(&[config(&provider.issuer)], "https://registry.example").unwrap());
     let token = sign(&payload(&provider.issuer), &provider.key);
     state.workload(&token).await.unwrap();
-    state.providers["example"].metadata.lock().await.attempted_at =
-        Instant::now().checked_sub(Duration::from_secs(31));
-    provider.discovery.delay_discovery.store(true, std::sync::atomic::Ordering::Relaxed);
-    let refreshing = Arc::clone(&state);
-    let refresh =
-        tokio::spawn(
-            async move { refreshing.metadata(&refreshing.providers["example"], true).await },
-        );
-    tokio::time::timeout(Duration::from_secs(2), provider.discovery.discovery_started.notified())
+    state.providers["example"]
+        .metadata
+        .lock()
         .await
-        .unwrap();
+        .attempted_at = Instant::now().checked_sub(Duration::from_secs(31));
+    provider
+        .discovery
+        .delay_discovery
+        .store(true, std::sync::atomic::Ordering::Relaxed);
+    let refreshing = Arc::clone(&state);
+    let refresh = tokio::spawn(async move {
+        refreshing
+            .metadata(&refreshing.providers["example"], true)
+            .await
+    });
+    tokio::time::timeout(
+        Duration::from_secs(2),
+        provider
+            .discovery
+            .discovery_started
+            .notified(),
+    )
+    .await
+    .unwrap();
     tokio::time::timeout(Duration::from_millis(100), state.workload(&token))
         .await
         .unwrap()
         .unwrap();
-    provider.discovery.release_discovery.notify_one();
+    provider
+        .discovery
+        .release_discovery
+        .notify_one();
     refresh.await.unwrap().unwrap();
     task.abort();
 }
@@ -458,10 +535,16 @@ async fn failed_callbacks_are_rejected_on_repeated_and_concurrent_attempts() {
     let (first, concurrent) = tokio::join!(first, concurrent);
     assert!(first.is_err());
     assert!(concurrent.is_err());
-    assert!(state.finish("example", &start.state, &start.browser_secret, "invalid").await.is_err());
+    assert!(
+        state
+            .finish("example", &start.state, &start.browser_secret, "invalid")
+            .await
+            .is_err()
+    );
     assert_eq!(*provider.token_requests.lock().unwrap(), 1);
     assert!(
-        state.sessions
+        state
+            .sessions
             .lock()
             .unwrap()
             .is_empty(),
@@ -483,8 +566,16 @@ async fn callback_capacity_recovers_without_blocking_unattempted_logins() {
             .unwrap();
     }
     assert_eq!(state.attempts.lock().unwrap().len(), super::MAX_ENTRIES);
-    let permits = state.exchanges.try_acquire_many(16).unwrap();
-    assert!(state.finish("example", &start.state, &start.browser_secret, "invalid").await.is_err());
+    let permits = state
+        .exchanges
+        .try_acquire_many(16)
+        .unwrap();
+    assert!(
+        state
+            .finish("example", &start.state, &start.browser_secret, "invalid")
+            .await
+            .is_err()
+    );
     assert_eq!(*provider.token_requests.lock().unwrap(), 0);
     drop(permits);
     let query: HashMap<_, _> = Url::parse(&start.url)
@@ -494,14 +585,20 @@ async fn callback_capacity_recovers_without_blocking_unattempted_logins() {
         .collect();
     *provider.nonce.lock().unwrap() = Some(query["nonce"].clone());
     *provider.challenge.lock().unwrap() = Some(query["code_challenge"].clone());
-    state.finish("example", &start.state, &start.browser_secret, "code").await.unwrap();
+    state
+        .finish("example", &start.state, &start.browser_secret, "code")
+        .await
+        .unwrap();
     assert_eq!(*provider.token_requests.lock().unwrap(), 1);
     task.abort();
 }
 
 impl DiscoveryGate {
     async fn wait(&self) {
-        if self.delay_discovery.load(std::sync::atomic::Ordering::Relaxed) {
+        if self
+            .delay_discovery
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
             self.discovery_started.notify_one();
             self.release_discovery.notified().await;
         }

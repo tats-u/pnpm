@@ -244,7 +244,8 @@ impl<'a> IngestTarballToStore<'a> {
         self,
         mem_cache: &'a MemCache,
     ) -> Result<Arc<HashMap<String, PathBuf>>, TarballError> {
-        self.run_with_mem_cache_inner::<Reporter>(mem_cache, false).await
+        self.run_with_mem_cache_inner::<Reporter>(mem_cache, false)
+            .await
     }
 
     /// Execute a registry revision fetch with the shared in-memory cache.
@@ -253,7 +254,8 @@ impl<'a> IngestTarballToStore<'a> {
         self,
         mem_cache: &'a MemCache,
     ) -> Result<Arc<HashMap<String, PathBuf>>, TarballError> {
-        self.run_with_mem_cache_inner::<Reporter>(mem_cache, true).await
+        self.run_with_mem_cache_inner::<Reporter>(mem_cache, true)
+            .await
     }
 
     async fn run_with_mem_cache_inner<Reporter: self::Reporter>(
@@ -268,7 +270,10 @@ impl<'a> IngestTarballToStore<'a> {
         );
         let cache_key =
             store_index_cache_key(self.package.integrity, self.package.id, self.store_projection);
-        let progress_key = self.progress_reported.as_ref().zip(cache_key.as_deref());
+        let progress_key = self
+            .progress_reported
+            .as_ref()
+            .zip(cache_key.as_deref());
 
         if let Some(prefetched) = self.store.prefetched_cas_paths
             && let Some(cache_key) = cache_key.as_deref()
@@ -287,7 +292,10 @@ impl<'a> IngestTarballToStore<'a> {
 
         let (cache_lock, owner_notify) = claim_cache_entry(mem_cache, mem_cache_key.clone());
         match owner_notify {
-            None => self.wait_for_owner::<Reporter>(&cache_lock, progress_key).await,
+            None => {
+                self.wait_for_owner::<Reporter>(&cache_lock, progress_key)
+                    .await
+            }
             Some(notify) => {
                 self.fetch_as_owner::<Reporter>(
                     mem_cache,
@@ -371,7 +379,9 @@ impl<'a> IngestTarballToStore<'a> {
         notify: &Notify,
         revision_addressed: bool,
     ) -> Result<Arc<HashMap<String, PathBuf>>, TarballError> {
-        let result = self.load_or_fetch::<Reporter>(revision_addressed).await;
+        let result = self
+            .load_or_fetch::<Reporter>(revision_addressed)
+            .await;
         match result {
             Ok(loaded) => {
                 let cached = publish_cached_tarball(
@@ -400,14 +410,17 @@ impl<'a> IngestTarballToStore<'a> {
         &self,
         revision_addressed: bool,
     ) -> Result<crate::CachedCasPaths, TarballError> {
-        self.ingestion(revision_addressed).load_or_fetch::<Reporter>().await
+        self.ingestion(revision_addressed)
+            .load_or_fetch::<Reporter>()
+            .await
     }
 
     /// Execute the subroutine without an in-memory cache.
     pub async fn run_without_mem_cache<Reporter: self::Reporter>(
         &self,
     ) -> Result<HashMap<String, PathBuf>, TarballError> {
-        self.run_without_mem_cache_inner::<Reporter>(false).await
+        self.run_without_mem_cache_inner::<Reporter>(false)
+            .await
     }
 
     /// Execute a registry revision fetch without the in-memory cache.
@@ -415,21 +428,26 @@ impl<'a> IngestTarballToStore<'a> {
     pub async fn run_revision_addressed_without_mem_cache<Reporter: self::Reporter>(
         &self,
     ) -> Result<HashMap<String, PathBuf>, TarballError> {
-        self.run_without_mem_cache_inner::<Reporter>(true).await
+        self.run_without_mem_cache_inner::<Reporter>(true)
+            .await
     }
 
     async fn run_without_mem_cache_inner<Reporter: self::Reporter>(
         &self,
         revision_addressed: bool,
     ) -> Result<HashMap<String, PathBuf>, TarballError> {
-        self.load_or_fetch::<Reporter>(revision_addressed).await.map(|cached| cached.files)
+        self.load_or_fetch::<Reporter>(revision_addressed)
+            .await
+            .map(|cached| cached.files)
     }
 
     /// Fetch without cache reuse, indexing unpinned archives by computed integrity.
     pub async fn fetch_and_extract<Reporter: self::Reporter>(
         &self,
     ) -> Result<FetchedTarball, TarballError> {
-        self.ingestion(false).fetch::<Reporter>(true).await
+        self.ingestion(false)
+            .fetch::<Reporter>(true)
+            .await
     }
 
     fn ingestion(&self, revision_addressed: bool) -> ingestion::ArchiveIngestion<'_> {
@@ -540,9 +558,8 @@ pub(crate) async fn publish_cache_failure(
 ) {
     *cache_lock.write().await = CacheValue::Failed;
     if !revision_addressed {
-        mem_cache.remove_if(mem_cache_key, |_, existing| {
-            std::ptr::eq(existing.as_ref(), cache_lock)
-        });
+        mem_cache
+            .remove_if(mem_cache_key, |_, existing| std::ptr::eq(existing.as_ref(), cache_lock));
     }
     notify.notify_waiters();
 }

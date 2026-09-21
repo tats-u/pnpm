@@ -113,7 +113,9 @@ where
     Pkg: BaseProject,
 {
     let (exclude_selectors, include_selectors): (Vec<&ProjectSelector>, Vec<&ProjectSelector>) =
-        project_selectors.iter().partition(|selector| selector.exclude);
+        project_selectors
+            .iter()
+            .partition(|selector| selector.exclude);
 
     let include = if include_selectors.is_empty() {
         FilterGraphResult {
@@ -129,7 +131,8 @@ where
     // Keep graph members only: a `[<since>]` selector can surface a
     // changed directory that no workspace project contains (upstream
     // drops those the same way, via its final `pick`).
-    let selected_projects: Vec<PathBuf> = include.selected
+    let selected_projects: Vec<PathBuf> = include
+        .selected
         .into_iter()
         .filter(|dir| !excluded.contains(dir) && projects_graph.contains_key(dir))
         .collect();
@@ -155,7 +158,14 @@ where
     let mut walk = WalkState::default();
     let mut unmatched_filters: Vec<String> = Vec::new();
 
-    let forward = |id: &Path| Some(projects_graph.get(id)?.dependencies.clone());
+    let forward = |id: &Path| {
+        Some(
+            projects_graph
+                .get(id)?
+                .dependencies
+                .clone(),
+        )
+    };
     let reversed_graph = selectors
         .iter()
         .any(|selector| selector.traversal.include_dependents)
@@ -205,13 +215,16 @@ fn match_selector_path<Pkg: BaseProject>(
     selector: &ProjectSelector,
     opts: &FilterWorkspaceProjectsOptions,
 ) -> Option<Vec<PathBuf>> {
-    selector.parent_dir
+    selector
+        .parent_dir
         .as_deref()
         .map(|parent_dir| {
             match_projects_by_path(
                 projects_graph,
                 parent_dir,
-                selector.use_glob_dir_filtering.unwrap_or(opts.use_glob_dir_filtering),
+                selector
+                    .use_glob_dir_filtering
+                    .unwrap_or(opts.use_glob_dir_filtering),
             )
         })
 }
@@ -226,7 +239,10 @@ fn changed_selector_projects<Pkg: BaseProject>(
         projects_graph.keys().cloned().collect(),
         diff,
         &GetChangedProjectsOptions {
-            workspace_dir: selector.parent_dir.as_deref().unwrap_or(&opts.workspace_dir),
+            workspace_dir: selector
+                .parent_dir
+                .as_deref()
+                .unwrap_or(&opts.workspace_dir),
             test_pattern: &opts.test_pattern,
             changed_files_ignore_pattern: &opts.changed_files_ignore_pattern,
         },
@@ -243,14 +259,23 @@ where
     Pkg: BaseProject,
 {
     let name_of = |id: &Path| {
-        projects_graph
-            .get(id)
-            .and_then(|node| node.package.manifest_name().map(str::to_string))
+        projects_graph.get(id).and_then(|node| {
+            node.package
+                .manifest_name()
+                .map(str::to_string)
+        })
     };
     let Some(ids) = entry_projects else {
         return projects_graph
             .iter()
-            .map(|(id, node)| (id.clone(), node.package.manifest_name().map(str::to_string)))
+            .map(|(id, node)| {
+                (
+                    id.clone(),
+                    node.package
+                        .manifest_name()
+                        .map(str::to_string),
+                )
+            })
             .collect();
     };
     ids.iter()
@@ -272,7 +297,11 @@ fn record_unmatched_filter(selector: &ProjectSelector, unmatched_filters: &mut V
         unmatched_filters.push(name_pattern.clone());
     }
     if let Some(parent_dir) = &selector.parent_dir {
-        unmatched_filters.push(parent_dir.to_string_lossy().into_owned());
+        unmatched_filters.push(
+            parent_dir
+                .to_string_lossy()
+                .into_owned(),
+        );
     }
 }
 
@@ -410,7 +439,9 @@ fn workspace_filter_options(opts: &FilterProjectsOptions) -> FilterWorkspaceProj
         use_glob_dir_filtering: opts.use_glob_dir_filtering,
         workspace_dir: opts.workspace_dir.clone(),
         test_pattern: opts.test_pattern.clone(),
-        changed_files_ignore_pattern: opts.changed_files_ignore_pattern.clone(),
+        changed_files_ignore_pattern: opts
+            .changed_files_ignore_pattern
+            .clone(),
     }
 }
 

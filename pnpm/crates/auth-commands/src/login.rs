@@ -135,7 +135,10 @@ where
     Sys: LoginHost,
     Reporter: self::Reporter,
 {
-    let registry = normalize_registry_url(opts.registry.unwrap_or(DEFAULT_REGISTRY));
+    let registry = normalize_registry_url(
+        opts.registry
+            .unwrap_or(DEFAULT_REGISTRY),
+    );
     // Before the network, not after: a value the reader would refuse must not
     // cost the user a round-trip, and must never be written — a `config.yaml`
     // holding one fails to load for every later command.
@@ -201,7 +204,9 @@ fn record_login<Sys: FsReadToString + FsWrite>(
     registry: &str,
     token: &str,
 ) -> Result<(), LoginError> {
-    let config_path = opts.config_dir.join(GLOBAL_CONFIG_YAML_FILENAME);
+    let config_path = opts
+        .config_dir
+        .join(GLOBAL_CONFIG_YAML_FILENAME);
     let original = read_config_yaml::<Sys>(&config_path)?;
     let scope = normalize_scope(opts.scope);
     let fields = config_yaml::login_fields(original.as_deref(), registry, scope.as_deref(), token)
@@ -240,7 +245,9 @@ fn read_config_yaml<Sys: FsReadToString>(path: &Path) -> Result<Option<String>, 
 
 /// Resolve `path` against the registry the way `new URL(path, registry)` does.
 fn registry_join(registry: &str, path: &str) -> Result<String, url::ParseError> {
-    url::Url::parse(registry)?.join(path).map(String::from)
+    url::Url::parse(registry)?
+        .join(path)
+        .map(String::from)
 }
 
 fn global_info<Reporter: self::Reporter>(message: String) {

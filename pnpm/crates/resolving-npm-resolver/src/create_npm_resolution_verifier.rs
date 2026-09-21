@@ -269,7 +269,12 @@ impl std::fmt::Debug for NpmResolutionVerifier {
             .field("minimum_release_age_minutes", &self.release_age.minimum_minutes)
             .field("cutoff", &self.release_age.cutoff)
             .field("ignore_missing_time_field", &self.metadata.ignore_missing_time_field)
-            .field("registry_supports_time_field", &self.metadata.registry_supports_time_field)
+            .field(
+                "registry_supports_time_field",
+                &self
+                    .metadata
+                    .registry_supports_time_field,
+            )
             .field("trust_policy", &self.trust.policy)
             .field("trust_policy_ignore_after", &self.trust.ignore_after)
             .field("offline", &self.metadata.offline)
@@ -298,7 +303,10 @@ pub fn create_npm_resolution_verifier(
     let named_registries_routing = named_registries_routing_digest(&opts.registries_by_prefix);
 
     let policy_snapshot = build_policy_snapshot(&BuildPolicySnapshot {
-        minimum_release_age: opts.release_age.minimum_minutes.unwrap_or(0),
+        minimum_release_age: opts
+            .release_age
+            .minimum_minutes
+            .unwrap_or(0),
         sorted_min_age_excludes: &sorted_min_age_excludes,
         ignore_missing_time_field: opts.metadata.ignore_missing_time_field,
         trust_policy: opts.trust.policy,
@@ -338,7 +346,11 @@ impl ResolutionVerifier for NpmResolutionVerifier {
         let Some(tarball_url) = npm_registry_tarball(resolution) else {
             return false;
         };
-        if tarball_url.is_some() || resolution.checkable_integrity().is_none() {
+        if tarball_url.is_some()
+            || resolution
+                .checkable_integrity()
+                .is_none()
+        {
             return true;
         }
         self.release_age.age_check_active()
@@ -372,7 +384,12 @@ impl ResolutionVerifier for NpmResolutionVerifier {
             .get("minimumReleaseAge")
             .and_then(JsonValue::as_u64)
             .unwrap_or(0);
-        if past_min_age < self.release_age.minimum_minutes.unwrap_or(0) {
+        if past_min_age
+            < self
+                .release_age
+                .minimum_minutes
+                .unwrap_or(0)
+        {
             return false;
         }
 
@@ -382,7 +399,9 @@ impl ResolutionVerifier for NpmResolutionVerifier {
             return false;
         }
 
-        let past_trust_policy = cached_policy.get("trustPolicy").and_then(JsonValue::as_str);
+        let past_trust_policy = cached_policy
+            .get("trustPolicy")
+            .and_then(JsonValue::as_str);
         let today_trust_policy = self.trust.trust_policy_wire_str();
         if past_trust_policy != today_trust_policy {
             return false;
@@ -393,8 +412,9 @@ impl ResolutionVerifier for NpmResolutionVerifier {
             return false;
         }
 
-        let past_ignore_after =
-            cached_policy.get("trustPolicyIgnoreAfter").and_then(JsonValue::as_u64);
+        let past_ignore_after = cached_policy
+            .get("trustPolicyIgnoreAfter")
+            .and_then(JsonValue::as_u64);
         if past_ignore_after != self.trust.ignore_after {
             return false;
         }
@@ -431,7 +451,10 @@ impl NpmResolutionVerifier {
         // metadata shortcuts below. An entry that pins no hash cannot be
         // verified against anything once fetched, whatever its version
         // shape — a URL-keyed dep is refused here too.
-        if resolution.checkable_integrity().is_none() {
+        if resolution
+            .checkable_integrity()
+            .is_none()
+        {
             return ResolutionVerification::Err {
                 code: MISSING_TARBALL_INTEGRITY_VIOLATION_CODE,
                 reason: r#"has no "integrity" field, so its downloaded tarball cannot be verified"#
@@ -445,7 +468,10 @@ impl NpmResolutionVerifier {
             return ResolutionVerification::Ok;
         }
 
-        let named_registry = match self.routing.named_registry_url(ctx.registry_name) {
+        let named_registry = match self
+            .routing
+            .named_registry_url(ctx.registry_name)
+        {
             Ok(named_registry) => named_registry,
             Err(violation) => return violation,
         };
@@ -454,22 +480,26 @@ impl NpmResolutionVerifier {
         if tarball_url.is_none() && !age_applies && !trust_applies {
             return ResolutionVerification::Ok;
         }
-        let registry =
-            named_registry.unwrap_or_else(|| self.routing.pick_registry(ctx.name, tarball_url));
+        let registry = named_registry.unwrap_or_else(|| {
+            self.routing
+                .pick_registry(ctx.name, tarball_url)
+        });
 
-        if let Some(violation) = self.run_artifact_binding(
-            &registry,
-            &ctx,
-            resolution,
-            tarball_url,
-            age_applies || trust_applies,
-        )
-        .await
+        if let Some(violation) = self
+            .run_artifact_binding(
+                &registry,
+                &ctx,
+                resolution,
+                tarball_url,
+                age_applies || trust_applies,
+            )
+            .await
         {
             return violation;
         }
 
-        self.run_policy_checks(&registry, &ctx, age_applies, trust_applies).await
+        self.run_policy_checks(&registry, &ctx, age_applies, trust_applies)
+            .await
     }
 
     /// A registry entry that pins an explicit tarball URL must point at the
@@ -515,13 +545,16 @@ impl NpmResolutionVerifier {
         trust_applies: bool,
     ) -> ResolutionVerification {
         if age_applies
-            && let Some(violation) =
-                self.run_age_check(registry, ctx.name, ctx.version, ctx.registry_name).await
+            && let Some(violation) = self
+                .run_age_check(registry, ctx.name, ctx.version, ctx.registry_name)
+                .await
         {
             return violation;
         }
         if trust_applies
-            && let Some(violation) = self.run_trust_check(registry, ctx.name, ctx.version).await
+            && let Some(violation) = self
+                .run_trust_check(registry, ctx.name, ctx.version)
+                .await
         {
             return violation;
         }
@@ -530,7 +563,9 @@ impl NpmResolutionVerifier {
 }
 
 fn render_fetch_metadata_error(error: &crate::FetchMetadataError) -> String {
-    let code = error.code().map(|code| code.to_string());
+    let code = error
+        .code()
+        .map(|code| code.to_string());
     let message = redact_url_credentials(&error.to_string());
     match code {
         Some(code) => format!("{code}: {message}"),
@@ -576,7 +611,10 @@ impl VerificationRegistryRoutes {
         registry_name: Option<&str>,
     ) -> Result<Option<String>, ResolutionVerification> {
         let Some(registry_name) = registry_name else { return Ok(None) };
-        match self.registries_by_prefix.get(registry_name) {
+        match self
+            .registries_by_prefix
+            .get(registry_name)
+        {
             Some(url) => Ok(Some(url.clone())),
             None => Err(ResolutionVerification::Err {
                 code: MISSING_NAMED_REGISTRY_VIOLATION_CODE,
@@ -607,6 +645,7 @@ impl VerificationRegistryRoutes {
 
 impl ReleaseAgeCheck {
     fn age_check_active(&self) -> bool {
-        self.minimum_minutes.is_some_and(|minutes| minutes > 0)
+        self.minimum_minutes
+            .is_some_and(|minutes| minutes > 0)
     }
 }

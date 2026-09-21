@@ -111,14 +111,17 @@ impl<'a> HoistSymlinkPlan<'a> {
             // the hoist symlink's `<slot>/node_modules/<name>` target.
             let dep_dir = std::sync::Arc::new(
                 crate::safe_join_modules_dir::safe_join_modules_dir(
-                    &layout.slot_dir(node_id).join("node_modules"),
+                    &layout
+                        .slot_dir(node_id)
+                        .join("node_modules"),
                     &node.name.to_string(),
                 )
                 .map_err(crate::SymlinkPackageError::InvalidAlias)?,
             );
             for (alias, kind) in alias_map {
                 self.record_scope_dir(alias, dirs.root(*kind));
-                self.work.push((std::sync::Arc::clone(&dep_dir), *kind, alias));
+                self.work
+                    .push((std::sync::Arc::clone(&dep_dir), *kind, alias));
             }
         }
         Ok(())
@@ -135,7 +138,8 @@ impl<'a> HoistSymlinkPlan<'a> {
     ) {
         for (alias, kind, project_dir) in hoisted_workspace_aliases {
             self.record_scope_dir(alias, dirs.root(*kind));
-            self.work.push((std::sync::Arc::new(project_dir.clone()), *kind, alias));
+            self.work
+                .push((std::sync::Arc::new(project_dir.clone()), *kind, alias));
         }
     }
 
@@ -149,7 +153,8 @@ impl<'a> HoistSymlinkPlan<'a> {
         if alias.starts_with('@')
             && let Some(slash) = alias.find('/')
         {
-            self.scope_dirs.insert(target_dir_root.join(&alias[..slash]));
+            self.scope_dirs
+                .insert(target_dir_root.join(&alias[..slash]));
         }
     }
 
@@ -161,11 +166,9 @@ impl<'a> HoistSymlinkPlan<'a> {
         dirs: &HoistedModulesDirs<'_>,
     ) -> Result<(), crate::SymlinkPackageError> {
         let mkdir = |path: &std::path::Path| -> Result<(), crate::SymlinkPackageError> {
-            std::fs::create_dir_all(path)
-                .map_err(|error| crate::SymlinkPackageError::CreateParentDir {
-                    dir: path.to_path_buf(),
-                    error,
-                })
+            std::fs::create_dir_all(path).map_err(|error| {
+                crate::SymlinkPackageError::CreateParentDir { dir: path.to_path_buf(), error }
+            })
         };
         mkdir(dirs.private)?;
         mkdir(dirs.public)?;
@@ -247,16 +250,14 @@ pub(super) fn update_stale_hoist_symlink(
     {
         return Ok(());
     }
-    pnpm_fs::remove_symlink_dir(dest)
-        .map_err(|error| crate::SymlinkPackageError::SymlinkDir {
-            symlink_target: dep_dir.to_path_buf(),
-            symlink_path: dest.to_path_buf(),
-            error,
-        })?;
-    pnpm_fs::symlink_dir(dep_dir, dest)
-        .map_err(|error| crate::SymlinkPackageError::SymlinkDir {
-            symlink_target: dep_dir.to_path_buf(),
-            symlink_path: dest.to_path_buf(),
-            error,
-        })
+    pnpm_fs::remove_symlink_dir(dest).map_err(|error| crate::SymlinkPackageError::SymlinkDir {
+        symlink_target: dep_dir.to_path_buf(),
+        symlink_path: dest.to_path_buf(),
+        error,
+    })?;
+    pnpm_fs::symlink_dir(dep_dir, dest).map_err(|error| crate::SymlinkPackageError::SymlinkDir {
+        symlink_target: dep_dir.to_path_buf(),
+        symlink_path: dest.to_path_buf(),
+        error,
+    })
 }

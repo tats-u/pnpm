@@ -111,7 +111,9 @@ fn a_virtual_shim_only_yields_to_its_own_package() {
     fs::write(bin_dir.join("tool"), "globally installed shim").expect("replace virtual shim");
     record_virtual_shim_state(&bin_dir, "owner", &["tool".to_string()])
         .expect("record restoration state");
-    let error = check_virtual_shim_conflicts(&[unrelated], &bin_dir).unwrap_err().to_string();
+    let error = check_virtual_shim_conflicts(&[unrelated], &bin_dir)
+        .unwrap_err()
+        .to_string();
     assert!(error.contains(r#"project-aware shim for "owner""#), "{error}");
 
     let owner = PackageBinSource::new(
@@ -169,7 +171,8 @@ fn later_hash_cleanup_failure_restores_earlier_groups() {
     let first_group =
         fixture.seed_group(GlobalGroupSpec { alias: "first", hash: "first-hash", bin: "first" });
     let groups = vec![first_group.clone(), fixture.group.clone()];
-    let affected_bin_names = fixture.affected_bin_names
+    let affected_bin_names = fixture
+        .affected_bin_names
         .iter()
         .cloned()
         .chain(["first".to_string()])
@@ -308,7 +311,11 @@ fn invalid_inferred_package_name_is_rejected() {
 
     let error = infer_local_package_alias(&selector).expect_err("reject invalid package name");
 
-    assert!(error.to_string().contains(r#"Invalid package name "Invalid Name"."#));
+    assert!(
+        error
+            .to_string()
+            .contains(r#"Invalid package name "Invalid Name"."#)
+    );
 }
 
 #[test]
@@ -370,7 +377,9 @@ fn ownership_snapshot_preserves_manifest_diagnostic_codes() {
         install_dir: root.path().to_path_buf(),
         dependencies: vec![("dependency".to_string(), "1.0.0".to_string())],
     };
-    let manifest_path = root.path().join("node_modules/dependency/package.json");
+    let manifest_path = root
+        .path()
+        .join("node_modules/dependency/package.json");
 
     let empty =
         snapshot_global_package(info.clone()).expect("a group without node_modules owns no bins");
@@ -413,11 +422,16 @@ fn ownership_snapshot_preserves_manifest_diagnostic_codes() {
             .contains(&root.path().display().to_string()),
     );
 
-    std::fs::create_dir_all(manifest_path.parent().expect("manifest parent"))
-        .expect("create dependency directory");
+    std::fs::create_dir_all(
+        manifest_path
+            .parent()
+            .expect("manifest parent"),
+    )
+    .expect("create dependency directory");
     std::fs::write(manifest_path, "{").expect("write malformed ownership manifest");
-    let malformed =
-        snapshot_global_package(info).err().expect("a malformed ownership manifest must fail");
+    let malformed = snapshot_global_package(info)
+        .err()
+        .expect("a malformed ownership manifest must fail");
     let malformed: &(dyn miette::Diagnostic + Send + Sync) = malformed.as_ref();
     assert_eq!(
         miette::Diagnostic::code(malformed).map(|code| code.to_string()),
@@ -508,8 +522,12 @@ impl GlobalRemovalFixture {
     }
 
     fn seed_group(&self, spec: GlobalGroupSpec<'_>) -> GlobalPackageBinSnapshot {
-        let install_dir = self.global_pkg_dir.join(format!("install-{}", spec.alias));
-        let package_dir = install_dir.join("node_modules").join(spec.alias);
+        let install_dir = self
+            .global_pkg_dir
+            .join(format!("install-{}", spec.alias));
+        let package_dir = install_dir
+            .join("node_modules")
+            .join(spec.alias);
         fs::create_dir_all(&package_dir).expect("create installed package directory");
         fs::write(
             package_dir.join("package.json"),

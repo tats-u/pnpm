@@ -14,7 +14,10 @@ use serde_json::Value;
 /// the raw ones are read back from [`Config::explicit_settings`], the
 /// record of what each config source set.
 pub(crate) fn warn_deprecated_override_version_references(config: &Config, emit: fn(&LogEvent)) {
-    let Some(overrides) = config.explicit_settings.get("overrides").and_then(Value::as_object)
+    let Some(overrides) = config
+        .explicit_settings
+        .get("overrides")
+        .and_then(Value::as_object)
     else {
         return;
     };

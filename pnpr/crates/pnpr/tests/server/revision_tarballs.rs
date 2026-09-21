@@ -44,7 +44,9 @@ async fn upstream_endpoint_preserves_and_serves_revision_tarballs() {
 
     let tmp = TempDir::new().unwrap();
     let mut config = upstream_endpoint_config(&upstream.url(), tmp.path().to_path_buf(), "alice");
-    config.routing.upstreams
+    config
+        .routing
+        .upstreams
         .get_mut("npmjs")
         .unwrap()
         .headers
@@ -55,7 +57,11 @@ async fn upstream_endpoint_preserves_and_serves_revision_tarballs() {
         Some("npmjs".to_string()),
     );
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
     let authorization = format!("Bearer {token}");
 
@@ -106,7 +112,9 @@ async fn upstream_endpoint_preserves_and_serves_revision_tarballs() {
 #[tokio::test]
 async fn upstream_revision_tarball_does_not_follow_redirects() {
     let mut upstream = mockito::Server::new_async().await;
-    let integrity = sha512_integrity(b"expected revision tarball").parse().unwrap();
+    let integrity = sha512_integrity(b"expected revision tarball")
+        .parse()
+        .unwrap();
     let revision_path = integrity_addressed_tarball_path(&integrity).unwrap();
     let redirect = upstream
         .mock("GET", format!("/{revision_path}").as_str())
@@ -124,7 +132,11 @@ async fn upstream_revision_tarball_does_not_follow_redirects() {
     let tmp = TempDir::new().unwrap();
     let config = upstream_endpoint_config(&upstream.url(), tmp.path().to_path_buf(), "alice");
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
     let response = app
         .oneshot(
@@ -144,7 +156,9 @@ async fn upstream_revision_tarball_does_not_follow_redirects() {
 #[tokio::test]
 async fn revision_tarballs_require_a_concrete_registry_without_package_access_rules() {
     let mut upstream = mockito::Server::new_async().await;
-    let integrity = sha512_integrity(b"unreachable revision tarball").parse().unwrap();
+    let integrity = sha512_integrity(b"unreachable revision tarball")
+        .parse()
+        .unwrap();
     let revision_path = integrity_addressed_tarball_path(&integrity).unwrap();
     let tarball = upstream
         .mock("GET", format!("/{revision_path}").as_str())
@@ -171,8 +185,12 @@ async fn revision_tarballs_require_a_concrete_registry_without_package_access_ru
     }
 
     let mut config = config_for(&upstream.url(), tmp.path().join("package-access"));
-    config.routing.upstreams.get_mut("npmjs").unwrap().rules =
-        PackageRules::new(vec![access_rule("restricted", "$authenticated")], None);
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .rules = PackageRules::new(vec![access_rule("restricted", "$authenticated")], None);
     let response = router_with_auth(config, AuthState::in_memory())
         .oneshot(
             Request::get(format!("/~npmjs/{revision_path}"))

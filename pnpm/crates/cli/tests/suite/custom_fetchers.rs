@@ -260,7 +260,9 @@ fn a_project_without_a_pnpmfile_installs() {
             .assert()
             .success();
         assert!(
-            workspace.join("node_modules/fetcher-pkg/package.json").is_file(),
+            workspace
+                .join("node_modules/fetcher-pkg/package.json")
+                .is_file(),
             "pnpmfile: {pnpmfile:?}",
         );
         drop((metadata, archive));
@@ -590,7 +592,9 @@ fn a_declining_fetcher_cannot_swap_a_locked_archive_for_a_directory() {
     let stderr = String::from_utf8_lossy(&output.get_output().stderr);
     assert!(stderr.contains("ERR_PNPM_TARBALL_INTEGRITY"), "stderr: {stderr}");
     assert!(
-        !workspace.join("node_modules/fetcher-pkg/package.json").exists(),
+        !workspace
+            .join("node_modules/fetcher-pkg/package.json")
+            .exists(),
         "a rewritten resolution must not import content",
     );
     metadata.assert();

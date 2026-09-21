@@ -32,14 +32,25 @@ pub(crate) struct ExecTaskOutput {
 pub(super) fn run_exec_task(context: &ExecTaskContext<'_>, node: &TaskNode) -> TaskCompletion {
     let root = node.project.as_path();
     let prefix = root.to_string_lossy().into_owned();
-    context.progress.result.lock().expect("summary lock is not poisoned")[&prefix].status =
-        Status::Running;
+    context
+        .progress
+        .result
+        .lock()
+        .expect("summary lock is not poisoned")[&prefix]
+        .status = Status::Running;
     let start = Instant::now();
     let outcome = spawn_exec_task(context, root);
     let execution = project_execution(start, outcome);
-    let mut result = context.progress.result.lock().expect("summary lock is not poisoned");
+    let mut result = context
+        .progress
+        .result
+        .lock()
+        .expect("summary lock is not poisoned");
     let entry = &mut result[&prefix];
-    if context.progress.process_tracker.is_some_and(ProcessTracker::is_cancelled)
+    if context
+        .progress
+        .process_tracker
+        .is_some_and(ProcessTracker::is_cancelled)
         && execution.message.is_none()
     {
         return TaskCompletion::Cancelled;
@@ -58,7 +69,11 @@ pub(super) fn run_exec_task(context: &ExecTaskContext<'_>, node: &TaskNode) -> T
     };
     // A failure that follows the tracker's own cancellation is that
     // cancellation, not a new one.
-    if context.progress.process_tracker.is_some_and(|tracker| !tracker.cancel()) {
+    if context
+        .progress
+        .process_tracker
+        .is_some_and(|tracker| !tracker.cancel())
+    {
         return TaskCompletion::Cancelled;
     }
     entry.status = Status::Failure;
@@ -76,21 +91,20 @@ pub(super) fn build_exec_task_graph(
     selection: &crate::cli_args::recursive::RecursiveSelection<'_>,
     command_name: &str,
 ) -> TaskGraph {
-    let project_dependencies: IndexMap<PathBuf, Vec<PathBuf>> =
-        if args.workspace.sort {
-            filtered_projects_dependencies(
-                graph,
-                selection.full_graph(),
-                selection.prod_all.as_ref(),
-                &selection.prod_only_selected,
-            )
-        } else {
-            graph
-                .keys()
-                .cloned()
-                .map(|root| (root, Vec::new()))
-                .collect()
-        };
+    let project_dependencies: IndexMap<PathBuf, Vec<PathBuf>> = if args.workspace.sort {
+        filtered_projects_dependencies(
+            graph,
+            selection.full_graph(),
+            selection.prod_all.as_ref(),
+            &selection.prod_only_selected,
+        )
+    } else {
+        graph
+            .keys()
+            .cloned()
+            .map(|root| (root, Vec::new()))
+            .collect()
+    };
     let task_graph: TaskGraph = project_dependencies
         .iter()
         .map(|(project, dependencies)| {
@@ -121,7 +135,9 @@ pub(super) fn exec_concurrency(args: &ExecArgs, config: &Config, task_count: usi
     if args.workspace.parallel {
         return task_count;
     }
-    usize::try_from(config.workspace_concurrency).unwrap_or(usize::MAX).max(1)
+    usize::try_from(config.workspace_concurrency)
+        .unwrap_or(usize::MAX)
+        .max(1)
 }
 
 /// Record a passed task in the run state, aborting the whole run when
@@ -138,7 +154,9 @@ fn record_task_passed(
     let Err(error) = task_run_state.record_passed(&key, node, workspace_root) else {
         return TaskCompletion::Passed;
     };
-    let mut abort = abort.lock().expect("abort slot lock is not poisoned");
+    let mut abort = abort
+        .lock()
+        .expect("abort slot lock is not poisoned");
     if abort.is_none() {
         *abort = Some(error);
     }
@@ -150,7 +168,9 @@ fn record_task_passed(
 
 /// The first failing project's prefix is the one the error names.
 fn record_first_failure(first_failure: &Mutex<Option<String>>, prefix: String) -> TaskCompletion {
-    let mut first_failure = first_failure.lock().expect("first-failure slot lock is not poisoned");
+    let mut first_failure = first_failure
+        .lock()
+        .expect("first-failure slot lock is not poisoned");
     if first_failure.is_none() {
         *first_failure = Some(prefix);
     }
@@ -180,13 +200,12 @@ pub(super) fn report_recursive_outcome(
 
 pub(super) fn project_dep_path(root: &Path, dir: &Path, show_prefix: bool) -> Option<String> {
     show_prefix.then(|| {
-        pnpm_workspace::read_project_name(root)
-            .unwrap_or_else(|| {
-                pathdiff::diff_paths(root, dir)
-                    .unwrap_or_else(|| root.to_path_buf())
-                    .to_string_lossy()
-                    .into_owned()
-            })
+        pnpm_workspace::read_project_name(root).unwrap_or_else(|| {
+            pathdiff::diff_paths(root, dir)
+                .unwrap_or_else(|| root.to_path_buf())
+                .to_string_lossy()
+                .into_owned()
+        })
     })
 }
 

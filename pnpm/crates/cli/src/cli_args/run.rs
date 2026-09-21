@@ -131,7 +131,9 @@ impl RunArgs {
     where
         Args: IntoIterator<Item = String>,
     {
-        std::iter::once(name.to_string()).chain(args).collect()
+        std::iter::once(name.to_string())
+            .chain(args)
+            .collect()
     }
 
     /// The script to run, or `None` when `run` was given no positional and

@@ -53,8 +53,9 @@ fn an_explicit_value_set_afterwards_survives_the_removal() {
     let stripped = Command::new("pnpm").without_ambient_pnpm_config();
     assert_eq!(env_value(&stripped, SETTING), None, "the inherited value should be removed");
 
-    let overridden =
-        Command::new("pnpm").without_ambient_pnpm_config().with_env(SETTING, r#"{"node":"auto"}"#);
+    let overridden = Command::new("pnpm")
+        .without_ambient_pnpm_config()
+        .with_env(SETTING, r#"{"node":"auto"}"#);
     assert_eq!(
         env_value(&overridden, SETTING).as_deref(),
         Some(OsStr::new(r#"{"node":"auto"}"#)),

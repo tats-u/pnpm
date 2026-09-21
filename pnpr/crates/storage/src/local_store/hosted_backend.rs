@@ -11,7 +11,9 @@ use super::{
 #[async_trait]
 impl HostedBackend for Store {
     async fn rebuild_package_index(&self) -> Result<()> {
-        let complete = self.root.join(".package-index/.complete");
+        let complete = self
+            .root
+            .join(".package-index/.complete");
         if fs::try_exists(&complete).await? {
             return Ok(());
         }
@@ -20,7 +22,8 @@ impl HostedBackend for Store {
             let file = file?;
             let Some(name) = file.path.strip_suffix("/package.json") else { continue };
             write_atomic(
-                &self.root
+                &self
+                    .root
                     .join(".package-index")
                     .join(name)
                     .join(".present"),
@@ -39,7 +42,8 @@ impl HostedBackend for Store {
         &self,
         name: &CanonicalPackageName,
     ) -> Result<Option<HostedDocumentForUpdate>> {
-        Ok(Store::read_document_any_age(self, name).await?
+        Ok(Store::read_document_any_age(self, name)
+            .await?
             .map(|bytes| HostedDocumentForUpdate {
                 bytes,
                 version: HostedDocumentVersion::Unversioned,
@@ -52,7 +56,8 @@ impl HostedBackend for Store {
         bytes: &[u8],
         _version: Option<&HostedDocumentVersion>,
     ) -> Result<DocumentWrite> {
-        let marker = self.root
+        let marker = self
+            .root
             .join(".package-index")
             .join(name.as_str())
             .join(".present");
@@ -73,7 +78,8 @@ impl HostedBackend for Store {
         name: &CanonicalPackageName,
         filename: &str,
     ) -> Result<Option<(Body, Option<u64>)>> {
-        Ok(Store::open_blob(self, name, filename).await?
+        Ok(Store::open_blob(self, name, filename)
+            .await?
             .map(|(file, len)| (streaming::stream_file(file), Some(len))))
     }
 
@@ -92,7 +98,8 @@ impl HostedBackend for Store {
         if range.is_empty() {
             return Ok(Some(RangedBlob::Unsatisfiable { size }));
         }
-        file.seek(SeekFrom::Start(range.start)).await?;
+        file.seek(SeekFrom::Start(range.start))
+            .await?;
         let body = streaming::stream_file(file.take(range.end - range.start));
         Ok(Some(RangedBlob::Read { body, range, size }))
     }
@@ -121,7 +128,13 @@ impl HostedBackend for Store {
 
     async fn remove_package(&self, name: &CanonicalPackageName) -> Result<bool> {
         let removed = Store::remove_package(self, name).await?;
-        match fs::remove_dir_all(self.root.join(".package-index").join(name.as_str())).await {
+        match fs::remove_dir_all(
+            self.root
+                .join(".package-index")
+                .join(name.as_str()),
+        )
+        .await
+        {
             Ok(()) => {}
             Err(err) if err.kind() == ErrorKind::NotFound => {}
             Err(err) => return Err(err.into()),

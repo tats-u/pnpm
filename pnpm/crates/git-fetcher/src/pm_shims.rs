@@ -41,7 +41,9 @@ pub(crate) fn shim_commands(
 pub(crate) fn shim_names(
     pm: crate::preferred_pm::PreferredPm,
 ) -> impl Iterator<Item = &'static str> {
-    shim_commands(pm).iter().map(|(name, _)| *name)
+    shim_commands(pm)
+        .iter()
+        .map(|(name, _)| *name)
 }
 
 /// Write shims for `wanted` into `dir`, which the caller prepends to the
@@ -53,7 +55,11 @@ pub(crate) fn write_pm_shims(
     pnpm_execpath: &Path,
 ) -> io::Result<Vec<PathBuf>> {
     fs::create_dir_all(dir)?;
-    let spec = match wanted.version_spec.as_deref().and_then(command_line_safe) {
+    let spec = match wanted
+        .version_spec
+        .as_deref()
+        .and_then(command_line_safe)
+    {
         Some(version_spec) => format!("{}@{version_spec}", wanted.pm.name()),
         None => wanted.pm.name().to_string(),
     };

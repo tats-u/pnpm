@@ -10,7 +10,9 @@ fn should_add_dependency() {
     let dir = tempdir().unwrap();
     let tmp = dir.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(tmp.clone()).unwrap();
-    manifest.add_dependency("fastify", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("fastify", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
 
     let dependencies: HashMap<_, _> = manifest
         .dependencies([DependencyGroup::Prod])
@@ -39,7 +41,11 @@ fn get_dependencies_should_return_peers() {
     let tmp = NamedTempFile::new().unwrap();
     write!(tmp.as_file(), "{data}").unwrap();
     let manifest = PackageManifest::create_if_needed(tmp.path().to_path_buf()).unwrap();
-    let dependencies = |groups| manifest.dependencies(groups).collect::<HashMap<_, _>>();
+    let dependencies = |groups| {
+        manifest
+            .dependencies(groups)
+            .collect::<HashMap<_, _>>()
+    };
     let peer = dependencies([DependencyGroup::Peer]);
     dbg!(&peer);
     assert!(peer.contains_key("fast-querystring"));
@@ -145,7 +151,12 @@ fn convert_engines_runtime_skips_entries_without_a_version() {
         },
     });
     convert_engines_runtime_to_dependencies(&mut manifest, "devEngines", "devDependencies");
-    assert!(manifest.get("devDependencies").is_none(), "manifest: {manifest}");
+    assert!(
+        manifest
+            .get("devDependencies")
+            .is_none(),
+        "manifest: {manifest}"
+    );
 }
 
 #[test]
@@ -420,8 +431,12 @@ fn save_converts_runtime_dependencies_before_writing() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(path.clone()).unwrap();
-    manifest.add_dependency("node", "runtime:22", DependencyGroup::Dev).unwrap();
-    manifest.add_dependency("bun", "runtime:1.2.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("node", "runtime:22", DependencyGroup::Dev)
+        .unwrap();
+    manifest
+        .add_dependency("bun", "runtime:1.2.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let saved: serde_json::Value =
@@ -469,8 +484,9 @@ fn failed_save_preserves_existing_file_when_dependency_field_is_malformed() {
 
     let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
     manifest.value_mut()["devDependencies"] = json!([]);
-    let err =
-        manifest.save().expect_err("malformed devDependencies must reject save before writing");
+    let err = manifest
+        .save()
+        .expect_err("malformed devDependencies must reject save before writing");
     match err {
         PackageManifestError::InvalidAttribute(msg) => {
             assert!(msg.contains("devDependencies"), "got: {msg:?}");
@@ -615,7 +631,9 @@ fn save_sorts_dependency_fields_and_drops_empty_ones() {
     )
     .unwrap();
     let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
-    manifest.add_dependency("aardvark", "2.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("aardvark", "2.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let saved = read_to_string(&path).unwrap();

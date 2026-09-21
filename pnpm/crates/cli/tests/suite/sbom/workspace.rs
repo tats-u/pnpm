@@ -193,7 +193,9 @@ fn sbom_merges_snapshot_optionality_from_dedicated_lockfiles() {
         .collect();
     assert_eq!(sboms.len(), 2);
     for sbom in sboms {
-        let components = sbom["components"].as_array().expect("components array");
+        let components = sbom["components"]
+            .as_array()
+            .expect("components array");
         assert!(
             components
                 .iter()
@@ -234,8 +236,11 @@ fn filtered_sbom_reads_reachable_workspace_project_lockfiles() {
 #[test]
 fn filtered_sbom_rejects_a_reachable_project_without_a_dedicated_lockfile() {
     let tmp = dedicated_workspace_with_reachable_project();
-    fs::remove_file(tmp.path().join("packages/project-b/pnpm-lock.yaml"))
-        .expect("remove reachable project lockfile");
+    fs::remove_file(
+        tmp.path()
+            .join("packages/project-b/pnpm-lock.yaml"),
+    )
+    .expect("remove reachable project lockfile");
 
     let output = pacquet(
         tmp.path(),
@@ -254,7 +259,9 @@ fn filtered_sbom_rejects_a_reachable_project_without_a_dedicated_lockfile() {
 fn sbom_exclude_peers_workspace_sub_packages() {
     let tmp = copy_fixture("with-peer-workspace");
     let parsed = run_sbom_json(tmp.path(), "cyclonedx", &["--exclude-peers"]);
-    let components = parsed["components"].as_array().expect("components");
+    let components = parsed["components"]
+        .as_array()
+        .expect("components");
     assert!(
         components
             .iter()
@@ -272,7 +279,9 @@ fn sbom_exclude_peers_workspace_sub_packages() {
 fn sbom_workspace_link_deps_as_components() {
     let tmp = copy_fixture("workspace-sbom-populated");
     let parsed = run_sbom_json(tmp.path(), "cyclonedx", &[]);
-    let components = parsed["components"].as_array().expect("components");
+    let components = parsed["components"]
+        .as_array()
+        .expect("components");
     let names: Vec<&str> = components
         .iter()
         .filter_map(|comp| comp["name"].as_str())
@@ -330,14 +339,12 @@ fn sbom_workspace_split_out_writes_files() {
     let files: Vec<String> = fs::read_dir(&out_dir)
         .expect("read output dir")
         .filter_map(|entry| {
-            entry
-                .ok()
-                .map(|entry| {
-                    entry
-                        .file_name()
-                        .to_string_lossy()
-                        .to_string()
-                })
+            entry.ok().map(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .to_string()
+            })
         })
         .collect();
     assert!(files.len() >= 3, "should write files for workspace packages, got {files:?}");
@@ -366,14 +373,12 @@ fn sbom_workspace_split_out_percent_v() {
     let files: Vec<String> = fs::read_dir(&out_dir)
         .expect("read output dir")
         .filter_map(|entry| {
-            entry
-                .ok()
-                .map(|entry| {
-                    entry
-                        .file_name()
-                        .to_string_lossy()
-                        .to_string()
-                })
+            entry.ok().map(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .to_string()
+            })
         })
         .collect();
     assert!(
@@ -400,7 +405,9 @@ fn sbom_workspace_filter_selects_importer() {
     );
     let parsed: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("parse JSON output");
-    let components = parsed["components"].as_array().expect("components");
+    let components = parsed["components"]
+        .as_array()
+        .expect("components");
     let names: Vec<&str> = components
         .iter()
         .filter_map(|comp| comp["name"].as_str())
@@ -413,7 +420,9 @@ fn sbom_workspace_filter_selects_importer() {
 fn sbom_workspace_link_dep_has_metadata() {
     let tmp = copy_fixture("workspace-sbom-populated");
     let parsed = run_sbom_json(tmp.path(), "cyclonedx", &[]);
-    let components = parsed["components"].as_array().expect("components");
+    let components = parsed["components"]
+        .as_array()
+        .expect("components");
     let shared_lib = components
         .iter()
         .find(|comp| comp["name"] == "shared-lib");
@@ -427,7 +436,9 @@ fn sbom_workspace_link_dep_has_metadata() {
 fn sbom_workspace_spdx_link_deps() {
     let tmp = copy_fixture("workspace-sbom-populated");
     let parsed = run_sbom_json(tmp.path(), "spdx", &[]);
-    let packages = parsed["packages"].as_array().expect("packages");
+    let packages = parsed["packages"]
+        .as_array()
+        .expect("packages");
     assert!(
         packages
             .iter()
@@ -472,7 +483,8 @@ fn sbom_workspace_split_from_member_anchors_importers_at_workspace_root() {
         "member sbom failed: {}",
         String::from_utf8_lossy(&output.stderr),
     );
-    let boms = output.stdout
+    let boms = output
+        .stdout
         .split(|byte| *byte == b'\n')
         .filter(|line| !line.is_empty())
         .map(|line| serde_json::from_slice::<serde_json::Value>(line).expect("valid JSON"))

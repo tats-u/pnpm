@@ -177,7 +177,12 @@ fn render_fish_settings(dir: &str, opts: &AddDirToEnvPathOpts) -> String {
 /// characters fish recognizes inside single quotes), so fish treats it as a
 /// literal with no expansion.
 fn fish_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\\', r"\\").replace('\'', r"\'"))
+    format!(
+        "'{}'",
+        value
+            .replace('\\', r"\\")
+            .replace('\'', r"\'")
+    )
 }
 
 /// Build the fish `PATH` list value from a pre-quoted `entry` (a
@@ -238,7 +243,12 @@ fn render_nu_settings(dir: &str, opts: &AddDirToEnvPathOpts) -> String {
 /// double-quoted string (only `$"..."` interpolates), so the result is a
 /// literal with no expansion.
 fn nu_quote(value: &str) -> String {
-    format!(r#""{}""#, value.replace('\\', r"\\").replace('"', r#"\""#))
+    format!(
+        r#""{}""#,
+        value
+            .replace('\\', r"\\")
+            .replace('"', r#"\""#)
+    )
 }
 
 fn wrap_settings(section_name: &str, settings: &str) -> String {

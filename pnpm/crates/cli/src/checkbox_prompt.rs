@@ -174,7 +174,12 @@ impl<Value> CheckboxPrompt<Value> {
         }
         match key {
             Key::Enter => {
-                if self.required && !self.checked.iter().any(|&checked| checked) {
+                if self.required
+                    && !self
+                        .checked
+                        .iter()
+                        .any(|&checked| checked)
+                {
                     self.error = Some("At least one choice must be selected");
                     return KeyOutcome::Redraw;
                 }
@@ -187,7 +192,8 @@ impl<Value> CheckboxPrompt<Value> {
                 self.checked[self.viewport.active] = !self.checked[self.viewport.active];
             }
             Key::Char('a') => {
-                let select_all = self.items
+                let select_all = self
+                    .items
                     .iter()
                     .zip(&self.checked)
                     .any(|(item, &checked)| is_choice(item) && !checked);
@@ -205,7 +211,8 @@ impl<Value> CheckboxPrompt<Value> {
 
     fn toggle_numbered_choice(&mut self, digit: char) {
         let nth = usize::from(digit as u8 - b'1');
-        if let Some(index) = self.items
+        if let Some(index) = self
+            .items
             .iter()
             .enumerate()
             .filter(|(_, item)| is_choice(item))
@@ -253,8 +260,7 @@ impl<Value> CheckboxPrompt<Value> {
         }
         while self.viewport.top > 0
             && !is_choice(&self.items[self.viewport.top - 1])
-            && self.viewport.active + 1 - (self.viewport.top - 1)
-                <= self.viewport.page_size
+            && self.viewport.active + 1 - (self.viewport.top - 1) <= self.viewport.page_size
         {
             self.viewport.top -= 1;
         }
@@ -366,7 +372,9 @@ fn render_help_line() -> String {
 fn page_size_for(term: &Term) -> usize {
     term.size_checked()
         .map_or(MIN_PAGE_SIZE, |(rows, _)| {
-            usize::from(rows).saturating_sub(FRAME_OVERHEAD).max(MIN_PAGE_SIZE)
+            usize::from(rows)
+                .saturating_sub(FRAME_OVERHEAD)
+                .max(MIN_PAGE_SIZE)
         })
 }
 
@@ -379,13 +387,16 @@ fn terminal_rows(frame: &str, columns: usize) -> usize {
             if columns == 0 {
                 return 1;
             }
-            measure_text_width(line).div_ceil(columns).max(1)
+            measure_text_width(line)
+                .div_ceil(columns)
+                .max(1)
         })
         .sum()
 }
 
 fn stdout_styled(text: &str, style: impl Fn(&str) -> String) -> String {
-    text.if_supports_color(Stream::Stdout, |text| style(text)).to_string()
+    text.if_supports_color(Stream::Stdout, |text| style(text))
+        .to_string()
 }
 
 #[cfg(test)]

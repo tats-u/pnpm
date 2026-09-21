@@ -40,7 +40,10 @@ fn resolve_file_version(
     alias: &PkgName,
     spec: &ResolvedDependencySpec,
 ) -> Option<String> {
-    let key = spec.version.resolved_key(alias)?.without_peer();
+    let key = spec
+        .version
+        .resolved_key(alias)?
+        .without_peer();
     let metadata = lockfile.packages.as_ref()?.get(&key)?;
     if let Some(version) = &metadata.version {
         return Some(version.clone());
@@ -82,7 +85,8 @@ pub(super) fn check_linked_package_peers(
     inputs: LinkedPackagePeers<'_>,
 ) -> Result<(), CatalogResolutionError> {
     let issues = inputs.issues;
-    let Some(peer_deps) = inputs.manifest
+    let Some(peer_deps) = inputs
+        .manifest
         .value()
         .get("peerDependencies")
         .and_then(|deps_val| deps_val.as_object())
@@ -127,7 +131,9 @@ fn check_one_linked_peer(check: LinkedPeerCheck<'_>) {
 
     // The linked package's own project comes second: a peer the depending
     // project provides is the one that ends up resolved.
-    let resolved_ref = check.providers.resolve_reference(&peer_pkg_name);
+    let resolved_ref = check
+        .providers
+        .resolve_reference(&peer_pkg_name);
     let Some((spec, dependency_dir)) = resolved_ref else {
         record_missing_peer(
             issues,
@@ -168,7 +174,8 @@ pub(super) fn record_missing_peer(
     if optional {
         return;
     }
-    issues.missing
+    issues
+        .missing
         .entry(peer_name.to_string())
         .or_default()
         .push(MissingPeerIssue {
@@ -190,7 +197,8 @@ pub(super) fn record_bad_peer(
     if satisfies(&found_version, wanted_range) {
         return;
     }
-    issues.bad
+    issues
+        .bad
         .entry(peer_name.to_string())
         .or_default()
         .push(BadPeerIssue {
@@ -242,16 +250,19 @@ fn project_dependency<'a>(
     importer: &'a ProjectSnapshot,
     name: &PkgName,
 ) -> Option<&'a ResolvedDependencySpec> {
-    importer.dependencies
+    importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(name))
         .or_else(|| {
-            importer.dev_dependencies
+            importer
+                .dev_dependencies
                 .as_ref()
                 .and_then(|deps| deps.get(name))
         })
         .or_else(|| {
-            importer.optional_dependencies
+            importer
+                .optional_dependencies
                 .as_ref()
                 .and_then(|deps| deps.get(name))
         })

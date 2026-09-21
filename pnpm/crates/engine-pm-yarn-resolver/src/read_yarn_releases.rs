@@ -176,16 +176,18 @@ fn pick_token(
 }
 
 pub fn parse_releases(body: &str) -> Result<Vec<YarnRelease>, ReadYarnReleasesError> {
-    let releases: Vec<GithubRelease> = serde_json::from_str(body)
-        .map_err(|error| ReadYarnReleasesError::Parse {
-            url: RELEASES_URL.to_string(),
-            error: Arc::new(error),
-        })?;
+    let releases: Vec<GithubRelease> = serde_json::from_str(body).map_err(|error| {
+        ReadYarnReleasesError::Parse { url: RELEASES_URL.to_string(), error: Arc::new(error) }
+    })?;
     Ok(releases
         .into_iter()
         .filter_map(|release| {
-            let version = release.tag_name.strip_prefix('v')?.to_string();
-            let assets = release.assets
+            let version = release
+                .tag_name
+                .strip_prefix('v')?
+                .to_string();
+            let assets = release
+                .assets
                 .into_iter()
                 .map(|asset| YarnAsset {
                     file_name: asset.name,
@@ -208,16 +210,21 @@ pub fn asset_variants(
     let mut variants = Vec::new();
     for asset in &release.assets {
         let Some(parsed) = parse_asset_name(&asset.file_name) else { continue };
-        let Some(integrity) = asset.digest.as_deref().and_then(sha256_digest_to_sri) else {
+        let Some(integrity) = asset
+            .digest
+            .as_deref()
+            .and_then(sha256_digest_to_sri)
+        else {
             continue;
         };
-        let integrity: Integrity = integrity
-            .parse()
-            .map_err(|error| ReadYarnReleasesError::Integrity {
-                integrity,
-                file_name: asset.file_name.clone(),
-                error: Arc::new(error),
-            })?;
+        let integrity: Integrity =
+            integrity
+                .parse()
+                .map_err(|error| ReadYarnReleasesError::Integrity {
+                    integrity,
+                    file_name: asset.file_name.clone(),
+                    error: Arc::new(error),
+                })?;
         let binary = BinaryResolution {
             url: asset.url.clone(),
             integrity,
@@ -247,13 +254,17 @@ pub fn asset_variants(
 /// A musl-only release also runs on glibc hosts. Constrain it by libc
 /// only when a usable glibc asset gives those hosts an alternative.
 fn has_valid_glibc_build(release: &YarnRelease) -> bool {
-    release.assets
+    release
+        .assets
         .iter()
         .filter_map(|asset| {
             let target = parse_asset_name(&asset.file_name)?;
             // An asset the loop below skips is not a build to choose
             // between, so it cannot be what constrains the musl one.
-            asset.digest.as_deref().and_then(sha256_digest_to_sri)?;
+            asset
+                .digest
+                .as_deref()
+                .and_then(sha256_digest_to_sri)?;
             Some(target)
         })
         .any(|target| target.os == "linux" && !target.musl)
@@ -283,7 +294,9 @@ struct YarnAssetTarget {
 /// Unknown triples are skipped, so a new target pnpm has no mapping for
 /// does not break the whole release.
 fn parse_asset_name(file_name: &str) -> Option<YarnAssetTarget> {
-    let triple = file_name.strip_suffix(".zip")?.strip_prefix("yarn-")?;
+    let triple = file_name
+        .strip_suffix(".zip")?
+        .strip_prefix("yarn-")?;
     let (arch, rest) = triple.split_once('-')?;
     let cpu = match arch {
         "aarch64" => "arm64",

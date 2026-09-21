@@ -187,7 +187,10 @@ impl HoistMissingScope {
         peer_name: &str,
         memo: &mut ChainSuffixMemo<String>,
     ) -> bool {
-        if self.locked_peer_names.contains(peer_name) {
+        if self
+            .locked_peer_names
+            .contains(peer_name)
+        {
             return false;
         }
         ancestor_pkg_ids.any_memoized(memo, |pkg_id| self.covers(pkg_id, peer_name))
@@ -200,7 +203,10 @@ impl HoistMissingScope {
         ancestor_pkg_ids: impl Iterator<Item = &'a String>,
         peer_name: &str,
     ) -> bool {
-        if self.locked_peer_names.contains(peer_name) {
+        if self
+            .locked_peer_names
+            .contains(peer_name)
+        {
             return false;
         }
         ancestor_pkg_ids
@@ -215,7 +221,8 @@ impl HoistMissingScope {
             .get(pkg_id)
             .is_some_and(|owner| {
                 *owner != self.importer_id
-                    && self.first_walk_missing_by_pkg
+                    && self
+                        .first_walk_missing_by_pkg
                         .get(pkg_id)
                         .is_some_and(|missing| !missing.contains(peer_name))
             })
@@ -290,12 +297,17 @@ pub struct WorkspaceResolvePeersResult {
 pub fn resolve_peers(tree: &mut ResolvedTree, opts: ResolvePeersOptions) -> ResolvePeersResult {
     let node_ids_by_previous_dep_path = build_node_ids_by_previous_dep_path(tree, &opts);
     let current_provider_sources = vec![CurrentProviderSource {
-        direct_node_ids_by_alias: tree.direct
+        direct_node_ids_by_alias: tree
+            .direct
             .iter()
             .map(|dep| (dep.alias.clone(), dep.node_id.clone()))
             .collect(),
-        declared_direct_dependencies: opts.scope.declared_direct_dependencies.clone(),
-        explicitly_requested_direct_dependencies: opts.scope
+        declared_direct_dependencies: opts
+            .scope
+            .declared_direct_dependencies
+            .clone(),
+        explicitly_requested_direct_dependencies: opts
+            .scope
             .explicitly_requested_direct_dependencies
             .clone(),
     }];
@@ -393,7 +405,11 @@ fn walk_importers(
         let previous_dirs =
             (walker.opts.project_dir.clone(), walker.opts.links.modules_dir.clone());
         walker.opts.project_dir = Some(importer.root_dir.clone());
-        walker.opts.links.modules_dir.clone_from(&importer.modules_dir);
+        walker
+            .opts
+            .links
+            .modules_dir
+            .clone_from(&importer.modules_dir);
         let parents = walker.build_importer_parents_from(&importer.direct);
         (walker.opts.project_dir, walker.opts.links.modules_dir) = previous_dirs;
         parents
@@ -427,7 +443,8 @@ fn finish_workspace_graph(
         .iter()
         .map(|importer| {
             let anchor = crate::link_target::ImporterAnchor::new(&importer.root_dir, lockfile_dir);
-            let direct_by_alias = importer.direct
+            let direct_by_alias = importer
+                .direct
                 .iter()
                 .map(|dep| {
                     let dep_path = importer_relative_link_dep_path(
@@ -462,8 +479,14 @@ fn walk_importer(
     // `resolve_node` resolves link targets against the right
     // importer and encodes the correct importer-scoped target.
     walker.opts.project_dir = Some(importer.root_dir.clone());
-    walker.opts.links.modules_dir.clone_from(&importer.modules_dir);
-    walker.providers.current_provider_sources = importer_provider_sources(importer, root_importer);
+    walker
+        .opts
+        .links
+        .modules_dir
+        .clone_from(&importer.modules_dir);
+    walker
+        .providers
+        .current_provider_sources = importer_provider_sources(importer, root_importer);
     let importer_parents =
         Arc::new(importer_parent_refs(walker, importer, root_importer, root_parents));
     let parent_chain_names = SharedChain::default();
@@ -477,10 +500,14 @@ fn walk_importer(
         parent_node_ids: &parent_node_ids,
         parent_pkg_ids: &parent_pkg_ids_chain,
     };
-    let (own_direct, provider_direct): (Vec<&DirectDep>, Vec<&DirectDep>) = importer
-        .direct
-        .iter()
-        .partition(|dep| !walker.opts.scope.hoisted_peer_provider_node_ids.contains(&dep.node_id));
+    let (own_direct, provider_direct): (Vec<&DirectDep>, Vec<&DirectDep>) =
+        importer.direct.iter().partition(|dep| {
+            !walker
+                .opts
+                .scope
+                .hoisted_peer_provider_node_ids
+                .contains(&dep.node_id)
+        });
     for dep in &own_direct {
         walker.remember_parent_context_if_peer_provider(
             &dep.alias,
@@ -506,7 +533,9 @@ fn importer_parent_refs(
     root_parents: Option<&ParentRefs>,
 ) -> ParentRefs {
     if root_importer.is_some_and(|root| root.id != importer.id) {
-        let mut refs = root_parents.cloned().unwrap_or_default();
+        let mut refs = root_parents
+            .cloned()
+            .unwrap_or_default();
         refs.extend(walker.build_importer_parents_from(&importer.direct));
         return refs;
     }
@@ -523,7 +552,8 @@ fn importer_provider_sources(
     root_importer: Option<&ImporterPeerInput>,
 ) -> Vec<CurrentProviderSource> {
     let source_of = |importer: &ImporterPeerInput| CurrentProviderSource {
-        direct_node_ids_by_alias: importer.direct
+        direct_node_ids_by_alias: importer
+            .direct
             .iter()
             .map(|dep| (dep.alias.clone(), dep.node_id.clone()))
             .collect(),
@@ -547,7 +577,11 @@ fn build_node_ids_by_previous_dep_path(
     opts: &ResolvePeersOptions,
 ) -> HashMap<DepPath, NodeId> {
     let mut map = HashMap::default();
-    if opts.scope.resolved_peer_provider_paths.is_none() {
+    if opts
+        .scope
+        .resolved_peer_provider_paths
+        .is_none()
+    {
         return map;
     }
     let mut node_ids: Vec<&NodeId> = tree.dependencies_tree.keys().collect();

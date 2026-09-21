@@ -28,7 +28,8 @@ async fn inactive_git_sources_in_frozen_lockfiles_are_rejected_before_building()
     let path = root.path().join("pylock.toml");
     let mut lock: pnpm_python_resolver::Lockfile =
         toml::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
-    let entry = lock.packages
+    let entry = lock
+        .packages
         .iter_mut()
         .find(|package| package.name.as_ref() == "fork")
         .unwrap();

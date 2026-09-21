@@ -77,11 +77,10 @@ pub(super) const MAX_KEY_LENGTH: usize = 255;
 /// `…/foo.` onto `…/foo`. A key that would not fit a 255-byte filename is
 /// replaced by its own hash.
 pub fn get_registry_name(registry: &str) -> Result<String, EncodeRegistryError> {
-    let parsed = reqwest::Url::parse(registry)
-        .map_err(|error| EncodeRegistryError::ParseUrl {
-            url: redact_and_sanitize(registry),
-            error: error.to_string(),
-        })?;
+    let parsed = reqwest::Url::parse(registry).map_err(|error| EncodeRegistryError::ParseUrl {
+        url: redact_and_sanitize(registry),
+        error: error.to_string(),
+    })?;
     let host = parsed
         .host_str()
         .ok_or_else(|| EncodeRegistryError::MissingHost {
@@ -146,9 +145,13 @@ pub fn decode_registry_name(registry_key: &str) -> String {
     };
     let (host, path) = match authority.split_once(PATH_SEPARATOR) {
         None => (authority, None),
-        Some((host, rest)) => {
-            (host, Some(rest.split_once(HASH_SEPARATOR).map_or(rest, |(path, _hash)| path)))
-        }
+        Some((host, rest)) => (
+            host,
+            Some(
+                rest.split_once(HASH_SEPARATOR)
+                    .map_or(rest, |(path, _hash)| path),
+            ),
+        ),
     };
     let Some(host) = decode_registry_key_component(host, ":") else {
         return registry_key.to_string();

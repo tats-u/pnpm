@@ -129,7 +129,9 @@ fn project_config(config: &pnpm_config::Config) -> ResolvedConfig {
 
     let registries = resolved_registries(config, &by_scope);
 
-    let no_proxy = config.proxy.no_proxy
+    let no_proxy = config
+        .proxy
+        .no_proxy
         .as_ref()
         .map(|setting| match setting {
             NoProxySetting::Bypass => serde_json::Value::Bool(true),
@@ -155,7 +157,9 @@ fn resolved_config_values(
         cert: config.tls.cert.clone(),
         key: config.tls.key.clone(),
         strict_ssl: config.tls.strict_ssl,
-        store_dir: std::path::PathBuf::from(config.store_dir.clone()).display().to_string(),
+        store_dir: std::path::PathBuf::from(config.store_dir.clone())
+            .display()
+            .to_string(),
         cache_dir: display_path(&config.cache_dir),
         virtual_store_dir_max_length: bounded_u32(config.virtual_store_dir_max_length),
         enable_global_virtual_store: config.enable_global_virtual_store,
@@ -163,7 +167,9 @@ fn resolved_config_values(
         virtual_store_dir: display_path(&config.virtual_store_dir),
         effective_virtual_store_dir: display_path(config.effective_virtual_store_dir()),
         network_concurrency: u32::try_from(config.network_concurrency).unwrap_or(u32::MAX),
-        max_sockets: config.max_sockets.map(|value| u32::try_from(value).unwrap_or(u32::MAX)),
+        max_sockets: config
+            .max_sockets
+            .map(|value| u32::try_from(value).unwrap_or(u32::MAX)),
         fetch_retries: config.fetch_retries,
         fetch_retry_factor: config.fetch_retry_factor,
         fetch_retry_mintimeout: u32::try_from(config.fetch_retry_mintimeout).unwrap_or(u32::MAX),
@@ -180,7 +186,8 @@ fn resolved_config_values(
         shamefully_hoist: config.shamefully_hoist,
         pnpm_home_dir: pnpm_config::default_pnpm_home_dir::<pnpm_config::Host>()
             .map(|dir| dir.display().to_string()),
-        explicit_settings: config.explicit_settings
+        explicit_settings: config
+            .explicit_settings
             .keys()
             .cloned()
             .collect(),
@@ -196,7 +203,10 @@ fn display_path(path: impl AsRef<std::path::Path>) -> String {
 
 /// Embedders supply their own user agent unless configuration explicitly overrides it.
 fn explicit_user_agent(config: &pnpm_config::Config) -> Option<String> {
-    config.explicit_settings.contains_key("userAgent").then(|| config.user_agent.clone())
+    config
+        .explicit_settings
+        .contains_key("userAgent")
+        .then(|| config.user_agent.clone())
 }
 
 fn import_method_name(method: pnpm_config::PackageImportMethod) -> &'static str {
@@ -218,9 +228,10 @@ fn resolved_registries(
     config: &pnpm_config::Config,
     by_scope: &AuthHeadersByScope,
 ) -> Vec<ResolvedRegistry> {
-    let default_entry = (!config.registries_by_scope.contains_key("default")).then(|| {
-        ("default".to_string(), config.registry.clone())
-    });
+    let default_entry = (!config
+        .registries_by_scope
+        .contains_key("default"))
+    .then(|| ("default".to_string(), config.registry.clone()));
     default_entry
         .iter()
         .map(|(name, url)| (name, url))

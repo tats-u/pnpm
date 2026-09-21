@@ -26,7 +26,8 @@ impl PythonPrepare<'_> {
                 selected.push(project);
             }
         }
-        self.build_projects::<Reporter>(&selected).await
+        self.build_projects::<Reporter>(&selected)
+            .await
     }
 
     /// Install what the project selects into a fresh environment
@@ -43,23 +44,36 @@ impl PythonPrepare<'_> {
         if self.context.lockfile_only {
             return Ok(None);
         }
-        let environment = EnvironmentStore::new(self.context.config).new_generation(project.root)?;
+        let environment =
+            EnvironmentStore::new(self.context.config).new_generation(project.root)?;
         // The lockfile may cover several environments; this one installs
         // for the interpreter that is running.
-        registry.resolution.answer_for(self.interpreter.target.clone());
-        registry.resolution.packages.candidates.clear();
+        registry
+            .resolution
+            .answer_for(self.interpreter.target.clone());
+        registry
+            .resolution
+            .packages
+            .candidates
+            .clear();
         lock.seed(&mut registry.resolution.packages, &self.interpreter.target)?;
         workspace::offer_locked(&mut registry.resolution.packages, project.local, lock);
         registry.record_sources(selected)?;
-        registry.fetch_wheels::<Reporter>(selected).await?;
+        registry
+            .fetch_wheels::<Reporter>(selected)
+            .await?;
         let solution = resolver::selected_solution(&mut registry.resolution, selected)?;
-        let installed = self.installable::<Reporter>(registry, solution, project).await?;
+        let installed = self
+            .installable::<Reporter>(registry, solution, project)
+            .await?;
         let packages = installed.packages;
         host::install(
             &self.interpreter.executable,
             environment.directory.path(),
             packages,
-            self.context.config.package_import_method,
+            self.context
+                .config
+                .package_import_method,
         )
         .await?;
         drop(installed.unpacked);
@@ -76,7 +90,9 @@ impl PythonPrepare<'_> {
         project: EnvironmentProject<'_>,
     ) -> Result<Installable> {
         let EnvironmentProject { members, local, .. } = project;
-        let built = self.build_solved::<Reporter>(&solution, local).await?;
+        let built = self
+            .build_solved::<Reporter>(&solution, local)
+            .await?;
         // A member another member requires from its source is installed
         // as that requirement asks, so it is not built a second time.
         let from_source = local
@@ -88,10 +104,13 @@ impl PythonPrepare<'_> {
         installable.take_solved(registry, solution, built);
         for member in members {
             if member.manifest.is_packaged() && !from_source.contains(member.root.as_path()) {
-                let name = member.manifest
+                let name = member
+                    .manifest
                     .distribution()
                     .expect("a packaged project declares a distribution");
-                let build = self.build_self::<Reporter>(&member.root, &member.manifest).await?;
+                let build = self
+                    .build_self::<Reporter>(&member.root, &member.manifest)
+                    .await?;
                 installable.take_build(name, build);
             }
         }
@@ -179,7 +198,8 @@ impl Installable {
         match build {
             build::Build::Made(build) => self.made(*build),
             build::Build::NotApproved(names) => {
-                self.unapproved.insert(name.clone(), names);
+                self.unapproved
+                    .insert(name.clone(), names);
             }
         }
     }

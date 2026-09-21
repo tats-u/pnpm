@@ -9,8 +9,12 @@ use super::{
 /// rejected rather than merged.
 #[tokio::test]
 async fn an_importer_outside_the_request_is_rejected() {
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.expect("bind capture");
-    let addr = listener.local_addr().expect("capture addr");
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+        .await
+        .expect("bind capture");
+    let addr = listener
+        .local_addr()
+        .expect("capture addr");
     let done = serde_json::json!({
         "type": "done",
         "lockfile": {

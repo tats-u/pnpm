@@ -32,13 +32,20 @@ pub(super) fn project_relative_cache_scope(
     wanted: &WantedDependency,
     opts: &ResolveOptions,
 ) -> Option<super::workspace_ctx::PathKey> {
-    (wanted.bare_specifier
+    (wanted
+        .bare_specifier
         .as_deref()
         .is_some_and(|spec| {
             spec.starts_with("link:") || spec.starts_with("file:") || spec.starts_with("workspace:")
         })
-        || (opts.project.link_workspace_packages.enabled_at_depth(0)
-            && opts.project.workspace_packages.is_some()))
+        || (opts
+            .project
+            .link_workspace_packages
+            .enabled_at_depth(0)
+            && opts
+                .project
+                .workspace_packages
+                .is_some()))
     .then(|| opts.project.project_dir.clone().into())
 }
 
@@ -69,7 +76,11 @@ pub(super) fn declaring_manifest_dir(
     let absolute = if directory.is_absolute() {
         pnpm_fs::lexical_normalize(directory)
     } else {
-        pnpm_fs::lexical_normalize(&ctx.importer.lockfile_dir.join(directory))
+        pnpm_fs::lexical_normalize(
+            &ctx.importer
+                .lockfile_dir
+                .join(directory),
+        )
     };
     Some(Arc::from(absolute))
 }
@@ -84,7 +95,8 @@ pub(super) fn opts_relative_to_declaring_manifest<'a>(
 ) -> Cow<'a, ResolveOptions> {
     match parent_dir {
         Some(parent_dir)
-            if wanted.bare_specifier
+            if wanted
+                .bare_specifier
                 .as_deref()
                 .is_some_and(|spec| spec.starts_with("file:")) =>
         {
@@ -179,7 +191,12 @@ impl TreeCtx {
     /// the same workspace ctx.
     #[must_use]
     pub fn new(base_opts: ResolveOptions) -> Self {
-        let lockfile_dir = if base_opts.project.lockfile_dir.as_os_str().is_empty() {
+        let lockfile_dir = if base_opts
+            .project
+            .lockfile_dir
+            .as_os_str()
+            .is_empty()
+        {
             base_opts.project.project_dir.clone()
         } else {
             base_opts.project.lockfile_dir.clone()
@@ -219,7 +236,12 @@ impl TreeCtx {
     /// `workspace` alive across importers (typically via
     /// `Arc::clone(&workspace)`).
     pub fn with_workspace(workspace: Arc<WorkspaceTreeCtx>, base_opts: ResolveOptions) -> Self {
-        let lockfile_dir = if base_opts.project.lockfile_dir.as_os_str().is_empty() {
+        let lockfile_dir = if base_opts
+            .project
+            .lockfile_dir
+            .as_os_str()
+            .is_empty()
+        {
             base_opts.project.project_dir.clone()
         } else {
             base_opts.project.lockfile_dir.clone()
@@ -283,8 +305,14 @@ impl TreeCtx {
         pick_lowest_direct: bool,
         subdep_published_by: Option<DateTime<Utc>>,
     ) -> Self {
-        self.options.direct.version.pick_lowest_version = pick_lowest_direct;
-        self.options.subdep.version.pick_lowest_version = false;
+        self.options
+            .direct
+            .version
+            .pick_lowest_version = pick_lowest_direct;
+        self.options
+            .subdep
+            .version
+            .pick_lowest_version = false;
         self.options.subdep.policy.published_by = subdep_published_by;
         self
     }
@@ -315,7 +343,11 @@ impl TreeCtx {
     pub fn resolve_new_direct_deps_as_subdeps(&mut self) {
         self.options.direct = ResolveOptions {
             project: pnpm_resolving_resolver_base::ResolverProjectOptions {
-                link_workspace_packages: self.options.direct.project.link_workspace_packages,
+                link_workspace_packages: self
+                    .options
+                    .direct
+                    .project
+                    .link_workspace_packages,
                 ..self.options.subdep.project.clone()
             },
             ..self.options.subdep.clone()
@@ -338,7 +370,8 @@ impl TreeCtx {
     }
 
     pub(super) fn update_reuse_scope(&self) -> &UpdateReuseScope {
-        self.workspace.update_reuse_scope_for(&self.importer.id)
+        self.workspace
+            .update_reuse_scope_for(&self.importer.id)
     }
 
     pub(super) fn update_scope(&self) -> UpdateScope<'_> {
@@ -346,9 +379,8 @@ impl TreeCtx {
     }
 
     pub(super) fn update_cache_scope(&self) -> Option<String> {
-        (!matches!(self.update_reuse_scope(), UpdateReuseScope::All)).then(|| {
-            self.importer.id.clone()
-        })
+        (!matches!(self.update_reuse_scope(), UpdateReuseScope::All))
+            .then(|| self.importer.id.clone())
     }
 
     /// Set the importer this context walks for. See [`TreeCtx`]'s
@@ -484,7 +516,8 @@ impl TreeCtx {
     /// Build an importer-scoped snapshot for a peer-hoist pass.
     #[must_use]
     pub fn snapshot_reachable_from(&self, direct: Vec<DirectDep>) -> ResolvedTree {
-        self.workspace.snapshot_reachable_from(direct)
+        self.workspace
+            .snapshot_reachable_from(direct)
     }
 
     /// The preferred-version buckets for `names`: the caller's seed
@@ -509,12 +542,15 @@ impl TreeCtx {
                 .cloned()
                 .unwrap_or_default();
             bucket.retain(|_, entry| entry.selector_type() == VersionSelectorType::Version);
-            for (selector, entry) in run.versions
+            for (selector, entry) in run
+                .versions
                 .get(name)
                 .into_iter()
                 .flatten()
             {
-                bucket.entry(selector.clone()).or_insert_with(|| entry.clone());
+                bucket
+                    .entry(selector.clone())
+                    .or_insert_with(|| entry.clone());
             }
             if !bucket.is_empty() {
                 out.insert(name.to_string(), bucket);
@@ -527,11 +563,14 @@ impl TreeCtx {
 fn create_subdep_options(base_opts: &ResolveOptions) -> ResolveOptions {
     ResolveOptions {
         project: pnpm_resolving_resolver_base::ResolverProjectOptions {
-            link_workspace_packages: if base_opts.project
+            link_workspace_packages: if base_opts
+                .project
                 .link_workspace_packages
                 .enabled_at_depth(1)
             {
-                base_opts.project.link_workspace_packages
+                base_opts
+                    .project
+                    .link_workspace_packages
             } else {
                 LinkWorkspacePackages::Off
             },

@@ -50,7 +50,11 @@ fn encode_pkg_name_hash_suffix_for_mixed_case() {
     assert!(got.starts_with("LRUCache_"), "got: {got}");
     let suffix = got.trim_start_matches("LRUCache_");
     assert_eq!(suffix.len(), 64, "sha256 hex is 64 chars");
-    assert!(suffix.chars().all(|ch| ch.is_ascii_hexdigit()));
+    assert!(
+        suffix
+            .chars()
+            .all(|ch| ch.is_ascii_hexdigit())
+    );
 }
 
 #[test]
@@ -253,7 +257,10 @@ fn get_registry_name_hashes_an_oversized_key() {
     let long_path = "a".repeat(300);
     let got = get_registry_name(&format!("https://npm.example/{long_path}/")).expect("encode");
     assert_eq!(got.len(), 64);
-    assert!(got.chars().all(|character| character.is_ascii_hexdigit()));
+    assert!(
+        got.chars()
+            .all(|character| character.is_ascii_hexdigit())
+    );
     let other = get_registry_name(&format!("https://npm.example/{long_path}b/")).expect("encode");
     assert_ne!(got, other);
 }
@@ -452,7 +459,10 @@ fn load_meta_round_trip_hydrates_versions_from_spans() {
     assert_eq!(loaded.etag.as_deref(), Some(r#"W/"abc""#));
     assert_eq!(loaded.published_at("1.0.0"), Some("2025-01-10T08:30:00.000Z"));
     assert_eq!(loaded.dist_tag("latest"), Some("1.0.0"));
-    let manifest = loaded.versions.get("1.0.0").expect("hydrate from file span");
+    let manifest = loaded
+        .versions
+        .get("1.0.0")
+        .expect("hydrate from file span");
     assert_eq!(manifest.dist.tarball, "https://registry/acme-1.0.0.tgz");
 }
 
@@ -492,7 +502,10 @@ fn load_meta_survives_mirror_rewrite() {
     }))
     .expect("deserialize rewritten Package");
     save_meta_indexed(&mirror, &newer, None).expect("overwrite");
-    let manifest = loaded.versions.get("1.0.0").expect("hydrate after rewrite");
+    let manifest = loaded
+        .versions
+        .get("1.0.0")
+        .expect("hydrate after rewrite");
     assert_eq!(manifest.dist.tarball, "https://registry/acme-1.0.0.tgz");
 }
 
@@ -503,7 +516,10 @@ fn load_meta_past_the_hold_cap_buffers_fragments_instead_of_missing() {
     let pkg = fixture_package();
     save_meta_indexed(&mirror, &pkg, Some(r#"W/"abc""#)).expect("save");
     let loaded = load_meta_with_hold_cap(&mirror, 0).expect("read full back without a handle");
-    let manifest = loaded.versions.get("1.0.0").expect("hydrate from buffered fragment");
+    let manifest = loaded
+        .versions
+        .get("1.0.0")
+        .expect("hydrate from buffered fragment");
     assert_eq!(manifest.dist.tarball, "https://registry/acme-1.0.0.tgz");
     assert_eq!(loaded.etag.as_deref(), Some(r#"W/"abc""#));
 }
@@ -530,7 +546,10 @@ fn load_meta_past_the_hold_cap_ignores_a_sparse_tail() {
     file.set_len(size + 64 * 1024 * 1024)
         .expect("extend sparsely");
     let loaded = load_meta_with_hold_cap(&mirror, 0).expect("read full back without a handle");
-    let manifest = loaded.versions.get("1.0.0").expect("hydrate from buffered fragment");
+    let manifest = loaded
+        .versions
+        .get("1.0.0")
+        .expect("hydrate from buffered fragment");
     assert_eq!(manifest.dist.tarball, "https://registry/acme-1.0.0.tgz");
 }
 
@@ -555,7 +574,10 @@ fn load_meta_past_the_hold_cap_skips_a_sparse_gap_between_spans() {
     file.set_len(contents.len() as u64 + far_offset + 16)
         .expect("extend sparsely");
     let loaded = load_meta_with_hold_cap(&mirror, 0).expect("read full back without a handle");
-    let manifest = loaded.versions.get("1.0.0").expect("hydrate the near fragment");
+    let manifest = loaded
+        .versions
+        .get("1.0.0")
+        .expect("hydrate the near fragment");
     assert_eq!(manifest.dist.tarball, "https://registry/acme-1.0.0.tgz");
     // The far span reads zeroes out of the sparse hole — not JSON, so
     // the version is absent; the gap itself must never be buffered.
@@ -587,7 +609,10 @@ fn load_meta_treats_an_oversized_fragment_span_as_absent() {
         .expect("extend sparsely");
     let loaded = load_meta(&mirror).expect("read full back");
     assert!(loaded.versions.get("9.9.9").is_none(), "oversized span must read as absent");
-    let manifest = loaded.versions.get("1.0.0").expect("hydrate the in-bounds fragment");
+    let manifest = loaded
+        .versions
+        .get("1.0.0")
+        .expect("hydrate the in-bounds fragment");
     assert_eq!(manifest.dist.tarball, "https://registry/acme-1.0.0.tgz");
 }
 

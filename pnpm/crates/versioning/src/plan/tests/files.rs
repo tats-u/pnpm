@@ -28,7 +28,11 @@ fn a_name_shared_by_two_projects_is_ambiguous_and_must_be_referenced_by_director
         &AssembleReleasePlanOptions::default(),
     )
     .expect_err("plan must fail");
-    assert!(err.to_string().contains("matches multiple workspace projects"), "unexpected: {err}");
+    assert!(
+        err.to_string()
+            .contains("matches multiple workspace projects"),
+        "unexpected: {err}"
+    );
 
     let intents = [make_intent("one", &[("./pnpm/npm/pnpm", "patch")])];
     let plan = assemble(&twins(), &intents, &Ledger::new(), None);
@@ -63,11 +67,13 @@ fn lanes_keyed_by_directory_path_apply_to_the_right_twin() {
         ..VersioningSettings::default()
     };
     let plan = assemble(&twins(), &intents, &Ledger::new(), Some(&versioning));
-    let ts_line = plan.releases
+    let ts_line = plan
+        .releases
         .iter()
         .find(|release| release.dir == "pnpm11/pnpm")
         .expect("ts");
-    let rust_line = plan.releases
+    let rust_line = plan
+        .releases
         .iter()
         .find(|release| release.dir == "pnpm/npm/pnpm")
         .expect("rust");

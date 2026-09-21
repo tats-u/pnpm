@@ -237,8 +237,12 @@ pub fn try_router_with_auth(mut config: Config, auth: AuthState) -> pnpr_error::
     // Enforce the "at least one surface enabled" invariant for embedders
     // that build and serve the router themselves rather than going through
     // `serve`/`serve_listener`.
-    config.features.ensure_a_feature_is_enabled()?;
-    config.routing.ensure_valid_registry_graph(config.features.registry.enabled)?;
+    config
+        .features
+        .ensure_a_feature_is_enabled()?;
+    config
+        .routing
+        .ensure_valid_registry_graph(config.features.registry.enabled)?;
     let osv_index = load_active_osv_index(&config)?;
     router_with_auth_and_osv(config, auth, osv_index)
 }
@@ -265,7 +269,10 @@ pub async fn recover_publish_journal(config: &Config) -> pnpr_error::Result<()> 
         config.storage.cache_dir.clone(),
     )?;
     for hosted in config.routing.hosted.values() {
-        storage.for_hosted(&hosted.org).rebuild_package_index().await?;
+        storage
+            .for_hosted(&hosted.org)
+            .rebuild_package_index()
+            .await?;
     }
     Ok(())
 }
@@ -274,7 +281,11 @@ pub async fn recover_publish_journal(config: &Config) -> pnpr_error::Result<()> 
 /// by a client that never came back. Only image pushes create these, so this
 /// is a no-op for a registry serving no image ecosystem.
 async fn sweep_abandoned_uploads(config: &Config) -> pnpr_error::Result<()> {
-    if !config.routing.registries.has_ecosystem(Ecosystem::Oci) {
+    if !config
+        .routing
+        .registries
+        .has_ecosystem(Ecosystem::Oci)
+    {
         return Ok(());
     }
     let storage = Storage::new(
@@ -284,7 +295,9 @@ async fn sweep_abandoned_uploads(config: &Config) -> pnpr_error::Result<()> {
     )?;
     // Shared sessions live in their hosted namespace. Local scratch can be
     // shared by those namespaces and is safe to sweep more than once.
-    let mut namespaces: Vec<&str> = config.routing.hosted
+    let mut namespaces: Vec<&str> = config
+        .routing
+        .hosted
         .values()
         .map(|hosted| hosted.org.as_str())
         .collect();
@@ -344,8 +357,12 @@ pub async fn serve(mut config: Config) -> pnpr_error::Result<()> {
     // YAML load / CLI: embedders build `Config` programmatically and call
     // straight into `serve`, so a both-disabled config must fail loudly
     // rather than start a server that only answers `/-/ping`.
-    config.features.ensure_a_feature_is_enabled()?;
-    config.routing.ensure_valid_registry_graph(config.features.registry.enabled)?;
+    config
+        .features
+        .ensure_a_feature_is_enabled()?;
+    config
+        .routing
+        .ensure_valid_registry_graph(config.features.registry.enabled)?;
     log_enabled_surfaces(&config);
     let osv_index = load_active_osv_index(&config)?;
     let auth = load_startup_auth(&config).await?;
@@ -388,8 +405,12 @@ pub async fn serve_listener(
     listener: tokio::net::TcpListener,
 ) -> pnpr_error::Result<()> {
     let listen = listener.local_addr()?;
-    config.features.ensure_a_feature_is_enabled()?;
-    config.routing.ensure_valid_registry_graph(config.features.registry.enabled)?;
+    config
+        .features
+        .ensure_a_feature_is_enabled()?;
+    config
+        .routing
+        .ensure_valid_registry_graph(config.features.registry.enabled)?;
     log_enabled_surfaces(&config);
     let osv_index = load_active_osv_index(&config)?;
     // Load the configured auth backends here too — going through `router`
@@ -450,7 +471,8 @@ impl<RouterState: Send + Sync> FromRequestParts<RouterState> for TargetRegistry 
         // `RawPathParams` reports only what the matched route captured, so an
         // absent `prefix` means this is the bare registration rather than a
         // prefixed request that happened to omit the segment.
-        let params = RawPathParams::from_request_parts(parts, &()).await
+        let params = RawPathParams::from_request_parts(parts, &())
+            .await
             .map_err(|err| {
                 match err {
                     // The client sent a segment that percent-decodes to invalid

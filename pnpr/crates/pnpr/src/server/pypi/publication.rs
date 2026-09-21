@@ -47,7 +47,10 @@ pub(super) async fn upload_file(
         .ok_or_else(|| bad_request("request body must be multipart/form-data"))?;
     let parts = multipart::parse_form(content_type, body).map_err(bad_request)?;
     let upload = parse_upload(parts).map_err(bad_request)?;
-    validate_upload(state, identity, registry, upload).await?.publish(state).await
+    validate_upload(state, identity, registry, upload)
+        .await?
+        .publish(state)
+        .await
 }
 
 /// An upload that may proceed: the caller is allowed to publish the project,
@@ -131,7 +134,8 @@ pub(in super::super) fn verify_upload(
 ) -> Result<PypiPublication, RegistryError> {
     let PypiTarget { key, org } = target;
     let sha256 = sha256_hex(&upload.content);
-    if upload.sha256_digest
+    if upload
+        .sha256_digest
         .as_deref()
         .is_some_and(|declared| !declared.eq_ignore_ascii_case(&sha256))
     {

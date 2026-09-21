@@ -153,7 +153,9 @@ pub fn try_lockfile_verification_cache(
         return CacheLookupResult::default();
     };
 
-    let path_key = lockfile_path.to_string_lossy().to_string();
+    let path_key = lockfile_path
+        .to_string_lossy()
+        .to_string();
 
     if let Some(record) = indexes.by_path.get(&path_key)
         && stat_matches(&stat, &record.lockfile)
@@ -161,9 +163,8 @@ pub fn try_lockfile_verification_cache(
         let hit = every_verifier_trusts_cached_run(record, verifiers);
         return CacheLookupResult {
             hit,
-            verified_at: (hit && !record.verified_at.is_empty()).then(|| {
-                record.verified_at.clone()
-            }),
+            verified_at: (hit && !record.verified_at.is_empty())
+                .then(|| record.verified_at.clone()),
             precomputed: CachePrecomputed {
                 stat: Some(stat),
                 hash: Some(record.lockfile.hash.clone()),
@@ -184,9 +185,7 @@ pub fn try_lockfile_verification_cache(
 
     CacheLookupResult {
         hit: true,
-        verified_at: (!refreshed.verified_at.is_empty()).then(|| {
-            refreshed.verified_at.clone()
-        }),
+        verified_at: (!refreshed.verified_at.is_empty()).then(|| refreshed.verified_at.clone()),
         precomputed: CachePrecomputed { stat: Some(stat), hash: Some(hash) },
     }
 }
@@ -242,12 +241,21 @@ pub fn record_verification(
     mut hash_lockfile: impl FnMut() -> String,
     precomputed: CachePrecomputed,
 ) {
-    let Some(stat) = precomputed.stat.or_else(|| stat_lockfile(lockfile_path)) else { return };
-    let hash = precomputed.hash.unwrap_or_else(&mut hash_lockfile);
+    let Some(stat) = precomputed
+        .stat
+        .or_else(|| stat_lockfile(lockfile_path))
+    else {
+        return;
+    };
+    let hash = precomputed
+        .hash
+        .unwrap_or_else(&mut hash_lockfile);
     let record = CacheRecord {
         lockfile: CacheLockfile {
             hash,
-            path: lockfile_path.to_string_lossy().to_string(),
+            path: lockfile_path
+                .to_string_lossy()
+                .to_string(),
             size: stat.size,
             mtime_ns: stat.mtime_ns,
             inode: stat.inode,
@@ -315,7 +323,11 @@ fn stat_lockfile(lockfile_path: &Path) -> Option<LockfileStat> {
     let mtime_ns = metadata
         .modified()
         .ok()
-        .and_then(|modified| modified.duration_since(SystemTime::UNIX_EPOCH).ok())
+        .and_then(|modified| {
+            modified
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .ok()
+        })
         .map_or_else(|| "0".to_string(), |duration| duration.as_nanos().to_string());
     let inode = inode_of(&metadata);
     Some(LockfileStat { size, mtime_ns, inode })
@@ -389,7 +401,9 @@ fn maybe_compact_cache(cache_dir: &Path) {
     let Ok(contents) = fs::read_to_string(&cache_file_path) else { return };
 
     let kept = newest_records(&contents);
-    let start = kept.len().saturating_sub(MAX_CACHE_ENTRIES);
+    let start = kept
+        .len()
+        .saturating_sub(MAX_CACHE_ENTRIES);
     let mut new_contents = String::with_capacity(size as usize);
     for line in &kept[start..] {
         new_contents.push_str(line);
@@ -442,7 +456,10 @@ fn compact_temp_path(target: &Path) -> PathBuf {
     let counter = COMPACT_TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     let pid = std::process::id();
     let suffix = format!(".{pid}.{counter}.tmp");
-    let mut name = match target.file_name().and_then(|n| n.to_str()) {
+    let mut name = match target
+        .file_name()
+        .and_then(|n| n.to_str())
+    {
         Some(name) => name.to_string(),
         None => "lockfile-verified".to_string(),
     };

@@ -79,7 +79,11 @@ fn app(tmp: &TempDir) -> Router {
 /// registry-level default denies.
 fn app_allowing_deletes(tmp: &TempDir) -> Router {
     let mut config = oci_config(tmp.path().to_path_buf(), "$all");
-    let hosted = config.routing.hosted.get_mut("images").expect("the hosted image registry");
+    let hosted = config
+        .routing
+        .hosted
+        .get_mut("images")
+        .expect("the hosted image registry");
     hosted.rules = std::mem::take(&mut hosted.rules)
         .with_default_unpublish(AccessList::from_tokens(["$authenticated"]));
     router_with_auth(config, AuthState::in_memory())
@@ -201,7 +205,11 @@ async fn check_protocol_surface(app: Router) {
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(response.headers()[header::CONTENT_LENGTH], "10");
-    assert!(body_bytes(response.into_body()).await.is_empty());
+    assert!(
+        body_bytes(response.into_body())
+            .await
+            .is_empty()
+    );
     let empty = push_blob(&app, &auth, "acme/source", b"").await;
     let response = app
         .clone()
@@ -229,7 +237,9 @@ async fn check_protocol_surface(app: Router) {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
-    let location = response.headers()[header::LOCATION].to_str().unwrap();
+    let location = response.headers()[header::LOCATION]
+        .to_str()
+        .unwrap();
     assert_eq!(location, format!("/v2/acme/destination/blobs/{digest}"));
     assert_eq!(body_bytes(get(&app, location).await.into_body()).await, b"0123456789");
     for from in ["acme/missing", "library/upstream"] {
@@ -267,7 +277,11 @@ async fn check_protocol_surface(app: Router) {
     let payload: Value = serde_json::from_slice(&body_bytes(response.into_body()).await).unwrap();
     assert_eq!(payload["tags"], json!(["a", "c"]));
     let response = get(&app, "/v2/acme/pages/tags/list?n=2&last=c").await;
-    assert!(!response.headers().contains_key(header::LINK));
+    assert!(
+        !response
+            .headers()
+            .contains_key(header::LINK)
+    );
     let payload: Value = serde_json::from_slice(&body_bytes(response.into_body()).await).unwrap();
     assert_eq!(payload["tags"], json!(["e"]));
     let response = get(&app, "/v2/acme/pages/tags/list?last=b").await;
@@ -276,14 +290,20 @@ async fn check_protocol_surface(app: Router) {
     for endpoint in ["acme/pages/tags/list", "_catalog"] {
         let response = get(&app, &format!("/v2/{endpoint}?n=0")).await;
         assert_eq!(response.status(), StatusCode::OK);
-        assert!(!response.headers().contains_key(header::LINK));
+        assert!(
+            !response
+                .headers()
+                .contains_key(header::LINK)
+        );
         let payload: Value =
             serde_json::from_slice(&body_bytes(response.into_body()).await).unwrap();
         let field = if endpoint == "_catalog" { "repositories" } else { "tags" };
         assert_eq!(payload[field], json!([]));
         for invalid in ["-1", "oops", "184467440737095516160", ""] {
             assert_eq!(
-                get(&app, &format!("/v2/{endpoint}?n={invalid}")).await.status(),
+                get(&app, &format!("/v2/{endpoint}?n={invalid}"))
+                    .await
+                    .status(),
                 StatusCode::BAD_REQUEST,
             );
         }
@@ -376,7 +396,9 @@ async fn check_protocol_surface(app: Router) {
     let payload: Value = serde_json::from_slice(&body_bytes(response.into_body()).await).unwrap();
     assert_eq!(payload["manifests"], json!([]));
     assert_eq!(
-        get(&app, "/v2/acme/artifacts/referrers/invalid").await.status(),
+        get(&app, "/v2/acme/artifacts/referrers/invalid")
+            .await
+            .status(),
         StatusCode::BAD_REQUEST,
     );
 }
@@ -466,7 +488,9 @@ async fn check_satisfiable_ranges(app: &Router, blob_path: &str) {
 }
 
 fn strip_referrer_metadata(document: &mut Value, expected_count: usize) {
-    let entries = document["manifests"].as_array_mut().unwrap();
+    let entries = document["manifests"]
+        .as_array_mut()
+        .unwrap();
     assert_eq!(entries.len(), expected_count, "the pushed manifests are stored");
     for entry in entries {
         assert!(

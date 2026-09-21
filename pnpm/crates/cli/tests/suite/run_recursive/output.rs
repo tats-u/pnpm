@@ -88,9 +88,20 @@ fn test_pattern_from_workspace_yaml_is_respected_by_the_test_script() {
     git(&["remote", "add", "origin", &remote.to_string_lossy()]);
     git(&["push", "-u", "origin", "main"]);
 
-    fs::write(workspace.join("project-2").join("file.js"), "").expect("write changed file");
-    fs::write(workspace.join("project-4").join("different-pattern.js"), "")
-        .expect("write changed file");
+    fs::write(
+        workspace
+            .join("project-2")
+            .join("file.js"),
+        "",
+    )
+    .expect("write changed file");
+    fs::write(
+        workspace
+            .join("project-4")
+            .join("different-pattern.js"),
+        "",
+    )
+    .expect("write changed file");
     let workspace_yaml = "packages:\n  - project-1\n  - project-2\n  - project-3\n  - project-4\ntestPattern:\n  - '*/file.js'\n";
     fs::write(workspace.join("pnpm-workspace.yaml"), workspace_yaml)
         .expect("write pnpm-workspace.yaml");
@@ -183,7 +194,13 @@ fn recursive_run_executes_every_script_matching_a_regexp_selector() {
 
     let statuses = summary_statuses(&workspace);
     assert_eq!(statuses.get("both").map(String::as_str), Some("passed"));
-    assert_eq!(statuses.get("neither").map(String::as_str), Some("skipped"), "{statuses:?}");
+    assert_eq!(
+        statuses
+            .get("neither")
+            .map(String::as_str),
+        Some("skipped"),
+        "{statuses:?}"
+    );
 
     drop(root);
 }

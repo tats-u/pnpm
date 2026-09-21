@@ -27,7 +27,9 @@ fn name(text: &str) -> PkgName {
 fn metadata_with_integrity(integrity: &str) -> PackageMetadata {
     PackageMetadata {
         resolution: LockfileResolution::Registry(RegistryResolution {
-            integrity: integrity.parse().expect("parse integrity"),
+            integrity: integrity
+                .parse()
+                .expect("parse integrity"),
             revision: None,
         }),
         version: None,
@@ -45,7 +47,9 @@ fn metadata_with_integrity(integrity: &str) -> PackageMetadata {
 }
 
 fn snapshot_with_dep(child: &str, ref_str: &str) -> SnapshotEntry {
-    let dep_ref: SnapshotDepRef = ref_str.parse().expect("parse SnapshotDepRef");
+    let dep_ref: SnapshotDepRef = ref_str
+        .parse()
+        .expect("parse SnapshotDepRef");
     SnapshotEntry {
         dependencies: Some(HashMap::from([(name(child), dep_ref)])),
         ..Default::default()
@@ -122,8 +126,10 @@ impl SeededStoreInstall {
             ("package.json", br#"{"name":"seeded","version":"1.0.0"}"#.as_slice()),
             ("index.js", b"module.exports = true\n".as_slice()),
         ] {
-            let (blob, digest) =
-                config.store_dir.write_cas_file(content, false).expect("write package file");
+            let (blob, digest) = config
+                .store_dir
+                .write_cas_file(content, false)
+                .expect("write package file");
             if path == "index.js" {
                 body_blob = Some(blob);
             }
@@ -138,8 +144,10 @@ impl SeededStoreInstall {
             );
         }
         let side_effects = build_output.map(|content| {
-            let (_, digest) =
-                config.store_dir.write_cas_file(content, false).expect("write build output");
+            let (_, digest) = config
+                .store_dir
+                .write_cas_file(content, false)
+                .expect("write build output");
             let added = HashMap::from([(
                 "build/output.js".to_string(),
                 CafsFileInfo {
@@ -203,7 +211,10 @@ impl SeededStoreInstall {
         let logged_methods = AtomicU8::new(0);
         let progress_reported = SharedReportedProgressKeys::default();
         let (store_index_writer, writer_task) = StoreIndexWriter::spawn(&self.config.store_dir);
-        let requester = self.workspace_root.to_string_lossy().into_owned();
+        let requester = self
+            .workspace_root
+            .to_string_lossy()
+            .into_owned();
 
         let output = CreateVirtualStore {
             fetching: crate::VirtualStoreFetchInputs {
@@ -252,7 +263,10 @@ impl SeededStoreInstall {
         .await;
 
         drop(store_index_writer);
-        writer_task.await.expect("join store-index writer").expect("flush store-index writer");
+        writer_task
+            .await
+            .expect("join store-index writer")
+            .expect("flush store-index writer");
         output
     }
 }

@@ -163,7 +163,9 @@ async fn add_jsr_selector(selector: &str) -> Option<String> {
     config.modules_dir = modules_dir;
     config.virtual_store_dir = virtual_store_dir;
     config.registry = format!("{}/", default_registry.url());
-    config.registries_by_scope.insert("@jsr".to_string(), jsr_registry_url);
+    config
+        .registries_by_scope
+        .insert("@jsr".to_string(), jsr_registry_url);
     config.minimum_release_age = None;
     let config = config.leak();
 
@@ -257,8 +259,12 @@ fn empty_project(root: &std::path::Path, name: &str) -> Project {
 fn project_with_foo(root: &std::path::Path, name: &str, specifier: &str) -> Project {
     let project = empty_project(root, name);
     let mut manifest = project.manifest;
-    manifest.add_dependency("foo", specifier, DependencyGroup::Prod).expect("add foo dependency");
-    manifest.save().expect("save package.json");
+    manifest
+        .add_dependency("foo", specifier, DependencyGroup::Prod)
+        .expect("add foo dependency");
+    manifest
+        .save()
+        .expect("save package.json");
     Project { root_dir: project.root_dir, manifest, dependency_manifest: None }
 }
 

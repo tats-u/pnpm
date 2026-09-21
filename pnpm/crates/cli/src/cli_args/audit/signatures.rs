@@ -132,7 +132,9 @@ pub(super) async fn verify_signatures(
         };
         match packuments.get(&(pkg.registry.clone(), pkg.name.clone())) {
             Some(Err(reason)) => {
-                result.invalid.push(issue(pkg, None, None, Some(reason.clone())));
+                result
+                    .invalid
+                    .push(issue(pkg, None, None, Some(reason.clone())));
             }
             Some(Ok(None)) | None => {}
             Some(Ok(Some(packument))) => {
@@ -159,10 +161,14 @@ async fn fetch_keys_by_registry(
     let key_fetches = registries
         .into_iter()
         .map(|registry| async move {
-            fetch_registry_keys(registry, config, http_client).await
+            fetch_registry_keys(registry, config, http_client)
+                .await
                 .map(|keys| (registry.to_string(), keys))
         });
-    Ok(futures_util::future::try_join_all(key_fetches).await?.into_iter().collect())
+    Ok(futures_util::future::try_join_all(key_fetches)
+        .await?
+        .into_iter()
+        .collect())
 }
 
 /// The packuments of the packages whose registry advertises signing keys;
@@ -190,7 +196,10 @@ async fn fetch_needed_packuments(
                 .map_err(|err| err.to_string());
             ((registry.to_string(), name.to_string()), result)
         });
-    futures_util::future::join_all(packument_fetches).await.into_iter().collect()
+    futures_util::future::join_all(packument_fetches)
+        .await
+        .into_iter()
+        .collect()
 }
 
 fn process_version(
@@ -200,7 +209,8 @@ fn process_version(
     result: &mut SignatureVerificationResult,
 ) {
     let version = packument.versions.get(&pkg.version);
-    let published_at = packument.time
+    let published_at = packument
+        .time
         .get(&pkg.version)
         .and_then(serde_json::Value::as_str)
         .map(str::to_string);
@@ -210,21 +220,29 @@ fn process_version(
     let raw_signatures = dist.and_then(|dist| dist.signatures.as_ref());
 
     let Some(signatures) = parse_signatures(raw_signatures) else {
-        result.invalid.push(issue(pkg, integrity, resolved, Some(malformed_reason(pkg))));
+        result
+            .invalid
+            .push(issue(pkg, integrity, resolved, Some(malformed_reason(pkg))));
         return;
     };
 
     if version.is_none() {
         let reason = format!("Missing registry metadata for {}@{}", pkg.name, pkg.version);
-        result.invalid.push(issue(pkg, None, None, Some(reason)));
+        result
+            .invalid
+            .push(issue(pkg, None, None, Some(reason)));
         return;
     }
     let Some(integrity) = integrity else {
-        result.missing.push(issue(pkg, None, resolved, None));
+        result
+            .missing
+            .push(issue(pkg, None, resolved, None));
         return;
     };
     if signatures.is_empty() {
-        result.missing.push(issue(pkg, Some(integrity), resolved, None));
+        result
+            .missing
+            .push(issue(pkg, Some(integrity), resolved, None));
         return;
     }
 
@@ -319,7 +337,12 @@ fn key_is_expired(key: &RegistryKey, published_time: Option<i64>) -> bool {
     // publish time comes from the same unauthenticated packument as the
     // signatures. A missing or unparsable publish time therefore keeps the
     // key usable — the signature check below is what gates acceptance.
-    match (key.expires.as_deref().and_then(parse_timestamp), published_time) {
+    match (
+        key.expires
+            .as_deref()
+            .and_then(parse_timestamp),
+        published_time,
+    ) {
         (Some(expires), Some(published)) => published >= expires,
         _ => false,
     }
@@ -334,7 +357,9 @@ fn verify_one(public_key_base64: &str, message: &str, signature_base64: &str) ->
     let Ok(verifying_key) = VerifyingKey::from_public_key_der(&key_der) else { return false };
     let Ok(signature_der) = engine.decode(signature_base64) else { return false };
     let Ok(signature) = Signature::from_der(&signature_der) else { return false };
-    verifying_key.verify(message.as_bytes(), &signature).is_ok()
+    verifying_key
+        .verify(message.as_bytes(), &signature)
+        .is_ok()
 }
 
 fn most_telling_failure(pkg: &SignaturePackage, failures: &[String]) -> String {
@@ -455,8 +480,10 @@ fn issue_table(issues: &[SignatureIssue], with_reason: bool) -> String {
     for issue in issues {
         let package = red(&format!("{}@{}", issue.name, issue.version));
         if with_reason {
-            let reason =
-                issue.reason.clone().unwrap_or_else(|| "Invalid registry signature".to_string());
+            let reason = issue
+                .reason
+                .clone()
+                .unwrap_or_else(|| "Invalid registry signature".to_string());
             builder.push_record(vec![package, issue.registry.clone(), reason]);
         } else {
             builder.push_record(vec![package, issue.registry.clone()]);
@@ -472,7 +499,8 @@ fn plural(count: usize, word: &str) -> String {
 }
 
 fn bright_red(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.bright_red()).to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.bright_red())
+        .to_string()
 }
 
 #[cfg(test)]

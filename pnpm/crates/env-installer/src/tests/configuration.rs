@@ -22,10 +22,14 @@ async fn resolves_and_installs_config_dep_when_no_env_lockfile_exists() {
     .await
     .unwrap();
 
-    let installed = root.path().join("node_modules/.pnpm-config/@pnpm.e2e/foo/package.json");
+    let installed = root
+        .path()
+        .join("node_modules/.pnpm-config/@pnpm.e2e/foo/package.json");
     assert!(installed.exists(), "config dep must be linked into .pnpm-config");
 
-    let env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
+    let env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
     let importer = &env.importers[EnvLockfile::ROOT_IMPORTER_KEY];
     let entry = &importer.config_dependencies["@pnpm.e2e/foo"];
     assert_eq!(entry.specifier, "100.0.0");
@@ -33,7 +37,9 @@ async fn resolves_and_installs_config_dep_when_no_env_lockfile_exists() {
     let key = "@pnpm.e2e/foo@100.0.0".parse().unwrap();
     assert!(env.packages.contains_key(&key), "package entry recorded");
     assert!(
-        env.snapshots[&key].optional_dependencies.is_none(),
+        env.snapshots[&key]
+            .optional_dependencies
+            .is_none(),
         "a config dep with no optionalDependencies keeps an empty snapshot",
     );
 }
@@ -62,10 +68,16 @@ async fn keeps_optional_subdeps_of_a_pinned_config_dep_out_of_the_lockfile() {
     .await
     .unwrap();
 
-    let env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
-    let key: PackageKey = "@pnpm.e2e/foobar@100.0.0".parse().unwrap();
+    let env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
+    let key: PackageKey = "@pnpm.e2e/foobar@100.0.0"
+        .parse()
+        .unwrap();
     assert!(
-        env.snapshots[&key].optional_dependencies.is_none(),
+        env.snapshots[&key]
+            .optional_dependencies
+            .is_none(),
         "a pinned config dep records no optional subdeps",
     );
 }
@@ -88,17 +100,23 @@ async fn rejects_config_dep_with_path_traversal_name() {
     .await
     .unwrap();
 
-    let mut env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
+    let mut env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
     let spec = env
         .root_importer_mut()
         .config_dependencies
         .remove("@pnpm.e2e/foo")
         .unwrap();
     let malicious_name = "../../PWNED_CFGDEP".to_string();
-    env.root_importer_mut().config_dependencies.insert(malicious_name.clone(), spec.clone());
+    env.root_importer_mut()
+        .config_dependencies
+        .insert(malicious_name.clone(), spec.clone());
     let legit_key: PackageKey = "@pnpm.e2e/foo@100.0.0".parse().unwrap();
     let pkg = env.packages[&legit_key].clone();
-    let malicious_key: PackageKey = format!("{malicious_name}@{}", spec.version).parse().unwrap();
+    let malicious_key: PackageKey = format!("{malicious_name}@{}", spec.version)
+        .parse()
+        .unwrap();
     env.packages.insert(malicious_key, pkg);
 
     let error = install_config_deps::<SilentReporter>(&env, &options(&harness, root.path(), false))
@@ -131,17 +149,23 @@ async fn rejects_config_dep_named_dunder_proto() {
     .await
     .unwrap();
 
-    let mut env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
+    let mut env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
     let spec = env
         .root_importer_mut()
         .config_dependencies
         .remove("@pnpm.e2e/foo")
         .unwrap();
     let malicious_name = "__proto__".to_string();
-    env.root_importer_mut().config_dependencies.insert(malicious_name.clone(), spec.clone());
+    env.root_importer_mut()
+        .config_dependencies
+        .insert(malicious_name.clone(), spec.clone());
     let legit_key: PackageKey = "@pnpm.e2e/foo@100.0.0".parse().unwrap();
     let pkg = env.packages[&legit_key].clone();
-    let malicious_key: PackageKey = format!("{malicious_name}@{}", spec.version).parse().unwrap();
+    let malicious_key: PackageKey = format!("{malicious_name}@{}", spec.version)
+        .parse()
+        .unwrap();
     env.packages.insert(malicious_key, pkg);
 
     let error = install_config_deps::<SilentReporter>(&env, &options(&harness, root.path(), false))
@@ -234,15 +258,20 @@ async fn rejects_config_dep_with_path_traversal_version() {
     .await
     .unwrap();
 
-    let mut env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
+    let mut env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
     let malicious_version = "../../../PWNED";
-    env.root_importer_mut().config_dependencies
+    env.root_importer_mut()
+        .config_dependencies
         .get_mut("@pnpm.e2e/foo")
         .unwrap()
         .version = malicious_version.to_string();
     let legit_key: PackageKey = "@pnpm.e2e/foo@100.0.0".parse().unwrap();
     let pkg = env.packages[&legit_key].clone();
-    let malicious_key: PackageKey = format!("@pnpm.e2e/foo@{malicious_version}").parse().unwrap();
+    let malicious_key: PackageKey = format!("@pnpm.e2e/foo@{malicious_version}")
+        .parse()
+        .unwrap();
     env.packages.insert(malicious_key, pkg);
 
     let error = install_config_deps::<SilentReporter>(&env, &options(&harness, root.path(), false))
@@ -311,7 +340,9 @@ async fn re_resolves_when_config_dep_version_changes() {
     .await
     .unwrap();
 
-    let env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
+    let env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
     let entry = &env.importers[EnvLockfile::ROOT_IMPORTER_KEY].config_dependencies["@pnpm.e2e/foo"];
     assert_eq!(entry.version, "100.1.0", "version bump is reflected");
     let old_key = "@pnpm.e2e/foo@100.0.0".parse().unwrap();
@@ -412,13 +443,18 @@ async fn removed_config_dep_is_pruned_from_lockfile_and_pnpm_config() {
     .await
     .unwrap();
 
-    let env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile present");
+    let env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile present");
     assert!(
-        env.importers[EnvLockfile::ROOT_IMPORTER_KEY].config_dependencies.is_empty(),
+        env.importers[EnvLockfile::ROOT_IMPORTER_KEY]
+            .config_dependencies
+            .is_empty(),
         "removed config dep dropped from the env lockfile importer",
     );
     assert!(
-        !env.packages.contains_key(&"@pnpm.e2e/foo@100.0.0".parse().unwrap()),
+        !env.packages
+            .contains_key(&"@pnpm.e2e/foo@100.0.0".parse().unwrap()),
         "its package entry pruned",
     );
     assert!(

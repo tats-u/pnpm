@@ -64,7 +64,9 @@ fn round_trip_parse_save_parse_preserves_lockfile() {
 
     let tmp = tempdir().expect("create tempdir");
     let path = tmp.path().join("pnpm-lock.yaml");
-    original.save_to_path(&path).expect("save lockfile");
+    original
+        .save_to_path(&path)
+        .expect("save lockfile");
 
     let saved_bytes = std::fs::read_to_string(&path).expect("read saved lockfile");
 
@@ -97,7 +99,9 @@ fn save_reproduces_pnpm_authored_bytes() {
 
     let tmp = tempdir().expect("create tempdir");
     let path = tmp.path().join("pnpm-lock.yaml");
-    original.save_to_path(&path).expect("save lockfile");
+    original
+        .save_to_path(&path)
+        .expect("save lockfile");
 
     let saved_bytes = std::fs::read_to_string(&path).expect("read saved lockfile");
     // `text_block!` omits the trailing newline; the writer appends one.
@@ -111,7 +115,9 @@ fn time_survives_a_save_round_trip() {
 
     let tmp = tempdir().expect("create tempdir");
     let path = tmp.path().join("pnpm-lock.yaml");
-    lockfile.save_to_path(&path).expect("save lockfile");
+    lockfile
+        .save_to_path(&path)
+        .expect("save lockfile");
 
     let saved_bytes = std::fs::read_to_string(&path).expect("read saved lockfile");
     assert_eq!(saved_bytes, format!("{LOCKFILE_YAML}\n{DIRECT_TIME}\n"));
@@ -134,7 +140,9 @@ fn time_is_pruned_to_the_importers_direct_dependencies() {
 
     let tmp = tempdir().expect("create tempdir");
     let path = tmp.path().join("pnpm-lock.yaml");
-    lockfile.save_to_path(&path).expect("save lockfile");
+    lockfile
+        .save_to_path(&path)
+        .expect("save lockfile");
 
     let saved_bytes = std::fs::read_to_string(&path).expect("read saved lockfile");
     assert_eq!(saved_bytes, format!("{LOCKFILE_YAML}\n{DIRECT_TIME}\n"));
@@ -191,8 +199,12 @@ fn workspace_lockfile_with_link_dep_round_trips() {
         serde_saphyr::from_str(WORKSPACE_YAML).expect("parse workspace lockfile");
     assert_eq!(original.importers.len(), 2);
 
-    let web = original.importers.get("packages/web").expect("web importer present");
-    let shared_dep = web.dependencies
+    let web = original
+        .importers
+        .get("packages/web")
+        .expect("web importer present");
+    let shared_dep = web
+        .dependencies
         .as_ref()
         .unwrap()
         .iter()
@@ -203,7 +215,9 @@ fn workspace_lockfile_with_link_dep_round_trips() {
 
     let tmp = tempdir().expect("create tempdir");
     let path = tmp.path().join("pnpm-lock.yaml");
-    original.save_to_path(&path).expect("save lockfile");
+    original
+        .save_to_path(&path)
+        .expect("save lockfile");
     let saved = std::fs::read_to_string(&path).expect("read saved");
     assert!(
         saved.contains("version: link:../shared"),
@@ -239,15 +253,22 @@ fn patched_dependencies_block_round_trips_and_renders_in_order() {
     };
 
     let original: Lockfile = serde_saphyr::from_str(PATCHED_YAML).expect("parse fixture lockfile");
-    let patched = original.patched_dependencies.as_ref().expect("patchedDependencies parsed");
+    let patched = original
+        .patched_dependencies
+        .as_ref()
+        .expect("patchedDependencies parsed");
     assert_eq!(
-        patched.get("graceful-fs@4.2.11").map(String::as_str),
+        patched
+            .get("graceful-fs@4.2.11")
+            .map(String::as_str),
         Some("68ebc232025360cb3dcd3081f4067f4e9fc022ab6b6f71a3230e86c7a5b337d1"),
     );
 
     let tmp = tempdir().expect("create tempdir");
     let path = tmp.path().join("pnpm-lock.yaml");
-    original.save_to_path(&path).expect("save lockfile");
+    original
+        .save_to_path(&path)
+        .expect("save lockfile");
     let saved = std::fs::read_to_string(&path).expect("read saved lockfile");
     assert_eq!(saved, format!("{PATCHED_YAML}\n"));
 }
@@ -281,7 +302,9 @@ fn peers_suffix_max_length_omitted_from_settings_when_unset() {
 
     let tmp = tempdir().expect("create tempdir");
     let path = tmp.path().join("pnpm-lock.yaml");
-    lockfile.save_to_path(&path).expect("save lockfile");
+    lockfile
+        .save_to_path(&path)
+        .expect("save lockfile");
     let saved = std::fs::read_to_string(&path).expect("read saved lockfile");
 
     assert!(
@@ -319,7 +342,9 @@ fn peers_suffix_max_length_serialized_when_set() {
 
     let tmp = tempdir().expect("create tempdir");
     let path = tmp.path().join("pnpm-lock.yaml");
-    lockfile.save_to_path(&path).expect("save lockfile");
+    lockfile
+        .save_to_path(&path)
+        .expect("save lockfile");
     let saved = std::fs::read_to_string(&path).expect("read saved lockfile");
 
     assert!(
@@ -328,7 +353,13 @@ fn peers_suffix_max_length_serialized_when_set() {
     );
 
     let reparsed: Lockfile = serde_saphyr::from_str(&saved).expect("reparse lockfile");
-    assert_eq!(reparsed.settings.expect("settings present").peers_suffix_max_length, Some(10));
+    assert_eq!(
+        reparsed
+            .settings
+            .expect("settings present")
+            .peers_suffix_max_length,
+        Some(10)
+    );
 }
 
 #[test]
@@ -342,7 +373,9 @@ fn save_fails_with_wrapped_io_error_when_path_is_invalid() {
         .path()
         .join("missing-dir")
         .join("pnpm-lock.yaml");
-    let err = empty_lockfile.save_to_path(&bad_path).expect_err("should fail");
+    let err = empty_lockfile
+        .save_to_path(&bad_path)
+        .expect_err("should fail");
     assert!(
         matches!(err, SaveLockfileError::WriteFile(_)),
         "expected SaveLockfileError::WriteFile(_), got: {err:?}",
@@ -359,7 +392,9 @@ fn write_current_round_trips_through_read_current() {
         .join("node_modules")
         .join(".pacquet");
 
-    original.save_current_to_virtual_store_dir(&virtual_store_dir).expect("write current lockfile");
+    original
+        .save_current_to_virtual_store_dir(&virtual_store_dir)
+        .expect("write current lockfile");
 
     let lock_path = virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME);
     assert!(lock_path.exists(), "lock.yaml should be created");
@@ -422,7 +457,11 @@ fn write_current_is_a_noop_for_empty_lockfile_with_no_existing_file() {
     empty
         .save_current_to_virtual_store_dir(&virtual_store_dir)
         .expect("write should succeed when target is missing");
-    assert!(!virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME).exists());
+    assert!(
+        !virtual_store_dir
+            .join(Lockfile::CURRENT_FILE_NAME)
+            .exists()
+    );
 }
 
 #[test]
@@ -535,7 +574,9 @@ fn save_leaves_an_unchanged_crlf_lockfile_untouched() {
     let path = dir.path().join(Lockfile::FILE_NAME);
     let lockfile: Lockfile = serde_saphyr::from_str(LOCKFILE_YAML).expect("parse fixture lockfile");
     lockfile.save_to_path(&path).unwrap();
-    let crlf_content = std::fs::read_to_string(&path).unwrap().replace('\n', "\r\n");
+    let crlf_content = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace('\n', "\r\n");
     std::fs::write(&path, &crlf_content).unwrap();
     let mtime_before = std::fs::metadata(&path)
         .unwrap()
@@ -587,9 +628,16 @@ fn save_refuses_symlinked_lockfile_without_touching_target() {
     std::os::unix::fs::symlink(&victim, &path).unwrap();
 
     let lockfile: Lockfile = serde_saphyr::from_str(LOCKFILE_YAML).expect("parse fixture lockfile");
-    let error = lockfile.save_to_path(&path).expect_err("a symlinked lockfile must not be written");
+    let error = lockfile
+        .save_to_path(&path)
+        .expect_err("a symlinked lockfile must not be written");
 
-    assert!(error.to_string().contains("symlinked lockfile"), "unexpected error: {error:?}");
+    assert!(
+        error
+            .to_string()
+            .contains("symlinked lockfile"),
+        "unexpected error: {error:?}"
+    );
     assert!(
         std::fs::symlink_metadata(&path)
             .unwrap()
@@ -618,7 +666,9 @@ fn save_accepts_symlinked_lockfile_when_nothing_changes() {
     let path = dir.path().join(Lockfile::FILE_NAME);
     std::os::unix::fs::symlink(&staged, &path).unwrap();
 
-    lockfile.save_to_path(&path).expect("an unchanged lockfile must not trip the symlink guard");
+    lockfile
+        .save_to_path(&path)
+        .expect("an unchanged lockfile must not trip the symlink guard");
 
     assert!(
         std::fs::symlink_metadata(&path)
@@ -643,7 +693,9 @@ fn save_accepts_unchanged_crlf_symlinked_lockfile() {
     let staged = dir.path().join("staged-lockfile.yaml");
     let lockfile: Lockfile = serde_saphyr::from_str(LOCKFILE_YAML).expect("parse fixture lockfile");
     lockfile.save_to_path(&staged).unwrap();
-    let crlf_content = std::fs::read_to_string(&staged).unwrap().replace('\n', "\r\n");
+    let crlf_content = std::fs::read_to_string(&staged)
+        .unwrap()
+        .replace('\n', "\r\n");
     std::fs::write(&staged, &crlf_content).unwrap();
     let mtime_before = std::fs::metadata(&staged)
         .unwrap()
@@ -722,11 +774,17 @@ fn foreign_top_level_keys_survive_a_round_trip() {
         Some(&serde_json::json!({ "depsRequiringBuild": ["esbuild@0.25.0"] })),
     );
 
-    let saved = lockfile.to_yaml_string().expect("serialize lockfile");
+    let saved = lockfile
+        .to_yaml_string()
+        .expect("serialize lockfile");
     assert!(saved.contains("bit:"), "saved: {saved}");
     assert!(saved.contains("esbuild@0.25.0"), "saved: {saved}");
-    let importers_at = saved.find("importers:").expect("importers survive the round trip");
-    let foreign_at = saved.find("bit:").expect("the foreign block survives the round trip");
+    let importers_at = saved
+        .find("importers:")
+        .expect("importers survive the round trip");
+    let foreign_at = saved
+        .find("bit:")
+        .expect("the foreign block survives the round trip");
     assert!(importers_at < foreign_at, "the foreign block belongs after pnpm's own keys:\n{saved}");
 }
 
@@ -773,10 +831,12 @@ fn parallel_map_lowering_matches_serial_lowering() {
 
     let lowered_before =
         crate::serialize_yaml::PARALLEL_LOWERINGS.load(std::sync::atomic::Ordering::Relaxed);
-    let via_to_string = lockfile.to_yaml_string().expect("serialize via to_string");
-    let lowered =
-        crate::serialize_yaml::PARALLEL_LOWERINGS.load(std::sync::atomic::Ordering::Relaxed)
-            - lowered_before;
+    let via_to_string = lockfile
+        .to_yaml_string()
+        .expect("serialize via to_string");
+    let lowered = crate::serialize_yaml::PARALLEL_LOWERINGS
+        .load(std::sync::atomic::Ordering::Relaxed)
+        - lowered_before;
     let mut plain = serde_json::to_value(&lockfile).expect("serialize serially");
     crate::prune_time(&mut plain);
     let via_serial = crate::yaml_emit::to_string(plain);
@@ -787,7 +847,9 @@ fn parallel_map_lowering_matches_serial_lowering() {
         "importers, packages, and snapshots must all take the parallel lowering, got {lowered}",
     );
     assert_eq!(
-        via_to_string.matches('\u{f8ff}').count(),
+        via_to_string
+            .matches('\u{f8ff}')
+            .count(),
         via_to_string.matches(decoy).count(),
         "every marker-prefixed character must belong to a planted decoy",
     );

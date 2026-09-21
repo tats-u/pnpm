@@ -31,16 +31,28 @@ fn save_preserves_the_final_newline_state_of_the_source_file() {
     let with_newline = dir.path().join("with-newline.json");
     std::fs::write(&with_newline, "{\n  \"name\": \"foo\"\n}\n").unwrap();
     let mut manifest = PackageManifest::from_path(with_newline.clone()).unwrap();
-    manifest.add_dependency("fastify", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("fastify", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
-    assert!(read_to_string(with_newline).unwrap().ends_with('\n'));
+    assert!(
+        read_to_string(with_newline)
+            .unwrap()
+            .ends_with('\n')
+    );
 
     let without_newline = dir.path().join("without-newline.json");
     std::fs::write(&without_newline, "{\n  \"name\": \"foo\"\n}").unwrap();
     let mut manifest = PackageManifest::from_path(without_newline.clone()).unwrap();
-    manifest.add_dependency("fastify", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("fastify", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
-    assert!(!read_to_string(without_newline).unwrap().ends_with('\n'));
+    assert!(
+        !read_to_string(without_newline)
+            .unwrap()
+            .ends_with('\n')
+    );
 }
 
 /// A save that wouldn't change the manifest leaves the file byte-for-byte
@@ -59,7 +71,9 @@ fn noop_save_does_not_rewrite_the_file() {
 
     // Re-adding an already-declared dependency at its existing version is
     // also a no-op.
-    manifest.add_dependency("zebra", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("zebra", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
     assert_eq!(read_to_string(&path).unwrap(), original);
 }

@@ -97,7 +97,8 @@ pub(super) async fn run_cold_batch<'a, Reporter: self::Reporter>(
     }
 
     let batch = &batch;
-    let mut downloads: FuturesUnordered<_> = batch.cold
+    let mut downloads: FuturesUnordered<_> = batch
+        .cold
         .iter()
         .map(|&(snapshot_key, snapshot)| download_one::<Reporter>(batch, snapshot_key, snapshot))
         .collect();
@@ -107,7 +108,9 @@ pub(super) async fn run_cold_batch<'a, Reporter: self::Reporter>(
         &mut downloads,
         ColdDrain {
             packages: batch.reuse.packages,
-            marker_path: batch.marker_source.map(tempfile::NamedTempFile::path),
+            marker_path: batch
+                .marker_source
+                .map(tempfile::NamedTempFile::path),
             removed_aliases_by_key: batch.removed_aliases_by_key,
             template: &cold_template,
             shared_packages: batch.shared_packages,
@@ -127,13 +130,19 @@ pub(super) async fn download_one<'a, Reporter: self::Reporter>(
     snapshot: &'a SnapshotEntry,
 ) -> Result<(Option<PackageKey>, Option<ColdCapture<'a>>), CreateVirtualStoreError> {
     let metadata_key = snapshot_key.without_peer();
-    let metadata = batch.reuse.packages
+    let metadata = batch
+        .reuse
+        .packages
         .get(&metadata_key)
         .ok_or_else(|| CreateVirtualStoreError::MissingPackageMetadata {
             snapshot_key: snapshot_key.to_string(),
             metadata_key: metadata_key.to_string(),
         })?;
-    let installed = match batch.installer.run::<Reporter>(snapshot_key, metadata, snapshot).await {
+    let installed = match batch
+        .installer
+        .run::<Reporter>(snapshot_key, metadata, snapshot)
+        .await
+    {
         Ok(installed) => installed,
         Err(err) => return swallow_optional_fetch_failure(snapshot_key, snapshot, err),
     };
@@ -225,17 +234,21 @@ pub(super) fn record_cold_outcome<'a>(
         state.fetch_failed.insert(key);
     }
     let captured = captured?;
-    state.requires_build_by_snapshot.insert(
-        (*captured.snapshot_key).clone(),
-        captured.requires_build,
-    );
+    state
+        .requires_build_by_snapshot
+        .insert((*captured.snapshot_key).clone(), captured.requires_build);
     if shared_packages.is_some_and(|packages| {
-        packages.contains(captured.snapshot_key.name.to_string().as_str())
+        packages.contains(
+            captured
+                .snapshot_key
+                .name
+                .to_string()
+                .as_str(),
+        )
     }) {
-        state.shared_base_cas_paths.insert(
-            (*captured.snapshot_key).clone(),
-            captured.cas_paths.clone(),
-        );
+        state
+            .shared_base_cas_paths
+            .insert((*captured.snapshot_key).clone(), captured.cas_paths.clone());
     }
     Some(captured)
 }

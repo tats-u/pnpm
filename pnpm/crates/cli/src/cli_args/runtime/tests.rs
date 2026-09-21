@@ -23,7 +23,9 @@ fn args(params: &[&str]) -> RuntimeArgs {
 
 #[test]
 fn set_request_defaults_to_dev_engines_runtime() {
-    let request = args(&["set", "node", "22"]).set_request().unwrap();
+    let request = args(&["set", "node", "22"])
+        .set_request()
+        .unwrap();
     assert_eq!(request.runtime_name, "node");
     assert_eq!(request.package_name, "node@runtime:22");
     assert_eq!(request.dependency_group, DependencyGroup::Dev);
@@ -31,8 +33,9 @@ fn set_request_defaults_to_dev_engines_runtime() {
 
 #[test]
 fn set_request_saves_prod_when_save_prod_is_set() {
-    let request =
-        RuntimeArgs { save_prod: true, ..args(&["set", "node", "22"]) }.set_request().unwrap();
+    let request = RuntimeArgs { save_prod: true, ..args(&["set", "node", "22"]) }
+        .set_request()
+        .unwrap();
     assert_eq!(request.package_name, "node@runtime:22");
     assert_eq!(request.dependency_group, DependencyGroup::Prod);
 }
@@ -48,14 +51,18 @@ fn set_request_prefers_save_dev_over_save_prod() {
 
 #[test]
 fn set_request_allows_missing_version_spec() {
-    let request = args(&["set", "node"]).set_request().unwrap();
+    let request = args(&["set", "node"])
+        .set_request()
+        .unwrap();
     assert_eq!(request.package_name, "node@runtime:");
     assert_eq!(request.dependency_group, DependencyGroup::Dev);
 }
 
 #[test]
 fn set_request_works_with_deno() {
-    let request = args(&["set", "deno", "2"]).set_request().unwrap();
+    let request = args(&["set", "deno", "2"])
+        .set_request()
+        .unwrap();
     assert_eq!(request.package_name, "deno@runtime:2");
     assert_eq!(request.dependency_group, DependencyGroup::Dev);
 }
@@ -68,13 +75,17 @@ fn set_request_fails_without_subcommand() {
 
 #[test]
 fn set_request_fails_for_unknown_subcommand() {
-    let err = args(&["foo"]).set_request().unwrap_err();
+    let err = args(&["foo"])
+        .set_request()
+        .unwrap_err();
     assert_eq!(err, RuntimeError::UnknownSubcommand { subcommand: "foo".to_string() });
 }
 
 #[test]
 fn set_request_fails_without_runtime_name() {
-    let err = args(&["set"]).set_request().unwrap_err();
+    let err = args(&["set"])
+        .set_request()
+        .unwrap_err();
     assert_eq!(err, RuntimeError::MissingRuntimeName);
 }
 
@@ -83,7 +94,9 @@ fn set_request_rejects_unsupported_runtime_names() {
     // An unknown runtime, plus the comma-list and local-path forms the
     // global-add pipeline would otherwise misread as extra install targets.
     for name in ["python", "node,is-positive", "./evil", "file:./evil"] {
-        let err = args(&["set", name, "22"]).set_request().unwrap_err();
+        let err = args(&["set", name, "22"])
+            .set_request()
+            .unwrap_err();
         assert_eq!(err, RuntimeError::InvalidRuntimeName { name: name.to_string() });
     }
 }
@@ -92,14 +105,18 @@ fn set_request_rejects_unsupported_runtime_names() {
 fn set_request_rejects_a_comma_in_the_version() {
     // The version is interpolated into the comma-splittable selector, so a
     // comma could smuggle in a second global install target.
-    let err = args(&["set", "node", "22,is-positive"]).set_request().unwrap_err();
+    let err = args(&["set", "node", "22,is-positive"])
+        .set_request()
+        .unwrap_err();
     assert_eq!(err, RuntimeError::InvalidRuntimeVersion { version: "22,is-positive".to_string() });
 }
 
 #[test]
 fn set_request_accepts_every_supported_runtime() {
     for name in ["node", "deno", "bun"] {
-        let request = args(&["set", name, "22"]).set_request().unwrap();
+        let request = args(&["set", name, "22"])
+            .set_request()
+            .unwrap();
         assert_eq!(request.package_name, format!("{name}@runtime:22"));
     }
 }
@@ -135,8 +152,9 @@ fn global_install_builds_the_same_runtime_selector() {
     // `--save-dev` / `--save-prod` group is irrelevant globally (the
     // global group always saves to `dependencies`), so only the selector
     // is asserted here.
-    let request =
-        RuntimeArgs { global: true, ..args(&["set", "node", "22"]) }.set_request().unwrap();
+    let request = RuntimeArgs { global: true, ..args(&["set", "node", "22"]) }
+        .set_request()
+        .unwrap();
     assert_eq!(request.package_name, "node@runtime:22");
 }
 

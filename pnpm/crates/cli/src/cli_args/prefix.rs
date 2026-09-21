@@ -137,19 +137,25 @@ impl PrefixArgs {
             // dir for every `--global` command, without the writability check
             // (`globalDirShouldAllowWrite` is false for `root` and `prefix`;
             // see pnpm issue 2700).
-            let bin = config.global_bin.clone().ok_or(GlobalError::NoGlobalBinDir)?;
-            std::fs::create_dir_all(&bin)
-                .map_err(|error| {
-                    let bin_dir = bin.display();
-                    miette::miette!("failed to create the global bin directory {bin_dir}: {error}")
-                })?;
+            let bin = config
+                .global_bin
+                .clone()
+                .ok_or(GlobalError::NoGlobalBinDir)?;
+            std::fs::create_dir_all(&bin).map_err(|error| {
+                let bin_dir = bin.display();
+                miette::miette!("failed to create the global bin directory {bin_dir}: {error}")
+            })?;
             check_global_bin_dir(&bin, std::env::var("PATH").ok().as_deref(), false)
                 .map_err(miette::Report::new)?;
             // pnpm's `prefix` handler prints the parent of the global packages
             // dir — the global dir root, without the layout-version leaf.
-            let pkg_dir =
-                config.global_pkg_dir.clone().ok_or(GlobalError::MissingGlobalPackageDir)?;
-            let prefix_dir = pkg_dir.parent().ok_or(GlobalError::MissingGlobalPackageDir)?;
+            let pkg_dir = config
+                .global_pkg_dir
+                .clone()
+                .ok_or(GlobalError::MissingGlobalPackageDir)?;
+            let prefix_dir = pkg_dir
+                .parent()
+                .ok_or(GlobalError::MissingGlobalPackageDir)?;
             println!("{}", prefix_dir.display());
             return Ok(());
         }

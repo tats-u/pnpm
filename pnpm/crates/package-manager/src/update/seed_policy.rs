@@ -100,8 +100,10 @@ pub(super) fn workspace_seed_policy(
             scope.config.save_workspace_protocol,
             scope.range_spec_style(),
         );
-        plan.drop_targets.insert(target.name.clone(), None);
-        plan.rewrites.push((target.name, target.group, specifier));
+        plan.drop_targets
+            .insert(target.name.clone(), None);
+        plan.rewrites
+            .push((target.name, target.group, specifier));
     }
     plan.drop_only(scope.max_depth())
 }
@@ -115,8 +117,12 @@ pub(super) async fn all_direct_seed_policy<Reporter: self::Reporter>(
 ) -> Result<UpdateSeedPolicy, UpdateError> {
     // `updateConfig.ignoreDependencies` applies only when no selector was
     // supplied and remains scoped by the included direct groups.
-    let ignore_patterns =
-        scope.config.update_config.ignore_dependencies.as_deref().unwrap_or_default();
+    let ignore_patterns = scope
+        .config
+        .update_config
+        .ignore_dependencies
+        .as_deref()
+        .unwrap_or_default();
     let ignore_matcher = (!ignore_patterns.is_empty()).then(|| create_matcher(ignore_patterns));
     let is_ignored = |name: &str| {
         ignore_matcher
@@ -163,14 +169,16 @@ pub(super) async fn record_direct_update(
         && let Some(specifier) =
             latest_specifier(rewrite_ctx, latest_chain, catalog_ctx, name, previous).await?
     {
-        plan.rewrites.push((name.clone(), group, specifier));
+        plan.rewrites
+            .push((name.clone(), group, specifier));
     }
     if scope.version.save && !scope.version.latest {
         plan.bump_targets
             .entry(name.clone())
             .or_insert_with(|| (group, previous.clone()));
     }
-    plan.drop_targets.insert(name.clone(), None);
+    plan.drop_targets
+        .insert(name.clone(), None);
     Ok(())
 }
 /// An update that covers every group also drops the pins of the packages only
@@ -184,7 +192,10 @@ pub(super) fn widen_drop_targets_to_lockfile(
     if !scope.updates_all_groups || (scope.version.latest && nothing_dropped) {
         return;
     }
-    let Some(snapshots) = scope.lockfile.and_then(|lockfile| lockfile.snapshots.as_ref()) else {
+    let Some(snapshots) = scope
+        .lockfile
+        .and_then(|lockfile| lockfile.snapshots.as_ref())
+    else {
         return;
     };
     for key in snapshots.keys() {
@@ -200,7 +211,8 @@ pub(super) fn name_matched_seed_policy(
     scope: &UpdateScope<'_>,
     plan: &mut UpdatePlan,
 ) -> UpdateSeedPolicy {
-    let patterns = scope.selectors
+    let patterns = scope
+        .selectors
         .iter()
         .map(|selector| selector.pattern.clone())
         .collect::<Vec<_>>();
@@ -214,7 +226,8 @@ pub(super) fn name_matched_seed_policy(
                 .entry(name.clone())
                 .or_insert_with(|| (*group, previous.clone()));
         }
-        plan.drop_targets.insert(name.clone(), None);
+        plan.drop_targets
+            .insert(name.clone(), None);
     }
     widen_drop_targets_by_matcher(scope.lockfile, plan, &matcher);
     plan.drop_only(scope.max_depth())
@@ -243,13 +256,15 @@ pub(super) async fn selector_seed_policy<Reporter: self::Reporter>(
     latest_chain: &mut Option<LatestResolverChain>,
     catalog_ctx: &mut Option<CatalogCtx>,
 ) -> Result<Option<UpdateSeedPolicy>, UpdateError> {
-    let patterns = scope.selectors
+    let patterns = scope
+        .selectors
         .iter()
         .map(|selector| selector.pattern.clone())
         .collect::<Vec<_>>();
     let matcher = create_matcher(&patterns);
     let expanded = expand_update_selectors(scope.selectors);
-    let matched_direct = scope.direct
+    let matched_direct = scope
+        .direct
         .iter()
         .filter(|(name, _, _)| matcher.matches(name))
         .cloned()
@@ -333,7 +348,10 @@ impl UpdateScope<'_> {
 
     fn use_name_matcher(&self) -> bool {
         !self.selectors.is_empty()
-            && self.selectors.iter().all(|selector| selector.version.is_none())
+            && self
+                .selectors
+                .iter()
+                .all(|selector| selector.version.is_none())
             && self.depth > 0
             && !self.version.latest
     }

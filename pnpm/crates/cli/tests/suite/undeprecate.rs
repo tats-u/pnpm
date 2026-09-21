@@ -9,7 +9,9 @@ use std::{
 };
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn empty_auth_file(root: &Path) -> PathBuf {
@@ -29,12 +31,16 @@ fn run_undeprecate(
         .with_arg(auth_file)
         .with_arg("undeprecate");
     if let Some(registry) = registry {
-        command = command.with_arg("--registry").with_arg(registry);
+        command = command
+            .with_arg("--registry")
+            .with_arg(registry);
     }
     for p in params {
         command = command.with_arg(p);
     }
-    command.output().expect("spawn pacquet undeprecate")
+    command
+        .output()
+        .expect("spawn pacquet undeprecate")
 }
 
 #[test]

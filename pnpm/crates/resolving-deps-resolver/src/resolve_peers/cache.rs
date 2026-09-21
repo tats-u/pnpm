@@ -198,7 +198,8 @@ impl Walker<'_> {
     }
 
     fn item_matches(&self, item: &PeersCacheItem, parent_refs: &ParentRefs) -> bool {
-        let resolved_still_match = item.resolved_peers
+        let resolved_still_match = item
+            .resolved_peers
             .iter()
             .all(|(name, cached_node_id)| {
                 parent_refs
@@ -208,7 +209,8 @@ impl Walker<'_> {
                     })
             });
         resolved_still_match
-            && !item.missing_peers
+            && !item
+                .missing_peers
                 .keys()
                 .any(|missing| parent_refs.contains_key(missing))
     }
@@ -222,10 +224,18 @@ impl Walker<'_> {
     /// for the loss of single-occurrence guarantees on the
     /// shallow-equality path.
     fn parent_packages_match(&self, cached_node_id: &NodeId, current_node_id: &NodeId) -> bool {
-        let Some(cached_parents) = self.caches.parent_pkgs_of_node.get(cached_node_id) else {
+        let Some(cached_parents) = self
+            .caches
+            .parent_pkgs_of_node
+            .get(cached_node_id)
+        else {
             return false;
         };
-        let Some(current_parents) = self.caches.parent_pkgs_of_node.get(current_node_id) else {
+        let Some(current_parents) = self
+            .caches
+            .parent_pkgs_of_node
+            .get(current_node_id)
+        else {
             return false;
         };
         if cached_parents.len() != current_parents.len() {
@@ -271,7 +281,10 @@ impl Walker<'_> {
         }
         shadowing.peer_deps_not_shadowed
             || current_info.depth == shadowing.max_depth
-            || self.caches.pure_pkgs.contains_key(&**cached_pkg_id)
+            || self
+                .caches
+                .pure_pkgs
+                .contains_key(&**cached_pkg_id)
     }
 
     fn parent_ref_matches_cached(&self, current_ref: &ParentRef, cached_node_id: &NodeId) -> bool {
@@ -282,15 +295,23 @@ impl Walker<'_> {
             return true;
         }
         if let (Some(cached_dp), Some(current_dp)) = (
-            self.caches.node_dep_paths.get(cached_node_id),
-            self.caches.node_dep_paths.get(current_node_id),
+            self.caches
+                .node_dep_paths
+                .get(cached_node_id),
+            self.caches
+                .node_dep_paths
+                .get(current_node_id),
         ) && cached_dp == current_dp
         {
             return true;
         }
         let (Some(cached_tree_node), Some(current_tree_node)) = (
-            self.tree.dependencies_tree.get(cached_node_id),
-            self.tree.dependencies_tree.get(current_node_id),
+            self.tree
+                .dependencies_tree
+                .get(cached_node_id),
+            self.tree
+                .dependencies_tree
+                .get(current_node_id),
         ) else {
             return false;
         };
@@ -298,7 +319,9 @@ impl Walker<'_> {
         if parent_pkg_id != &cached_tree_node.resolved_package_id {
             return false;
         }
-        self.caches.pure_pkgs.contains_key(&**parent_pkg_id)
+        self.caches
+            .pure_pkgs
+            .contains_key(&**parent_pkg_id)
             || self.parent_packages_match(cached_node_id, current_node_id)
     }
 
@@ -314,11 +337,7 @@ impl Walker<'_> {
             parent_pkg_ids_chain,
             preview_undo,
         } = context;
-        let CachedNodeOutput {
-            owner_node_id,
-            output,
-            missing_peers_of_children,
-        } = cached;
+        let CachedNodeOutput { owner_node_id, output, missing_peers_of_children } = cached;
         self.undo_realize(node_id, preview_undo, None);
 
         self.record_cache_hit_missing_issues(
@@ -329,12 +348,17 @@ impl Walker<'_> {
         );
         self.remember_resolved_node(node_id, &output.dep_path);
         self.remember_cache_hit_node(node_id, owner_node_id, &output, missing_peers_of_children);
-        if let Some(node) = self.output.graph.get_mut(&output.dep_path)
+        if let Some(node) = self
+            .output
+            .graph
+            .get_mut(&output.dep_path)
             && node.depth > tree_node_depth
         {
             node.depth = tree_node_depth;
         }
-        self.traversal.in_progress.remove(node_id);
+        self.traversal
+            .in_progress
+            .remove(node_id);
         output
     }
 
@@ -380,19 +404,27 @@ impl Walker<'_> {
             return;
         }
         if &owner_node_id != node_id {
-            let owner_is_fully_walked = !self.nodes.cache_owners.contains_key(&owner_node_id);
+            let owner_is_fully_walked = !self
+                .nodes
+                .cache_owners
+                .contains_key(&owner_node_id);
             debug_assert!(
                 owner_is_fully_walked,
                 "cache owner {owner_node_id:?} of {node_id:?} is itself a cache hit",
             );
-            self.nodes.cache_owners.insert(node_id.clone(), owner_node_id);
+            self.nodes
+                .cache_owners
+                .insert(node_id.clone(), owner_node_id);
         }
-        self.nodes.external_peers.insert(
-            node_id.clone(),
-            Arc::clone(&output.external_resolved_peers),
-        );
-        self.nodes.missing_peers.insert(node_id.clone(), Arc::clone(&output.missing_peers));
-        self.nodes.children_missing_peers.insert(node_id.clone(), missing_peers_of_children);
+        self.nodes
+            .external_peers
+            .insert(node_id.clone(), Arc::clone(&output.external_resolved_peers));
+        self.nodes
+            .missing_peers
+            .insert(node_id.clone(), Arc::clone(&output.missing_peers));
+        self.nodes
+            .children_missing_peers
+            .insert(node_id.clone(), missing_peers_of_children);
     }
 }
 
@@ -406,7 +438,9 @@ pub(super) fn merge_realize_undo(
     match (first, second) {
         (None, undo) | (undo, None) => undo,
         (Some(mut first), Some(second)) => {
-            first.newly_inserted.extend(second.newly_inserted);
+            first
+                .newly_inserted
+                .extend(second.newly_inserted);
             Some(first)
         }
     }
@@ -419,10 +453,12 @@ fn should_retain_materialized_node(
 ) -> bool {
     retained_peer_node_ids.contains(node_id)
         || output.is_some_and(|output| {
-            output.external_resolved_peers
+            output
+                .external_resolved_peers
                 .values()
                 .any(|resolved_id| resolved_id == node_id)
-                || output.auto_install_resolved_peers
+                || output
+                    .auto_install_resolved_peers
                     .values()
                     .any(|resolved_id| resolved_id == node_id)
         })

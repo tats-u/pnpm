@@ -7,7 +7,9 @@ use pnpm_testing_utils::bin::{AddMockedRegistry, CommandTempCwd};
 use std::{fs, path::Path, process::Command};
 
 fn pacquet(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 /// A three-project workspace (root plus two members) with one mocked
@@ -17,7 +19,9 @@ fn three_project_workspace(root_manifest: &serde_json::Value) -> CommandTempCwd<
     fs::write(fixture.workspace.join("package.json"), root_manifest.to_string())
         .expect("write root package.json");
 
-    let workspace_yaml_path = fixture.workspace.join("pnpm-workspace.yaml");
+    let workspace_yaml_path = fixture
+        .workspace
+        .join("pnpm-workspace.yaml");
     let mut workspace_yaml =
         fs::read_to_string(&workspace_yaml_path).expect("read pnpm-workspace.yaml");
     if !workspace_yaml.ends_with('\n') {
@@ -29,7 +33,10 @@ fn three_project_workspace(root_manifest: &serde_json::Value) -> CommandTempCwd<
     for name in ["pkg-a", "pkg-b"] {
         fs::create_dir(fixture.workspace.join(name)).expect("mkdir member");
         fs::write(
-            fixture.workspace.join(name).join("package.json"),
+            fixture
+                .workspace
+                .join(name)
+                .join("package.json"),
             serde_json::json!({ "name": name, "version": "1.0.0", "private": true }).to_string(),
         )
         .expect("write member package.json");
@@ -143,7 +150,9 @@ fn a_recursive_run_reports_the_scope_it_selected() {
 
     for member in ["pkg-a", "pkg-b"] {
         fs::write(
-            workspace.join(member).join("package.json"),
+            workspace
+                .join(member)
+                .join("package.json"),
             serde_json::json!({
                 "name": member,
                 "version": "1.0.0",
@@ -188,9 +197,12 @@ fn a_dedicated_lockfile_install_reports_its_scope_once() {
         .assert()
         .success();
 
-    let printed = output_of(
-        pacquet(&workspace).with_args(["install", "--filter", "pkg-*", "--reporter=ndjson"]),
-    );
+    let printed = output_of(pacquet(&workspace).with_args([
+        "install",
+        "--filter",
+        "pkg-*",
+        "--reporter=ndjson",
+    ]));
     let scopes = scope_records(&printed);
     assert_eq!(scopes.len(), 1, "exactly one scope record: {printed}");
     assert_eq!(scopes[0]["level"], "debug");
@@ -214,9 +226,11 @@ fn a_partial_install_reports_the_single_project_shape() {
         .with_arg("install")
         .assert()
         .success();
-    let printed = output_of(
-        pacquet(&workspace).with_args(["add", "@pnpm.e2e/hello-world-js-bin", "--reporter=ndjson"]),
-    );
+    let printed = output_of(pacquet(&workspace).with_args([
+        "add",
+        "@pnpm.e2e/hello-world-js-bin",
+        "--reporter=ndjson",
+    ]));
 
     let scopes = scope_records(&printed);
     assert_eq!(scopes.len(), 1, "exactly one scope record: {printed}");

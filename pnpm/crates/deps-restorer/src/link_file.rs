@@ -423,12 +423,11 @@ fn copy_file(source_file: &Path, target_link: &Path) -> io::Result<()> {
     let mut source = fs::File::open(source_file)?;
     let permissions = source.metadata()?.permissions();
     let mut target = create_new_with_permissions(target_link, &permissions)?;
-    finish_copy(&mut source, &mut target, permissions, source_file)
-        .inspect_err(|_| {
-            if path_still_names(&target, target_link) {
-                let _ = fs::remove_file(target_link);
-            }
-        })
+    finish_copy(&mut source, &mut target, permissions, source_file).inspect_err(|_| {
+        if path_still_names(&target, target_link) {
+            let _ = fs::remove_file(target_link);
+        }
+    })
 }
 
 /// The part of [`copy_file`] that runs against the created handle, so

@@ -61,11 +61,10 @@ pub fn execute_emulated(
     process_tracker: Option<&ProcessTracker>,
 ) -> Result<i32, ShellEmulatorError> {
     let expanded_script = braced_parameters::expand(script, env);
-    let list = parser::parse(&expanded_script)
-        .map_err(|error| ShellEmulatorError::Parse {
-            script: script.to_string(),
-            message: error.to_string(),
-        })?;
+    let list = parser::parse(&expanded_script).map_err(|error| ShellEmulatorError::Parse {
+        script: script.to_string(),
+        message: error.to_string(),
+    })?;
     // `ShellState` requires an absolute cwd. Every production caller
     // already passes one; resolving here keeps a relative path from
     // reaching the panic inside the shell.
@@ -79,7 +78,9 @@ pub fn execute_emulated(
             .map(|(key, value)| (OsString::from(key), OsString::from(value)))
             .collect(),
         cwd,
-        cancellation: cancellation.as_ref().map(EmulatedCancellation::to_receiver),
+        cancellation: cancellation
+            .as_ref()
+            .map(EmulatedCancellation::to_receiver),
     };
     match output {
         EmulatedOutput::Inherit => {
@@ -135,10 +136,8 @@ impl EmulatedRun {
     ) -> Result<i32, ShellEmulatorError> {
         let run = thread::spawn(move || self.execute(stdout, stderr));
         match run.join() {
-            Ok(result) => result.map_err(|source| ShellEmulatorError::Start {
-                script: script.to_string(),
-                source,
-            }),
+            Ok(result) => result
+                .map_err(|source| ShellEmulatorError::Start { script: script.to_string(), source }),
             Err(payload) => std::panic::resume_unwind(payload),
         }
     }
@@ -147,7 +146,9 @@ impl EmulatedRun {
     /// current-thread runtime and `LocalSet`.
     fn execute(self, stdout: ShellPipeWriter, stderr: ShellPipeWriter) -> io::Result<i32> {
         let EmulatedRun { list, env, cwd, cancellation } = self;
-        let runtime = Builder::new_current_thread().enable_all().build()?;
+        let runtime = Builder::new_current_thread()
+            .enable_all()
+            .build()?;
         let kill_signal = KillSignal::default();
         let local_set = LocalSet::new();
         if let Some(mut cancellation) = cancellation {
@@ -197,11 +198,13 @@ impl LineWriter<'_> {
 impl Write for LineWriter<'_> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.pending.extend_from_slice(buf);
-        while let Some(end) = self.pending
+        while let Some(end) = self
+            .pending
             .iter()
             .position(|&byte| byte == b'\n')
         {
-            let mut line = self.pending
+            let mut line = self
+                .pending
                 .drain(..=end)
                 .collect::<Vec<_>>();
             line.pop();

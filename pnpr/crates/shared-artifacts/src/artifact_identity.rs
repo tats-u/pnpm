@@ -16,7 +16,9 @@ pub(super) fn scope_marker_path(owner: &str, entry: &str, scope: &str) -> String
 /// there. Variants sit beside the marker directory, not inside it.
 pub(super) fn scope_name(path: &ObjectPath) -> Option<&str> {
     let (parent, name) = path.as_ref().rsplit_once('/')?;
-    parent.ends_with("/scopes").then_some(name)
+    parent
+        .ends_with("/scopes")
+        .then_some(name)
 }
 
 pub(super) fn owner_key(username: &str, owner: &OwnerScope) -> Result<String> {
@@ -67,9 +69,8 @@ pub(super) fn entry_owner(relative: &str) -> Option<&str> {
     else {
         return None;
     };
-    (is_digest_segment(owner) && is_digest_segment(entry) && is_variant_file(variant)).then_some(
-        owner,
-    )
+    (is_digest_segment(owner) && is_digest_segment(entry) && is_variant_file(variant))
+        .then_some(owner)
 }
 
 pub(super) fn is_digest_segment(segment: &str) -> bool {
@@ -81,10 +82,9 @@ pub(super) fn is_digest_segment(segment: &str) -> bool {
 
 pub(super) fn artifact_operation_id() -> Result<String> {
     let mut bytes = [0_u8; 16];
-    getrandom::fill(&mut bytes)
-        .map_err(|error| RegistryError::Internal {
-            reason: format!("could not generate a shared artifact operation ID: {error}"),
-        })?;
+    getrandom::fill(&mut bytes).map_err(|error| RegistryError::Internal {
+        reason: format!("could not generate a shared artifact operation ID: {error}"),
+    })?;
     Ok(hex(&bytes))
 }
 

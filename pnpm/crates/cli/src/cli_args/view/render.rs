@@ -117,18 +117,27 @@ fn summary_header(info: &Value) -> String {
     if let Some(license) = str_field(info, "license") {
         header.push(green(license));
     }
-    match info.get("depsCount").and_then(Value::as_u64) {
+    match info
+        .get("depsCount")
+        .and_then(Value::as_u64)
+    {
         Some(count) => header.push(format!("deps: {}", cyan(&count.to_string()))),
         None => header.push("deps: none".to_string()),
     }
-    if let Some(count) = info.get("versionsCount").and_then(Value::as_u64) {
+    if let Some(count) = info
+        .get("versionsCount")
+        .and_then(Value::as_u64)
+    {
         header.push(format!("versions: {}", cyan(&count.to_string())));
     }
     header.join(" | ")
 }
 
 fn dist_lines(info: &Value) -> Vec<String> {
-    let Some(dist) = info.get("dist").and_then(Value::as_object) else {
+    let Some(dist) = info
+        .get("dist")
+        .and_then(Value::as_object)
+    else {
         return Vec::new();
     };
     let mut lines = vec![String::new(), bold("dist")];
@@ -141,14 +150,20 @@ fn dist_lines(info: &Value) -> Vec<String> {
     if let Some(integrity) = obj_str(dist, "integrity") {
         lines.push(format!(".integrity: {}", green(integrity)));
     }
-    if let Some(unpacked_size) = dist.get("unpackedSize").and_then(Value::as_u64) {
+    if let Some(unpacked_size) = dist
+        .get("unpackedSize")
+        .and_then(Value::as_u64)
+    {
         lines.push(format!(".unpackedSize: {}", blue(&format_bytes(unpacked_size))));
     }
     lines
 }
 
 fn dependencies_lines(info: &Value) -> Vec<String> {
-    let Some(dependencies) = info.get("dependencies").and_then(Value::as_object) else {
+    let Some(dependencies) = info
+        .get("dependencies")
+        .and_then(Value::as_object)
+    else {
         return Vec::new();
     };
     if dependencies.is_empty() {
@@ -173,7 +188,10 @@ fn maintainers_lines(info: &Value) -> Vec<String> {
 }
 
 fn dist_tags_lines(info: &Value) -> Vec<String> {
-    let Some(dist_tags) = info.get("distTags").and_then(Value::as_object) else {
+    let Some(dist_tags) = info
+        .get("distTags")
+        .and_then(Value::as_object)
+    else {
         return Vec::new();
     };
     if dist_tags.is_empty() {
@@ -233,7 +251,9 @@ pub(super) fn published_info(info: &Value) -> Option<String> {
 /// `_npmUser`, then the first maintainer (with `et al.` when there are
 /// more), then the author.
 pub(super) fn publisher(info: &Value) -> Option<String> {
-    if let Some(npm_user) = info.get("_npmUser").and_then(Value::as_object)
+    if let Some(npm_user) = info
+        .get("_npmUser")
+        .and_then(Value::as_object)
         && obj_str(npm_user, "name").is_some()
     {
         return Some(format_person(&Value::Object(npm_user.clone())));
@@ -283,7 +303,9 @@ pub(super) fn format_bytes(bytes: u64) -> String {
 /// ago" label. `None` for a future date (clock skew). Split from
 /// [`format_time_ago`] so the `now` reference is injectable in tests.
 pub(super) fn format_time_ago_since(date: DateTime<Utc>, now: DateTime<Utc>) -> Option<String> {
-    let diff_ms = now.signed_duration_since(date).num_milliseconds();
+    let diff_ms = now
+        .signed_duration_since(date)
+        .num_milliseconds();
     if diff_ms < 0 {
         return None;
     }
@@ -346,27 +368,33 @@ fn array_field<'a>(info: &'a Value, key: &str) -> Option<&'a Vec<Value>> {
 }
 
 fn cyan(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, OwoColorize::cyan).to_string()
+    text.if_supports_color(Stream::Stdout, OwoColorize::cyan)
+        .to_string()
 }
 
 fn green(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, OwoColorize::green).to_string()
+    text.if_supports_color(Stream::Stdout, OwoColorize::green)
+        .to_string()
 }
 
 fn blue(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, OwoColorize::blue).to_string()
+    text.if_supports_color(Stream::Stdout, OwoColorize::blue)
+        .to_string()
 }
 
 fn red(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, OwoColorize::red).to_string()
+    text.if_supports_color(Stream::Stdout, OwoColorize::red)
+        .to_string()
 }
 
 fn bold(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, OwoColorize::bold).to_string()
+    text.if_supports_color(Stream::Stdout, OwoColorize::bold)
+        .to_string()
 }
 
 fn dim(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, OwoColorize::dimmed).to_string()
+    text.if_supports_color(Stream::Stdout, OwoColorize::dimmed)
+        .to_string()
 }
 
 fn underline_blue(text: &str) -> String {

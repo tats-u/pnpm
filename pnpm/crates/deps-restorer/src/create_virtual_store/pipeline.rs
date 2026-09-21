@@ -34,13 +34,14 @@ impl<'a> CreateVirtualStore<'a> {
         let prefetch = self.prefetch(wanted).await;
         let marker_source = self.prepare_store().await?;
         let mut plan = self.plan::<Reporter>(wanted, prefetch.cache_keys)?;
-        let prefetched = self.settle_prefetch(
-            prefetch.task,
-            &prefetch.verified_files_cache,
-            wanted.packages,
-            &mut plan,
-        )
-        .await?;
+        let prefetched = self
+            .settle_prefetch(
+                prefetch.task,
+                &prefetch.verified_files_cache,
+                wanted.packages,
+                &mut plan,
+            )
+            .await?;
         self.materialize_plan::<Reporter>(
             wanted,
             plan,
@@ -82,7 +83,9 @@ impl<'a> CreateVirtualStore<'a> {
             self.fetching.planned_canonical_fetches,
             &partition.cold,
             wanted.packages,
-            self.fetching.custom_fetcher_session.is_some(),
+            self.fetching
+                .custom_fetcher_session
+                .is_some(),
         );
 
         let links = self.link_plan(&plan);
@@ -94,13 +97,15 @@ impl<'a> CreateVirtualStore<'a> {
             &links,
             marker_source.map(tempfile::NamedTempFile::path),
         )?;
-        let fetch_failed = self.download_cold::<Reporter>(
-            ColdInputs { wanted, store, prefetched, marker_source, links: &links },
-            &mut partition,
-            &mut indexes,
-        )
-        .await?;
-        self.apply_side_effects(wanted, &mut partition, &indexes.shared_base).await;
+        let fetch_failed = self
+            .download_cold::<Reporter>(
+                ColdInputs { wanted, store, prefetched, marker_source, links: &links },
+                &mut partition,
+                &mut indexes,
+            )
+            .await?;
+        self.apply_side_effects(wanted, &mut partition, &indexes.shared_base)
+            .await;
 
         // The writer is owned by the caller now. They drop their
         // sender and await the join handle after the build phase
@@ -135,8 +140,10 @@ impl<'a> CreateVirtualStore<'a> {
         // this is a valid no-op; if it does, pnpm would have populated
         // `snapshots`, so bailing out here is safe enough for v9.
         let Some(snapshots) = self.entries.snapshots else { return Ok(None) };
-        let packages =
-            self.entries.packages.ok_or(CreateVirtualStoreError::MissingPackagesSection)?;
+        let packages = self
+            .entries
+            .packages
+            .ok_or(CreateVirtualStoreError::MissingPackagesSection)?;
         Ok(Some(WantedEntries { packages, snapshots }))
     }
 
@@ -247,7 +254,9 @@ impl<'a> CreateVirtualStore<'a> {
             );
             PrefetchResult::default()
         });
-        let prefetched = self.verify_imported_rows(prefetched, verified_files_cache, plan).await;
+        let prefetched = self
+            .verify_imported_rows(prefetched, verified_files_cache, plan)
+            .await;
         enforce_cached_git_prepare_policy(
             &mut plan.survivors,
             packages,
@@ -313,10 +322,12 @@ impl<'a> CreateVirtualStore<'a> {
                 self.current_entries.snapshots,
                 &plan.survivors,
             ),
-            shared_packages: config.remote_side_effects_cache
+            shared_packages: config
+                .remote_side_effects_cache
                 .as_ref()
                 .map(|settings| {
-                    settings.packages
+                    settings
+                        .packages
                         .iter()
                         .map(String::as_str)
                         .collect()
@@ -475,7 +486,11 @@ pub(super) fn imported_cache_keys(
             plan.skipped_entries
                 .iter()
                 .filter_map(|(_, _, cache_key)| cache_key.clone())
-                .filter(|cache_key| prefetched.side_effects_maps.contains_key(cache_key)),
+                .filter(|cache_key| {
+                    prefetched
+                        .side_effects_maps
+                        .contains_key(cache_key)
+                }),
         )
         .collect()
 }

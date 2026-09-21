@@ -58,13 +58,7 @@ pub(super) fn settle_repeat_install(
         project_manifests,
         is_workspace_install,
         catalogs,
-        layout:
-            crate::RepeatInstallLayout {
-                node_linker,
-                included,
-                supported_architectures,
-                ..
-            },
+        layout: crate::RepeatInstallLayout { node_linker, included, supported_architectures, .. },
         ..
     } = check;
     regenerate_wanted_lockfile_if_missing(check, loaded_current)?;
@@ -120,7 +114,11 @@ pub(super) fn regenerate_wanted_lockfile_if_missing(
         return Ok(());
     };
     current
-        .save_to_path(&check.workspace_root.join(check.config.wanted_lockfile_name()))
+        .save_to_path(
+            &check
+                .workspace_root
+                .join(check.config.wanted_lockfile_name()),
+        )
         .map_err(|_| "failed to regenerate the wanted lockfile from the current lockfile")
 }
 impl<'a> LinkedPackagesContext<'a> {
@@ -178,8 +176,10 @@ pub(super) fn current_lockfile_unusable_with_non_empty_wanted(
     if current_lockfile_file_has_content(&check.config.virtual_store_dir) {
         return Ok(false);
     }
-    let Some(wanted) =
-        check.lockfile.get().map_err(|_| "the wanted lockfile cannot be read or parsed")?
+    let Some(wanted) = check
+        .lockfile
+        .get()
+        .map_err(|_| "the wanted lockfile cannot be read or parsed")?
     else {
         return Ok(false);
     };
@@ -208,8 +208,13 @@ pub(super) fn project_structure_matches(
                 return false;
             };
             entry.name.as_deref() == manifest_string_field(manifest, "name").as_deref()
-                && entry.version.as_deref().unwrap_or("0.0.0")
-                    == manifest_string_field(manifest, "version").as_deref().unwrap_or("0.0.0")
+                && entry
+                    .version
+                    .as_deref()
+                    .unwrap_or("0.0.0")
+                    == manifest_string_field(manifest, "version")
+                        .as_deref()
+                        .unwrap_or("0.0.0")
         })
 }
 pub(super) fn modules_dirs_present(check: &OptimisticRepeatInstallCheck<'_>) -> bool {
@@ -318,14 +323,13 @@ fn dedupe_links_nothing(
     groups: &[DependencyGroup],
     importers: DedupeImporters<'_>,
 ) -> bool {
-    let DedupeImporters {
-        lockfile_root,
-        root_dir,
-        sibling_dir,
-    } = importers;
+    let DedupeImporters { lockfile_root, root_dir, sibling_dir } = importers;
     let Ok(Some(lockfile)) = lockfile.get() else { return false };
-    let importer =
-        |dir: &Path| lockfile.importers.get(&importer_id_from_root_dir(lockfile_root, dir));
+    let importer = |dir: &Path| {
+        lockfile
+            .importers
+            .get(&importer_id_from_root_dir(lockfile_root, dir))
+    };
     let (Some(root), Some(sibling)) = (importer(root_dir), importer(sibling_dir)) else {
         return false;
     };
@@ -387,5 +391,8 @@ fn resolves_to_same_target(
 /// shape but it matches how the install path itself derives
 /// `config.modules_dir`.
 pub(super) fn workspace_dir_of(config: &Config, fallback: &Path) -> PathBuf {
-    config.modules_dir.parent().map_or_else(|| fallback.to_path_buf(), Path::to_path_buf)
+    config
+        .modules_dir
+        .parent()
+        .map_or_else(|| fallback.to_path_buf(), Path::to_path_buf)
 }

@@ -93,7 +93,9 @@ fn updates_named_catalog_value_preserving_comment() {
 fn add_catalogs_rejects_control_characters() {
     let original = "packages:\n  - pkgs/*\n";
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     fs::write(&path, original).expect("seed manifest");
 
     for updated in [

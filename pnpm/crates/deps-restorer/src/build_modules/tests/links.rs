@@ -66,7 +66,9 @@ fn pkg_root_for_key_hoisted_missing_returns_none() {
     let config = config.leak();
     let layout = VirtualStoreLayout::new(config, None, None, None, None, None);
 
-    let key: PackageKey = "absent@1.0.0".parse().expect("parse key");
+    let key: PackageKey = "absent@1.0.0"
+        .parse()
+        .expect("parse key");
     let map: HashMap<PackageKey, Vec<PathBuf>> = HashMap::new();
 
     let result = super::super::PkgRoots { layout: &layout, by_key: Some(&map) }.canonical(&key);

@@ -99,7 +99,8 @@ fn version_argv_reads_dir_auth_file_and_command_forms() {
     ];
 
     for case in cases {
-        let argv = case.argv
+        let argv = case
+            .argv
             .iter()
             .copied()
             .map(OsString::from)
@@ -182,7 +183,8 @@ fn the_pre_command_config_resolves_the_store_dir_flag() {
 
     assert_eq!(
         config.store_dir.root(),
-        dir.join("relative-store").join(pnpm_store_dir::STORE_VERSION),
+        dir.join("relative-store")
+            .join(pnpm_store_dir::STORE_VERSION),
     );
 }
 
@@ -229,7 +231,9 @@ fn pre_command_plan_reports_a_pnpm_pin_corepack_prevents_switching() {
     let error = plan.expect_err("expected the package manager check to fail");
     dbg!(&error);
     assert!(
-        error.to_string().contains("This project is configured to use 9.3.0 of pnpm"),
+        error
+            .to_string()
+            .contains("This project is configured to use 9.3.0 of pnpm"),
         "unexpected error: {error:?}",
     );
 }
@@ -263,7 +267,9 @@ fn pre_command_plan_reports_a_project_pinned_to_another_package_manager() {
 
     dbg!(&error);
     assert!(
-        error.to_string().contains("This project is configured to use yarn"),
+        error
+            .to_string()
+            .contains("This project is configured to use yarn"),
         "unexpected error: {error:?}",
     );
 }
@@ -285,7 +291,9 @@ fn pre_command_plan_checks_the_runtime_pinned_by_the_root_manifest() {
 
     dbg!(&error);
     assert!(
-        error.to_string().contains("This project requires Node.js 99999.0.0"),
+        error
+            .to_string()
+            .contains("This project requires Node.js 99999.0.0"),
         "unexpected error: {error:?}",
     );
 }
@@ -733,11 +741,10 @@ fn parse_with_positional(name: &str, args: &[&str]) -> CliCommand {
             .and_then(|matches| CliArgs::from_arg_matches(&matches))
             .map(|args| args.command)
     };
-    parse(&argv)
-        .unwrap_or_else(|_| {
-            argv.push("placeholder");
-            parse(&argv).unwrap_or_else(|error| panic!("parse `pnpm {name}`: {error}"))
-        })
+    parse(&argv).unwrap_or_else(|_| {
+        argv.push("placeholder");
+        parse(&argv).unwrap_or_else(|error| panic!("parse `pnpm {name}`: {error}"))
+    })
 }
 
 fn parse_command(argv: &[&str]) -> CliCommand {

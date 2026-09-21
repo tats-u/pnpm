@@ -51,7 +51,11 @@ impl StoreDir {
     /// `hex[..2]` slice inside `file_path_by_hex_str` from panicking on
     /// non-UTF-8-char-boundary input.
     pub fn cas_file_path_by_mode(&self, hex: &str, mode: u32) -> Option<PathBuf> {
-        if hex.len() <= 2 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+        if hex.len() <= 2
+            || !hex
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit())
+        {
             return None;
         }
         // Same executable-bit rule the write side uses
@@ -151,7 +155,9 @@ impl StoreDir {
         // verifiers of the same path, per [`cas_write_lock`]'s
         // coordination contract.
         let lock = cas_write_lock(&file_path);
-        let _guard = lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let _guard = lock
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
 
         // A regular file already at the hash-derived target is kept —
         // preserving its inode — only after its bytes are verified
@@ -188,7 +194,9 @@ impl StoreDir {
     /// into the cache, subsequent writes take the fast path.
     fn ensure_shard_dir(&self, file_path: &Path, shard_byte: u8) -> Result<(), WriteCasFileError> {
         if !self.shard_already_ensured(shard_byte) {
-            let parent = file_path.parent().expect("CAS file path always has a parent shard dir");
+            let parent = file_path
+                .parent()
+                .expect("CAS file path always has a parent shard dir");
             ensure_parent_dir(parent).map_err(WriteCasFileError::WriteFile)?;
             self.mark_shard_ensured(shard_byte);
         }
@@ -239,7 +247,9 @@ fn stream_into_temp_file(
             Err(error) => return Err(WriteCasFileFromReaderError::Read(error)),
         }
     }
-    writer.into_inner().map_err(|error| io_write_error(error.into_error()))?;
+    writer
+        .into_inner()
+        .map_err(|error| io_write_error(error.into_error()))?;
 
     if let Some(expected) = expected_size
         && size != expected

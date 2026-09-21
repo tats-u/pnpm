@@ -118,8 +118,15 @@ pub(crate) fn is_relocatable_shim(shim_content: &str, shim_dir: &Path, root: &Pa
         && markers.all(resolves_in_root)
         && shim_content
             .lines()
-            .filter_map(|line| line.trim_start().strip_prefix("export NODE_PATH="))
-            .map(|value| value.strip_prefix('"')?.strip_suffix('"'))
+            .filter_map(|line| {
+                line.trim_start()
+                    .strip_prefix("export NODE_PATH=")
+            })
+            .map(|value| {
+                value
+                    .strip_prefix('"')?
+                    .strip_suffix('"')
+            })
             .all(|value| value.is_some_and(entries_resolve_in_root))
 }
 

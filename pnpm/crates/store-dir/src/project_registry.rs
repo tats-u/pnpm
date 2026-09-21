@@ -91,11 +91,10 @@ pub fn register_project(
     }
 
     let registry_dir = store_dir.projects();
-    fs::create_dir_all(&registry_dir)
-        .map_err(|error| RegisterProjectError::CreateRegistryDir {
-            dir: registry_dir.clone(),
-            error,
-        })?;
+    fs::create_dir_all(&registry_dir).map_err(|error| RegisterProjectError::CreateRegistryDir {
+        dir: registry_dir.clone(),
+        error,
+    })?;
 
     let project_dir_str = project_dir.to_string_lossy();
     let link_path = registry_dir.join(create_short_hash(&project_dir_str));
@@ -122,8 +121,8 @@ fn repair_project_link(project_dir: &Path, link_path: PathBuf) -> Result<(), Reg
     // `fs::read_link` alone would fail with `EINVAL` for
     // every entry pacquet writes there (see
     // [`rust-lang/rust#28528`](https://github.com/rust-lang/rust/issues/28528)).
-    let existing_target = read_symlink_dir(&link_path)
-        .map_err(|error| RegisterProjectError::InspectExisting {
+    let existing_target =
+        read_symlink_dir(&link_path).map_err(|error| RegisterProjectError::InspectExisting {
             project_dir: project_dir.to_path_buf(),
             link_path: link_path.clone(),
             error,
@@ -138,19 +137,17 @@ fn repair_project_link(project_dir: &Path, link_path: PathBuf) -> Result<(), Reg
     // entry is a directory symlink on Unix (file-shaped) and
     // a junction on Windows (directory-shaped); the helper
     // covers both.
-    remove_symlink_dir(&link_path)
-        .map_err(|error| RegisterProjectError::RemoveStale {
-            project_dir: project_dir.to_path_buf(),
-            link_path: link_path.clone(),
-            old_target: existing_target.clone(),
-            error,
-        })?;
-    symlink_dir(project_dir, &link_path)
-        .map_err(|error| RegisterProjectError::CreateSymlink {
-            project_dir: project_dir.to_path_buf(),
-            link_path,
-            error,
-        })
+    remove_symlink_dir(&link_path).map_err(|error| RegisterProjectError::RemoveStale {
+        project_dir: project_dir.to_path_buf(),
+        link_path: link_path.clone(),
+        old_target: existing_target.clone(),
+        error,
+    })?;
+    symlink_dir(project_dir, &link_path).map_err(|error| RegisterProjectError::CreateSymlink {
+        project_dir: project_dir.to_path_buf(),
+        link_path,
+        error,
+    })
 }
 
 /// Error type for [`get_registered_projects`].
@@ -276,12 +273,13 @@ fn registered_project_target(
     // live registry entry, and a downstream prune could then
     // remove slots that project still references. We err on the
     // side of strictness.
-    let file_type = entry
-        .file_type()
-        .map_err(|error| GetRegisteredProjectsError::EntryInaccessible {
-            link_path: link_path.clone(),
-            error,
-        })?;
+    let file_type =
+        entry
+            .file_type()
+            .map_err(|error| GetRegisteredProjectsError::EntryInaccessible {
+                link_path: link_path.clone(),
+                error,
+            })?;
     if !file_type.is_symlink() {
         return Ok(None);
     }
@@ -328,11 +326,12 @@ fn live_project_dir(
             // Use the cross-platform helper: the registry entry
             // is a directory symlink on Unix and a junction on
             // Windows, which need different syscalls to unlink.
-            remove_symlink_dir(link_path)
-                .map_err(|error| GetRegisteredProjectsError::UnlinkStale {
+            remove_symlink_dir(link_path).map_err(|error| {
+                GetRegisteredProjectsError::UnlinkStale {
                     link_path: link_path.to_path_buf(),
                     error,
-                })?;
+                }
+            })?;
             Ok(None)
         }
         Err(error) => Err(GetRegisteredProjectsError::ProjectInaccessible {

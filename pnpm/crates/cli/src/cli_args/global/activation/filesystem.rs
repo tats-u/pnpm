@@ -20,10 +20,9 @@ pub(super) fn swap_hash_link_atomically(target: &Path, link: &Path) -> io::Resul
         Err(error) => return Err(error),
     }
     symlink_dir_entry(&relative_path(parent, target), &staged)?;
-    fs::rename(&staged, link)
-        .inspect_err(|_| {
-            let _ = fs::remove_file(&staged);
-        })
+    fs::rename(&staged, link).inspect_err(|_| {
+        let _ = fs::remove_file(&staged);
+    })
 }
 
 #[cfg(unix)]
@@ -58,12 +57,17 @@ pub(in super::super) fn hash_linked_packages(
 ) -> Vec<PackageBinSource> {
     packages
         .iter()
-        .map(|package| match package.location.strip_prefix(install_dir) {
-            Ok(relative) => PackageBinSource::new(
-                hash_link.join(relative),
-                std::sync::Arc::clone(&package.manifest),
-            ),
-            Err(_) => package.clone(),
+        .map(|package| {
+            match package
+                .location
+                .strip_prefix(install_dir)
+            {
+                Ok(relative) => PackageBinSource::new(
+                    hash_link.join(relative),
+                    std::sync::Arc::clone(&package.manifest),
+                ),
+                Err(_) => package.clone(),
+            }
         })
         .collect()
 }

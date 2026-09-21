@@ -29,11 +29,12 @@ function readPackage(pkg) {
         "version": "1.0.0"
     });
 
-    let result = hooks.read_package(
-        manifest.clone(),
-        pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None },
-    )
-    .await;
+    let result = hooks
+        .read_package(
+            manifest.clone(),
+            pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None },
+        )
+        .await;
 
     let updated = result.expect("readPackage should succeed");
     assert_eq!(updated["dependencies"]["bar"], "100.0.0");
@@ -64,11 +65,12 @@ function readPackage(pkg) {
         "version": "1.0.0"
     });
 
-    let result = hooks.read_package(
-        manifest.clone(),
-        pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None },
-    )
-    .await;
+    let result = hooks
+        .read_package(
+            manifest.clone(),
+            pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None },
+        )
+        .await;
 
     let updated = result.expect("readPackage should succeed");
     assert_eq!(updated["name"], "baz");
@@ -102,7 +104,8 @@ function filterLog(log) {
     });
 
     assert!(
-        hooks.filter_log(debug_log, pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None })
+        hooks
+            .filter_log(debug_log, pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None })
             .await,
     );
 
@@ -112,7 +115,8 @@ function filterLog(log) {
     });
 
     assert!(
-        !hooks.filter_log(warn_log, pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None })
+        !hooks
+            .filter_log(warn_log, pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None })
             .await,
     );
 }
@@ -145,11 +149,12 @@ function readPackage(pkg) {
         "version": "1.0.0"
     });
 
-    let result = hooks.read_package(
-        manifest.clone(),
-        pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None },
-    )
-    .await;
+    let result = hooks
+        .read_package(
+            manifest.clone(),
+            pnpm_hooks::HookContext { log: Arc::new(|_| {}), dir: None },
+        )
+        .await;
 
     let updated = result.unwrap_or_else(|err| {
         panic!(

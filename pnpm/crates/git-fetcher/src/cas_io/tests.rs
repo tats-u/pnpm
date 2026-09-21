@@ -23,7 +23,9 @@ fn join_checked_accepts_normal_segments() {
     let root = Path::new("/root");
     let joined = join_checked(root, "a/b/c.txt").unwrap();
     // Use components() so the assertion stays platform-agnostic.
-    let expected: Vec<_> = Path::new("/root/a/b/c.txt").components().collect();
+    let expected: Vec<_> = Path::new("/root/a/b/c.txt")
+        .components()
+        .collect();
     let actual: Vec<_> = joined.components().collect();
     assert_eq!(actual, expected);
 }
@@ -32,7 +34,9 @@ fn join_checked_accepts_normal_segments() {
 fn join_checked_strips_current_dir_components() {
     let root = Path::new("/root");
     let joined = join_checked(root, "./a").unwrap();
-    let expected: Vec<_> = Path::new("/root/a").components().collect();
+    let expected: Vec<_> = Path::new("/root/a")
+        .components()
+        .collect();
     let actual: Vec<_> = joined.components().collect();
     assert_eq!(actual, expected);
 }
@@ -59,13 +63,17 @@ fn cas_path_digest_round_trips_through_write_cas_file() {
     let cas_root = tempdir().unwrap();
     let store_dir = StoreDir::from(cas_root.path().to_path_buf());
 
-    let (regular_path, regular_hash) = store_dir.write_cas_file(b"hello", false).unwrap();
+    let (regular_path, regular_hash) = store_dir
+        .write_cas_file(b"hello", false)
+        .unwrap();
     assert_eq!(
         cas_path_digest(&regular_path).expect("round-trip non-exec"),
         format!("{regular_hash:x}"),
     );
 
-    let (exec_path, exec_hash) = store_dir.write_cas_file(b"#!/bin/sh\n", true).unwrap();
+    let (exec_path, exec_hash) = store_dir
+        .write_cas_file(b"#!/bin/sh\n", true)
+        .unwrap();
     let digest = cas_path_digest(&exec_path).expect("round-trip exec");
     assert_eq!(digest, format!("{exec_hash:x}"), "`-exec` suffix must be stripped before parse");
 }
@@ -105,8 +113,12 @@ fn synthesize_files_index_recovers_digest_size_and_exec_bit() {
     let store_root = tempdir().unwrap();
     let store_dir = StoreDir::from(store_root.path().to_path_buf());
 
-    let (regular_path, regular_hash) = store_dir.write_cas_file(b"abc", false).unwrap();
-    let (exec_path, exec_hash) = store_dir.write_cas_file(b"#!/usr/bin/env node\n", true).unwrap();
+    let (regular_path, regular_hash) = store_dir
+        .write_cas_file(b"abc", false)
+        .unwrap();
+    let (exec_path, exec_hash) = store_dir
+        .write_cas_file(b"#!/usr/bin/env node\n", true)
+        .unwrap();
 
     let mut cas_paths = HashMap::new();
     cas_paths.insert("README.md".to_string(), regular_path);
@@ -115,7 +127,9 @@ fn synthesize_files_index_recovers_digest_size_and_exec_bit() {
     let index = synthesize_files_index(&cas_paths).unwrap();
     assert_eq!(index.len(), 2);
 
-    let readme = index.get("README.md").expect("README entry");
+    let readme = index
+        .get("README.md")
+        .expect("README entry");
     assert_eq!(readme.digest, format!("{regular_hash:x}"));
     assert_eq!(readme.size, 3);
     assert_eq!(readme.mode & 0o111, 0, "regular files have no exec bit");
@@ -155,7 +169,9 @@ fn materialize_into_rejects_traversal() {
     let target = tempdir().unwrap();
     let cas_root = tempdir().unwrap();
     let store_dir = StoreDir::from(cas_root.path().to_path_buf());
-    let (cas_path, _hash) = store_dir.write_cas_file(b"poison\n", false).unwrap();
+    let (cas_path, _hash) = store_dir
+        .write_cas_file(b"poison\n", false)
+        .unwrap();
 
     let mut bad: HashMap<String, _> = HashMap::new();
     bad.insert("../escape".to_string(), cas_path);
@@ -186,9 +202,13 @@ fn materialize_into_restores_exec_bit_from_cas_suffix() {
     let cas_root = tempdir().unwrap();
     let store_dir = StoreDir::from(cas_root.path().to_path_buf());
 
-    let (exec_cas, _) = store_dir.write_cas_file(b"#!/bin/sh\n", true).unwrap();
+    let (exec_cas, _) = store_dir
+        .write_cas_file(b"#!/bin/sh\n", true)
+        .unwrap();
     fs::set_permissions(&exec_cas, fs::Permissions::from_mode(0o644)).unwrap();
-    let (regular_cas, _) = store_dir.write_cas_file(b"data\n", false).unwrap();
+    let (regular_cas, _) = store_dir
+        .write_cas_file(b"data\n", false)
+        .unwrap();
     fs::set_permissions(&regular_cas, fs::Permissions::from_mode(0o600)).unwrap();
 
     let mut cas_paths: HashMap<String, _> = HashMap::new();

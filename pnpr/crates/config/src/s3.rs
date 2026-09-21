@@ -52,10 +52,28 @@ impl fmt::Debug for S3Settings {
         f.debug_struct("S3Settings")
             .field("bucket", &self.bucket)
             .field("region", &self.region)
-            .field("endpoint", &self.endpoint.as_deref().map(redact_url_credentials))
+            .field(
+                "endpoint",
+                &self
+                    .endpoint
+                    .as_deref()
+                    .map(redact_url_credentials),
+            )
             .field("prefix", &self.prefix)
-            .field("access_key_id", &self.access_key_id.as_ref().map(|_| "<redacted>"))
-            .field("secret_access_key", &self.secret_access_key.as_ref().map(|_| "<redacted>"))
+            .field(
+                "access_key_id",
+                &self
+                    .access_key_id
+                    .as_ref()
+                    .map(|_| "<redacted>"),
+            )
+            .field(
+                "secret_access_key",
+                &self
+                    .secret_access_key
+                    .as_ref()
+                    .map(|_| "<redacted>"),
+            )
             .field("force_path_style", &self.force_path_style)
             .field("allow_http", &self.allow_http)
             .finish()

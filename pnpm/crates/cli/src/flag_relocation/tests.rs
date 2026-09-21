@@ -14,7 +14,11 @@ fn relocate(tokens: &[&str]) -> Vec<String> {
             .collect(),
     )
     .into_iter()
-    .map(|token| token.into_string().expect("test tokens are UTF-8"))
+    .map(|token| {
+        token
+            .into_string()
+            .expect("test tokens are UTF-8")
+    })
     .collect()
 }
 
@@ -31,7 +35,8 @@ fn try_parse(tokens: &[&str]) -> Result<CliArgs, clap::Error> {
             .map(OsString::from)
             .collect(),
     );
-    cmd.try_get_matches_from(argv).and_then(|matches| CliArgs::from_arg_matches(&matches))
+    cmd.try_get_matches_from(argv)
+        .and_then(|matches| CliArgs::from_arg_matches(&matches))
 }
 
 #[test]
@@ -68,7 +73,12 @@ fn relocated_deploy_invocation_parses_with_the_flags_applied() {
     let crate::cli_args::cli_command::CliCommand::Deploy(deploy) = args.command else {
         panic!("expected deploy");
     };
-    assert!(deploy.install_args.materialization.force);
+    assert!(
+        deploy
+            .install_args
+            .materialization
+            .force
+    );
     assert!(deploy.install_args.scripts.ignore);
     assert_eq!(deploy.target_dirs, [std::path::PathBuf::from("temp-deploy")]);
 }

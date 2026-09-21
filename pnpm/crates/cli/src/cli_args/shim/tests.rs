@@ -84,11 +84,20 @@ fn failed_publication_retains_intent_for_a_retry() {
     publish_virtual_shims(&publication()).expect_err("the occupied bin path should fail");
     assert!(bin_path.is_dir());
     assert_eq!(virtual_shim_bins_to_restore(&bin_dir, "tool").unwrap(), bins);
-    assert!(fs::read_to_string(config_dir.join("config.yaml")).unwrap().contains("tool: auto"));
+    assert!(
+        fs::read_to_string(config_dir.join("config.yaml"))
+            .unwrap()
+            .contains("tool: auto")
+    );
 
     fs::remove_dir(&bin_path).unwrap();
     publish_virtual_shims(&publication()).expect("retry publication");
-    assert_eq!(virtual_shim_owner(&bin_path).unwrap().as_deref(), Some("tool"));
+    assert_eq!(
+        virtual_shim_owner(&bin_path)
+            .unwrap()
+            .as_deref(),
+        Some("tool")
+    );
 }
 
 /// A globally installed package manager opts into project-aware
@@ -113,7 +122,9 @@ fn installing_a_package_manager_globally_records_the_opt_in() {
     let added = record_package_manager_shims(&config, ["npm"]).expect("record");
     assert!(added.is_empty());
     assert_eq!(
-        recorded_entries(dir.path()).expect("read back").get("npm"),
+        recorded_entries(dir.path())
+            .expect("read back")
+            .get("npm"),
         Some(&ShimPolicyValue::Toggle(false)),
     );
 }
@@ -133,7 +144,9 @@ fn a_global_disable_is_not_undone_by_installing_a_package_manager() {
 
     assert!(added.is_empty());
     assert_eq!(
-        fs::read_to_string(dir.path().join("config.yaml")).unwrap().trim(),
+        fs::read_to_string(dir.path().join("config.yaml"))
+            .unwrap()
+            .trim(),
         "globalShims: false",
     );
 }
@@ -201,6 +214,8 @@ fn restoration_state_rejects_invalid_package_owners() {
     )
     .unwrap();
 
-    let error = virtual_shim_bins_to_restore(dir.path(), "../tool").unwrap_err().to_string();
+    let error = virtual_shim_bins_to_restore(dir.path(), "../tool")
+        .unwrap_err()
+        .to_string();
     assert!(error.contains("invalid package owner"), "{error}");
 }

@@ -64,10 +64,15 @@ fn shorten_above_threshold_hashes_to_max_length() {
     let input = "a".repeat(200);
     let shortened = shorten_virtual_store_name(input, 120);
     assert_eq!(shortened.len(), 120);
-    let (prefix, hash) = shortened.rsplit_once('_').expect("hash suffix");
+    let (prefix, hash) = shortened
+        .rsplit_once('_')
+        .expect("hash suffix");
     assert_eq!(prefix.len(), 120 - 33);
     assert_eq!(hash.len(), 32);
-    assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+    assert!(
+        hash.chars()
+            .all(|c| c.is_ascii_hexdigit())
+    );
 }
 
 #[test]
@@ -84,7 +89,9 @@ fn shorten_triggered_by_uppercase_unless_file_protocol() {
 #[test]
 fn integrity_address_requires_one_complete_canonical_sha512_hash() {
     let digest = format!("{}==", "A".repeat(86));
-    let integrity: Integrity = format!("sha512-{digest}").parse().unwrap();
+    let integrity: Integrity = format!("sha512-{digest}")
+        .parse()
+        .unwrap();
     assert_eq!(
         integrity_addressed_tarball_path(&integrity),
         Some(format!("-/tarballs/sha512/{}", "A".repeat(86))),

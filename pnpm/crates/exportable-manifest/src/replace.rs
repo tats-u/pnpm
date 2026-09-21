@@ -146,8 +146,10 @@ fn parsed_peer_spec(dep_spec: &str) -> Option<ParsedPeer> {
     if let Some(alias) = workspace_spec.alias.as_deref() {
         return Some(ParsedPeer::Alias(aliased_peer_spec(alias, &workspace_spec.version)));
     }
-    let relative =
-        workspace_spec.version.starts_with("./") || workspace_spec.version.starts_with("../");
+    let relative = workspace_spec.version.starts_with("./")
+        || workspace_spec
+            .version
+            .starts_with("../");
     relative.then_some(ParsedPeer::Relative)
 }
 
@@ -192,12 +194,18 @@ fn read_and_check_manifest(
         }
         Err(err) => return Err(ReplaceWorkspaceProtocolError::ReadManifest(err)),
     };
-    let Some(name) = value.get("name").and_then(Value::as_str) else {
+    let Some(name) = value
+        .get("name")
+        .and_then(Value::as_str)
+    else {
         return Err(ReplaceWorkspaceProtocolError::CannotResolve(
             CannotResolveWorkspaceProtocolError { dep_name: dep_name.to_string() },
         ));
     };
-    let Some(version) = value.get("version").and_then(Value::as_str) else {
+    let Some(version) = value
+        .get("version")
+        .and_then(Value::as_str)
+    else {
         return Err(ReplaceWorkspaceProtocolError::CannotResolve(
             CannotResolveWorkspaceProtocolError { dep_name: dep_name.to_string() },
         ));
@@ -328,7 +336,10 @@ fn parse_peer_version_part(bytes: &[u8], start: usize) -> Option<usize> {
         b'x' | b'X' | b'*' => Some(start + 1),
         b if b.is_ascii_digit() => {
             let mut end = start + 1;
-            while bytes.get(end).is_some_and(u8::is_ascii_digit) {
+            while bytes
+                .get(end)
+                .is_some_and(u8::is_ascii_digit)
+            {
                 end += 1;
             }
             Some(end)

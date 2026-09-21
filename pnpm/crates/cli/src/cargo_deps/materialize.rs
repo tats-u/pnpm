@@ -106,7 +106,9 @@ pub(super) async fn materialize<Reporter: self::Reporter + 'static>(
     options: MaterializeOptions,
 ) -> Result<(String, PathBuf)> {
     let link_name = options.package.link_name();
-    let slot = options.package.store_slot(options.store.dir.root());
+    let slot = options
+        .package
+        .store_slot(options.store.dir.root());
     let mut cas_paths = ingest_crate::<Reporter>(&options).await?;
 
     let slot_for_import = slot.clone();

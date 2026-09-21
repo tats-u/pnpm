@@ -36,7 +36,9 @@ async fn fresh_partial_install_preserves_optional_link_in_warm_gvs_slot() {
     manifest
         .add_dependency("@pnpm.e2e/abc-optional-peers", "1.0.0", DependencyGroup::Prod)
         .unwrap();
-    manifest.add_dependency("@pnpm.e2e/peer-c", "link:../peer-c", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("@pnpm.e2e/peer-c", "link:../peer-c", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -104,7 +106,8 @@ async fn fresh_partial_install_preserves_optional_link_in_warm_gvs_slot() {
     let lockfile = Lockfile::load_wanted_from_dir(&project_root)
         .expect("load wanted lockfile")
         .expect("wanted lockfile exists");
-    let snapshot_key = lockfile.snapshots
+    let snapshot_key = lockfile
+        .snapshots
         .as_ref()
         .expect("snapshots exist")
         .keys()
@@ -307,7 +310,10 @@ async fn gvs_persists_global_virtual_store_dir_in_modules_yaml_and_context_log()
     // [`STORE_VERSION`] suffix to the configured root, so the live
     // value is `<dirs.store_dir>/v11/links` even though the test handed
     // `Config::dirs.store_dir` the un-suffixed root.
-    let expected_resolved = dirs.store_dir.join(STORE_VERSION).join("links");
+    let expected_resolved = dirs
+        .store_dir
+        .join(STORE_VERSION)
+        .join("links");
 
     // Ensure the GVS root exists on disk so `dunce::canonicalize` can
     // resolve it. An empty-lockfile install doesn't link anything into

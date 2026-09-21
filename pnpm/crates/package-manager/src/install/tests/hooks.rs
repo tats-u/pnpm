@@ -67,11 +67,13 @@ async fn read_package_hook_pins_transitive_dependency_version() {
 
     let vsd = dir.path().join("node_modules/.pacquet");
     assert!(
-        vsd.join("@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0").exists(),
+        vsd.join("@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0")
+            .exists(),
         "readPackage hook should have pinned the transitive dep to 100.0.0",
     );
     assert!(
-        !vsd.join("@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0").exists(),
+        !vsd.join("@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0")
+            .exists(),
         "the un-pinned 100.1.0 must not be installed",
     );
 

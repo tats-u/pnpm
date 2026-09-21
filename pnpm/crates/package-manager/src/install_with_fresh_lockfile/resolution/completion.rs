@@ -16,7 +16,9 @@ pub(super) async fn enforce_resolution_policies<Reporter: self::Reporter + 'stat
     crate::minimum_release_age::handle_minimum_release_age_violations::<Reporter>(
         install.drivers.config,
         install.projects.lockfile_dir,
-        &workspace_result.merged_tree.policy_violations,
+        &workspace_result
+            .merged_tree
+            .policy_violations,
         can_prompt_now,
         policy_excludes_now,
     )
@@ -25,7 +27,9 @@ pub(super) async fn enforce_resolution_policies<Reporter: self::Reporter + 'stat
     check_patch_usage::<Reporter>(
         install.drivers.config,
         prep.patches.record.as_deref(),
-        &workspace_result.merged_tree.applied_patches,
+        &workspace_result
+            .merged_tree
+            .applied_patches,
         PatchUsageScope {
             real_importer_ids: install.projects.real_ids,
             selected_importer_ids: install.projects.selected_ids,
@@ -45,7 +49,9 @@ pub(super) async fn collect_resolution<'m, Reporter: self::Reporter + 'static>(
 ) -> Result<Resolved<'m, Reporter>, InstallWithFreshLockfileError> {
     let workspace_result = pass.result;
     enforce_resolution_policies::<Reporter>(install, &prep, &workspace_result).await?;
-    let peer_issues = &workspace_result.peers.peer_dependency_issues_by_importer;
+    let peer_issues = &workspace_result
+        .peers
+        .peer_dependency_issues_by_importer;
     let mut peer_issue_importer_ids: HashSet<String> = peer_issues.keys().cloned().collect();
     peer_issue_importer_ids.extend(pass.linked_peer_importers);
     report_peer_issues(peer_issues_sink, peer_issues);
@@ -65,8 +71,15 @@ pub(super) async fn collect_resolution<'m, Reporter: self::Reporter + 'static>(
             after_all_resolved_log: prep.hooks.after_all_resolved_log,
         },
         reuse: crate::install_with_fresh_lockfile::resolution::ResolutionReuseGuard {
-            guard_previous_importers: install.lockfiles.merge_wanted
-                .filter(|_| install.drivers.config.dedupe_injected_deps)
+            guard_previous_importers: install
+                .lockfiles
+                .merge_wanted
+                .filter(|_| {
+                    install
+                        .drivers
+                        .config
+                        .dedupe_injected_deps
+                })
                 .map(|lockfile| &lockfile.importers),
             guard_update_reuse_scope: prep.reuse.scope,
             guard_update_reuse_scopes_by_importer: prep.reuse.by_importer,
@@ -75,7 +88,9 @@ pub(super) async fn collect_resolution<'m, Reporter: self::Reporter + 'static>(
         graph: crate::install_with_fresh_lockfile::resolution::ResolvedGraph {
             peer_issue_importer_ids,
             merged_graph: workspace_result.peers.graph,
-            direct_by_importer: workspace_result.peers.direct_dependencies_by_importer,
+            direct_by_importer: workspace_result
+                .peers
+                .direct_dependencies_by_importer,
             time: workspace_result.time,
         },
     })

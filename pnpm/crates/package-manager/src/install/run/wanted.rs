@@ -116,7 +116,9 @@ pub(super) async fn settle_wanted_lockfile<'a: 'w, 'w, Reporter: self::Reporter 
                     catalogs: &workspace.catalogs,
                     pnpmfile_hook: loaded.pnpmfile_hook.as_ref(),
                     scope: FreshnessScope {
-                        ignore_manifest_check: install.lockfile_policy.ignore_manifest_check,
+                        ignore_manifest_check: install
+                            .lockfile_policy
+                            .ignore_manifest_check,
                         prune_stale_importers: scope.prune_stale_importers,
                         allow_missing_dependency_free_importers: true,
                     },
@@ -132,7 +134,9 @@ pub(super) fn reconcile_branch_lockfile(
     loaded: &Loaded<'_>,
     config: &Config,
 ) {
-    lockfiles.wanted.merged_branch = loaded.wanted.pre_merge_importers
+    lockfiles.wanted.merged_branch = loaded
+        .wanted
+        .pre_merge_importers
         .zip(lockfiles.wanted.get())
         .and_then(|(pre_merge_importers, lockfile)| {
             prune_merged_branch_lockfile(
@@ -166,7 +170,9 @@ pub(super) async fn synthesize_wanted(
                 catalogs: &workspace.catalogs,
                 pnpmfile_hook: loaded.pnpmfile_hook.as_ref(),
                 scope: FreshnessScope {
-                    ignore_manifest_check: install.lockfile_policy.ignore_manifest_check,
+                    ignore_manifest_check: install
+                        .lockfile_policy
+                        .ignore_manifest_check,
                     prune_stale_importers: scope.prune_stale_importers,
                     allow_missing_dependency_free_importers: true,
                 },
@@ -195,7 +201,10 @@ pub(super) async fn synthesize_lockfile_from_current(
     if !scope.lockfile_is_absent || scope.frozen_lockfile || !scope.prefer_frozen_lockfile {
         return None;
     }
-    check_lockfile_freshness(current, &scope.freshness).await.ok().map(|()| current.clone())
+    check_lockfile_freshness(current, &scope.freshness)
+        .await
+        .ok()
+        .map(|()| current.clone())
 }
 /// A lockfile whose Git conflict markers were merged away has to be
 /// written back, and only a resolution writes it, so the fast update is
@@ -210,5 +219,8 @@ pub(super) fn may_fast_update_lockfile(
         && !install.lockfile_policy.frozen
         && !install.execution.dry_run
         && prefer_frozen_lockfile
-        && install.execution.mutation.may_fast_update_lockfile()
+        && install
+            .execution
+            .mutation
+            .may_fast_update_lockfile()
 }

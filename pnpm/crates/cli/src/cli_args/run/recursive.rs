@@ -116,7 +116,10 @@ pub fn run_recursive(
     emit: fn(&LogEvent),
     silent: bool,
 ) -> miette::Result<()> {
-    let workspace_root = config.workspace_dir.as_deref().unwrap_or(dir);
+    let workspace_root = config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(dir);
 
     let (projects, patterns) = discover_workspace_projects(workspace_root, config)?;
     let selection = select_recursive_projects(
@@ -160,7 +163,8 @@ fn emit_selection_scope(emit: fn(&LogEvent), config: &Config, selected: usize, t
         level: LogLevel::Debug,
         selected,
         total: Some(total),
-        workspace_prefix: config.workspace_dir
+        workspace_prefix: config
+            .workspace_dir
             .as_deref()
             .map(|dir| dir.to_string_lossy().into_owned()),
     }));
@@ -226,7 +230,9 @@ impl RecursiveRun<'_, '_> {
     fn prepare(&self) -> miette::Result<Option<PreparedRun>> {
         // Compiled once for the whole run, not per project or task.
         let full_task_graph = self.task_graph()?;
-        let extra_env: HashMap<String, String> = self.config.extra_env_with_node_options();
+        let extra_env: HashMap<String, String> = self
+            .config
+            .extra_env_with_node_options();
         let state_settings = run_state_settings(self.config, &extra_env);
         let task_run_state_context = TaskRunStateContext::new(
             "run",
@@ -261,10 +267,8 @@ impl RecursiveRun<'_, '_> {
 
         self.validate_requested_scripts(&mut task_graph)?;
 
-        let task_run_state = task_run_state_context.start(&initially_completed_tasks(
-            &full_task_graph,
-            &task_graph,
-        ))?;
+        let task_run_state = task_run_state_context
+            .start(&initially_completed_tasks(&full_task_graph, &task_graph))?;
         Ok(Some(PreparedRun { task_graph, sequenced_tasks, extra_env, task_run_state }))
     }
 
@@ -300,9 +304,13 @@ impl RecursiveRun<'_, '_> {
     }
 
     fn script_commands(&self, node: &TaskNode, script: &str) -> Vec<String> {
-        let manifest = &self.graph[&node.project].package.project.manifest;
-        let Some(main) =
-            manifest.script(script, true).expect("if-present script lookup cannot fail")
+        let manifest = &self.graph[&node.project]
+            .package
+            .project
+            .manifest;
+        let Some(main) = manifest
+            .script(script, true)
+            .expect("if-present script lookup cannot fail")
         else {
             return Vec::new();
         };
@@ -338,7 +346,10 @@ impl RecursiveRun<'_, '_> {
         };
         let run_task = |node: &TaskNode| runner.run_task(node);
         let on_task_skipped = |node: &TaskNode| {
-            slots.result.lock().expect("summary lock is not poisoned")[&task_summary_key(node)]
+            slots
+                .result
+                .lock()
+                .expect("summary lock is not poisoned")[&task_summary_key(node)]
                 .status = Status::Skipped;
         };
         schedule_tasks(

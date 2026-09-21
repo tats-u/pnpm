@@ -86,8 +86,10 @@ impl ApproveBuildsArgs {
             return Ok(None);
         };
 
-        let settings_dir =
-            initial_config.workspace_dir.clone().unwrap_or_else(|| dir.to_path_buf());
+        let settings_dir = initial_config
+            .workspace_dir
+            .clone()
+            .unwrap_or_else(|| dir.to_path_buf());
         write_approval_settings(&settings_dir, &decision)?;
         clear_decided_ignored_builds(scan.modules_manifest, &scan.modules_dir, &decision)?;
 
@@ -95,7 +97,8 @@ impl ApproveBuildsArgs {
         // rebuild. A pre-emptive approval names a package that is not
         // installed yet, and rebuilding for it would demand a lockfile the
         // project may not have.
-        let build_packages: Vec<String> = decision.build_packages
+        let build_packages: Vec<String> = decision
+            .build_packages
             .into_iter()
             .filter(|name| pending.contains(name))
             .collect();
@@ -160,10 +163,11 @@ impl ApproveBuildsArgs {
         if self.all && !self.packages.is_empty() {
             return Err(ApproveBuildsError::AllWithArgs.into());
         }
-        if self.packages
-            .iter()
-            .any(|param| parse_allow_build_selector(param).0.is_empty())
-        {
+        if self.packages.iter().any(|param| {
+            parse_allow_build_selector(param)
+                .0
+                .is_empty()
+        }) {
             return Err(ApproveBuildsError::MissingPackage.into());
         }
         Ok(())
@@ -199,7 +203,8 @@ pub(crate) fn write_approval_settings(
 ) -> miette::Result<()> {
     set_allow_builds_clearing_legacy(
         settings_dir,
-        decision.decisions
+        decision
+            .decisions
             .iter()
             .map(|(pkg, &value)| (pkg.as_str(), value)),
     )
@@ -232,7 +237,9 @@ fn partition_params(params: &[String], automatically_ignored_builds: &[String]) 
             partition.unknown.push(name.to_string());
         }
         if allowed {
-            partition.approved.push(name.to_string());
+            partition
+                .approved
+                .push(name.to_string());
         } else {
             partition.denied.push(name.to_string());
         }
@@ -293,7 +300,8 @@ pub(crate) fn clear_decided_ignored_builds(
     if decision.clear_all {
         modules.ignored_builds = None;
     } else {
-        let decided: HashSet<&str> = decision.decisions
+        let decided: HashSet<&str> = decision
+            .decisions
             .keys()
             .map(String::as_str)
             .collect();
@@ -331,7 +339,9 @@ pub(crate) async fn prompt_approve_install_builds<Reporter: self::Reporter + 'st
     install_dir: &Path,
     settings_dir: &Path,
 ) -> miette::Result<()> {
-    let pending = get_automatically_ignored_builds(config)?.names.filter(|names| !names.is_empty());
+    let pending = get_automatically_ignored_builds(config)?
+        .names
+        .filter(|names| !names.is_empty());
     if pending.is_none() {
         return Ok(());
     }
@@ -378,7 +388,8 @@ fn config_with_install_approvals(
         .wrap_err("load approved install builds")?
         && let Some(allow_builds) = settings.allow_builds
     {
-        cfg.allow_builds.extend(decided_allow_builds(allow_builds));
+        cfg.allow_builds
+            .extend(decided_allow_builds(allow_builds));
     }
     Ok(Config::leak(cfg))
 }

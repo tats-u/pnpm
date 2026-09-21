@@ -16,7 +16,10 @@ impl SourceKeys {
         let mut keys = Self::default();
         for mut path in mapping_paths(text)? {
             let Some(Component::Key(source)) = path.pop() else { continue };
-            let Some(mapping) = keys.value_at(original, &path).and_then(Value::as_object) else {
+            let Some(mapping) = keys
+                .value_at(original, &path)
+                .and_then(Value::as_object)
+            else {
                 continue;
             };
             if mapping.contains_key(source.as_ref()) {
@@ -43,7 +46,8 @@ impl SourceKeys {
     }
 
     pub(crate) fn child<'a>(&self, parent: &Route<'a>, key: &'a str) -> Route<'a> {
-        let source = self.source
+        let source = self
+            .source
             .get(&route_id(parent))
             .and_then(|keys| keys.get(key));
         match source {
@@ -61,7 +65,8 @@ impl SourceKeys {
         for component in path {
             value = match component {
                 Component::Key(key) => {
-                    let canonical = self.canonical
+                    let canonical = self
+                        .canonical
                         .get(&route_id(&parent))
                         .and_then(|keys| keys.get(key.as_ref()));
                     value.get(canonical.map_or_else(|| key.as_ref(), String::as_str))?

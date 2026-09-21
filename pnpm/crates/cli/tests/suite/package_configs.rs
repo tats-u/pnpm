@@ -195,7 +195,9 @@ fn a_package_yaml_project_gets_its_settings() {
     let fixture = dedicated_lockfile_workspace(&format!(
         "packageConfigs:\n  pinned:\n    overrides:\n      \"{DEP}\": 100.0.0\n",
     ));
-    let pinned = fixture.workspace.join("packages/pinned");
+    let pinned = fixture
+        .workspace
+        .join("packages/pinned");
     fs::create_dir_all(&pinned).unwrap();
     fs::write(
         pinned.join("package.yaml"),

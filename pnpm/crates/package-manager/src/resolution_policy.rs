@@ -71,7 +71,10 @@ impl PickPolicy {
         let Some(extra) = extra_excludes.filter(|extra| !extra.is_empty()) else {
             return Ok(policy);
         };
-        let mut merged = config.minimum_release_age_exclude.clone().unwrap_or_default();
+        let mut merged = config
+            .minimum_release_age_exclude
+            .clone()
+            .unwrap_or_default();
         merged.extend(extra.iter().cloned());
         policy.published_by_exclude = Some(create_package_version_policy(&merged)?);
         Ok(policy)
@@ -97,7 +100,9 @@ impl PickPolicy {
         now: DateTime<Utc>,
     ) -> Result<Self, VersionPolicyError> {
         let time_based = config.resolution_mode == ResolutionMode::TimeBased;
-        let pick_lowest_direct = config.resolution_mode.picks_lowest_direct();
+        let pick_lowest_direct = config
+            .resolution_mode
+            .picks_lowest_direct();
         let full_metadata = config.requires_full_metadata_for_resolution();
         // On overflow we leave the policy inactive for this run — better
         // than silently producing a cutoff in the wrong direction.
@@ -107,7 +112,8 @@ impl PickPolicy {
                 let duration = chrono::Duration::try_minutes(i64::try_from(minutes).ok()?)?;
                 now.checked_sub_signed(duration)
             });
-        let published_by_exclude = config.minimum_release_age_exclude
+        let published_by_exclude = config
+            .minimum_release_age_exclude
             .as_deref()
             .filter(|patterns| !patterns.is_empty())
             .map(create_package_version_policy)
@@ -139,7 +145,8 @@ pub fn create_configured_npm_resolver(
     policy: &PickPolicy,
 ) -> Result<NpmResolver<InMemoryPackageMetaCache>, MergeNamedRegistriesError> {
     let registries_by_prefix = merge_named_registries(
-        &config.registries_by_prefix
+        &config
+            .registries_by_prefix
             .clone()
             .into_iter()
             .collect(),

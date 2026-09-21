@@ -65,7 +65,10 @@ pub async fn remove_atomic_write_temps(path: &Path) -> Result<()> {
     };
     while let Some(entry) = entries.next_entry().await? {
         let name = entry.file_name();
-        let Some(suffix) = name.as_encoded_bytes().strip_prefix(prefix.as_encoded_bytes()) else {
+        let Some(suffix) = name
+            .as_encoded_bytes()
+            .strip_prefix(prefix.as_encoded_bytes())
+        else {
             continue;
         };
         if !is_atomic_write_temp_suffix(suffix) {

@@ -76,7 +76,10 @@ pub(super) fn collect_participants<'a>(
     versioning: Option<&VersioningSettings>,
 ) -> Result<BTreeMap<String, Participant<'a>>, VersioningError> {
     let mut ignored_dirs: HashSet<String> = HashSet::new();
-    for reference in versioning.map(|settings| settings.ignore.as_slice()).unwrap_or_default() {
+    for reference in versioning
+        .map(|settings| settings.ignore.as_slice())
+        .unwrap_or_default()
+    {
         ignored_dirs.extend(resolve_config_ref(refs, reference, "versioning.ignore")?);
     }
 
@@ -88,8 +91,10 @@ pub(super) fn collect_participants<'a>(
             continue;
         }
         let internal_deps = internal_deps_of(project, &participants, &participant_dirs, refs)?;
-        participants.get_mut(dir.as_str()).expect("participant exists").internal_deps =
-            internal_deps;
+        participants
+            .get_mut(dir.as_str())
+            .expect("participant exists")
+            .internal_deps = internal_deps;
     }
     Ok(participants)
 }
@@ -191,7 +196,10 @@ fn ambiguous_package(
 fn internal_dep_target_name(alias: &str, spec: &str, refs: &ProjectRefIndex) -> Option<String> {
     if let Some(rest) = spec.strip_prefix("workspace:") {
         let target_name = parse_workspace_spec_alias(rest).unwrap_or(alias);
-        return (!refs.name_to_dirs(target_name).is_empty()).then(|| target_name.to_string());
+        return (!refs
+            .name_to_dirs(target_name)
+            .is_empty())
+        .then(|| target_name.to_string());
     }
     if refs.name_to_dirs(alias).is_empty() {
         return None;

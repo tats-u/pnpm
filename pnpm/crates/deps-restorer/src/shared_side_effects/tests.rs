@@ -18,7 +18,9 @@ fn validates_windows_kernel_versions() {
 
 #[test]
 fn package_identity_uses_the_manifest_version_for_non_registry_sources() {
-    let file: PackageKey = "native-addon@file:../native-addon.tgz".parse().unwrap();
+    let file: PackageKey = "native-addon@file:../native-addon.tgz"
+        .parse()
+        .unwrap();
     assert_eq!(package_version(&file, Some("1.0.0")), "1.0.0");
 
     let registry: PackageKey = "native-addon@2.0.0".parse().unwrap();
@@ -77,19 +79,31 @@ async fn corrupted_store_content_is_not_reused() {
     let store = tempfile::tempdir().unwrap();
     let store_dir = pnpm_store_dir::StoreDir::new(store.path());
     let bytes = b"addon".as_slice();
-    let (path, _) = store_dir.write_cas_file(bytes, true).unwrap();
+    let (path, _) = store_dir
+        .write_cas_file(bytes, true)
+        .unwrap();
     let integrity = format!("sha512-{}", BASE64.encode(Sha512::digest(bytes)));
     let digest = pnpm_pnpr_client::blob_id(&integrity).unwrap();
-    assert!(super::store_holds(&path, &digest).await.unwrap());
+    assert!(
+        super::store_holds(&path, &digest)
+            .await
+            .unwrap()
+    );
 
     std::fs::write(&path, b"tampered").unwrap();
     assert!(
-        !super::store_holds(&path, &digest).await.unwrap(),
+        !super::store_holds(&path, &digest)
+            .await
+            .unwrap(),
         "the write this skips checks the destination whatever verifyStoreIntegrity says",
     );
 
     std::fs::remove_file(&path).unwrap();
-    assert!(!super::store_holds(&path, &digest).await.unwrap());
+    assert!(
+        !super::store_holds(&path, &digest)
+            .await
+            .unwrap()
+    );
 }
 
 /// The store addresses its own regular files, so anything else at the digest
@@ -102,13 +116,19 @@ async fn a_non_regular_file_is_not_reused_as_store_content() {
     let store = tempfile::tempdir().unwrap();
     let store_dir = pnpm_store_dir::StoreDir::new(store.path());
     let bytes = b"addon".as_slice();
-    let (path, _) = store_dir.write_cas_file(bytes, true).unwrap();
+    let (path, _) = store_dir
+        .write_cas_file(bytes, true)
+        .unwrap();
     let integrity = format!("sha512-{}", BASE64.encode(Sha512::digest(bytes)));
     let digest = pnpm_pnpr_client::blob_id(&integrity).unwrap();
 
     std::fs::remove_file(&path).unwrap();
     std::fs::create_dir(&path).unwrap();
-    assert!(!super::store_holds(&path, &digest).await.unwrap());
+    assert!(
+        !super::store_holds(&path, &digest)
+            .await
+            .unwrap()
+    );
 
     #[cfg(unix)]
     {
@@ -122,7 +142,9 @@ async fn a_non_regular_file_is_not_reused_as_store_content() {
             "mkfifo is needed to plant a FIFO at a store path",
         );
         assert!(
-            !super::store_holds(&fifo, &digest).await.unwrap(),
+            !super::store_holds(&fifo, &digest)
+                .await
+                .unwrap(),
             "a FIFO must be refused rather than held open waiting for a writer",
         );
 
@@ -131,7 +153,9 @@ async fn a_non_regular_file_is_not_reused_as_store_content() {
         std::fs::remove_dir(&path).unwrap();
         std::os::unix::fs::symlink(&outside, &path).unwrap();
         assert!(
-            !super::store_holds(&path, &digest).await.unwrap(),
+            !super::store_holds(&path, &digest)
+                .await
+                .unwrap(),
             "a link naming correct bytes still imports content the store does not own",
         );
     }
@@ -190,7 +214,12 @@ mod restore {
     fn snapshots() -> HashMap<PackageKey, SnapshotEntry> {
         HashMap::from([
             (SNAPSHOT.parse().expect("snapshot key"), SnapshotEntry::default()),
-            (NODE_RUNTIME.parse().expect("runtime key"), SnapshotEntry::default()),
+            (
+                NODE_RUNTIME
+                    .parse()
+                    .expect("runtime key"),
+                SnapshotEntry::default(),
+            ),
         ])
     }
 
@@ -388,7 +417,9 @@ mod restore {
     async fn restore(store_dir: &StoreDir, expected_downloads: usize) -> PathBuf {
         let snapshot_key: PackageKey = SNAPSHOT.parse().expect("snapshot key");
         let side_effects = apply(store_dir, built_manifest(), expected_downloads).await;
-        let maps = side_effects.get(&snapshot_key).expect("the snapshot must be restored");
+        let maps = side_effects
+            .get(&snapshot_key)
+            .expect("the snapshot must be restored");
         let [overlay] = maps.values().collect::<Vec<_>>()[..] else {
             panic!("expected one cache key, got {}", maps.len());
         };
@@ -415,7 +446,9 @@ mod restore {
             22,
             "the lockfile's Node pin, not the machine's Node, must decide the platform",
         );
-        let mut supported_tags = platform.supported_tags().expect("supported tags");
+        let mut supported_tags = platform
+            .supported_tags()
+            .expect("supported tags");
         let compatibility_tag = supported_tags.swap_remove(0);
 
         let mut server = mockito::Server::new_async().await;
@@ -478,7 +511,10 @@ mod restore {
         })
         .await;
         drop(store_index_writer);
-        store_index_writer_task.await.unwrap().unwrap();
+        store_index_writer_task
+            .await
+            .unwrap()
+            .unwrap();
 
         handshake.assert_async().await;
         resolve.assert_async().await;
@@ -575,7 +611,10 @@ mod restore {
     /// key, so the artifacts it signs verify against `trusted_keys`.
     fn publishing_config(server: &str, store_dir: &StoreDir) -> Config {
         let mut config = config(server, store_dir);
-        let settings = config.remote_side_effects_cache.as_mut().expect("cache settings");
+        let settings = config
+            .remote_side_effects_cache
+            .as_mut()
+            .expect("cache settings");
         settings.publish = Some(true);
         settings.key_id = Some(KEY_ID.to_string());
         settings.builder_id = Some("ci/main/1".to_string());
@@ -608,7 +647,9 @@ mod restore {
             )]);
             publisher.publish(
                 &snapshot_key,
-                packages.get(&snapshot_key).expect("package metadata"),
+                packages
+                    .get(&snapshot_key)
+                    .expect("package metadata"),
                 &graph,
                 None,
                 diff,

@@ -5,13 +5,8 @@ use std::fs;
 
 #[test]
 fn link_fails_without_paths() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -36,13 +31,8 @@ fn link_fails_without_paths() {
 
 #[test]
 fn ln_alias_fails_without_paths() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -62,13 +52,8 @@ fn ln_alias_fails_without_paths() {
 
 #[test]
 fn link_fails_with_nonexistent_target() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -99,13 +84,8 @@ fn link_fails_with_nonexistent_target() {
 
 #[test]
 fn link_succeeds_with_valid_target() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -131,7 +111,9 @@ fn link_succeeds_with_valid_target() {
     let manifest =
         pnpm_package_manifest::PackageManifest::from_path(workspace.join("package.json"))
             .expect("read manifest");
-    let deps = manifest.value()["dependencies"].as_object().expect("dependencies exist");
+    let deps = manifest.value()["dependencies"]
+        .as_object()
+        .expect("dependencies exist");
     assert!(deps.contains_key("target-project"), "dependency must exist");
     assert_eq!(deps["target-project"], "link:../target-project");
 
@@ -140,13 +122,8 @@ fn link_succeeds_with_valid_target() {
 
 #[test]
 fn link_succeeds_with_absolute_path() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -172,7 +149,9 @@ fn link_succeeds_with_absolute_path() {
     let manifest =
         pnpm_package_manifest::PackageManifest::from_path(workspace.join("package.json"))
             .expect("read manifest");
-    let deps = manifest.value()["dependencies"].as_object().expect("dependencies exist");
+    let deps = manifest.value()["dependencies"]
+        .as_object()
+        .expect("dependencies exist");
     assert!(deps.contains_key("abs-target"), "dependency must exist");
 
     drop((root, mock_instance));
@@ -180,13 +159,8 @@ fn link_succeeds_with_absolute_path() {
 
 #[test]
 fn link_succeeds_with_multiple_targets() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -221,7 +195,9 @@ fn link_succeeds_with_multiple_targets() {
     let manifest =
         pnpm_package_manifest::PackageManifest::from_path(workspace.join("package.json"))
             .expect("read manifest");
-    let deps = manifest.value()["dependencies"].as_object().expect("dependencies exist");
+    let deps = manifest.value()["dependencies"]
+        .as_object()
+        .expect("dependencies exist");
     assert!(deps.contains_key("multi-a"), "dependency multi-a must exist");
     assert!(deps.contains_key("multi-b"), "dependency multi-b must exist");
 
@@ -230,13 +206,8 @@ fn link_succeeds_with_multiple_targets() {
 
 #[test]
 fn link_fails_target_no_name() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -245,7 +216,9 @@ fn link_fails_target_no_name() {
     )
     .expect("write package.json");
 
-    let target_dir = root.path().join("target-project-no-name");
+    let target_dir = root
+        .path()
+        .join("target-project-no-name");
     fs::create_dir_all(&target_dir).expect("create target dir");
     fs::write(
         target_dir.join("package.json"),
@@ -270,13 +243,8 @@ fn link_fails_target_no_name() {
 
 #[test]
 fn ln_alias_succeeds_with_valid_target() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -302,7 +270,9 @@ fn ln_alias_succeeds_with_valid_target() {
     let manifest =
         pnpm_package_manifest::PackageManifest::from_path(workspace.join("package.json"))
             .expect("read manifest");
-    let deps = manifest.value()["dependencies"].as_object().expect("dependencies exist");
+    let deps = manifest.value()["dependencies"]
+        .as_object()
+        .expect("dependencies exist");
     assert!(deps.contains_key("ln-target"), "dependency must exist");
     assert_eq!(deps["ln-target"], "link:../ln-target");
 
@@ -313,13 +283,8 @@ fn ln_alias_succeeds_with_valid_target() {
 /// `overrides:` block (mirroring pnpm), not just in `dependencies`.
 #[test]
 fn link_persists_override_to_workspace_yaml() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -360,13 +325,8 @@ fn link_persists_override_to_workspace_yaml() {
 /// even though the existing spec is a registry range.
 #[test]
 fn link_existing_dependency_writes_override_only() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -404,7 +364,9 @@ fn link_existing_dependency_writes_override_only() {
             .is_none(),
         "no dependencies entry should be added when already declared elsewhere",
     );
-    let dev_deps = manifest.value()["devDependencies"].as_object().expect("devDependencies exist");
+    let dev_deps = manifest.value()["devDependencies"]
+        .as_object()
+        .expect("devDependencies exist");
     assert_eq!(dev_deps["target-project"], "^1.0.0", "the existing entry stays untouched");
 
     let workspace_yaml =
@@ -417,7 +379,9 @@ fn link_existing_dependency_writes_override_only() {
     // The install succeeded despite the registry-spec devDependency, which is
     // only possible because the in-memory override rewrote it to the local
     // `link:` — confirm the symlink was created rather than a registry fetch.
-    let linked = workspace.join("node_modules").join("target-project");
+    let linked = workspace
+        .join("node_modules")
+        .join("target-project");
     assert!(
         fs::symlink_metadata(&linked).is_ok_and(|meta| meta.file_type().is_symlink()),
         "node_modules/target-project must be a symlink created from the link override",

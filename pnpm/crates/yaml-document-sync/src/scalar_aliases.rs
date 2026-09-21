@@ -95,8 +95,13 @@ impl ScalarAliases {
 }
 
 pub(crate) fn byte_range(span: Span) -> Range<usize> {
-    span.start.byte_offset().expect("string parser records byte offsets")
-        ..span.end.byte_offset().expect("string parser records byte offsets")
+    span.start
+        .byte_offset()
+        .expect("string parser records byte offsets")
+        ..span
+            .end
+            .byte_offset()
+            .expect("string parser records byte offsets")
 }
 
 fn apply_edits(text: &str, mut edits: Vec<(Range<usize>, String)>) -> String {
@@ -146,7 +151,8 @@ fn scalar_definitions(
                         scalar_text: value.to_string(),
                         anchor: anchor_token.1.clone(),
                         value: byte_range(span),
-                        tag: span.tag_start
+                        tag: span
+                            .tag_start
                             .and_then(|start| start.byte_offset())
                             .and_then(|start| tags.get(&start).cloned()),
                         aliases: Vec::new(),
@@ -157,7 +163,9 @@ fn scalar_definitions(
             }
             Event::Alias(id) => {
                 if let Some(definition) = definitions.get_mut(&id) {
-                    definition.aliases.push(byte_range(span));
+                    definition
+                        .aliases
+                        .push(byte_range(span));
                 }
             }
             _ => {}
@@ -220,7 +228,9 @@ fn unique_name(
         .unwrap_or_default()
         > 1
     {
-        let suffix = next_suffix.entry(name.clone()).or_insert(1);
+        let suffix = next_suffix
+            .entry(name.clone())
+            .or_insert(1);
         while names.contains_key(&format!("{name}_{suffix}")) {
             *suffix += 1;
         }
@@ -244,9 +254,15 @@ fn surviving_values(
             continue;
         }
         let feature = if path.key {
-            Some(document.query_key_only(&route).map_err(yamlpatch::Error::from)?)
+            Some(
+                document
+                    .query_key_only(&route)
+                    .map_err(yamlpatch::Error::from)?,
+            )
         } else {
-            document.query_exact(&route).map_err(yamlpatch::Error::from)?
+            document
+                .query_exact(&route)
+                .map_err(yamlpatch::Error::from)?
         };
         let Some(feature) = feature else { continue };
         let literal = document.extract(&feature);
@@ -272,7 +288,8 @@ fn restore_group(
     let Some((_, first, ..)) = values.first() else { return Ok(()) };
     let first = first.clone();
     for (index, (span, value, literal, key)) in values.into_iter().enumerate() {
-        let tagged = group.tagged_scalar
+        let tagged = group
+            .tagged_scalar
             .as_ref()
             .filter(|tagged| tagged.value == value);
         if index == 0 {
@@ -364,7 +381,8 @@ fn scalar_replacement(
     definition: &Definition,
 ) -> Result<String, Box<yamlpatch::Error>> {
     let literal = &text[definition.value.clone()];
-    let start = definition.tag
+    let start = definition
+        .tag
         .as_ref()
         .map_or(definition.anchor.start, |tag| tag.start.min(definition.anchor.start));
     let value: yaml_serde::Value = serde_saphyr::from_str(&text[start..definition.value.end])

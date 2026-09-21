@@ -56,12 +56,7 @@ pub(super) async fn send_mutation<Sys: UnpublishHost, Reporter: self::Reporter>(
     mutation: &mut MutationContext<'_>,
     request: MutationRequest<'_>,
 ) -> miette::Result<reqwest::Response> {
-    let MutationContext {
-        registry,
-        auth_header,
-        auth_type,
-        session,
-    } = mutation;
+    let MutationContext { registry, auth_header, auth_type, session } = mutation;
     let (registry, auth_header, auth_type) = (*registry, *auth_header, *auth_type);
     session
         .run::<Sys, Reporter, reqwest::Response, UnpublishHttpError, _, _>(
@@ -104,8 +99,9 @@ async fn send_once(
                 .request(request.method.clone(), request.url)
                 .header("npm-auth-type", auth_type.header_value());
             if let Some(json_body) = request.json_body {
-                builder =
-                    builder.header("content-type", "application/json").body(json_body.to_owned());
+                builder = builder
+                    .header("content-type", "application/json")
+                    .body(json_body.to_owned());
             }
             if let Some(auth_header) = auth_header {
                 builder = builder.header("authorization", auth_header);
@@ -144,7 +140,8 @@ pub(super) fn web_auth_fetch_options(config: &Config) -> WebAuthFetchOptions {
 async fn unauthorized_unpublish(
     response: reqwest::Response,
 ) -> Result<reqwest::Response, UnpublishHttpError> {
-    let body = read_limited_body(response, DEPRECATION_ERROR_BODY_LIMIT).await
+    let body = read_limited_body(response, DEPRECATION_ERROR_BODY_LIMIT)
+        .await
         .map_err(|source| {
             UnpublishHttpError::Registry(registry_operation_failed(
                 "reading the registry error response",

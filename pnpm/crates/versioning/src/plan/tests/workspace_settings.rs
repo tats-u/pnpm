@@ -73,7 +73,11 @@ fn an_internal_dependency_without_the_workspace_protocol_fails_a_release_but_not
         },
     )
     .expect_err("plan must fail");
-    assert!(err.to_string().contains("workspace: protocol"), "unexpected error: {err}");
+    assert!(
+        err.to_string()
+            .contains("workspace: protocol"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]

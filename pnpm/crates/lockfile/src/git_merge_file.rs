@@ -61,7 +61,10 @@ impl Section {
 fn is_git_conflicted(file_content: &str) -> bool {
     let mut section = Section::Common;
     let mut conflicts = 0_usize;
-    for next in file_content.lines().filter_map(Section::opened_by) {
+    for next in file_content
+        .lines()
+        .filter_map(Section::opened_by)
+    {
         if !section.may_open(next) {
             return false;
         }

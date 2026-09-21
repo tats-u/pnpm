@@ -22,7 +22,10 @@ pub(crate) fn frozen_tree_intact(
     workspace_root: &Path,
     node_linker: NodeLinker,
 ) -> bool {
-    if matches!(node_linker, NodeLinker::Pnp) && !workspace_root.join(crate::PNP_FILENAME).is_file()
+    if matches!(node_linker, NodeLinker::Pnp)
+        && !workspace_root
+            .join(crate::PNP_FILENAME)
+            .is_file()
     {
         return false;
     }
@@ -76,7 +79,10 @@ fn hoisted_packages_present(
             locations
                 .get(&hoisted_package_identity(key))
                 .is_some_and(|dirs| {
-                    !dirs.is_empty() && dirs.iter().all(|dir| hoisted_location_present(&root, dir))
+                    !dirs.is_empty()
+                        && dirs
+                            .iter()
+                            .all(|dir| hoisted_location_present(&root, dir))
                 })
         })
 }
@@ -107,10 +113,9 @@ fn hoisted_package_identity(key: &PackageKey) -> String {
 }
 
 fn hoisted_location_present(root: &Path, location: &str) -> bool {
-    std::fs::canonicalize(root.join(location))
-        .is_ok_and(|package_dir| {
-            package_dir.starts_with(root) && package_dir != root && package_dir.is_dir()
-        })
+    std::fs::canonicalize(root.join(location)).is_ok_and(|package_dir| {
+        package_dir.starts_with(root) && package_dir != root && package_dir.is_dir()
+    })
 }
 
 /// Whether every snapshot the lockfile records still has its virtual-store
@@ -124,25 +129,25 @@ fn all_virtual_store_slots_present(
         config.virtual_store_dir.clone(),
         config.virtual_store_dir_max_length as usize,
     );
-    snapshots
-        .keys()
-        .all(|key| {
-            if skipped.contains(key) {
-                return true;
-            }
-            // The name is lockfile-controlled: join it with the same
-            // traversal-rejecting helper the linkers use, and treat a
-            // malformed name as not-intact so the full path's
-            // structural lockfile gate rejects it.
-            let slot_node_modules = layout.slot_dir(key).join("node_modules");
-            match crate::safe_join_modules_dir::safe_join_modules_dir(
-                &slot_node_modules,
-                &key.name.to_string(),
-            ) {
-                Ok(dir) => dir.is_dir(),
-                Err(_) => false,
-            }
-        })
+    snapshots.keys().all(|key| {
+        if skipped.contains(key) {
+            return true;
+        }
+        // The name is lockfile-controlled: join it with the same
+        // traversal-rejecting helper the linkers use, and treat a
+        // malformed name as not-intact so the full path's
+        // structural lockfile gate rejects it.
+        let slot_node_modules = layout
+            .slot_dir(key)
+            .join("node_modules");
+        match crate::safe_join_modules_dir::safe_join_modules_dir(
+            &slot_node_modules,
+            &key.name.to_string(),
+        ) {
+            Ok(dir) => dir.is_dir(),
+            Err(_) => false,
+        }
+    })
 }
 
 /// Whether every importer's direct dependencies resolve from its own
@@ -156,9 +161,12 @@ fn importer_symlinks_intact(
     skipped: &crate::SkippedSnapshots,
 ) -> bool {
     let groups = crate::prune_direct_deps::selected_groups(modules.included);
-    let modules_dir_name: &std::ffi::OsStr =
-        config.modules_dir.file_name().unwrap_or_else(|| std::ffi::OsStr::new("node_modules"));
-    wanted.importers
+    let modules_dir_name: &std::ffi::OsStr = config
+        .modules_dir
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new("node_modules"));
+    wanted
+        .importers
         .iter()
         .all(|(importer_id, snapshot)| {
             if crate::symlink_direct_dependencies::validate_importer_id(importer_id).is_err() {

@@ -16,7 +16,9 @@ fn create_errors_when_no_name_given() {
             command.arg(reporter);
         }
         command.arg("create");
-        let output = command.output().expect("spawn pacquet create");
+        let output = command
+            .output()
+            .expect("spawn pacquet create");
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!("STDERR:\n{stderr}\n");
         assert!(!output.status.success(), "create with no name must fail");

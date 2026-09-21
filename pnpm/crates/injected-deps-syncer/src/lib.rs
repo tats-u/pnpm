@@ -119,8 +119,9 @@ fn sync_workspace_injected_deps(
     let modules =
         read_modules_manifest::<pnpm_modules_yaml::Host>(&workspace_dir.join("node_modules"))
             .map_err(|error| SyncInjectedDepsError::ReadModules { error })?;
-    let Some(injected_deps) =
-        modules.as_ref().and_then(|modules| modules.injected_deps.as_ref())
+    let Some(injected_deps) = modules
+        .as_ref()
+        .and_then(|modules| modules.injected_deps.as_ref())
     else {
         tracing::debug!(
             target: "pacquet::sync_injected_deps",
@@ -147,9 +148,9 @@ fn sync_workspace_injected_deps(
         .collect();
     patch_targets(&pkg_root_dir, &resolved_targets)?;
 
-    let previous_bin_names = opts.manifest_before_scripts.map_or_else(Vec::new, |manifest| {
-        bin_names(manifest, &pkg_root_dir)
-    });
+    let previous_bin_names = opts
+        .manifest_before_scripts
+        .map_or_else(Vec::new, |manifest| bin_names(manifest, &pkg_root_dir));
     // The install hoists bins into the virtual store's own `.bin` as well.
     let hoisted_bin_dir = hoisted_bin_path(workspace_dir, modules.as_ref());
     sync_bin_links(&SyncBinLinks {
@@ -180,7 +181,9 @@ fn patch_targets(
     for patcher in DirPatcher::from_multiple_targets(pkg_root_dir, resolved_targets)
         .map_err(SyncInjectedDepsError::Patch)?
     {
-        patcher.apply().map_err(SyncInjectedDepsError::Patch)?;
+        patcher
+            .apply()
+            .map_err(SyncInjectedDepsError::Patch)?;
     }
     Ok(())
 }
@@ -196,7 +199,9 @@ fn bin_names(manifest: &serde_json::Value, pkg_root_dir: &Path) -> Vec<String> {
 /// package's path relative to the workspace root, with forward slashes
 /// on every host.
 fn injected_dep_key(workspace_dir: &Path, pkg_root_dir: &Path) -> String {
-    pnpm_fs::relative_path(workspace_dir, pkg_root_dir).to_string_lossy().replace('\\', "/")
+    pnpm_fs::relative_path(workspace_dir, pkg_root_dir)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
 /// Re-link the bins of a package whose files just changed: a build
@@ -220,20 +225,20 @@ struct RemoveStaleBins<'a> {
 }
 
 fn sync_bin_links(opts: &SyncBinLinks<'_>) -> Result<(), SyncInjectedDepsError> {
-    let manifest = safe_read_package_json_from_dir(opts.pkg_root_dir)
-        .map_err(|error| SyncInjectedDepsError::ReadManifest {
-            dir: opts.pkg_root_dir.to_path_buf(),
-            error,
-        })?;
+    let manifest = safe_read_package_json_from_dir(opts.pkg_root_dir).map_err(|error| {
+        SyncInjectedDepsError::ReadManifest { dir: opts.pkg_root_dir.to_path_buf(), error }
+    })?;
     let Some(manifest) = manifest.filter(|manifest| manifest.get("name").is_some()) else {
         return Ok(());
     };
 
     // `link_bins` only ever creates shims, so a bin the script dropped keeps
     // its shim, pointing at a command that is no longer there.
-    let current_bin_names: HashSet<String> =
-        bin_names(&manifest, opts.pkg_root_dir).into_iter().collect();
-    let stale_bin_names: Vec<&String> = opts.previous_bin_names
+    let current_bin_names: HashSet<String> = bin_names(&manifest, opts.pkg_root_dir)
+        .into_iter()
+        .collect();
+    let stale_bin_names: Vec<&String> = opts
+        .previous_bin_names
         .iter()
         .filter(|name| !current_bin_names.contains(*name))
         .collect();
@@ -295,11 +300,12 @@ fn relink_project_bins(
         // this package left behind.
         let project_bin_dir = project_modules_dir.join(".bin");
         for name in stale_bin_names {
-            remove_bin(&project_bin_dir.join(name.as_str()))
-                .map_err(|error| SyncInjectedDepsError::RemoveBin {
+            remove_bin(&project_bin_dir.join(name.as_str())).map_err(|error| {
+                SyncInjectedDepsError::RemoveBin {
                     path: project_bin_dir.join(name.as_str()),
                     error,
-                })?;
+                }
+            })?;
         }
         link_bins::<pnpm_cmd_shim::Host>(
             &project_modules_dir,
@@ -319,7 +325,10 @@ fn relink_project_bins(
 fn remove_stale_bins(remove: RemoveStaleBins<'_>) -> Result<(), SyncInjectedDepsError> {
     let bin_dirs = [
         remove.parent_modules_dir.join(".bin"),
-        remove.target_dir.join("node_modules").join(".bin"),
+        remove
+            .target_dir
+            .join("node_modules")
+            .join(".bin"),
     ];
     for bin_dir in bin_dirs
         .iter()
@@ -327,11 +336,9 @@ fn remove_stale_bins(remove: RemoveStaleBins<'_>) -> Result<(), SyncInjectedDeps
         .chain(remove.hoisted_bin_dir)
     {
         for name in remove.stale_bin_names {
-            remove_bin(&bin_dir.join(name.as_str()))
-                .map_err(|error| SyncInjectedDepsError::RemoveBin {
-                    path: bin_dir.join(name.as_str()),
-                    error,
-                })?;
+            remove_bin(&bin_dir.join(name.as_str())).map_err(|error| {
+                SyncInjectedDepsError::RemoveBin { path: bin_dir.join(name.as_str()), error }
+            })?;
         }
     }
     Ok(())

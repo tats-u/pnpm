@@ -54,17 +54,30 @@ async fn resolve_directory() {
         .expect("claims");
 
     assert_eq!(result.id.as_str(), "link:..");
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("link:.."));
-    let manifest = result.manifest.as_ref().expect("manifest");
     assert_eq!(
-        manifest.get("name").and_then(|value| value.as_str()),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("link:..")
+    );
+    let manifest = result
+        .manifest
+        .as_ref()
+        .expect("manifest");
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(|value| value.as_str()),
         Some("@pnpm/resolving.local-resolver"),
     );
     let LockfileResolution::Directory(dir) = &result.resolution else {
         panic!("expected directory resolution, got {:?}", result.resolution);
     };
-    let expected_dir =
-        forward_slashes(lexical_normalize(&project_dir.join("..")).display().to_string());
+    let expected_dir = forward_slashes(
+        lexical_normalize(&project_dir.join(".."))
+            .display()
+            .to_string(),
+    );
     assert_eq!(dir.directory, expected_dir);
 }
 
@@ -85,7 +98,9 @@ async fn resolve_directory_specified_using_absolute_path() {
 
     assert_eq!(result.id.as_str(), "link:..");
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some(format!("link:{normalized_linked_dir}").as_str()),
     );
     let LockfileResolution::Directory(dir) = &result.resolution else {
@@ -105,13 +120,16 @@ async fn resolve_directory_specified_using_absolute_path_with_preserve_absolute_
         injected: false,
     };
     let ctx = LocalResolverContext { preserve_absolute_paths: true };
-    let result = resolve_from_local_scheme(&ctx, &wd, &opts(&project_dir)).await
+    let result = resolve_from_local_scheme(&ctx, &wd, &opts(&project_dir))
+        .await
         .expect("resolve")
         .expect("claims");
 
     assert_eq!(result.id.as_str(), format!("link:{normalized_linked_dir}"));
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some(format!("link:{normalized_linked_dir}").as_str()),
     );
 }
@@ -128,13 +146,16 @@ async fn resolve_directory_specified_using_absolute_path_with_preserve_absolute_
         injected: false,
     };
     let ctx = LocalResolverContext { preserve_absolute_paths: true };
-    let result = resolve_from_local_scheme(&ctx, &wd, &opts(&project_dir)).await
+    let result = resolve_from_local_scheme(&ctx, &wd, &opts(&project_dir))
+        .await
         .expect("resolve")
         .expect("claims");
 
     assert_eq!(result.id.as_str(), format!("file:{normalized_linked_dir}"));
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some(format!("file:{normalized_linked_dir}").as_str()),
     );
 }
@@ -150,7 +171,12 @@ async fn resolve_injected_directory() {
         .expect("claims");
 
     assert_eq!(result.id.as_str(), "file:..");
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("file:.."));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("file:..")
+    );
     let LockfileResolution::Directory(dir) = &result.resolution else {
         panic!("expected directory resolution, got {:?}", result.resolution);
     };
@@ -168,7 +194,12 @@ async fn resolve_workspace_directory() {
         .expect("claims");
 
     assert_eq!(result.id.as_str(), "link:..");
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("link:.."));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("link:..")
+    );
 }
 
 #[tokio::test]
@@ -182,7 +213,12 @@ async fn resolve_directory_specified_using_the_file_protocol() {
         .expect("claims");
 
     assert_eq!(result.id.as_str(), "file:..");
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("file:.."));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("file:..")
+    );
     let LockfileResolution::Directory(dir) = &result.resolution else {
         panic!("expected directory resolution");
     };
@@ -200,7 +236,12 @@ async fn resolve_directory_specified_using_the_link_protocol() {
         .expect("claims");
 
     assert_eq!(result.id.as_str(), "link:..");
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("link:.."));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("link:..")
+    );
 }
 
 /// Build a tarball for `pnpm-local-resolver@0.1.1` at `path` and return
@@ -330,7 +371,9 @@ async fn resolve_file() {
 
     assert_eq!(result.id.as_str(), "file:pnpm-local-resolver-0.1.1.tgz");
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some("file:pnpm-local-resolver-0.1.1.tgz"),
     );
     let LockfileResolution::Tarball(TarballResolution {
@@ -350,12 +393,22 @@ async fn resolve_file() {
     assert_eq!(result.resolved_via, "local-filesystem");
     // The bundled manifest is what gives the dep path its `<name>@`
     // prefix, so a lockfile key can be parsed out of it.
-    let manifest = result.manifest.as_deref().expect("bundled manifest");
+    let manifest = result
+        .manifest
+        .as_deref()
+        .expect("bundled manifest");
     assert_eq!(
-        manifest.get("name").and_then(serde_json::Value::as_str),
+        manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str),
         Some("pnpm-local-resolver"),
     );
-    assert_eq!(manifest.get("version").and_then(serde_json::Value::as_str), Some("0.1.1"));
+    assert_eq!(
+        manifest
+            .get("version")
+            .and_then(serde_json::Value::as_str),
+        Some("0.1.1")
+    );
 }
 
 #[tokio::test]
@@ -373,13 +426,16 @@ async fn resolve_file_when_lockfile_directory_differs_from_the_packages_dir() {
         bare_specifier: "./pnpm-local-resolver-0.1.1.tgz".to_string(),
         injected: false,
     };
-    let result = resolve_from_local_path(&ctx_default(), &wd, &options).await
+    let result = resolve_from_local_path(&ctx_default(), &wd, &options)
+        .await
         .expect("resolve")
         .expect("claims");
 
     assert_eq!(result.id.as_str(), "file:tgz/pnpm-local-resolver-0.1.1.tgz");
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some("file:pnpm-local-resolver-0.1.1.tgz"),
     );
     let LockfileResolution::Tarball(TarballResolution { tarball, .. }) = &result.resolution else {
@@ -396,7 +452,9 @@ async fn resolve_absolute_tarball_when_project_dir_contains_parent_components() 
     let pnpm_home = data.join("pnpm");
     fs::create_dir_all(&child).expect("create child dir");
     fs::create_dir_all(&pnpm_home).expect("create pnpm home");
-    let tarball_path = tmp.path().join("pnpm-local-resolver-0.1.1.tgz");
+    let tarball_path = tmp
+        .path()
+        .join("pnpm-local-resolver-0.1.1.tgz");
     write_tarball(&tarball_path);
 
     // Same directory as `pnpm_home`, still spelled with a `..` segment —
@@ -415,7 +473,9 @@ async fn resolve_absolute_tarball_when_project_dir_contains_parent_components() 
     let LockfileResolution::Tarball(TarballResolution { tarball, .. }) = &result.resolution else {
         panic!("expected tarball resolution, got {:?}", result.resolution);
     };
-    let rel = tarball.strip_prefix("file:").expect("file: tarball");
+    let rel = tarball
+        .strip_prefix("file:")
+        .expect("file: tarball");
     let reconstructed = lexical_normalize(&unnormalized_home.join(rel));
     assert_eq!(
         reconstructed,
@@ -447,7 +507,9 @@ async fn resolve_relative_tarball_when_project_dir_contains_parent_components() 
         .expect("claims");
 
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some("file:pnpm-local-resolver-0.1.1.tgz"),
     );
     assert_eq!(result.id.as_str(), "file:pnpm-local-resolver-0.1.1.tgz");
@@ -463,7 +525,9 @@ async fn resolve_relative_tarball_when_project_dir_contains_parent_components() 
 #[tokio::test]
 async fn resolve_absolute_tarball_path_stepping_back_through_a_missing_directory() {
     let tmp = TempDir::new().expect("tempdir");
-    let tarball_path = tmp.path().join("pnpm-local-resolver-0.1.1.tgz");
+    let tarball_path = tmp
+        .path()
+        .join("pnpm-local-resolver-0.1.1.tgz");
     let integrity = write_tarball(&tarball_path);
 
     let spec = tmp
@@ -516,7 +580,9 @@ async fn resolve_tarball_specified_with_file_protocol() {
 
     assert_eq!(result.id.as_str(), "file:pnpm-local-resolver-0.1.1.tgz");
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some("file:pnpm-local-resolver-0.1.1.tgz"),
     );
 }
@@ -549,7 +615,8 @@ async fn resolve_file_with_different_integrity_force_fetch() {
         bare_specifier: "file:./pnpm-local-resolver-0.1.1.tgz".to_string(),
         injected: false,
     };
-    let result = resolve_from_local_scheme(&ctx_default(), &wd, &options).await
+    let result = resolve_from_local_scheme(&ctx_default(), &wd, &options)
+        .await
         .expect("resolve")
         .expect("claims");
 
@@ -655,9 +722,22 @@ async fn do_not_fail_when_resolving_from_not_existing_directory() {
         .await
         .expect("resolve")
         .expect("claims");
-    let manifest = result.manifest.as_ref().expect("manifest");
-    assert_eq!(manifest.get("name").and_then(|value| value.as_str()), Some("dir-does-not-exist"));
-    assert_eq!(manifest.get("version").and_then(|value| value.as_str()), Some("0.0.0"));
+    let manifest = result
+        .manifest
+        .as_ref()
+        .expect("manifest");
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(|value| value.as_str()),
+        Some("dir-does-not-exist")
+    );
+    assert_eq!(
+        manifest
+            .get("version")
+            .and_then(|value| value.as_str()),
+        Some("0.0.0")
+    );
 }
 
 #[tokio::test]

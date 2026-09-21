@@ -53,18 +53,28 @@ impl EffectiveResolverSettings {
     pub(super) fn for_request(request: &ResolveRequest) -> Self {
         static DEFAULTS: LazyLock<PacquetConfig> = LazyLock::new(PacquetConfig::new);
 
-        let lockfile_settings = request.frozen_lockfile
-            .then(|| request.lockfile.as_ref()?.settings.as_ref())
+        let lockfile_settings = request
+            .frozen_lockfile
+            .then(|| {
+                request
+                    .lockfile
+                    .as_ref()?
+                    .settings
+                    .as_ref()
+            })
             .flatten();
 
         EffectiveResolverSettings {
-            auto_install_peers: request.auto_install_peers
+            auto_install_peers: request
+                .auto_install_peers
                 .or_else(|| lockfile_settings.map(|settings| settings.auto_install_peers))
                 .unwrap_or(DEFAULTS.auto_install_peers),
-            dedupe_peers: request.dedupe_peers
+            dedupe_peers: request
+                .dedupe_peers
                 .or_else(|| lockfile_settings.and_then(|settings| settings.dedupe_peers))
                 .unwrap_or(DEFAULTS.dedupe_peers),
-            exclude_links_from_lockfile: request.exclude_links_from_lockfile
+            exclude_links_from_lockfile: request
+                .exclude_links_from_lockfile
                 .or_else(|| lockfile_settings.map(|settings| settings.exclude_links_from_lockfile))
                 .unwrap_or(DEFAULTS.exclude_links_from_lockfile),
         }
@@ -93,10 +103,13 @@ pub(super) fn intern_config(
     max_interned: usize,
     max_key_bytes: usize,
 ) -> Option<&'static PacquetConfig> {
-    let registry =
-        request.registry.clone().unwrap_or_else(|| "https://registry.npmjs.org/".to_string());
+    let registry = request
+        .registry
+        .clone()
+        .unwrap_or_else(|| "https://registry.npmjs.org/".to_string());
     let registry = if registry.ends_with('/') { registry } else { format!("{registry}/") };
-    let overrides: Option<IndexMap<String, String>> = request.overrides
+    let overrides: Option<IndexMap<String, String>> = request
+        .overrides
         .as_ref()
         .and_then(|value| serde_json::from_value(value.clone()).ok());
     let resolver_settings = EffectiveResolverSettings::for_request(request);
@@ -105,7 +118,9 @@ pub(super) fn intern_config(
         return None;
     }
 
-    let mut configs = configs.lock().expect("config cache poisoned");
+    let mut configs = configs
+        .lock()
+        .expect("config cache poisoned");
     if let Some(config) = configs.get(&key) {
         return Some(config);
     }
@@ -119,8 +134,12 @@ pub(super) fn intern_config(
     config.registry = registry;
     apply_registry_declarations(&mut config, request);
     config.overrides = overrides;
-    config.patched_dependency_hashes_override.clone_from(&request.patched_dependencies);
-    config.package_extensions.clone_from(&request.package_extensions);
+    config
+        .patched_dependency_hashes_override
+        .clone_from(&request.patched_dependencies);
+    config
+        .package_extensions
+        .clone_from(&request.package_extensions);
     config.allow_unused_patches = request.allow_unused_patches;
     config.modules_dir = PathBuf::from("node_modules");
     config.lockfile = true;
@@ -188,11 +207,15 @@ pub(super) fn apply_registry_declarations(config: &mut PacquetConfig, request: &
 pub(super) fn apply_request_policy(config: &mut PacquetConfig, request: &ResolveRequest) {
     config.resolution_mode = request.resolution_mode;
     config.minimum_release_age = request.minimum_release_age;
-    config.minimum_release_age_exclude.clone_from(&request.minimum_release_age_exclude);
+    config
+        .minimum_release_age_exclude
+        .clone_from(&request.minimum_release_age_exclude);
     if let Some(ignore_missing_time) = request.minimum_release_age_ignore_missing_time {
         config.minimum_release_age_ignore_missing_time = ignore_missing_time;
     }
     config.trust_policy = request.trust_policy;
-    config.trust_policy_exclude.clone_from(&request.trust_policy_exclude);
+    config
+        .trust_policy_exclude
+        .clone_from(&request.trust_policy_exclude);
     config.trust_policy_ignore_after = request.trust_policy_ignore_after;
 }

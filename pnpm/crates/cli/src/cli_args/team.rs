@@ -211,16 +211,28 @@ impl TeamArgs {
         };
         let context = self.context(config)?;
         match subcommand {
-            "create" => team_create(&context, &self.params[1..]).await.map(Some),
-            "destroy" => team_destroy(&context, &self.params[1..]).await.map(Some),
-            "add" => team_add(&context, &self.params[1..]).await.map(Some),
-            "rm" => team_rm(&context, &self.params[1..]).await.map(Some),
-            "ls" | "list" => team_ls(&context, &self.params[1..]).await.map(Some),
+            "create" => team_create(&context, &self.params[1..])
+                .await
+                .map(Some),
+            "destroy" => team_destroy(&context, &self.params[1..])
+                .await
+                .map(Some),
+            "add" => team_add(&context, &self.params[1..])
+                .await
+                .map(Some),
+            "rm" => team_rm(&context, &self.params[1..])
+                .await
+                .map(Some),
+            "ls" | "list" => team_ls(&context, &self.params[1..])
+                .await
+                .map(Some),
             _ => {
                 // When no subcommand is given, assume the first arg is a scope:team
                 // and list members, or a scope and list teams.
                 if self.params[0].starts_with('@') || self.params[0].starts_with(':') {
-                    team_ls(&context, &self.params).await.map(Some)
+                    team_ls(&context, &self.params)
+                        .await
+                        .map(Some)
                 } else {
                     Err(TeamError::SubcommandRequired.into())
                 }
@@ -236,7 +248,10 @@ impl TeamArgs {
         if let Some(registry) = &self.registry {
             registries.insert("default".to_string(), normalize_registry_url(registry));
         }
-        let redirect_guard = self.otp.as_ref().map(|_| registry::redirect_guard(&registries));
+        let redirect_guard = self
+            .otp
+            .as_ref()
+            .map(|_| registry::redirect_guard(&registries));
         Ok(TeamContext {
             config,
             http_client: build_http_client(config, redirect_guard.as_ref())?,
@@ -250,9 +265,14 @@ impl TeamArgs {
 }
 
 async fn team_create(context: &TeamContext<'_>, params: &[String]) -> miette::Result<String> {
-    let spec = params.first().ok_or(TeamError::CreateScopeRequired)?;
+    let spec = params
+        .first()
+        .ok_or(TeamError::CreateScopeRequired)?;
     let st = parse_scope_team(spec)?;
-    let team = st.team.as_deref().ok_or(TeamError::CreateNameRequired)?;
+    let team = st
+        .team
+        .as_deref()
+        .ok_or(TeamError::CreateNameRequired)?;
 
     let registry_url = registry_for_scope(context, &st.scope);
     let auth_header = auth_header_for_registry(context, &st.scope)?;
@@ -278,9 +298,14 @@ async fn team_create(context: &TeamContext<'_>, params: &[String]) -> miette::Re
 }
 
 async fn team_destroy(context: &TeamContext<'_>, params: &[String]) -> miette::Result<String> {
-    let spec = params.first().ok_or(TeamError::DestroyScopeRequired)?;
+    let spec = params
+        .first()
+        .ok_or(TeamError::DestroyScopeRequired)?;
     let st = parse_scope_team(spec)?;
-    let team = st.team.as_deref().ok_or(TeamError::DestroyNameRequired)?;
+    let team = st
+        .team
+        .as_deref()
+        .ok_or(TeamError::DestroyNameRequired)?;
 
     let registry_url = registry_for_scope(context, &st.scope);
     let auth_header = auth_header_for_registry(context, &st.scope)?;
@@ -306,7 +331,10 @@ async fn team_add(context: &TeamContext<'_>, params: &[String]) -> miette::Resul
         return Err(TeamError::AddArgsRequired.into());
     }
     let st = parse_scope_team(&params[0])?;
-    let team = st.team.as_deref().ok_or(TeamError::AddNameRequired)?;
+    let team = st
+        .team
+        .as_deref()
+        .ok_or(TeamError::AddNameRequired)?;
     let username = &params[1];
 
     let registry_url = registry_for_scope(context, &st.scope);
@@ -340,7 +368,10 @@ async fn team_rm(context: &TeamContext<'_>, params: &[String]) -> miette::Result
         return Err(TeamError::RmArgsRequired.into());
     }
     let st = parse_scope_team(&params[0])?;
-    let team = st.team.as_deref().ok_or(TeamError::RmNameRequired)?;
+    let team = st
+        .team
+        .as_deref()
+        .ok_or(TeamError::RmNameRequired)?;
     let username = &params[1];
 
     let registry_url = registry_for_scope(context, &st.scope);
@@ -370,7 +401,9 @@ async fn team_rm(context: &TeamContext<'_>, params: &[String]) -> miette::Result
 }
 
 async fn team_ls(context: &TeamContext<'_>, params: &[String]) -> miette::Result<String> {
-    let spec = params.first().ok_or(TeamError::LsScopeRequired)?;
+    let spec = params
+        .first()
+        .ok_or(TeamError::LsScopeRequired)?;
     let st = parse_scope_team(spec)?;
 
     let auth_header = auth_header_for_registry(context, &st.scope)?;

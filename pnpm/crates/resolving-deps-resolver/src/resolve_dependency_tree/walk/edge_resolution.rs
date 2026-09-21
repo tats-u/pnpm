@@ -183,7 +183,8 @@ pub(super) fn edge_cache_key(
     prior_key: Option<&PkgNameVerPeer>,
 ) -> WantedKey {
     let project_scope = project_relative_cache_scope(wanted, opts);
-    let overlay_versions = edge.pick_overlay
+    let overlay_versions = edge
+        .pick_overlay
         .as_ref()
         .map(|overlay| overlay_version_view(overlay, wanted))
         .unwrap_or_default();
@@ -389,7 +390,8 @@ pub(super) fn record_workspace_manifest_identity(
     if result.package.name_ver.is_some() {
         return;
     }
-    let names_a_workspace_project = wanted.bare_specifier
+    let names_a_workspace_project = wanted
+        .bare_specifier
         .as_deref()
         .is_some_and(|specifier| {
             specifier.starts_with("workspace:") && !specifier.starts_with("workspace:.")
@@ -399,12 +401,18 @@ pub(super) fn record_workspace_manifest_identity(
     }
     let Some(manifest) = result.package.manifest.as_deref() else { return };
     let (Some(name), Some(version)) = (
-        manifest.get("name").and_then(Value::as_str),
-        manifest.get("version").and_then(Value::as_str),
+        manifest
+            .get("name")
+            .and_then(Value::as_str),
+        manifest
+            .get("version")
+            .and_then(Value::as_str),
     ) else {
         return;
     };
-    ctx.workspace.versions.record_workspace_manifest_identity(id, name, version);
+    ctx.workspace
+        .versions
+        .record_workspace_manifest_identity(id, name, version);
 }
 
 pub(super) fn reject_exotic_subdep(
@@ -414,7 +422,11 @@ pub(super) fn reject_exotic_subdep(
     depth: i32,
     parent_is_workspace: bool,
 ) -> Result<(), ResolveDependencyTreeError> {
-    if !ctx.options.base.policy.block_exotic_subdeps
+    if !ctx
+        .options
+        .base
+        .policy
+        .block_exotic_subdeps
         || depth == 0
         || parent_is_workspace
         || !is_exotic_resolved_via(&result.resolved_via)
@@ -422,7 +434,8 @@ pub(super) fn reject_exotic_subdep(
         return Ok(());
     }
     Err(ResolveDependencyTreeError::ExoticSubdep {
-        specifier: wanted.alias
+        specifier: wanted
+            .alias
             .clone()
             .or_else(|| wanted.bare_specifier.clone())
             .unwrap_or_default(),
@@ -448,17 +461,30 @@ pub(super) fn drop_failed_optional_edge(
     if wanted_lockfile_contains_satisfying_entry(ctx.workspace.reuse.lockfile.as_deref(), wanted) {
         return Err(ResolveDependencyTreeError::LockedOptionalResolutionFailure(Box::new(err)));
     }
-    if let Some(log) = ctx.workspace.hooks.skipped_optional_log.as_ref() {
+    if let Some(log) = ctx
+        .workspace
+        .hooks
+        .skipped_optional_log
+        .as_ref()
+    {
         log(SkippedOptionalDependency {
             details: err.to_string(),
             name: wanted.alias.clone(),
-            version: wanted.alias
+            version: wanted
+                .alias
                 .is_some()
                 .then(|| wanted.bare_specifier.clone())
                 .flatten(),
-            bare_specifier: wanted.bare_specifier.clone().unwrap_or_default(),
+            bare_specifier: wanted
+                .bare_specifier
+                .clone()
+                .unwrap_or_default(),
             parents: pkgs_info_from_ids(ctx, ancestor_ids),
-            prefix: opts.project.project_dir.display().to_string(),
+            prefix: opts
+                .project
+                .project_dir
+                .display()
+                .to_string(),
         });
     }
     Ok(())
@@ -478,7 +504,8 @@ pub(super) fn is_droppable_resolve_error(err: &ResolveDependencyTreeError) -> bo
 
 impl ChildEdge<'_> {
     fn pending_ancestry(&self, id: &str, current_is_optional: bool) -> super::PendingNodeAncestry {
-        let next_ancestors = self.ancestor_ids
+        let next_ancestors = self
+            .ancestor_ids
             .iter()
             .cloned()
             .chain(std::iter::once(id.to_owned()))

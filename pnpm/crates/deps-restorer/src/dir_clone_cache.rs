@@ -167,7 +167,8 @@ impl<'install> DirCloneCache<'install> {
     /// that probe, so it must only run on a worker thread — which
     /// [`Self::try_import`]'s calling convention already guarantees.
     fn layout(&self) -> &VirtualStoreLayout {
-        self.layout.get_or_init(|| self.layout_inputs.build())
+        self.layout
+            .get_or_init(|| self.layout_inputs.build())
     }
 
     /// Try to materialize `save_path` (the project slot's
@@ -204,7 +205,10 @@ impl<'install> DirCloneCache<'install> {
         // Only a hash-suffixed canonical slot is content-addressed;
         // a snapshot the layout has no precomputed suffix for goes
         // through the per-file import.
-        let Some(slot_dir) = self.layout().hashed_slot_dir(package_key) else {
+        let Some(slot_dir) = self
+            .layout()
+            .hashed_slot_dir(package_key)
+        else {
             return false;
         };
         let canonical_node_modules = slot_dir.join("node_modules");
@@ -299,7 +303,8 @@ impl<'install> DirCloneCache<'install> {
                 | io::ErrorKind::PermissionDenied
                 | io::ErrorKind::AlreadyExists,
         ) {
-            self.disabled.store(true, Ordering::Relaxed);
+            self.disabled
+                .store(true, Ordering::Relaxed);
         }
         tracing::debug!(
             target: "pacquet::dir_clone_cache",

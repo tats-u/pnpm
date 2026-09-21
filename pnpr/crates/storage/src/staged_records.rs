@@ -5,12 +5,18 @@ use super::{
 
 impl Storage {
     pub async fn read_staged_meta(&self, stage_id: &str) -> Result<Option<Vec<u8>>> {
-        self.hosted.read_record(STAGED_DIR, &staged_meta_object(stage_id)?).await
+        self.hosted
+            .read_record(STAGED_DIR, &staged_meta_object(stage_id)?)
+            .await
     }
 
     pub async fn create_staged_meta(&self, stage_id: &str, bytes: &[u8]) -> Result<()> {
         let key = staged_meta_object(stage_id)?;
-        if self.hosted.create_record(STAGED_DIR, &key, bytes).await? {
+        if self
+            .hosted
+            .create_record(STAGED_DIR, &key, bytes)
+            .await?
+        {
             return Ok(());
         }
         // Stage ids are minted from the CSPRNG, so a taken key is not a
@@ -28,22 +34,24 @@ impl Storage {
         expected: &[u8],
         bytes: &[u8],
     ) -> Result<DocumentWrite> {
-        self.hosted.replace_record_if_current(
-            STAGED_DIR,
-            &staged_meta_object(stage_id)?,
-            expected,
-            bytes,
-        )
-        .await
+        self.hosted
+            .replace_record_if_current(STAGED_DIR, &staged_meta_object(stage_id)?, expected, bytes)
+            .await
     }
 
     pub async fn read_staged_body(&self, stage_id: &str) -> Result<Option<Vec<u8>>> {
-        self.hosted.read_record(STAGED_DIR, &staged_body_object(stage_id)?).await
+        self.hosted
+            .read_record(STAGED_DIR, &staged_body_object(stage_id)?)
+            .await
     }
 
     pub async fn create_staged_body(&self, stage_id: &str, bytes: &[u8]) -> Result<()> {
         let key = staged_body_object(stage_id)?;
-        if self.hosted.create_record(STAGED_DIR, &key, bytes).await? {
+        if self
+            .hosted
+            .create_record(STAGED_DIR, &key, bytes)
+            .await?
+        {
             return Ok(());
         }
         Err(RegistryError::Internal {
@@ -58,9 +66,14 @@ impl Storage {
     /// reader, and an error here would misreport that while leaving nothing
     /// for a retry to find (bodies are only discovered through metadata).
     pub async fn remove_staged(&self, stage_id: &str) -> Result<bool> {
-        let removed = self.hosted.remove_record(STAGED_DIR, &staged_meta_object(stage_id)?).await?;
-        if let Err(err) =
-            self.hosted.remove_record(STAGED_DIR, &staged_body_object(stage_id)?).await
+        let removed = self
+            .hosted
+            .remove_record(STAGED_DIR, &staged_meta_object(stage_id)?)
+            .await?;
+        if let Err(err) = self
+            .hosted
+            .remove_record(STAGED_DIR, &staged_body_object(stage_id)?)
+            .await
         {
             tracing::warn!(error = %err, stage_id, "staged body cleanup failed after removing its metadata");
         }
@@ -70,7 +83,10 @@ impl Storage {
     /// Every staged record's id, in unspecified order (the listing endpoint
     /// sorts by staging time).
     pub async fn list_staged_ids(&self) -> Result<Vec<String>> {
-        let keys = self.hosted.list_record_keys(STAGED_DIR).await?;
+        let keys = self
+            .hosted
+            .list_record_keys(STAGED_DIR)
+            .await?;
         Ok(keys
             .iter()
             .filter_map(|key| staged_id_of_meta_object(key))
@@ -83,7 +99,9 @@ impl Storage {
         workspace: &str,
         run_id: &str,
     ) -> Result<Option<Vec<u8>>> {
-        self.hosted.read_record(PIPELINE_RUNS_DIR, &pipeline_run_key(workspace, run_id)?).await
+        self.hosted
+            .read_record(PIPELINE_RUNS_DIR, &pipeline_run_key(workspace, run_id)?)
+            .await
     }
 
     /// Record a run, reporting `false` when that workspace already has one
@@ -95,7 +113,9 @@ impl Storage {
         bytes: &[u8],
     ) -> Result<bool> {
         let key = pipeline_run_key(workspace, run_id)?;
-        self.hosted.create_record(PIPELINE_RUNS_DIR, &key, bytes).await
+        self.hosted
+            .create_record(PIPELINE_RUNS_DIR, &key, bytes)
+            .await
     }
 
     /// One workspace's recorded run keys, in unspecified order. Scoped to the
@@ -103,6 +123,8 @@ impl Storage {
     /// the deployment holds.
     pub async fn list_pipeline_runs(&self, workspace: &str) -> Result<Vec<String>> {
         let namespace = format!("{PIPELINE_RUNS_DIR}/{}", validated_record_name(workspace)?);
-        self.hosted.list_record_keys(&namespace).await
+        self.hosted
+            .list_record_keys(&namespace)
+            .await
     }
 }

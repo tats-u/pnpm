@@ -312,7 +312,9 @@ fn setup_fresh_install_with_config(
     let settings = current_settings(config, config_kind, isolated_included(), None);
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some(project_name.into()), version: Some(project_version.into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), settings, projects);
@@ -369,14 +371,22 @@ fn setup_content_check_project() -> (tempfile::TempDir, &'static Config) {
     config.modules_dir = workspace_root.join("node_modules");
     config.virtual_store_dir = workspace_root.join("node_modules/.pnpm");
     fs::create_dir_all(&config.virtual_store_dir).unwrap();
-    fs::write(config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME), FOO_LOCKFILE).unwrap();
+    fs::write(
+        config
+            .virtual_store_dir
+            .join(Lockfile::CURRENT_FILE_NAME),
+        FOO_LOCKFILE,
+    )
+    .unwrap();
     let config = config.leak();
 
     let settings =
         current_settings(config, pnpm_config::NodeLinker::Isolated, isolated_included(), None);
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), settings, projects);
@@ -448,13 +458,17 @@ fn collide_mtimes_with_recorded_state(
     for path in [
         workspace_root.join("package.json"),
         workspace_root.join(Lockfile::FILE_NAME),
-        config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME),
+        config
+            .virtual_store_dir
+            .join(Lockfile::CURRENT_FILE_NAME),
     ] {
         set_mtime(&path, modified);
     }
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(
@@ -619,11 +633,15 @@ fn linked_sibling_decision_for_spec(
         current_settings(config, pnpm_config::NodeLinker::Isolated, isolated_included(), None);
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     projects.insert(
-        sibling_dir.to_string_lossy().into_owned(),
+        sibling_dir
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("pkg-a".into()), version: Some(sibling_version.into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), settings, projects);

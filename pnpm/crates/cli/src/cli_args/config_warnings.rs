@@ -51,16 +51,25 @@ pub(crate) fn warn_unmatched_registry_options(config: &Config) {
 /// every entry matches. Split out so the wording is testable without
 /// capturing stderr.
 fn unmatched_registry_options_warning(config: &Config) -> Option<String> {
-    if config.registry_options_by_url.is_empty() {
+    if config
+        .registry_options_by_url
+        .is_empty()
+    {
         return None;
     }
-    let configured: BTreeSet<&str> = config.registries_by_scope
+    let configured: BTreeSet<&str> = config
+        .registries_by_scope
         .values()
         .chain(config.registries_by_prefix.values())
         .map(String::as_str)
-        .chain(BUILTIN_REGISTRIES_BY_PREFIX.iter().map(|(_, url)| *url))
+        .chain(
+            BUILTIN_REGISTRIES_BY_PREFIX
+                .iter()
+                .map(|(_, url)| *url),
+        )
         .collect();
-    let unmatched = config.registry_options_by_url
+    let unmatched = config
+        .registry_options_by_url
         .keys()
         .filter(|registry| !configured.contains(registry.as_str()))
         .map(|registry| format!(r#""{}""#, redact_and_sanitize(registry)))
@@ -101,23 +110,26 @@ fn unapplied_package_configs_warning(config: &Config) -> Option<String> {
     if !config.shares_one_lockfile() {
         return None;
     }
-    let ignored = config.package_configs
+    let ignored = config
+        .package_configs
         .iter()
         .flatten()
         .flat_map(|(project, settings)| {
-            let ProjectConfig {
-                hoist,
-                modules_dir,
-                overrides,
-                save_exact,
-                save_prefix,
-            } = settings;
+            let ProjectConfig { hoist, modules_dir, overrides, save_exact, save_prefix } = settings;
             [
                 hoist.is_some().then_some("hoist"),
-                modules_dir.is_some().then_some("modulesDir"),
-                overrides.is_some().then_some("overrides"),
-                save_exact.is_some().then_some("saveExact"),
-                save_prefix.is_some().then_some("savePrefix"),
+                modules_dir
+                    .is_some()
+                    .then_some("modulesDir"),
+                overrides
+                    .is_some()
+                    .then_some("overrides"),
+                save_exact
+                    .is_some()
+                    .then_some("saveExact"),
+                save_prefix
+                    .is_some()
+                    .then_some("savePrefix"),
             ]
             .into_iter()
             .flatten()
@@ -240,7 +252,8 @@ fn render_task_settings(settings: &UnrecognizedTaskSettings) -> Option<String> {
     if settings.total == 0 {
         return None;
     }
-    let mut rendered = settings.named
+    let mut rendered = settings
+        .named
         .iter()
         .map(|setting| format!(r#""{}""#, redact_and_sanitize(setting)))
         .collect::<Vec<_>>()

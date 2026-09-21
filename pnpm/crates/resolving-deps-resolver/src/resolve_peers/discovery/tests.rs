@@ -69,14 +69,18 @@ fn cached_subtree_reuse_reports_no_peer_providers() {
         ResolvePeersOptions::default(),
     );
     assert!(
-        first.resolved_peer_providers_by_alias.contains_key("peerpkg"),
+        first
+            .resolved_peer_providers_by_alias
+            .contains_key("peerpkg"),
         "the walk that resolves the subtree reports its providers",
     );
 
     let (second, _) =
         discover_peers(&mut tree, &direct, &direct, caches, ResolvePeersOptions::default());
     assert_eq!(
-        second.resolved_peer_providers_by_alias.get("peerpkg"),
+        second
+            .resolved_peer_providers_by_alias
+            .get("peerpkg"),
         None,
         "a cached-subtree reuse must not re-report the owner walk's providers",
     );
@@ -89,7 +93,10 @@ fn discovery_engine_rebuilds_after_a_children_ownership_rewrite() {
     engine.discover(&workspace, &[], &[], ResolvePeersOptions::default());
 
     // A marker in the persistent caches makes reset-vs-merge observable.
-    engine.caches.pure_pkgs.insert("marker@1.0.0".to_string(), DepPath::from("marker@1.0.0"));
+    engine
+        .caches
+        .pure_pkgs
+        .insert("marker@1.0.0".to_string(), DepPath::from("marker@1.0.0"));
     // Production rewrites happen inside `extend_tree`, which always
     // bumps the revision; mirror that pairing.
     workspace.tree.record_children_rewrite();
@@ -100,11 +107,17 @@ fn discovery_engine_rebuilds_after_a_children_ownership_rewrite() {
         "an ownership rewrite must discard walk state derived before it",
     );
 
-    engine.caches.pure_pkgs.insert("marker@1.0.0".to_string(), DepPath::from("marker@1.0.0"));
+    engine
+        .caches
+        .pure_pkgs
+        .insert("marker@1.0.0".to_string(), DepPath::from("marker@1.0.0"));
     workspace.tree.bump_revision();
     engine.discover(&workspace, &[], &[], ResolvePeersOptions::default());
     assert!(
-        engine.caches.pure_pkgs.contains_key("marker@1.0.0"),
+        engine
+            .caches
+            .pure_pkgs
+            .contains_key("marker@1.0.0"),
         "a rewrite-free revision bump merges instead of rebuilding",
     );
 }

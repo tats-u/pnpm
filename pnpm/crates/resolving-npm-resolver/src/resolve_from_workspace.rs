@@ -141,7 +141,10 @@ pub fn try_resolve_from_workspace(
     wanted_dependency: &WantedDependency,
     opts: &ResolveFromWorkspaceOptions<'_>,
 ) -> Result<Option<ResolveResult>, ResolveFromWorkspaceError> {
-    let Some(bare) = wanted_dependency.bare_specifier.as_deref() else {
+    let Some(bare) = wanted_dependency
+        .bare_specifier
+        .as_deref()
+    else {
         return Ok(None);
     };
     if !bare.starts_with("workspace:") {
@@ -166,8 +169,9 @@ pub fn try_resolve_from_workspace(
         bare_specifier: bare.to_string(),
     })?;
 
-    let workspace_packages =
-        opts.workspace_packages.ok_or(ResolveFromWorkspaceError::WorkspacePackagesNotLoaded)?;
+    let workspace_packages = opts
+        .workspace_packages
+        .ok_or(ResolveFromWorkspaceError::WorkspacePackagesNotLoaded)?;
 
     let result =
         try_resolve_from_workspace_packages(workspace_packages, &spec, wanted_dependency, opts)?;
@@ -190,29 +194,41 @@ pub(crate) fn try_resolve_from_workspace_packages(
                 .join(", ");
             ResolveFromWorkspaceError::WorkspacePkgNotFound {
                 name: spec.name.clone(),
-                bare_specifier: wanted_dependency.bare_specifier.clone().unwrap_or_default(),
+                bare_specifier: wanted_dependency
+                    .bare_specifier
+                    .clone()
+                    .unwrap_or_default(),
                 project_dir: opts.project_dir.display().to_string(),
                 hint: format!("Packages found in the workspace: {names}"),
             }
         })?;
 
-    let picked = pick_matching_local_version_or_null(matching_name, spec)
-        .ok_or_else(|| {
-            let available = available_workspace_versions(matching_name);
-            ResolveFromWorkspaceError::NoMatchingVersionInsideWorkspace {
-                alias: wanted_dependency.alias.clone().unwrap_or_default(),
-                bare_specifier: wanted_dependency.bare_specifier.clone().unwrap_or_default(),
-                project_dir: opts.project_dir.display().to_string(),
-                available,
-            }
-        })?;
-    let local_package =
-        matching_name.get(&picked).expect("picked version came from the matching set");
+    let picked = pick_matching_local_version_or_null(matching_name, spec).ok_or_else(|| {
+        let available = available_workspace_versions(matching_name);
+        ResolveFromWorkspaceError::NoMatchingVersionInsideWorkspace {
+            alias: wanted_dependency
+                .alias
+                .clone()
+                .unwrap_or_default(),
+            bare_specifier: wanted_dependency
+                .bare_specifier
+                .clone()
+                .unwrap_or_default(),
+            project_dir: opts.project_dir.display().to_string(),
+            available,
+        }
+    })?;
+    let local_package = matching_name
+        .get(&picked)
+        .expect("picked version came from the matching set");
 
     Ok(resolve_from_local_package(
         local_package,
         wanted_dependency,
-        opts.inject_workspace_packages || wanted_dependency.injected.unwrap_or(false),
+        opts.inject_workspace_packages
+            || wanted_dependency
+                .injected
+                .unwrap_or(false),
         opts.project_dir,
         opts.lockfile_dir,
         opts.saved_specifier,
@@ -230,9 +246,9 @@ pub fn pick_matching_local_version_or_null(
             let raw: Vec<String> = versions.keys().cloned().collect();
             resolve_workspace_range("*", &raw)
         }
-        RegistryPackageSpecType::Version => {
-            versions.contains_key(&spec.fetch_spec).then(|| spec.fetch_spec.clone())
-        }
+        RegistryPackageSpecType::Version => versions
+            .contains_key(&spec.fetch_spec)
+            .then(|| spec.fetch_spec.clone()),
         RegistryPackageSpecType::Range => {
             let raw: Vec<String> = versions.keys().cloned().collect();
             resolve_workspace_range(&spec.fetch_spec, &raw)
@@ -265,7 +281,8 @@ pub(crate) fn resolve_from_local_package(
         id: PkgResolutionId::from(id_text),
         resolution: LockfileResolution::Directory(DirectoryResolution { directory }),
         resolved_via: "workspace".to_string(),
-        normalized_bare_specifier: saved_specifier.calc_specifier
+        normalized_bare_specifier: saved_specifier
+            .calc_specifier
             .then(|| workspace_specifier(local_package, wanted_dependency, saved_specifier))
             .flatten(),
         alias: wanted_dependency.alias.clone(),
@@ -287,17 +304,28 @@ fn workspace_specifier(
     wanted_dependency: &WantedDependency,
     saved_specifier: SavedSpecifierOptions,
 ) -> Option<String> {
-    let manifest_field = |key| local_package.manifest.get(key).and_then(serde_json::Value::as_str);
+    let manifest_field = |key| {
+        local_package
+            .manifest
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+    };
     Some(calc_specifier_for_workspace_dep(
         DeclaredSpecifiers {
-            prev: wanted_dependency.prev_specifier.as_deref(),
-            bare: wanted_dependency.bare_specifier.as_deref(),
+            prev: wanted_dependency
+                .prev_specifier
+                .as_deref(),
+            bare: wanted_dependency
+                .bare_specifier
+                .as_deref(),
         },
         wanted_dependency.alias.as_deref(),
         manifest_field("name")?,
         manifest_field("version"),
         saved_specifier.save_workspace_protocol,
-        saved_specifier.range_spec_style.unwrap_or_default(),
+        saved_specifier
+            .range_spec_style
+            .unwrap_or_default(),
     ))
 }
 
@@ -307,7 +335,9 @@ fn workspace_specifier(
 /// unset or `true`; otherwise returns the project's own root directory.
 #[must_use]
 pub fn resolve_workspace_package_dir(local_package: &WorkspacePackage) -> PathBuf {
-    let publish_config = local_package.manifest.get("publishConfig");
+    let publish_config = local_package
+        .manifest
+        .get("publishConfig");
     let publish_dir = publish_config
         .and_then(|cfg| cfg.get("directory"))
         .and_then(serde_json::Value::as_str);
@@ -317,7 +347,9 @@ pub fn resolve_workspace_package_dir(local_package: &WorkspacePackage) -> PathBu
     if publish_dir.is_none() || link_directory == Some(false) {
         return local_package.root_dir.clone();
     }
-    local_package.root_dir.join(publish_dir.expect("guard above"))
+    local_package
+        .root_dir
+        .join(publish_dir.expect("guard above"))
 }
 
 fn relative_path(base: &Path, target: &Path) -> String {

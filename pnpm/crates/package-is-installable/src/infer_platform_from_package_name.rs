@@ -97,8 +97,17 @@ pub fn inferred_platform(name: &str, declared: WantedPlatformRef<'_>) -> Option<
         return None;
     }
     Some(WantedPlatform {
-        os: declared.os.map(<[String]>::to_vec).or(inferred.os),
-        cpu: declared.cpu.map(<[String]>::to_vec).or(inferred.cpu),
-        libc: declared.libc.map(<[String]>::to_vec).or(inferred.libc),
+        os: declared
+            .os
+            .map(<[String]>::to_vec)
+            .or(inferred.os),
+        cpu: declared
+            .cpu
+            .map(<[String]>::to_vec)
+            .or(inferred.cpu),
+        libc: declared
+            .libc
+            .map(<[String]>::to_vec)
+            .or(inferred.libc),
     })
 }

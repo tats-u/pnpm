@@ -43,7 +43,8 @@ impl InitArgs {
 
     /// `--init-type` layered over the `initType` setting.
     pub(crate) fn effective_init_type(&self, config: &Config) -> InitType {
-        self.init_type.map_or(config.init_type, InitTypeArg::into_config)
+        self.init_type
+            .map_or(config.init_type, InitTypeArg::into_config)
     }
 
     /// Whether `pnpm init` records a package-manager pin in the manifest it
@@ -54,7 +55,8 @@ impl InitArgs {
     /// pinned.
     pub(crate) fn pins_pnpm(&self, config: &Config, init_dir: &Path) -> bool {
         self.effective_init_package_manager(config)
-            && config.workspace_dir
+            && config
+                .workspace_dir
                 .as_deref()
                 .is_none_or(|root| root == init_dir)
     }

@@ -63,7 +63,11 @@ impl RemoteUploadStore {
     }
 
     async fn read(&self, id: &str) -> Result<Option<VersionedRecord>> {
-        let result = match self.store.get(&self.key(id, "session.json")).await {
+        let result = match self
+            .store
+            .get(&self.key(id, "session.json"))
+            .await
+        {
             Ok(result) => result,
             Err(object_store::Error::NotFound { .. }) => return Ok(None),
             Err(error) => return Err(error.into()),
@@ -74,7 +78,8 @@ impl RemoteUploadStore {
         };
         let record: UploadRecord = serde_json::from_slice(&result.bytes().await?)?;
         if record.chunks.len() > MAX_CHUNKS
-            || record.chunks
+            || record
+                .chunks
                 .iter()
                 .any(|id| !is_upload_id(id))
         {
@@ -84,7 +89,8 @@ impl RemoteUploadStore {
     }
 
     async fn write(&self, id: &str, record: &UploadRecord, mode: PutMode) -> Result<UpdateVersion> {
-        let result = self.store
+        let result = self
+            .store
             .put_opts(
                 &self.key(id, "session.json"),
                 serde_json::to_vec(record)?.into(),
@@ -130,8 +136,11 @@ impl RemoteUploadStore {
             closed: false,
             completion: None,
         };
-        let version = self.write(&id, &record, PutMode::Create).await?;
-        self.handle(&id, VersionedRecord { record, version }).await
+        let version = self
+            .write(&id, &record, PutMode::Create)
+            .await?;
+        self.handle(&id, VersionedRecord { record, version })
+            .await
     }
 
     pub(super) async fn open(
@@ -155,7 +164,8 @@ impl RemoteUploadStore {
             return Err(RegistryError::BlobUploadConflict { id: id.to_string() });
         }
         state.record.closed = true;
-        self.write(id, &state.record, PutMode::Update(state.version)).await?;
+        self.write(id, &state.record, PutMode::Update(state.version))
+            .await?;
         self.remove_chunks(id).await?;
         Ok(true)
     }
@@ -181,20 +191,31 @@ impl RemoteUploadStore {
     }
 
     pub(super) async fn sweep(&self, max_age: Duration) -> Result<usize> {
-        let mut listing = self.store.list(Some(&Path::from(self.prefix.clone())));
+        let mut listing = self
+            .store
+            .list(Some(&Path::from(self.prefix.clone())));
         let mut swept = 0;
         let mut state = SweepState::default();
         while let Some(meta) = listing.next().await {
             let meta = meta?;
-            let Some(relative) = meta.location.as_ref().strip_prefix(&self.prefix) else {
+            let Some(relative) = meta
+                .location
+                .as_ref()
+                .strip_prefix(&self.prefix)
+            else {
                 continue;
             };
             let Some((id, object)) = relative.split_once('/') else { continue };
-            let age = std::time::SystemTime::from(meta.last_modified).elapsed().unwrap_or_default();
+            let age = std::time::SystemTime::from(meta.last_modified)
+                .elapsed()
+                .unwrap_or_default();
             if !is_upload_id(id) || age <= max_age || state.unreadable.contains(id) {
                 continue;
             }
-            if self.expire_upload_object(id, object, &meta, &mut state).await? {
+            if self
+                .expire_upload_object(id, object, &meta, &mut state)
+                .await?
+            {
                 swept += 1;
             }
         }
@@ -211,9 +232,12 @@ impl RemoteUploadStore {
         state: &mut SweepState,
     ) -> Result<bool> {
         if object == "session.json" {
-            return self.expire_upload_session(id, meta, state).await;
+            return self
+                .expire_upload_session(id, meta, state)
+                .await;
         }
-        self.expire_upload_chunk(id, meta, state).await?;
+        self.expire_upload_chunk(id, meta, state)
+            .await?;
         Ok(false)
     }
 
@@ -234,13 +258,17 @@ impl RemoteUploadStore {
         let record = match self.sweep_session(id, state).await? {
             SweepSession::Record(record) => record,
             SweepSession::Missing => {
-                state.sessions.insert(id.to_string(), false);
+                state
+                    .sessions
+                    .insert(id.to_string(), false);
                 self.remove(&meta.location).await?;
                 return Ok(());
             }
             SweepSession::Unreadable => return Ok(()),
         };
-        state.sessions.insert(id.to_string(), !record.record.closed);
+        state
+            .sessions
+            .insert(id.to_string(), !record.record.closed);
         if record.record.closed {
             self.remove(&meta.location).await?;
         }
@@ -257,7 +285,9 @@ impl RemoteUploadStore {
         let mut record = match self.sweep_session(id, state).await? {
             SweepSession::Record(record) => record,
             SweepSession::Missing => {
-                state.sessions.insert(id.to_string(), false);
+                state
+                    .sessions
+                    .insert(id.to_string(), false);
                 self.remove(&meta.location).await?;
                 return Ok(false);
             }
@@ -267,12 +297,17 @@ impl RemoteUploadStore {
         // version, never a freshly read version, when expiring it.
         record.record.closed = true;
         let version = UpdateVersion { e_tag: meta.e_tag.clone(), version: meta.version.clone() };
-        match self.write(id, &record.record, PutMode::Update(version)).await {
+        match self
+            .write(id, &record.record, PutMode::Update(version))
+            .await
+        {
             Ok(_) => {}
             Err(RegistryError::BlobUploadConflict { .. }) => return Ok(false),
             Err(error) => return Err(error),
         }
-        state.sessions.insert(id.to_string(), false);
+        state
+            .sessions
+            .insert(id.to_string(), false);
         self.remove_chunks(id).await?;
         self.remove(&meta.location).await?;
         Ok(true)
@@ -319,7 +354,10 @@ impl RemoteUpload {
     pub(super) async fn append(self: &Arc<Self>) -> Result<BlobUploadWriter> {
         let state = self.state.lock().await;
         let path = self.backend.temp().await?;
-        let file = fs::OpenOptions::new().write(true).open(&path).await?;
+        let file = fs::OpenOptions::new()
+            .write(true)
+            .open(&path)
+            .await?;
         Ok(BlobUploadWriter {
             file,
             remote: Some(RemoteChunk {
@@ -338,7 +376,9 @@ impl RemoteUpload {
         }
         let mut file = fs::File::create(path).await?;
         for chunk in &state.record.chunks {
-            let mut stream = self.backend.store
+            let mut stream = self
+                .backend
+                .store
                 .get(&self.backend.key(&self.id, chunk))
                 .await?
                 .into_stream();
@@ -355,7 +395,9 @@ impl RemoteUpload {
     pub(super) async fn prepare_completion(&self, filename: &str) -> Result<()> {
         let mut state = self.state.lock().await;
         if state.record.closed
-            || state.record.completion
+            || state
+                .record
+                .completion
                 .as_deref()
                 .is_some_and(|value| value != filename)
         {
@@ -363,8 +405,10 @@ impl RemoteUpload {
         }
         let mut record = state.record.clone();
         record.completion = Some(filename.to_string());
-        let version =
-            self.backend.write(&self.id, &record, PutMode::Update(state.version.clone())).await?;
+        let version = self
+            .backend
+            .write(&self.id, &record, PutMode::Update(state.version.clone()))
+            .await?;
         *state = VersionedRecord { record, version };
         Ok(())
     }
@@ -373,10 +417,16 @@ impl RemoteUpload {
         let mut state = self.state.lock().await;
         let mut record = state.record.clone();
         record.closed = true;
-        let version =
-            self.backend.write(&self.id, &record, PutMode::Update(state.version.clone())).await?;
+        let version = self
+            .backend
+            .write(&self.id, &record, PutMode::Update(state.version.clone()))
+            .await?;
         *state = VersionedRecord { record, version };
-        if let Err(error) = self.backend.remove_chunks(&self.id).await {
+        if let Err(error) = self
+            .backend
+            .remove_chunks(&self.id)
+            .await
+        {
             tracing::warn!(%error, upload = self.id, "completed upload chunks await expiry cleanup");
         }
         Ok(())
@@ -386,10 +436,14 @@ impl RemoteUpload {
 impl RemoteChunk {
     pub(super) async fn commit(mut self, size: u64) -> Result<u64> {
         if size == 0 {
-            let current = self.upload.backend.read(&self.upload.id).await?;
-            if current.is_none_or(|current| {
-                current.record.closed || current.version != self.version
-            }) {
+            let current = self
+                .upload
+                .backend
+                .read(&self.upload.id)
+                .await?;
+            if current
+                .is_none_or(|current| current.record.closed || current.version != self.version)
+            {
                 return Err(RegistryError::BlobUploadConflict { id: self.upload.id.clone() });
             }
             return Ok(self.snapshot.size);
@@ -401,21 +455,30 @@ impl RemoteChunk {
             return Err(RegistryError::BadRequest { reason: "upload has too many chunks".into() });
         }
         let chunk = generate_upload_id();
-        let key = self.upload.backend.key(&self.upload.id, &chunk);
-        let mut multipart = self.upload.backend.store.put_multipart(&key).await?;
+        let key = self
+            .upload
+            .backend
+            .key(&self.upload.id, &chunk);
+        let mut multipart = self
+            .upload
+            .backend
+            .store
+            .put_multipart(&key)
+            .await?;
         send_parts(&self.path, multipart.as_mut()).await?;
         self.snapshot.chunks.push(chunk);
-        self.snapshot.size = self.snapshot.size
+        self.snapshot.size = self
+            .snapshot
+            .size
             .checked_add(size)
             .ok_or_else(|| RegistryError::BadRequest { reason: "upload size overflow".into() })?;
         // An uncertain write may have committed. Leave its chunk until session
         // expiry, when no append can make the chunk reachable anymore.
-        let version = self.upload.backend.write(
-            &self.upload.id,
-            &self.snapshot,
-            PutMode::Update(self.version),
-        )
-        .await?;
+        let version = self
+            .upload
+            .backend
+            .write(&self.upload.id, &self.snapshot, PutMode::Update(self.version))
+            .await?;
         let offset = self.snapshot.size;
         *self.upload.state.lock().await = VersionedRecord { record: self.snapshot, version };
         Ok(offset)

@@ -25,7 +25,9 @@ impl<'a> ScriptSelector<'a> {
     /// The script names this selector picks out of `manifest`: an exact
     /// match wins, otherwise every script the pattern matches.
     pub(in super::super) fn select(&self, manifest: &Value) -> Vec<String> {
-        let scripts = manifest.get("scripts").and_then(Value::as_object);
+        let scripts = manifest
+            .get("scripts")
+            .and_then(Value::as_object);
         let has_script = scripts
             .and_then(|scripts| scripts.get(self.name))
             .and_then(Value::as_str)
@@ -181,7 +183,9 @@ type ScriptListing<'a> = Vec<(&'a str, &'a str)>;
 fn split_listed_scripts(manifest: &Value) -> (ScriptListing<'_>, ScriptListing<'_>) {
     let mut lifecycle = Vec::new();
     let mut other = Vec::new();
-    let scripts = manifest.get("scripts").and_then(Value::as_object);
+    let scripts = manifest
+        .get("scripts")
+        .and_then(Value::as_object);
     for (name, script) in scripts.into_iter().flatten() {
         if name.starts_with('.') {
             continue;
@@ -204,9 +208,8 @@ fn append_command_section(output: &mut String, title: &str, commands: &[(&str, &
     if !output.is_empty() {
         output.push_str("\n\n");
     }
-    write!(output, "{title}\n{}", render_commands(commands)).expect(
-        "writing to a string cannot fail",
-    );
+    write!(output, "{title}\n{}", render_commands(commands))
+        .expect("writing to a string cannot fail");
 }
 
 fn render_commands(commands: &[(&str, &str)]) -> String {

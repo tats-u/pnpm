@@ -226,7 +226,9 @@ fn extract_tarball_applies_ignore_filter_dropping_entries_from_both_maps() {
             header.set_mode(0o644);
             header.set_entry_type(tar::EntryType::Regular);
             header.set_cksum();
-            builder.append_data(&mut header, path, body).expect("append entry");
+            builder
+                .append_data(&mut header, path, body)
+                .expect("append entry");
         }
         builder.finish().expect("finalize tar");
     }
@@ -248,10 +250,20 @@ fn extract_tarball_applies_ignore_filter_dropping_entries_from_both_maps() {
     );
 
     dbg!(&pkg_files_idx.files);
-    assert!(pkg_files_idx.files.contains_key("bin/tool"));
-    assert!(pkg_files_idx.files.contains_key("README.md"));
     assert!(
-        !pkg_files_idx.files.contains_key("lib/node_modules/npm/package.json"),
+        pkg_files_idx
+            .files
+            .contains_key("bin/tool")
+    );
+    assert!(
+        pkg_files_idx
+            .files
+            .contains_key("README.md")
+    );
+    assert!(
+        !pkg_files_idx
+            .files
+            .contains_key("lib/node_modules/npm/package.json"),
         "ignore filter should drop bundled npm from pkg_files_idx.files",
     );
     assert_eq!(pkg_files_idx.requires_build, Some(false));
@@ -330,7 +342,9 @@ fn extract_gzipped_tarball_streams_an_archive_past_the_eager_ceiling() {
     dbg!(cas_paths.keys().collect::<Vec<_>>());
     assert_eq!(pkg_files_idx.files["bomb.bin"].size, payload_size);
     assert_eq!(
-        std::fs::metadata(&cas_paths["bomb.bin"]).expect("stat the streamed entry").len(),
+        std::fs::metadata(&cas_paths["bomb.bin"])
+            .expect("stat the streamed entry")
+            .len(),
         payload_size,
         "the oversized entry must land in the CAS in full",
     );
@@ -378,7 +392,9 @@ fn streaming_extract_matches_eager_extract() {
             cas_paths
                 .iter()
                 .map(|(key, path)| {
-                    let path = path.strip_prefix(store.root()).expect("path within store");
+                    let path = path
+                        .strip_prefix(store.root())
+                        .expect("path within store");
                     (key.clone(), path.to_path_buf())
                 })
                 .collect()
@@ -389,7 +405,8 @@ fn streaming_extract_matches_eager_extract() {
     );
 
     let comparable = |idx: &PackageFilesIndex| -> Vec<(String, String, u32, u64)> {
-        let mut rows: Vec<_> = idx.files
+        let mut rows: Vec<_> = idx
+            .files
             .iter()
             .map(|(path, info)| (path.clone(), info.digest.clone(), info.mode, info.size))
             .collect();
@@ -408,7 +425,9 @@ fn streaming_extract_matches_eager_extract() {
         "the direct-to-store streamed entry must land byte-identical content",
     );
     assert!(
-        streaming_cas_paths["bin/tool"].to_string_lossy().ends_with("-exec"),
+        streaming_cas_paths["bin/tool"]
+            .to_string_lossy()
+            .ends_with("-exec"),
         "executable entries must keep the -exec CAS suffix on the streaming path",
     );
 
@@ -477,7 +496,9 @@ fn streaming_extract_applies_ignore_filter_dropping_entries_from_both_maps() {
             header.set_mode(0o644);
             header.set_entry_type(tar::EntryType::Regular);
             header.set_cksum();
-            builder.append_data(&mut header, path, body).expect("append entry");
+            builder
+                .append_data(&mut header, path, body)
+                .expect("append entry");
         }
         builder.finish().expect("finalize tar");
     }
@@ -494,7 +515,11 @@ fn streaming_extract_applies_ignore_filter_dropping_entries_from_both_maps() {
     assert!(cas_paths.contains_key("bin/tool"));
     assert!(cas_paths.contains_key("README.md"));
     assert!(!cas_paths.contains_key("lib/node_modules/npm/package.json"));
-    assert!(!pkg_files_idx.files.contains_key("lib/node_modules/npm/package.json"));
+    assert!(
+        !pkg_files_idx
+            .files
+            .contains_key("lib/node_modules/npm/package.json")
+    );
     assert_eq!(pkg_files_idx.requires_build, Some(false));
 
     drop(tempdir);
@@ -510,7 +535,9 @@ fn streaming_extract_truncated_large_entry_commits_nothing() {
 
     let mut tar_bytes = Vec::new();
     let mut header = tar::Header::new_gnu();
-    header.set_path("package/big.bin").expect("set tar entry path");
+    header
+        .set_path("package/big.bin")
+        .expect("set tar entry path");
     header.set_size(STREAM_ENTRY_BUFFER_MAX + 1);
     header.set_mode(0o644);
     header.set_entry_type(tar::EntryType::Regular);
@@ -527,23 +554,22 @@ fn streaming_extract_truncated_large_entry_commits_nothing() {
     );
 
     fn count_files_recursively(dir: &Path) -> usize {
-        std::fs::read_dir(dir)
-            .map_or(0, |entries| {
-                entries
-                    .map(|entry| entry.expect("read dirent"))
-                    .map(|entry| {
-                        if entry
-                            .file_type()
-                            .expect("dirent file type")
-                            .is_dir()
-                        {
-                            count_files_recursively(&entry.path())
-                        } else {
-                            1
-                        }
-                    })
-                    .sum()
-            })
+        std::fs::read_dir(dir).map_or(0, |entries| {
+            entries
+                .map(|entry| entry.expect("read dirent"))
+                .map(|entry| {
+                    if entry
+                        .file_type()
+                        .expect("dirent file type")
+                        .is_dir()
+                    {
+                        count_files_recursively(&entry.path())
+                    } else {
+                        1
+                    }
+                })
+                .sum()
+        })
     }
     assert_eq!(
         count_files_recursively(&store_path.root().join("files")),
@@ -669,13 +695,19 @@ fn allocate_local_tarball_buffer_rejects_absurd_size_as_local_read_error() {
 #[tokio::test]
 async fn open_local_tarball_rejects_directories() {
     let local_dir = tempdir().unwrap();
-    let err = open_local_tarball(local_dir.path()).await
+    let err = open_local_tarball(local_dir.path())
+        .await
         .expect_err("local tarballs must be regular files");
     match err {
         TarballError::ReadLocalTarball { path, source } => {
             assert_eq!(path, local_dir.path());
             assert_eq!(source.kind(), ErrorKind::InvalidInput);
-            assert!(source.to_string().contains("regular file"), "got: {source}");
+            assert!(
+                source
+                    .to_string()
+                    .contains("regular file"),
+                "got: {source}"
+            );
         }
         other => panic!("expected ReadLocalTarball, got {other:?}"),
     }
@@ -686,7 +718,9 @@ async fn read_local_tarball_buffer_rejects_growth_past_checked_size() {
     let local_dir = tempdir().unwrap();
     let tarball_path = local_dir.path().join("pkg.tgz");
     std::fs::write(&tarball_path, b"abcd").unwrap();
-    let file = tokio::fs::File::open(&tarball_path).await.unwrap();
+    let file = tokio::fs::File::open(&tarball_path)
+        .await
+        .unwrap();
 
     let err = read_local_tarball_buffer(file, &tarball_path, "file:pkg.tgz", 3)
         .await
@@ -695,7 +729,12 @@ async fn read_local_tarball_buffer_rejects_growth_past_checked_size() {
         TarballError::ReadLocalTarball { path, source } => {
             assert_eq!(path, tarball_path);
             assert_eq!(source.kind(), ErrorKind::InvalidData);
-            assert!(source.to_string().contains("changed while reading"), "got: {source}");
+            assert!(
+                source
+                    .to_string()
+                    .contains("changed while reading"),
+                "got: {source}"
+            );
         }
         other => panic!("expected ReadLocalTarball, got {other:?}"),
     }
@@ -708,8 +747,9 @@ async fn read_local_tarball_metadata_reports_a_missing_file_as_not_found() {
     let local_dir = tempdir().unwrap();
     let tarball_path = local_dir.path().join("missing.tgz");
 
-    let err =
-        read_local_tarball_metadata(&tarball_path).await.expect_err("a missing tarball must fail");
+    let err = read_local_tarball_metadata(&tarball_path)
+        .await
+        .expect_err("a missing tarball must fail");
     match err {
         TarballError::ReadLocalTarball { path, source } => {
             assert_eq!(path, tarball_path);

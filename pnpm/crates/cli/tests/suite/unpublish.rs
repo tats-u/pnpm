@@ -24,7 +24,9 @@ use std::{
 };
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn empty_auth_file(root: &Path) -> PathBuf {
@@ -44,12 +46,16 @@ fn run_unpublish(
         .with_arg(auth_file)
         .with_arg("unpublish");
     if let Some(registry) = registry {
-        command = command.with_arg("--registry").with_arg(registry);
+        command = command
+            .with_arg("--registry")
+            .with_arg(registry);
     }
     for param in params {
         command = command.with_arg(param);
     }
-    command.output().expect("spawn pacquet unpublish")
+    command
+        .output()
+        .expect("spawn pacquet unpublish")
 }
 
 fn stderr_of(output: &std::process::Output) -> String {

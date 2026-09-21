@@ -54,8 +54,12 @@ fn wildcard_name_in_allow_builds_does_not_match_real_package() {
 fn from_config_consumes_allow_builds_and_dangerously_allow_all_builds() {
     let mut config = Config::new();
     config.dangerously_allow_all_builds = false;
-    config.allow_builds.insert("@pnpm.e2e/install-script-example".to_string(), true);
-    config.allow_builds.insert("@pnpm.e2e/bad-package".to_string(), false);
+    config
+        .allow_builds
+        .insert("@pnpm.e2e/install-script-example".to_string(), true);
+    config
+        .allow_builds
+        .insert("@pnpm.e2e/bad-package".to_string(), false);
 
     let policy = AllowBuildPolicy::from_config(&config).expect("valid specs");
     assert_eq!(policy.check("@pnpm.e2e/install-script-example@1.0.0"), Some(true));
@@ -692,7 +696,9 @@ fn using_side_effects_cache_skips_rebuild() {
         .join("node_modules")
         .join("@pnpm.e2e/failing-postinstall");
     let cas_source = tempdir().expect("create temp dir");
-    let side_effect_blob = cas_source.path().join("generated-by-postinstall");
+    let side_effect_blob = cas_source
+        .path()
+        .join("generated-by-postinstall");
     fs::write(&side_effect_blob, b"built").expect("write side-effect blob");
     let mut overlay = std::collections::HashMap::new();
     overlay.insert(
@@ -772,7 +778,9 @@ fn using_side_effects_cache_skips_rebuild() {
     // be materialized — the overlay's side-effect file must land in the
     // slot so the warm reinstall isn't left in its pre-build state.
     assert!(
-        pkg_dir.join("generated-by-postinstall.js").exists(),
+        pkg_dir
+            .join("generated-by-postinstall.js")
+            .exists(),
         "cached side-effect file must be materialized when the gate skips the rebuild",
     );
 }
@@ -840,7 +848,12 @@ fn corrupt_side_effects_cache_falls_back_to_rebuild() {
     // store whose side-effects blob went missing.
     let overlay = std::collections::HashMap::from([
         ("package.json".to_string(), pkg_dir.join("package.json")),
-        ("generated.txt".to_string(), virtual_store_dir.path().join("missing-cas-blob")),
+        (
+            "generated.txt".to_string(),
+            virtual_store_dir
+                .path()
+                .join("missing-cas-blob"),
+        ),
     ]);
     let mut side_effects_maps = std::collections::HashMap::new();
     side_effects_maps.insert(

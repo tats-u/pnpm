@@ -126,13 +126,18 @@ async fn release_assets(
         .await
         .and_then(reqwest::Response::error_for_status)
         .map_err(fetch_failed)?;
-    let body = response.text().await.map_err(fetch_failed)?;
-    let index: ReleaseIndex = serde_json::from_str(&body)
-        .map_err(|error| ReadDenoAssetsError::DecodeReleaseIndex {
+    let body = response
+        .text()
+        .await
+        .map_err(fetch_failed)?;
+    let index: ReleaseIndex =
+        serde_json::from_str(&body).map_err(|error| ReadDenoAssetsError::DecodeReleaseIndex {
             version: version.to_string(),
             error: Arc::new(error),
         })?;
-    index.assets.ok_or_else(|| ReadDenoAssetsError::MissingAssets { version: version.to_string() })
+    index
+        .assets
+        .ok_or_else(|| ReadDenoAssetsError::MissingAssets { version: version.to_string() })
 }
 
 /// The download one release asset describes, with the integrity read from
@@ -150,10 +155,9 @@ async fn asset_resolution(
     // empty byte slice so a future change to `extract_sha256`
     // that loosens the validator surfaces with the right error
     // code instead of an opaque integrity-parse failure.
-    let hex_bytes = decode_hex(&sha256)
-        .ok_or_else(|| ReadDenoAssetsError::ParseHash {
-            url: asset.browser_download_url.clone(),
-        })?;
+    let hex_bytes = decode_hex(&sha256).ok_or_else(|| ReadDenoAssetsError::ParseHash {
+        url: asset.browser_download_url.clone(),
+    })?;
     let integrity: Integrity = format!("sha256-{}", BASE64_STANDARD.encode(hex_bytes))
         .parse()
         .map_err(|error| ReadDenoAssetsError::Integrity {
@@ -161,7 +165,8 @@ async fn asset_resolution(
             error: Arc::new(error),
         })?;
     let binary = BinaryResolution {
-        url: asset.browser_download_url
+        url: asset
+            .browser_download_url
             .strip_suffix(".sha256sum")
             .unwrap_or(&asset.browser_download_url)
             .to_string(),

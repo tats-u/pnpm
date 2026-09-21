@@ -17,7 +17,9 @@ use std::{
 };
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 /// `pacquet install` resolves the `configDependencies` declared in
@@ -26,13 +28,8 @@ fn pacquet_at(workspace: &Path) -> Command {
 /// `pnpm-lock.yaml`).
 #[test]
 fn installs_configurational_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(workspace.join("package.json"), serde_json::json!({}).to_string())
@@ -75,7 +72,9 @@ fn config_dependency_install_waits_for_the_store_operation_lock() {
     yaml.push_str("\nconfigDependencies:\n  '@pnpm.e2e/foo': 100.0.0\n");
     fs::write(&yaml_path, yaml).expect("write pnpm-workspace.yaml");
 
-    let prune_lock = store_dir.lock_for_prune().expect("lock store for prune");
+    let prune_lock = store_dir
+        .lock_for_prune()
+        .expect("lock store for prune");
     let output_path = workspace.join("config-dependency-lock.ndjson");
     let mut install = pacquet_at(&workspace)
         .with_args(["--reporter=ndjson", "--loglevel=debug", "install"])
@@ -102,7 +101,9 @@ fn config_dependency_install_waits_for_the_store_operation_lock() {
         "{output}",
     );
     assert!(
-        workspace.join("node_modules/.pnpm-config/@pnpm.e2e/foo/package.json").exists(),
+        workspace
+            .join("node_modules/.pnpm-config/@pnpm.e2e/foo/package.json")
+            .exists(),
         "config dependency must be materialized after the prune lock is released",
     );
 
@@ -134,7 +135,9 @@ fn second_install_keeps_config_dependency() {
         .success();
 
     assert!(
-        workspace.join("node_modules/.pnpm-config/@pnpm.e2e/foo/package.json").exists(),
+        workspace
+            .join("node_modules/.pnpm-config/@pnpm.e2e/foo/package.json")
+            .exists(),
         "config dep must remain linked after a repeat install",
     );
 
@@ -208,7 +211,9 @@ fn add_config_writes_workspace_yaml_and_installs() {
     assert!(yaml.contains("storeDir:"), "untouched settings are preserved");
 
     assert!(
-        workspace.join("node_modules/.pnpm-config/@pnpm.e2e/foo/package.json").exists(),
+        workspace
+            .join("node_modules/.pnpm-config/@pnpm.e2e/foo/package.json")
+            .exists(),
         "config dep linked into .pnpm-config",
     );
 
@@ -232,7 +237,9 @@ fn add_config_accepts_multiple_package_selectors_in_one_operation() {
     let (_, settings) = WorkspaceSettings::find_and_load(&workspace)
         .expect("read pnpm-workspace.yaml")
         .expect("workspace manifest exists");
-    let config_dependencies = settings.config_dependencies.expect("configDependencies map");
+    let config_dependencies = settings
+        .config_dependencies
+        .expect("configDependencies map");
     assert_eq!(config_dependencies.len(), 2);
     for package_name in ["@pnpm.e2e/foo", "@pnpm.e2e/bar"] {
         assert_eq!(
@@ -241,8 +248,9 @@ fn add_config_accepts_multiple_package_selectors_in_one_operation() {
         );
     }
 
-    let env_lockfile =
-        EnvLockfile::read(&workspace).expect("read env lockfile").expect("env lockfile exists");
+    let env_lockfile = EnvLockfile::read(&workspace)
+        .expect("read env lockfile")
+        .expect("env lockfile exists");
     let root_importer = &env_lockfile.importers[EnvLockfile::ROOT_IMPORTER_KEY];
     for package_name in ["@pnpm.e2e/foo", "@pnpm.e2e/bar"] {
         let dependency = &root_importer.config_dependencies[package_name];
@@ -316,7 +324,9 @@ fn update_config_hook_injects_catalog() {
         .success();
 
     assert!(
-        workspace.join("node_modules/.pnpm/@pnpm.e2e+foo@100.0.0").exists(),
+        workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+foo@100.0.0")
+            .exists(),
         "the catalog: dep resolved to the version the updateConfig hook injected",
     );
 
@@ -355,8 +365,9 @@ fn update_config_observes_and_can_replace_the_cli_store_dir() {
     )
     .expect("read .modules.yaml")
     .expect(".modules.yaml exists");
-    let hook_store =
-        dunce::canonicalize(&workspace).expect("canonicalize workspace").join("hook-store/v11");
+    let hook_store = dunce::canonicalize(&workspace)
+        .expect("canonicalize workspace")
+        .join("hook-store/v11");
     assert_eq!(
         dunce::canonicalize(&modules.store_dir).expect("canonicalize recorded store"),
         hook_store,
@@ -495,8 +506,9 @@ fn install_merges_a_conflicted_env_document() {
 
     let lockfile = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
     assert!(!lockfile.contains("<<<<<<<"), "the markers must be gone:\n{lockfile}");
-    let env =
-        EnvLockfile::read(&workspace).expect("the env document parses").expect("env document");
+    let env = EnvLockfile::read(&workspace)
+        .expect("the env document parses")
+        .expect("env document");
     let config_deps = &env.importers[EnvLockfile::ROOT_IMPORTER_KEY].config_dependencies;
     dbg!(config_deps);
     assert!(config_deps.contains_key("@pnpm.e2e/foo"), "our side's config dep survives");

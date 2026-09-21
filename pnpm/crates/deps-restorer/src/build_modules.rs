@@ -273,8 +273,9 @@ impl BuildModules<'_> {
         // mid-insertion. A `BTreeSet::insert` is one atomic
         // operation from the data-structure's POV (no torn writes),
         // so the canonical poison-recovery pattern is safe.
-        let ignored_builds =
-            ignored_builds.into_inner().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let ignored_builds = ignored_builds
+            .into_inner()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(BuildModulesOutput {
             ignored_builds: ignored_builds.into_iter().collect(),
             deferred_builds: deferred_builds(requires_build_map.iter(), self.scripts.ignore),
@@ -358,7 +359,10 @@ impl BuildModules<'_> {
             can_write_store: self.cache.store_index_writer.is_some()
                 && self.cache.store_dir.is_some(),
             has_packages: self.graph.packages.is_some(),
-            has_cache_rows: self.cache.maps_by_snapshot.is_some_and(|map| !map.is_empty()),
+            has_cache_rows: self
+                .cache
+                .maps_by_snapshot
+                .is_some_and(|map| !map.is_empty()),
         });
         let graph = cache_gate_active.then(|| {
             // Every requires-build snapshot is a root, including the ones
@@ -374,7 +378,9 @@ impl BuildModules<'_> {
                 .map(|(key, _)| key.clone());
             crate::build_deps_subgraph(
                 snapshots,
-                self.graph.packages.expect("`cache_gate_active` requires packages: Some"),
+                self.graph
+                    .packages
+                    .expect("`cache_gate_active` requires packages: Some"),
                 roots,
             )
         });
@@ -386,11 +392,15 @@ impl BuildModules<'_> {
         // a different side-effects-cache key on every run, and every
         // repeat install would re-run the build it already has cached.
         if let Some(graph) = &graph {
-            let mut cache_guard = cache.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+            let mut cache_guard = cache
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             pnpm_graph_hasher::warm_deps_state_cache(
                 graph,
                 &mut cache_guard,
-                crate::deps_graph::in_lockfile_order(graph).into_iter().map(|(key, _)| key),
+                crate::deps_graph::in_lockfile_order(graph)
+                    .into_iter()
+                    .map(|(key, _)| key),
             );
         }
         DepStates { graph, cache }
@@ -440,7 +450,10 @@ fn schedule_builds<Reporter: self::Reporter>(
         },
     )
     .map_err(|source| BuildModulesError::ThreadPoolBuild { source })?;
-    match first_error.into_inner().unwrap_or_else(std::sync::PoisonError::into_inner) {
+    match first_error
+        .into_inner()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+    {
         Some(error) => Err(error),
         None => Ok(()),
     }

@@ -16,8 +16,18 @@ fn accepts_snapshots_whose_slots_stay_in_the_store() {
         pnpm_config::default_virtual_store_dir_max_length() as usize,
     );
     let mut snapshots = HashMap::new();
-    snapshots.insert("@scope/foo@1.2.3".parse::<PackageKey>().unwrap(), SnapshotEntry::default());
-    snapshots.insert("bar@4.5.6".parse::<PackageKey>().unwrap(), SnapshotEntry::default());
+    snapshots.insert(
+        "@scope/foo@1.2.3"
+            .parse::<PackageKey>()
+            .unwrap(),
+        SnapshotEntry::default(),
+    );
+    snapshots.insert(
+        "bar@4.5.6"
+            .parse::<PackageKey>()
+            .unwrap(),
+        SnapshotEntry::default(),
+    );
     validate_virtual_store_slot_containment(Some(&snapshots), &layout)
         .expect("contained slots must pass");
 }
@@ -29,7 +39,9 @@ fn rejects_a_global_virtual_store_version_escape() {
     // escapes `/`). A traversal-bearing version escapes the store root
     // even though the package name itself is valid, so the containment
     // check — not the name check — is what rejects it.
-    let key: PackageKey = "evil@../../../escaped".parse().expect("parse escaping version key");
+    let key: PackageKey = "evil@../../../escaped"
+        .parse()
+        .expect("parse escaping version key");
 
     let mut config = pnpm_config::Config::new();
     config.enable_global_virtual_store = true;

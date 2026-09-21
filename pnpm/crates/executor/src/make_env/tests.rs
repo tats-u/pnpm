@@ -63,15 +63,38 @@ fn make_env_preserves_user_config_and_strips_auth_and_package_leakage() {
     let extra = empty_extra();
     let built = build_env(&base_opts(pkg_root, pkg_root, &extra), &manifest, parent);
 
-    assert_eq!(built.env.get("npm_package_name").map(String::as_str), Some("@scope/pkg"));
-    assert_eq!(built.env.get("npm_package_version").map(String::as_str), Some("1.2.3"));
-    assert_eq!(built.env.get("npm_package_config_myKey").map(String::as_str), Some("myValue"));
+    assert_eq!(
+        built
+            .env
+            .get("npm_package_name")
+            .map(String::as_str),
+        Some("@scope/pkg")
+    );
+    assert_eq!(
+        built
+            .env
+            .get("npm_package_version")
+            .map(String::as_str),
+        Some("1.2.3")
+    );
+    assert_eq!(
+        built
+            .env
+            .get("npm_package_config_myKey")
+            .map(String::as_str),
+        Some("myValue")
+    );
     assert!(
-        !built.env.contains_key("npm_package__myPackage_secret"),
+        !built
+            .env
+            .contains_key("npm_package__myPackage_secret"),
         "underscore-prefixed manifest keys must be ignored",
     );
     assert_eq!(
-        built.env.get("npm_config_platform_arch").map(String::as_str),
+        built
+            .env
+            .get("npm_config_platform_arch")
+            .map(String::as_str),
         Some("x64"),
         "user-defined npm_config_* vars from the parent env are preserved: {:?}",
         built.env,
@@ -92,12 +115,18 @@ fn make_env_preserves_user_config_and_strips_auth_and_package_leakage() {
         );
     }
     assert_eq!(
-        built.env.get("PNPM_HOME").map(String::as_str),
+        built
+            .env
+            .get("PNPM_HOME")
+            .map(String::as_str),
         Some("/opt/pnpm"),
         "pnpm_* (incl. PNPM_HOME) keys are NOT in upstream's strip filter — they must pass through",
     );
     assert_eq!(
-        built.env.get("HOME").map(String::as_str),
+        built
+            .env
+            .get("HOME")
+            .map(String::as_str),
         Some("/home/me"),
         "non-npm parent keys are preserved",
     );
@@ -161,8 +190,20 @@ fn make_env_stamps_lifecycle_specific_keys() {
     let expected_init_cwd = init_cwd.to_string_lossy().into_owned();
     let expected_src_dir = pkg_root.to_string_lossy().into_owned();
 
-    assert_eq!(built.env.get("npm_lifecycle_event").map(String::as_str), Some("preinstall"));
-    assert_eq!(built.env.get("npm_lifecycle_script").map(String::as_str), Some("node x.js"));
+    assert_eq!(
+        built
+            .env
+            .get("npm_lifecycle_event")
+            .map(String::as_str),
+        Some("preinstall")
+    );
+    assert_eq!(
+        built
+            .env
+            .get("npm_lifecycle_script")
+            .map(String::as_str),
+        Some("node x.js")
+    );
     assert_eq!(built.env.get("npm_package_json"), Some(&expected_package_json));
     assert_eq!(built.env.get("INIT_CWD"), Some(&expected_init_cwd));
     assert_eq!(built.env.get("PNPM_SCRIPT_SRC_DIR"), Some(&expected_src_dir));
@@ -178,13 +219,28 @@ fn make_env_preserves_or_overrides_tmpdir_based_on_unsafe_perm() {
     opts.unsafe_perm = true;
     let built = build_env(&opts, &json!({"name":"z","version":"0"}), parent.clone());
     assert!(built.tmpdir.is_none());
-    assert_eq!(built.env.get("TMPDIR").map(String::as_str), Some("/alternate/tmp"));
+    assert_eq!(
+        built
+            .env
+            .get("TMPDIR")
+            .map(String::as_str),
+        Some("/alternate/tmp")
+    );
 
     opts.unsafe_perm = false;
     let built = build_env(&opts, &json!({"name":"z","version":"0"}), parent);
-    let expected_tmpdir = pkg_root.join("node_modules").join(".tmp");
+    let expected_tmpdir = pkg_root
+        .join("node_modules")
+        .join(".tmp");
     assert_eq!(built.tmpdir.as_deref(), Some(expected_tmpdir.as_path()));
-    assert_eq!(built.env.get("TMPDIR"), Some(&expected_tmpdir.to_string_lossy().into_owned()));
+    assert_eq!(
+        built.env.get("TMPDIR"),
+        Some(
+            &expected_tmpdir
+                .to_string_lossy()
+                .into_owned()
+        )
+    );
 }
 
 #[test]
@@ -196,10 +252,20 @@ fn make_env_windows_tmpdir_override_removes_differently_cased_keys() {
     opts.unsafe_perm = false;
 
     let built = build_env_for_platform(&opts, &json!({"name":"z","version":"0"}), parent, true);
-    let expected_tmpdir = pkg_root.join("node_modules").join(".tmp");
+    let expected_tmpdir = pkg_root
+        .join("node_modules")
+        .join(".tmp");
 
-    assert_eq!(built.env.get("TMPDIR"), Some(&expected_tmpdir.to_string_lossy().into_owned()));
-    let tmpdir_key_count = built.env
+    assert_eq!(
+        built.env.get("TMPDIR"),
+        Some(
+            &expected_tmpdir
+                .to_string_lossy()
+                .into_owned()
+        )
+    );
+    let tmpdir_key_count = built
+        .env
         .keys()
         .filter(|key| key.eq_ignore_ascii_case("TMPDIR"))
         .count();
@@ -248,20 +314,65 @@ fn reserved_stamps_win_over_extra_env_but_custom_keys_apply() {
     let built = build_env(&opts, &json!({"name":"w","version":"0"}), HashMap::new());
 
     // Reserved pnpm keys win over the user's `extraEnv`.
-    assert_eq!(built.env.get("INIT_CWD").map(String::as_str), Some("/original"));
-    assert_eq!(built.env.get("npm_config_user_agent").map(String::as_str), Some("pnpm"));
-    assert_eq!(built.env.get(VERIFY_DEPS_BEFORE_RUN_ENV).map(String::as_str), Some("false"));
-    assert_eq!(built.env.get("npm_lifecycle_script").map(String::as_str), Some("REAL"));
+    assert_eq!(
+        built
+            .env
+            .get("INIT_CWD")
+            .map(String::as_str),
+        Some("/original")
+    );
+    assert_eq!(
+        built
+            .env
+            .get("npm_config_user_agent")
+            .map(String::as_str),
+        Some("pnpm")
+    );
+    assert_eq!(
+        built
+            .env
+            .get(VERIFY_DEPS_BEFORE_RUN_ENV)
+            .map(String::as_str),
+        Some("false")
+    );
+    assert_eq!(
+        built
+            .env
+            .get("npm_lifecycle_script")
+            .map(String::as_str),
+        Some("REAL")
+    );
     // Non-reserved stamps pnpm generates before `extra_env` stay
     // overridable, matching TS.
-    assert_eq!(built.env.get("npm_lifecycle_event").map(String::as_str), Some("from-hook"));
     assert_eq!(
-        built.env.get("npm_config_node_gyp").map(String::as_str),
+        built
+            .env
+            .get("npm_lifecycle_event")
+            .map(String::as_str),
+        Some("from-hook")
+    );
+    assert_eq!(
+        built
+            .env
+            .get("npm_config_node_gyp")
+            .map(String::as_str),
         Some("/from-hook/node-gyp"),
     );
-    assert_eq!(built.env.get("npm_package_name").map(String::as_str), Some("from-hook"));
+    assert_eq!(
+        built
+            .env
+            .get("npm_package_name")
+            .map(String::as_str),
+        Some("from-hook")
+    );
     // A brand-new key from `extraEnv` also applies.
-    assert_eq!(built.env.get("CUSTOM").map(String::as_str), Some("hello"));
+    assert_eq!(
+        built
+            .env
+            .get("CUSTOM")
+            .map(String::as_str),
+        Some("hello")
+    );
 }
 
 #[test]
@@ -277,23 +388,48 @@ fn stamp_package_recurses_into_kept_buckets() {
             "bin": { "foo": "./bin/foo.js" },
         }),
     );
-    assert_eq!(env.get("npm_package_name").map(String::as_str), Some("pkg"));
-    assert_eq!(env.get("npm_package_config_port").map(String::as_str), Some("3000"));
     assert_eq!(
-        env.get("npm_package_config_deep_nested").map(String::as_str),
+        env.get("npm_package_name")
+            .map(String::as_str),
+        Some("pkg")
+    );
+    assert_eq!(
+        env.get("npm_package_config_port")
+            .map(String::as_str),
+        Some("3000")
+    );
+    assert_eq!(
+        env.get("npm_package_config_deep_nested")
+            .map(String::as_str),
         Some("value"),
         "recursion must keep going beneath config/* — only the top-level filter restricts",
     );
-    assert_eq!(env.get("npm_package_engines_node").map(String::as_str), Some(">=18"));
-    assert_eq!(env.get("npm_package_bin_foo").map(String::as_str), Some("./bin/foo.js"));
+    assert_eq!(
+        env.get("npm_package_engines_node")
+            .map(String::as_str),
+        Some(">=18")
+    );
+    assert_eq!(
+        env.get("npm_package_bin_foo")
+            .map(String::as_str),
+        Some("./bin/foo.js")
+    );
 }
 
 #[test]
 fn stamp_package_handles_arrays() {
     let mut env = HashMap::new();
     stamp_package(&mut env, "npm_package_", &json!({"name":"a","bin":["./a","./b"]}));
-    assert_eq!(env.get("npm_package_bin_0").map(String::as_str), Some("./a"));
-    assert_eq!(env.get("npm_package_bin_1").map(String::as_str), Some("./b"));
+    assert_eq!(
+        env.get("npm_package_bin_0")
+            .map(String::as_str),
+        Some("./a")
+    );
+    assert_eq!(
+        env.get("npm_package_bin_1")
+            .map(String::as_str),
+        Some("./b")
+    );
 }
 
 #[test]
@@ -351,7 +487,12 @@ fn the_dev_preinstall_delegation_marker_never_reaches_a_script() {
         parent,
     );
 
-    assert_eq!(built.env.get(DEV_PREINSTALL_ALREADY_RAN_ENV), None);
+    assert_eq!(
+        built
+            .env
+            .get(DEV_PREINSTALL_ALREADY_RAN_ENV),
+        None
+    );
 }
 
 /// On Windows a differently-cased spelling is the same variable, so an

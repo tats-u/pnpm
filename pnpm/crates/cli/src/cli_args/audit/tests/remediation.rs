@@ -35,7 +35,9 @@ fn create_overrides_sorts_and_skips_unfixable() {
     let overrides = create_overrides(&advisories, RangeSpecStyle::Major);
 
     assert_eq!(
-        overrides.into_iter().collect::<Vec<_>>(),
+        overrides
+            .into_iter()
+            .collect::<Vec<_>>(),
         vec![
             ("abc@<1.5.0".to_string(), "^1.5.0".to_string()),
             ("zoo@<2.0.0".to_string(), "^2.0.0".to_string()),
@@ -344,10 +346,20 @@ fn classify_for_update_routes_unparsable_ranges_to_remaining() {
 
     let classification = classify_for_update(&advisories);
 
-    assert!(classification.vulnerabilities.contains_key("ok"));
-    assert!(classification.unfixable.contains_key("any"));
     assert!(
-        classification.unfixable.contains_key("padded"),
+        classification
+            .vulnerabilities
+            .contains_key("ok")
+    );
+    assert!(
+        classification
+            .unfixable
+            .contains_key("any")
+    );
+    assert!(
+        classification
+            .unfixable
+            .contains_key("padded"),
         "a padded sentinel is still unfixable",
     );
     assert_eq!(classification.unparsable, vec![3], "an unparsable range must not be dropped");
@@ -369,8 +381,16 @@ fn classify_for_update_trims_module_names() {
 
     let classification = classify_for_update(&advisories);
 
-    assert!(classification.vulnerabilities.contains_key("vulnerable"));
-    assert!(!classification.vulnerabilities.contains_key("  vulnerable  "));
+    assert!(
+        classification
+            .vulnerabilities
+            .contains_key("vulnerable")
+    );
+    assert!(
+        !classification
+            .vulnerabilities
+            .contains_key("  vulnerable  ")
+    );
 }
 
 #[test]
@@ -383,7 +403,9 @@ fn report_fixed_remaining_keeps_non_semver_installed_packages_remaining() {
     // `non-semver` is still installed but only under a non-semver key, so its
     // version can't be range-checked.
     let installed = InstalledPackages {
-        names: ["bumped".to_string(), "non-semver".to_string()].into_iter().collect(),
+        names: ["bumped".to_string(), "non-semver".to_string()]
+            .into_iter()
+            .collect(),
         versions: HashMap::from([("bumped".to_string(), vec!["2.0.0".parse().unwrap()])]),
     };
 

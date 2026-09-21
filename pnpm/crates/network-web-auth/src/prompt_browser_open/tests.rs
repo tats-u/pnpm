@@ -224,7 +224,10 @@ async fn opens_browser_when_enter_key_is_pressed_before_poll_completes() {
             poll_tx
                 .send(Ok("token-after-enter".to_owned()))
                 .expect("send poll result");
-            let token = handle.await.expect("join").expect("a token");
+            let token = handle
+                .await
+                .expect("join")
+                .expect("a token");
 
             assert_eq!(token, "token-after-enter");
             assert!(closed(), "the listener should be closed");
@@ -261,7 +264,10 @@ async fn warns_and_continues_polling_when_open_fails() {
             poll_tx
                 .send(Ok("tok".to_owned()))
                 .expect("send poll result");
-            let token = handle.await.expect("join").expect("a token");
+            let token = handle
+                .await
+                .expect("join")
+                .expect("a token");
             assert_eq!(token, "tok");
         })
         .await;

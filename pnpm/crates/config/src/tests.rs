@@ -278,7 +278,9 @@ fn load_with_project_and_user(project_npmrc: &str, user_file: PathBuf) -> Config
 fn config_from_workspace_yaml(yaml: &str) -> Config {
     let tmp = tempdir().expect("workspace tempdir");
     fs::write(tmp.path().join("pnpm-workspace.yaml"), yaml).expect("write to pnpm-workspace.yaml");
-    Config::new().current::<HostNoHome>(tmp.path()).expect("config loads")
+    Config::new()
+        .current::<HostNoHome>(tmp.path())
+        .expect("config loads")
 }
 
 const NPM_DEFAULT_REGISTRY: &str = "https://registry.npmjs.org/";
@@ -337,8 +339,13 @@ fn load_with_auth_file(auth_yaml: &str, project_yaml: Option<&str>) -> Config {
 
     let project = tempdir().expect("project tempdir");
     if let Some(project_yaml) = project_yaml {
-        fs::write(project.path().join("pnpm-workspace.yaml"), project_yaml)
-            .expect("write pnpm-workspace.yaml");
+        fs::write(
+            project
+                .path()
+                .join("pnpm-workspace.yaml"),
+            project_yaml,
+        )
+        .expect("write pnpm-workspace.yaml");
     }
     set_fake_env(&[("XDG_CONFIG_HOME", xdg.path().to_str().unwrap())]);
 

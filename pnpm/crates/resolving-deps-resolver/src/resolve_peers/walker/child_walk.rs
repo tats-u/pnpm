@@ -24,7 +24,8 @@ impl Walker<'_> {
             return None;
         };
         Some((
-            self.tree.children_by_id
+            self.tree
+                .children_by_id
                 .get(&**pkg_id)
                 .cloned()
                 .unwrap_or_default(),
@@ -37,19 +38,16 @@ impl Walker<'_> {
         deferred: DeferredChildren<'_>,
         walk: &NodeWalkContext<'_>,
     ) -> ChildOutputs {
-        let DeferredChildren {
-            pkg_id,
-            children,
-            parent_ids,
-            provider_children,
-            depth,
-        } = deferred;
+        let DeferredChildren { pkg_id, children, parent_ids, provider_children, depth } = deferred;
         let canonical_scc = self.canonical_scc();
         let child_aliases = ChildAliases::Deferred(children);
         let mut child_outputs = ChildOutputs::default();
         for repeated in [true, false] {
             for edge in children {
-                if walk.parent_refs.contains_key(&edge.alias) != repeated
+                if walk
+                    .parent_refs
+                    .contains_key(&edge.alias)
+                    != repeated
                     || Self::cuts_cycle_edge(&canonical_scc, pkg_id, &edge.pkg_id)
                 {
                     continue;
@@ -71,7 +69,11 @@ impl Walker<'_> {
         parent_depth: i32,
         walk: &NodeWalkContext<'_>,
     ) -> NodeOutput {
-        if self.tree.dependencies_tree.contains_key(&child_node_id) {
+        if self
+            .tree
+            .dependencies_tree
+            .contains_key(&child_node_id)
+        {
             return self.resolve_node(&child_node_id, walk);
         }
         self.resolve_deferred_child(&DeferredChildContext {
@@ -104,7 +106,9 @@ impl Walker<'_> {
                 // still walks it once at importer context — eagerly realized
                 // trees reach their back-edge subtrees only through that
                 // queue.
-                if self.tree.dependencies_tree
+                if self
+                    .tree
+                    .dependencies_tree
                     .get(child_node_id)
                     .is_some_and(|child| {
                         Self::cuts_cycle_edge(&canonical_scc, pkg_id, &child.resolved_package_id)
@@ -133,22 +137,32 @@ impl Walker<'_> {
         result: &WalkResult<'_>,
     ) {
         if !self.traversal.discovery {
-            self.nodes.external_peers.insert(
-                node_id.clone(),
-                Arc::clone(result.all_resolved_peers),
-            );
-            self.nodes.missing_peers.insert(node_id.clone(), Arc::clone(result.all_missing_peers));
-            self.nodes.children_missing_peers.insert(
-                node_id.clone(),
-                Arc::clone(result.missing_peers_of_children),
-            );
+            self.nodes
+                .external_peers
+                .insert(node_id.clone(), Arc::clone(result.all_resolved_peers));
+            self.nodes
+                .missing_peers
+                .insert(node_id.clone(), Arc::clone(result.all_missing_peers));
+            self.nodes
+                .children_missing_peers
+                .insert(node_id.clone(), Arc::clone(result.missing_peers_of_children));
         }
         if result.is_pure {
-            self.caches.pure_pkgs.insert(pkg_id.to_string(), result.dep_path.clone());
+            self.caches
+                .pure_pkgs
+                .insert(pkg_id.to_string(), result.dep_path.clone());
             return;
         }
-        self.caches.retained_peer_node_ids.extend(result.all_resolved_peers.values().cloned());
-        self.caches.peers_cache
+        self.caches
+            .retained_peer_node_ids
+            .extend(
+                result
+                    .all_resolved_peers
+                    .values()
+                    .cloned(),
+            );
+        self.caches
+            .peers_cache
             .entry(pkg_id.to_string())
             .or_default()
             .push(PeersCacheItem {
@@ -207,8 +221,18 @@ impl Walker<'_> {
     ) -> ParentRefs {
         let mut new_parent_refs = ParentRefs::default();
         for (alias, child_node_id) in provider_children {
-            let Some(child_tree) = self.tree.dependencies_tree.get(child_node_id) else { continue };
-            let Some(child_pkg) = self.tree.packages.get(&child_tree.resolved_package_id) else {
+            let Some(child_tree) = self
+                .tree
+                .dependencies_tree
+                .get(child_node_id)
+            else {
+                continue;
+            };
+            let Some(child_pkg) = self
+                .tree
+                .packages
+                .get(&child_tree.resolved_package_id)
+            else {
                 continue;
             };
             insert_parent_ref(

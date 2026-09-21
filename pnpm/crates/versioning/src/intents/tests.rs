@@ -33,14 +33,22 @@ fn tolerates_a_utf8_bom_and_crlf_line_endings() {
 fn rejects_an_invalid_bump_type() {
     let err = parse_change_intent("---\nfoo: gigantic\n---\nx", "id", Path::new("/x/id.md"))
         .expect_err("parse must fail");
-    assert!(err.to_string().contains("invalid bump type"), "unexpected error: {err}");
+    assert!(
+        err.to_string()
+            .contains("invalid bump type"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
 fn rejects_a_file_without_frontmatter() {
     let err = parse_change_intent("Just some text.", "id", Path::new("/x/id.md"))
         .expect_err("parse must fail");
-    assert!(err.to_string().contains("no YAML frontmatter"), "unexpected error: {err}");
+    assert!(
+        err.to_string()
+            .contains("no YAML frontmatter"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]

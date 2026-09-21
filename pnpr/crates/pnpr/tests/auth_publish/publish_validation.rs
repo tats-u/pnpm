@@ -90,7 +90,8 @@ async fn republish_via_a_smuggled_version_entry_without_an_attachment_is_rejecte
         .body(Body::from(serde_json::to_vec(&body).unwrap()))
         .unwrap();
     assert_eq!(
-        app.oneshot(smuggle).await
+        app.oneshot(smuggle)
+            .await
             .unwrap()
             .status(),
         StatusCode::CONFLICT,
@@ -404,7 +405,8 @@ async fn update_packument_protects_a_published_tarball_with_a_basenameless_url()
         .body(Body::from(serde_json::to_vec(&tampered).unwrap()))
         .unwrap();
     assert_eq!(
-        app.oneshot(request).await
+        app.oneshot(request)
+            .await
             .unwrap()
             .status(),
         StatusCode::BAD_REQUEST,
@@ -427,13 +429,18 @@ async fn update_packument_rejects_seeding_a_package_with_no_published_packument(
         .body(Body::from(serde_json::to_vec(&body).unwrap()))
         .unwrap();
     assert_eq!(
-        app.oneshot(request).await
+        app.oneshot(request)
+            .await
             .unwrap()
             .status(),
         StatusCode::BAD_REQUEST,
     );
 
-    assert!(!storage.join("ghost/package.json").exists());
+    assert!(
+        !storage
+            .join("ghost/package.json")
+            .exists()
+    );
 }
 
 #[tokio::test]
@@ -544,10 +551,20 @@ async fn published_package_survives_wiping_the_proxy_cache() {
     );
 
     // The artifacts land in the authoritative root, not the cache.
-    assert!(storage.join("durable-pkg/package.json").exists());
-    assert!(storage.join("durable-pkg/durable-pkg-1.0.0.tgz").exists());
     assert!(
-        !storage.join(".pnpr-cache/durable-pkg").exists(),
+        storage
+            .join("durable-pkg/package.json")
+            .exists()
+    );
+    assert!(
+        storage
+            .join("durable-pkg/durable-pkg-1.0.0.tgz")
+            .exists()
+    );
+    assert!(
+        !storage
+            .join(".pnpr-cache/durable-pkg")
+            .exists(),
         "published package must not be written into the disposable proxy cache",
     );
 
@@ -653,11 +670,15 @@ async fn publish_rejects_integrity_mismatch_and_leaves_no_artifacts() {
 
     // Neither the packument nor the tarball should have been written.
     assert!(
-        !storage.join("bad-pkg/package.json").exists(),
+        !storage
+            .join("bad-pkg/package.json")
+            .exists(),
         "packument must not be written when integrity check fails",
     );
     assert!(
-        !storage.join("bad-pkg/bad-pkg-1.0.0.tgz").exists(),
+        !storage
+            .join("bad-pkg/bad-pkg-1.0.0.tgz")
+            .exists(),
         "tarball must not be written when integrity check fails",
     );
 }
@@ -686,7 +707,11 @@ async fn publish_rejects_shasum_mismatch() {
         body_text.contains("EINTEGRITY"),
         "shasum mismatch must surface EINTEGRITY: {body_text}",
     );
-    assert!(!storage.join("shasum-pkg/package.json").exists());
+    assert!(
+        !storage
+            .join("shasum-pkg/package.json")
+            .exists()
+    );
 }
 
 #[tokio::test]
@@ -715,7 +740,11 @@ async fn publish_rejects_missing_integrity_field() {
         body_text.contains("EINTEGRITY") && body_text.contains("integrity"),
         "missing integrity must surface a clear EINTEGRITY message: {body_text}",
     );
-    assert!(!storage.join("no-int-pkg/package.json").exists());
+    assert!(
+        !storage
+            .join("no-int-pkg/package.json")
+            .exists()
+    );
 }
 
 /// Real npm clients send one attachment per publish, but the
@@ -879,8 +908,16 @@ async fn publish_supports_scoped_packages() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
 
-    assert!(storage.join("@scope/pkg/package.json").exists());
-    assert!(storage.join("@scope/pkg/pkg-1.0.0.tgz").exists());
+    assert!(
+        storage
+            .join("@scope/pkg/package.json")
+            .exists()
+    );
+    assert!(
+        storage
+            .join("@scope/pkg/pkg-1.0.0.tgz")
+            .exists()
+    );
 
     // And we can read it back.
     let response = app

@@ -70,8 +70,9 @@ fn slot_dir_engine_agnostic_with_empty_allow_build_policy() {
 }
 #[test]
 fn full_pkg_id_keeps_patch_hash_when_present() {
-    let patched_key: PackageKey =
-        "foo@1.0.0(patch_hash=abc)(react@18.0.0)".parse().expect("parse patched key");
+    let patched_key: PackageKey = "foo@1.0.0(patch_hash=abc)(react@18.0.0)"
+        .parse()
+        .expect("parse patched key");
     let metadata_key = patched_key.without_peer();
     let mut packages = HashMap::new();
     packages.insert(
@@ -108,7 +109,8 @@ fn full_pkg_id_keeps_patch_hash_when_present() {
         .get(&patched_key.to_string())
         .expect("patched snapshot node");
     assert!(
-        node.full_pkg_id.starts_with("foo@1.0.0(patch_hash=abc):"),
+        node.full_pkg_id
+            .starts_with("foo@1.0.0(patch_hash=abc):"),
         "full_pkg_id must keep the patch-hash segment; got {:?}",
         node.full_pkg_id,
     );
@@ -121,12 +123,20 @@ fn link_hash_matches_the_shared_typescript_fixture() {
     )))
     .expect("parse shared GVS link hash fixture");
     let cases = if cfg!(windows) { &fixture.win32 } else { &fixture.posix };
-    let package_key: PackageKey = fixture.package.key.parse().expect("parse fixture package key");
+    let package_key: PackageKey = fixture
+        .package
+        .key
+        .parse()
+        .expect("parse fixture package key");
     let packages = HashMap::from([(
         package_key.without_peer(),
         package_metadata(
             LockfileResolution::Registry(RegistryResolution {
-                integrity: fixture.package.integrity.parse().expect("parse fixture integrity"),
+                integrity: fixture
+                    .package
+                    .integrity
+                    .parse()
+                    .expect("parse fixture integrity"),
                 revision: None,
             }),
             Some(&fixture.package.version),
@@ -150,7 +160,10 @@ fn link_hash_matches_the_shared_typescript_fixture() {
         );
         let link_node = graph
             .get(&fixture.package.key)
-            .and_then(|node| node.children.get(&fixture.package.alias))
+            .and_then(|node| {
+                node.children
+                    .get(&fixture.package.alias)
+            })
             .unwrap_or_else(|| panic!("{}: fixture link node", case.name));
         assert_eq!(link_node, &case.expected_link_node, "{}: normalized link node", case.name);
 

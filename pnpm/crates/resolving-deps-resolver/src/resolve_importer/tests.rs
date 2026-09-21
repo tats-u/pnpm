@@ -134,7 +134,9 @@ fn link_dependency(target: &str) -> pnpm_lockfile::SnapshotDepRef {
 /// list — the union `importer_locked_peer_context` folds over every
 /// snapshot.
 fn locked_peer_names(wanted_lockfile: Option<&pnpm_lockfile::Lockfile>) -> HashSet<String> {
-    importer_locked_peer_versions(wanted_lockfile, "missing-importer").into_keys().collect()
+    importer_locked_peer_versions(wanted_lockfile, "missing-importer")
+        .into_keys()
+        .collect()
 }
 
 struct StubResolver {
@@ -150,7 +152,10 @@ impl Resolver for StubResolver {
     ) -> ResolveFuture<'a> {
         let key = (
             wanted.alias.clone().unwrap_or_default(),
-            wanted.bare_specifier.clone().unwrap_or_default(),
+            wanted
+                .bare_specifier
+                .clone()
+                .unwrap_or_default(),
         );
         self.calls
             .lock()
@@ -311,7 +316,8 @@ mod resolution_mode {
         }
 
         fn opts_for(&self, alias: &str) -> RecordedOpts {
-            *self.seen
+            *self
+                .seen
                 .lock()
                 .unwrap()
                 .get(alias)
@@ -371,7 +377,9 @@ mod resolution_mode {
     async fn highest_mode_picks_highest_everywhere() {
         let resolver = RecordingResolver::new(one_dep_one_subdep_table());
         let (_tmp, manifest) = fake_manifest(serde_json::json!({ "direct": "^1.0.0" }));
-        let maximum = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+        let maximum = Utc
+            .with_ymd_and_hms(2024, 1, 1, 0, 0, 0)
+            .unwrap();
         let mut opts = default_opts();
         opts.base_opts.policy.published_by = Some(maximum);
         opts.resolution.pick_lowest_direct = false;
@@ -413,8 +421,12 @@ mod resolution_mode {
     async fn time_based_mode_threads_cutoff_to_subdeps_only() {
         let resolver = RecordingResolver::new(one_dep_one_subdep_table());
         let (_tmp, manifest) = fake_manifest(serde_json::json!({ "direct": "^1.0.0" }));
-        let maximum = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
-        let cutoff = Utc.with_ymd_and_hms(2024, 3, 1, 0, 0, 0).unwrap();
+        let maximum = Utc
+            .with_ymd_and_hms(2024, 6, 1, 0, 0, 0)
+            .unwrap();
+        let cutoff = Utc
+            .with_ymd_and_hms(2024, 3, 1, 0, 0, 0)
+            .unwrap();
         let mut opts = default_opts();
         opts.base_opts.policy.published_by = Some(maximum);
         opts.resolution.pick_lowest_direct = true;

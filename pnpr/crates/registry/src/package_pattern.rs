@@ -139,7 +139,9 @@ impl PackagePattern {
     /// namespace-tier key a specificity lookup consults.
     #[must_use]
     pub fn namespace_of(package: &str) -> Option<&str> {
-        package.split_once('/').map(|(namespace, _)| namespace)
+        package
+            .split_once('/')
+            .map(|(namespace, _)| namespace)
     }
 
     /// Whether this pattern matches `package`.
@@ -210,7 +212,9 @@ impl fmt::Display for PackagePattern {
 /// `("acme", "foo")`), or `None` when it is unscoped or missing either segment
 /// (`@acme`, `@/foo`, `@acme/`).
 pub(super) fn scoped_name(package: &str) -> Option<(&str, &str)> {
-    let (scope, name) = package.strip_prefix('@')?.split_once('/')?;
+    let (scope, name) = package
+        .strip_prefix('@')?
+        .split_once('/')?;
     (!scope.is_empty() && !name.is_empty()).then_some((scope, name))
 }
 
@@ -251,13 +255,10 @@ pub(super) fn reject_shadowed_source(
     patterns: &[PackagePattern],
     seen: &[&PackagePattern],
 ) -> Result<(), RegistryConfigError> {
-    if patterns
-        .iter()
-        .all(|pattern| {
-            seen.iter()
-                .any(|earlier| earlier.covers(pattern))
-        })
-    {
+    if patterns.iter().all(|pattern| {
+        seen.iter()
+            .any(|earlier| earlier.covers(pattern))
+    }) {
         return Err(RegistryConfigError::UnreachableSource {
             router: router.to_string(),
             index,

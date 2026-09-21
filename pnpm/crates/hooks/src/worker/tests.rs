@@ -17,14 +17,17 @@ async fn cancelled_request_removes_its_pending_entry() {
         "module.exports = { hooks: { readPackage: () => new Promise(() => {}) } }\n",
     )
     .expect("write pnpmfile");
-    let worker = NodeWorker::spawn(&pnpmfile_path).await.expect("spawn worker");
+    let worker = NodeWorker::spawn(&pnpmfile_path)
+        .await
+        .expect("spawn worker");
 
     let call = worker.call("readPackage", serde_json::json!({}), Arc::new(|_| {}));
     let cancelled = timeout(Duration::from_millis(500), call).await;
     assert!(cancelled.is_err(), "the never-resolving hook must outlive the local timeout");
 
     assert!(
-        worker.pending
+        worker
+            .pending
             .lock()
             .unwrap()
             .is_empty(),
@@ -55,7 +58,9 @@ module.exports = {
 ",
     )
     .expect("write pnpmfile");
-    let worker = NodeWorker::spawn(&pnpmfile_path).await.expect("spawn worker");
+    let worker = NodeWorker::spawn(&pnpmfile_path)
+        .await
+        .expect("spawn worker");
 
     let peak = call_read_package_concurrently(&worker, 100).await;
     assert_eq!(
@@ -100,13 +105,17 @@ async fn call_read_package_concurrently(worker: &Arc<NodeWorker>, count: usize) 
     for _ in 0..count {
         let worker = Arc::clone(worker);
         calls.spawn(async move {
-            worker.call("readPackage", serde_json::json!({}), Arc::new(|_| {})).await
+            worker
+                .call("readPackage", serde_json::json!({}), Arc::new(|_| {}))
+                .await
         });
     }
 
     let mut peak = 0;
     while let Some(call) = calls.join_next().await {
-        let result = call.expect("join the call").expect("the hook should not fail");
+        let result = call
+            .expect("join the call")
+            .expect("the hook should not fail");
         peak = peak.max(result["peak"].as_u64().unwrap_or(0) as usize);
     }
     peak

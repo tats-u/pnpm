@@ -89,7 +89,8 @@ async fn record_package_manager_pins(
         if let Some((pm, version_spec)) = declared_package_manager(selector) {
             let reference = resolve_project_pin(state.config, pm, version_spec.as_deref()).await?;
             let reference = reference.as_deref();
-            let manifest = state.manifest
+            let manifest = state
+                .manifest
                 .value_mut()
                 .as_object_mut()
                 .ok_or(EngineError::ManifestIsNotAnObject)?;
@@ -109,7 +110,8 @@ impl RecordedPins {
         if self.recorded.is_empty() {
             return Ok(());
         }
-        state.manifest
+        state
+            .manifest
             .save()
             .map_err(miette::Report::new)
             .wrap_err("save the manifest")
@@ -142,14 +144,8 @@ where
     DependencyGroupList: IntoIterator<Item = DependencyGroup>,
 {
     let lockfile_path = state.lockfile_path();
-    let State {
-        tarball_mem_cache,
-        http_client,
-        config,
-        manifest,
-        lockfile,
-        resolved_packages,
-    } = &mut state;
+    let State { tarball_mem_cache, http_client, config, manifest, lockfile, resolved_packages } =
+        &mut state;
     let lockfile = command_lockfile(lockfile, &lockfile_path)?;
 
     Add {
@@ -182,10 +178,13 @@ async fn add_workspace_config_dependencies<Reporter: self::Reporter>(
     state: &State,
     added: &BTreeMap<String, String>,
 ) -> miette::Result<()> {
-    let root_dir = state.config.workspace_dir
+    let root_dir = state
+        .config
+        .workspace_dir
         .clone()
         .unwrap_or_else(|| {
-            state.manifest
+            state
+                .manifest
                 .path()
                 .parent()
                 .map_or_else(|| PathBuf::from("."), Path::to_path_buf)
@@ -233,8 +232,12 @@ impl AddArgs {
         // `cli_args::install.rs` for the parallel comment — the
         // pattern is identical (clone from `&'static Config`, merge,
         // pass merged value through).
-        let supported_architectures =
-            self.supported_architectures.apply_to(state.config.supported_architectures.clone());
+        let supported_architectures = self.supported_architectures.apply_to(
+            state
+                .config
+                .supported_architectures
+                .clone(),
+        );
 
         // `--save-catalog-name=<name>` wins; `--save-catalog` is the
         // shorthand for the default catalog; otherwise fall back to the
@@ -255,8 +258,10 @@ impl AddArgs {
         };
 
         let range_spec_style = self.range_spec_style(state.config);
-        let dependency_options =
-            self.dependency_options.clone().with_save_peer_setting(state.config.save_peer);
+        let dependency_options = self
+            .dependency_options
+            .clone()
+            .with_save_peer_setting(state.config.save_peer);
         let included_groups = self.included_groups(state.config);
 
         // The install saves the manifest, so the declarations recorded
@@ -284,10 +289,15 @@ impl AddArgs {
         mut selection: InstallFamilySelection,
     ) -> miette::Result<()> {
         let package_names = self.selected_package_names(state.config, &selection)?;
-        let supported_architectures =
-            self.supported_architectures.apply_to(state.config.supported_architectures.clone());
+        let supported_architectures = self.supported_architectures.apply_to(
+            state
+                .config
+                .supported_architectures
+                .clone(),
+        );
         let save_catalog_name = self.effective_save_catalog_name(state.config);
-        let dependency_groups = self.dependency_options
+        let dependency_groups = self
+            .dependency_options
             .clone()
             .with_save_peer_setting(state.config.save_peer)
             .save_target();
@@ -326,7 +336,8 @@ impl AddArgs {
         config: &Config,
         selection: &InstallFamilySelection,
     ) -> miette::Result<Vec<String>> {
-        if let Some(request) = self.package_names
+        if let Some(request) = self
+            .package_names
             .iter()
             .find(|request| {
                 request.may_name_a_tool() && declared_package_manager(request.selector()).is_some()
@@ -335,7 +346,8 @@ impl AddArgs {
             let request = request.selector().to_string();
             return Err(AddError::PackageManagerInSelection { request }.into());
         }
-        let selectors: Vec<String> = self.package_names
+        let selectors: Vec<String> = self
+            .package_names
             .iter()
             .map(|request| request.selector().to_string())
             .collect();
@@ -351,9 +363,14 @@ impl AddArgs {
     }
 
     fn effective_save_catalog_name(&self, config: &Config) -> Option<String> {
-        self.save.catalog_name
+        self.save
+            .catalog_name
             .clone()
-            .or_else(|| self.save.catalog.then(|| "default".to_string()))
+            .or_else(|| {
+                self.save
+                    .catalog
+                    .then(|| "default".to_string())
+            })
             .or_else(|| config.save_catalog_name.clone())
     }
 
@@ -376,8 +393,9 @@ impl AddArgs {
             ));
         }
         workspace_link_root(self.target.workspace, None)?;
-        let supported_architectures =
-            self.supported_architectures.apply_to(config.supported_architectures.clone());
+        let supported_architectures = self
+            .supported_architectures
+            .apply_to(config.supported_architectures.clone());
         let range_spec_style = self.range_spec_style(config);
         Box::pin(crate::cli_args::global::handle_global_add::<Reporter>(
             config,

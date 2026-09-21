@@ -117,7 +117,9 @@ where
     drop(stream);
     drop(network_permit);
     tracing::info!(target: "pacquet::download", ?package_url, "Download completed");
-    let extracted = extract_task.await.map_err(TarballError::TaskJoin)?;
+    let extracted = extract_task
+        .await
+        .map_err(TarballError::TaskJoin)?;
     if let Some(error) = body_error {
         return Err(error);
     }
@@ -140,7 +142,8 @@ struct ExtractorFeed {
 impl ExtractorFeed {
     async fn send(&mut self, chunk: bytes::Bytes) {
         if self.open
-            && self.chunk_tx
+            && self
+                .chunk_tx
                 .send(Ok(chunk))
                 .await
                 .is_err()
@@ -153,10 +156,10 @@ impl ExtractorFeed {
     /// treating the truncated stream as a complete archive.
     async fn fail(&self) {
         if self.open {
-            let _ = self.chunk_tx.send(Err(std::io::Error::other(
-                "the tarball body failed mid-download",
-            )))
-            .await;
+            let _ = self
+                .chunk_tx
+                .send(Err(std::io::Error::other("the tarball body failed mid-download")))
+                .await;
         }
     }
 }
@@ -271,8 +274,9 @@ where
     // advertised size would be reserving for bytes that never land
     // here — and would let a server's claim, rather than its body,
     // decide the size of an allocation.
-    let reserve =
-        inputs.expected_size.map(|size| size.min(STREAM_EXTRACT_COMPRESSED_THRESHOLD as u64));
+    let reserve = inputs
+        .expected_size
+        .map(|size| size.min(STREAM_EXTRACT_COMPRESSED_THRESHOLD as u64));
     let mut buf = allocate_tarball_buffer(reserve, inputs.package_url)?;
     for chunk in inputs.prefix.chunks {
         buf.extend_from_slice(&chunk);

@@ -22,7 +22,9 @@ async fn workspace_resolution_is_shared_and_rendered_per_importer() {
     let workspace_packages = std::sync::Arc::new(std::collections::BTreeMap::default());
     let hook_calls: RecordedReadPackageCalls = Arc::new(Mutex::new(Vec::new()));
     let mut opts = workspace_opts(false, false);
-    opts.peers.lockfile_dir.clone_from(&lockfile_dir);
+    opts.peers
+        .lockfile_dir
+        .clone_from(&lockfile_dir);
     opts.hooks.manifests.pnpmfile_hook =
         Some(Arc::new(RecordingHooks { calls: Arc::clone(&hook_calls) }));
 
@@ -36,25 +38,40 @@ async fn workspace_resolution_is_shared_and_rendered_per_importer() {
             };
             let mut opts = importer_opts(project_dir, None);
             opts.links.lockfile_dir = Some(lockfile_dir.clone());
-            opts.base_opts.project.lockfile_dir.clone_from(&lockfile_dir);
-            opts.base_opts.project.link_workspace_packages = LinkWorkspacePackages::Deep;
-            opts.base_opts.project.workspace_packages =
-                Some(std::sync::Arc::clone(&workspace_packages));
+            opts.base_opts
+                .project
+                .lockfile_dir
+                .clone_from(&lockfile_dir);
+            opts.base_opts
+                .project
+                .link_workspace_packages = LinkWorkspacePackages::Deep;
+            opts.base_opts
+                .project
+                .workspace_packages = Some(std::sync::Arc::clone(&workspace_packages));
             opts
         })
         .await
         .expect("resolve workspace");
 
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["packages/a"]["shared"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["packages/a"]["shared"]
+            .as_str(),
         "link:../shared",
     );
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["apps/b"]["shared"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["apps/b"]["shared"]
+            .as_str(),
         "link:../../packages/shared",
     );
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["packages/c"]["shared"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["packages/c"]["shared"]
+            .as_str(),
         "link:../shared",
     );
     assert_eq!(resolver.workspace_resolution_count(), 1);
@@ -91,7 +108,9 @@ async fn semver_workspace_matches_stay_scoped_to_each_importer() {
     let lockfile_dir = std::path::PathBuf::from("/repo");
     let workspace_packages = std::sync::Arc::new(std::collections::BTreeMap::default());
     let mut opts = workspace_opts(false, false);
-    opts.peers.lockfile_dir.clone_from(&lockfile_dir);
+    opts.peers
+        .lockfile_dir
+        .clone_from(&lockfile_dir);
 
     let result =
         resolve_workspace(&resolver, &importers, &[DependencyGroup::Prod], opts, |importer| {
@@ -102,21 +121,33 @@ async fn semver_workspace_matches_stay_scoped_to_each_importer() {
             };
             let mut opts = importer_opts(project_dir, None);
             opts.links.lockfile_dir = Some(lockfile_dir.clone());
-            opts.base_opts.project.lockfile_dir.clone_from(&lockfile_dir);
-            opts.base_opts.project.link_workspace_packages = LinkWorkspacePackages::Deep;
-            opts.base_opts.project.workspace_packages =
-                Some(std::sync::Arc::clone(&workspace_packages));
+            opts.base_opts
+                .project
+                .lockfile_dir
+                .clone_from(&lockfile_dir);
+            opts.base_opts
+                .project
+                .link_workspace_packages = LinkWorkspacePackages::Deep;
+            opts.base_opts
+                .project
+                .workspace_packages = Some(std::sync::Arc::clone(&workspace_packages));
             opts
         })
         .await
         .expect("resolve workspace");
 
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["packages/a"]["shared"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["packages/a"]["shared"]
+            .as_str(),
         "link:../shared",
     );
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["apps/b"]["shared"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["apps/b"]["shared"]
+            .as_str(),
         "link:../../packages/shared",
     );
     assert_eq!(resolver.workspace_resolution_count(), 2);
@@ -140,7 +171,9 @@ async fn canonical_snapshot_link_keeps_direct_links_relative_to_each_importer() 
         WorkspaceImporter { id: "packages/consumer".to_string(), manifest: &shallow_manifest },
     ];
     let mut opts = workspace_opts(false, false);
-    opts.peers.lockfile_dir.clone_from(&lockfile_dir);
+    opts.peers
+        .lockfile_dir
+        .clone_from(&lockfile_dir);
 
     let result =
         resolve_workspace(&resolver, &importers, &[DependencyGroup::Prod], opts, |importer| {
@@ -151,32 +184,56 @@ async fn canonical_snapshot_link_keeps_direct_links_relative_to_each_importer() 
             };
             let mut opts = importer_opts(project_dir, None);
             opts.links.lockfile_dir = Some(lockfile_dir.clone());
-            opts.base_opts.project.lockfile_dir.clone_from(&lockfile_dir);
-            opts.base_opts.project.link_workspace_packages = LinkWorkspacePackages::Deep;
-            opts.base_opts.project.workspace_packages =
-                Some(std::sync::Arc::clone(&workspace_packages));
+            opts.base_opts
+                .project
+                .lockfile_dir
+                .clone_from(&lockfile_dir);
+            opts.base_opts
+                .project
+                .link_workspace_packages = LinkWorkspacePackages::Deep;
+            opts.base_opts
+                .project
+                .workspace_packages = Some(std::sync::Arc::clone(&workspace_packages));
             opts
         })
         .await
         .expect("resolve workspace");
 
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["apps/nested/app"]["shared"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["apps/nested/app"]["shared"]
+            .as_str(),
         "link:../../../packages/shared",
     );
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["packages/consumer"]["shared"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["packages/consumer"]["shared"]
+            .as_str(),
         "link:../shared",
     );
-    let wrapper = result.peers.graph
+    let wrapper = result
+        .peers
+        .graph
         .get(&crate::DepPath::from("wrapper@1.0.0"))
         .expect("wrapper graph node");
     assert_eq!(
         wrapper.edges.children.get("shared"),
         Some(&crate::DepPath::from("link:packages/shared")),
     );
-    assert!(result.merged_tree.packages.contains_key("link:packages/shared"));
-    assert!(!result.merged_tree.packages.contains_key("link:../../../packages/shared"));
+    assert!(
+        result
+            .merged_tree
+            .packages
+            .contains_key("link:packages/shared")
+    );
+    assert!(
+        !result
+            .merged_tree
+            .packages
+            .contains_key("link:../../../packages/shared")
+    );
     assert_eq!(resolver.workspace_resolution_count(), 1);
 }
 
@@ -246,9 +303,21 @@ async fn catalogs_work_in_injected_workspace_packages() {
     .await
     .expect("resolve catalog dependency of injected workspace package");
 
-    assert!(result.merged_tree.packages.contains_key("project2@file:packages/project2"));
-    assert!(result.merged_tree.packages.contains_key("is-positive@1.0.0"));
-    let children = result.merged_tree.children_by_id
+    assert!(
+        result
+            .merged_tree
+            .packages
+            .contains_key("project2@file:packages/project2")
+    );
+    assert!(
+        result
+            .merged_tree
+            .packages
+            .contains_key("is-positive@1.0.0")
+    );
+    let children = result
+        .merged_tree
+        .children_by_id
         .get("project2@file:packages/project2")
         .expect("injected workspace package children");
     assert_eq!(children.len(), 1);

@@ -41,7 +41,9 @@ pub fn redact_url_credentials(text: &str) -> String {
         // (schemes end in an ASCII alphanumeric) precedes it, so an unrelated
         // "://" in the message isn't mangled.
         let has_scheme = pos > 0 && rest.as_bytes()[pos - 1].is_ascii_alphanumeric();
-        rest = strip_leading_userinfo(after).filter(|_| has_scheme).unwrap_or(after);
+        rest = strip_leading_userinfo(after)
+            .filter(|_| has_scheme)
+            .unwrap_or(after);
     }
     out.push_str(rest);
     out
@@ -77,7 +79,9 @@ pub fn redact_npm_auth_key(key: &str) -> String {
     if let Some(redacted) = strip_leading_userinfo(authority_and_path) {
         return format!("//{redacted}");
     }
-    let mut ats = authority_and_path.match_indices('@').peekable();
+    let mut ats = authority_and_path
+        .match_indices('@')
+        .peekable();
     if ats.peek().is_some() {
         if ats.any(|(at, _)| {
             let before_at = &authority_and_path[..at];

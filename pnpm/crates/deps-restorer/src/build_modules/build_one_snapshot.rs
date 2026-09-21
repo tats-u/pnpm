@@ -51,7 +51,11 @@ pub(crate) fn build_one_snapshot<Reporter: self::Reporter>(
         return Ok(());
     }
 
-    let optional = context.graph.snapshots.get(snapshot_key).is_some_and(|entry| entry.optional);
+    let optional = context
+        .graph
+        .snapshots
+        .get(snapshot_key)
+        .is_some_and(|entry| entry.optional);
     if reject_frozen_store_build::<Reporter>(
         context,
         snapshot_key,
@@ -76,7 +80,10 @@ fn build_candidate<Reporter: self::Reporter>(
     cache_key: Option<&str>,
     optional: bool,
 ) -> Result<(), BuildModulesError> {
-    let Some(pkg_dir) = context.pkg_roots().canonical(snapshot_key) else {
+    let Some(pkg_dir) = context
+        .pkg_roots()
+        .canonical(snapshot_key)
+    else {
         return Ok(());
     };
     if !pkg_dir.exists() {
@@ -87,7 +94,10 @@ fn build_candidate<Reporter: self::Reporter>(
     // hoisted gathers every ancestor's `node_modules/.bin` up to
     // `lockfile_dir` so a lifecycle script invoked at a nested
     // hoisted location can resolve bins added by parents.
-    let extra_bin_paths = if context.directories.gather_ancestor_bin_paths {
+    let extra_bin_paths = if context
+        .directories
+        .gather_ancestor_bin_paths
+    {
         bin_dirs_in_all_parent_dirs(&pkg_dir, context.directories.lockfile_dir)
     } else {
         Vec::new()
@@ -161,8 +171,13 @@ struct BuildCandidate<'c> {
 impl<'c> BuildCandidate<'c> {
     fn of(context: &BuildOneSnapshot<'c>, snapshot_key: &PackageKey) -> Option<Self> {
         let metadata_key = snapshot_key.without_peer();
-        let patch = context.graph.patches.and_then(|patches| patches.get(&metadata_key));
-        let requires_build = context.graph.requires_build_map
+        let patch = context
+            .graph
+            .patches
+            .and_then(|patches| patches.get(&metadata_key));
+        let requires_build = context
+            .graph
+            .requires_build_map
             .get(snapshot_key)
             .copied()
             .unwrap_or(false);
@@ -192,7 +207,12 @@ fn report_broken_slot<Reporter: self::Reporter>(
     error: BuildModulesError,
 ) -> Result<(), BuildModulesError> {
     let (name, version) = named;
-    if !context.graph.snapshots.get(snapshot_key).is_some_and(|entry| entry.optional) {
+    if !context
+        .graph
+        .snapshots
+        .get(snapshot_key)
+        .is_some_and(|entry| entry.optional)
+    {
         return Err(error);
     }
     Reporter::emit(&LogEvent::SkippedOptionalDependency(SkippedOptionalDependencyLog {
@@ -204,7 +224,11 @@ fn report_broken_slot<Reporter: self::Reporter>(
             version: version.to_string(),
         },
         parents: None,
-        prefix: context.directories.lockfile_dir.to_string_lossy().into_owned(),
+        prefix: context
+            .directories
+            .lockfile_dir
+            .to_string_lossy()
+            .into_owned(),
         reason: SkippedOptionalReason::BuildFailure,
     }));
     Ok(())
@@ -227,13 +251,12 @@ fn reject_frozen_store_build<Reporter: self::Reporter>(
     writes: &FrozenStoreWrites,
 ) -> Result<bool, BuildModulesError> {
     let (name, version) = named;
-    let &FrozenStoreWrites {
-        optional,
-        has_patch,
-        should_run_scripts,
-    } = writes;
+    let &FrozenStoreWrites { optional, has_patch, should_run_scripts } = writes;
     if !context.cache.frozen_store
-        || !context.directories.layout.enable_global_virtual_store()
+        || !context
+            .directories
+            .layout
+            .enable_global_virtual_store()
         || !(has_patch || should_run_scripts)
     {
         return Ok(false);
@@ -260,7 +283,11 @@ fn reject_frozen_store_build<Reporter: self::Reporter>(
             version: version.to_string(),
         },
         parents: None,
-        prefix: context.directories.lockfile_dir.to_string_lossy().into_owned(),
+        prefix: context
+            .directories
+            .lockfile_dir
+            .to_string_lossy()
+            .into_owned(),
         reason: SkippedOptionalReason::BuildFailure,
     }));
     Ok(true)
@@ -279,12 +306,16 @@ fn apply_configured_patch(
     patch: Option<&pnpm_patching::ExtendedPatchInfo>,
 ) -> Result<bool, BuildModulesError> {
     let Some(patch) = patch else { return Ok(false) };
-    let patch_file_path = patch.patch_file_path
+    let patch_file_path = patch
+        .patch_file_path
         .as_deref()
         .ok_or_else(|| BuildModulesError::PatchFilePathMissing {
             dep_path: snapshot_key.to_string(),
         })?;
-    context.progress.slot_mutations.store(true, Ordering::Relaxed);
+    context
+        .progress
+        .slot_mutations
+        .store(true, Ordering::Relaxed);
     for patched_dir in context.pkg_roots().all(snapshot_key) {
         if !patched_dir.exists() {
             continue;
@@ -304,7 +335,10 @@ fn global_slot_carries_overlay(
     snapshot_key: &PackageKey,
     overlay: &HashMap<String, PathBuf>,
 ) -> bool {
-    context.directories.layout.enable_global_virtual_store()
+    context
+        .directories
+        .layout
+        .enable_global_virtual_store()
         && context
             .pkg_roots()
             .canonical(snapshot_key)
@@ -324,7 +358,10 @@ fn run_snapshot_scripts<Reporter: self::Reporter>(
     if !should_run_scripts {
         return Ok(Some(false));
     }
-    context.progress.slot_mutations.store(true, Ordering::Relaxed);
+    context
+        .progress
+        .slot_mutations
+        .store(true, Ordering::Relaxed);
     let result =
         run_candidate_hooks::<Reporter>(context, snapshot_key, pkg_dir, extra_bin_paths, optional);
     match result {
@@ -345,7 +382,11 @@ fn run_snapshot_scripts<Reporter: self::Reporter>(
                     version: version.to_string(),
                 },
                 parents: None,
-                prefix: context.directories.lockfile_dir.to_string_lossy().into_owned(),
+                prefix: context
+                    .directories
+                    .lockfile_dir
+                    .to_string_lossy()
+                    .into_owned(),
                 reason: SkippedOptionalReason::BuildFailure,
             }));
             Ok(None)
@@ -394,8 +435,14 @@ fn clear_global_virtual_store_build_markers(
     built: bool,
 ) {
     if !built
-        || !context.directories.layout.enable_global_virtual_store()
-        || context.directories.pkg_roots_by_key.is_some()
+        || !context
+            .directories
+            .layout
+            .enable_global_virtual_store()
+        || context
+            .directories
+            .pkg_roots_by_key
+            .is_some()
     {
         return;
     }
@@ -463,7 +510,10 @@ fn scripts_are_allowed(
     snapshot_key: &PackageKey,
     dep_path: &str,
 ) -> bool {
-    if let Some(allowed) = context.allow_build_policy.check(dep_path) {
+    if let Some(allowed) = context
+        .allow_build_policy
+        .check(dep_path)
+    {
         allowed
     } else {
         {
@@ -477,7 +527,9 @@ fn scripts_are_allowed(
             // same reason. `dep_path` has already lost it, so it is re-derived
             // from the full key.
             let ignored_key = get_pkg_id_with_patch_hash(&snapshot_key.to_string()).to_string();
-            context.progress.ignored_builds
+            context
+                .progress
+                .ignored_builds
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .insert(ignored_key);

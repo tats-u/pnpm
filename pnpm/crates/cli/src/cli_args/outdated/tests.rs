@@ -308,7 +308,9 @@ fn recursive_table_wraps_the_dependents_column() {
     assert_eq!(last_column_width(&table), DEPENDENTS_COLUMN_WIDTH);
 
     let cells = last_column_cells(&table);
-    let (heading, wrapped) = cells.split_first().expect("a heading and one row");
+    let (heading, wrapped) = cells
+        .split_first()
+        .expect("a heading and one row");
     assert_eq!(*heading, "Dependents");
     assert!(wrapped.len() > 1, "the dependents cell must wrap onto several lines");
 

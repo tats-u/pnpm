@@ -39,9 +39,16 @@ async fn missing_peer_is_reported() {
     .unwrap();
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
-    assert!(result.peer_dependency_issues.missing.contains_key("react"));
+    assert!(
+        result
+            .peer_dependency_issues
+            .missing
+            .contains_key("react")
+    );
     assert_eq!(
-        result.direct_dependencies_by_alias.get("react-dom"),
+        result
+            .direct_dependencies_by_alias
+            .get("react-dom"),
         Some(&DepPath::from("react-dom@18.0.0".to_string())),
     );
 }

@@ -56,10 +56,9 @@ fn add_rejects_an_unsupported_purl_type() {
     let stderr = String::from_utf8_lossy(&output.get_output().stderr);
     eprintln!("stderr:\n{stderr}");
     assert!(
-        flatten_report(&stderr)
-            .contains(&flatten_report(
-                "has purl type `maven`, but pnpm can add only `npm`, `cargo`, and `pypi` packages",
-            )),
+        flatten_report(&stderr).contains(&flatten_report(
+            "has purl type `maven`, but pnpm can add only `npm`, `cargo`, and `pypi` packages",
+        )),
         "{stderr}",
     );
     assert!(
@@ -78,13 +77,8 @@ fn an_npm_purl_that_names_a_tool_is_installed_rather_than_declared() {
     for (selector, name, version) in
         [("pkg:npm/npm@11.0.0", "npm", "11.0.0"), ("pkg:npm/node@22.0.0", "node", "22.0.0")]
     {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         pacquet
             .with_args(["add", selector, "--lockfile-only"])
             .assert()
@@ -106,13 +100,8 @@ fn an_npm_purl_that_names_a_tool_is_installed_rather_than_declared() {
 /// its own meaning.
 #[test]
 fn a_bare_package_manager_request_beside_its_purl_keeps_its_own_meaning() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     pacquet
         .with_args(["add", "npm@11.0.0", "pkg:npm/npm@11.0.0", "--lockfile-only"])
         .assert()

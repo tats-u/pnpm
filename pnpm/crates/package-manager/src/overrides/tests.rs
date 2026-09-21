@@ -516,7 +516,11 @@ fn override_for_undeclared_dependency_applies_converge_only_within_range() {
 
     assert_eq!(undeclared(&overrider, "react", "^18.0.0").as_deref(), Some("18.3.1"));
     assert_eq!(undeclared(&overrider, "react", "^19.0.0"), None);
-    assert!(overrider.converge_declared_ranges().is_empty());
+    assert!(
+        overrider
+            .converge_declared_ranges()
+            .is_empty()
+    );
 }
 
 /// An override is written once, at the workspace root, and applied to

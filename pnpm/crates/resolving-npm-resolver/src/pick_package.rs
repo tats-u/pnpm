@@ -199,7 +199,10 @@ pub async fn pick_package<Cache: PackageMetaCache>(
     let state = PickState::new(ctx, spec, opts);
 
     // 1. In-memory cache.
-    if let Some(result) = state.cached_pick(ctx, spec, opts).await? {
+    if let Some(result) = state
+        .cached_pick(ctx, spec, opts)
+        .await?
+    {
         return Ok(result);
     }
 
@@ -211,17 +214,26 @@ pub async fn pick_package<Cache: PackageMetaCache>(
     // callers may briefly duplicate a disk read; the mem-cache
     // promotion inside each path keeps that a one-wave cost.
     let mut disk_meta: Option<Arc<Package>> = None;
-    if let Some(result) = state.mirror_fast_paths(ctx, spec, opts, &mut disk_meta).await {
+    if let Some(result) = state
+        .mirror_fast_paths(ctx, spec, opts, &mut disk_meta)
+        .await
+    {
         return Ok(result);
     }
 
     let limit = {
-        let entry = ctx.metadata.fetch_locker.limits
+        let entry = ctx
+            .metadata
+            .fetch_locker
+            .limits
             .entry(state.cache_key.clone())
             .or_insert_with(|| Arc::new(Semaphore::new(1)));
         Arc::clone(entry.value())
     };
-    let _permit = limit.acquire().await.expect("packument fetch semaphore should not be closed");
+    let _permit = limit
+        .acquire()
+        .await
+        .expect("packument fetch semaphore should not be closed");
     // The pre-permit fast paths may have read the mirror before the
     // previous permit holder rewrote it; drop that snapshot so every
     // disk-backed pick below reads the current mirror.
@@ -232,18 +244,25 @@ pub async fn pick_package<Cache: PackageMetaCache>(
     // this re-check, every duplicate caller would still fall
     // through to the disk + network path even though they were
     // waiting precisely for the winner's fetch to complete.
-    if let Some(result) = state.cached_pick(ctx, spec, opts).await? {
+    if let Some(result) = state
+        .cached_pick(ctx, spec, opts)
+        .await?
+    {
         return Ok(result);
     }
 
     // 2. Offline / pickLowestVersion / preferOffline disk read.
     if (ctx.cache_policy.offline || ctx.cache_policy.prefer_offline || opts.pick_lowest_version)
-        && let Some(result) = state.offline_disk_pick(ctx, spec, opts, &mut disk_meta).await?
+        && let Some(result) = state
+            .offline_disk_pick(ctx, spec, opts, &mut disk_meta)
+            .await?
     {
         return Ok(result);
     }
 
-    state.fetch_and_pick(ctx, spec, opts, disk_meta).await
+    state
+        .fetch_and_pick(ctx, spec, opts, disk_meta)
+        .await
 }
 
 /// The route classification and cache keys every layer of one pick shares.
@@ -278,23 +297,29 @@ impl<'a> PickState<'a> {
         // layer serves the metadata. A no-op for the CLI (no hook installed);
         // idempotent on the hook, so the network path re-recording it is fine.
         let url = to_registry_url(opts.registry, &spec.name);
-        ctx.metadata.http.auth_headers.record_route(&url, Some(&spec.name));
+        ctx.metadata
+            .http
+            .auth_headers
+            .record_route(&url, Some(&spec.name));
 
         // Classify the metadata cache scope once. Every layer below — the
         // in-memory cache, the disk fast paths, and the network fetch — must
         // agree on the mirror namespace and cache keys this route resolves to,
         // or a private packument could leak into (or read from) the global
         // mirror. `Public` for the CLI, leaving the global mirror unchanged.
-        let scope = ctx.metadata.http.auth_headers.metadata_scope(&url, Some(&spec.name));
+        let scope = ctx
+            .metadata
+            .http
+            .auth_headers
+            .metadata_scope(&url, Some(&spec.name));
 
         // The per-registry answer is authoritative when the caller can give
         // one: it already folds in the reasons that hold for every registry,
         // so a registry that carries `time` is free to stay on abbreviated
         // metadata while the others do not.
-        let policy_wants_full_metadata =
-            ctx.needs_full_metadata_for.map_or(ctx.full_metadata, |needs_full_metadata| {
-                needs_full_metadata(opts.registry)
-            });
+        let policy_wants_full_metadata = ctx
+            .needs_full_metadata_for
+            .map_or(ctx.full_metadata, |needs_full_metadata| needs_full_metadata(opts.registry));
         let full_metadata = opts.request.optional || policy_wants_full_metadata;
         let use_filtered_full_metadata = full_metadata && ctx.filter_metadata;
         let base_meta_dir = if full_metadata {
@@ -318,7 +343,9 @@ impl<'a> PickState<'a> {
                 published_by_exclude: opts.policy.published_by_exclude,
                 pick_lowest_version: opts.pick_lowest_version,
                 include_latest_tag: opts.include_latest_tag,
-                ignore_missing_time_field: ctx.cache_policy.ignore_missing_time_field,
+                ignore_missing_time_field: ctx
+                    .cache_policy
+                    .ignore_missing_time_field,
             },
             cache_key: metadata_cache_key(
                 &scope,
@@ -344,7 +371,11 @@ impl<'a> PickState<'a> {
         if !self.use_mem_cache {
             return Ok(None);
         }
-        let Some(cached) = ctx.metadata.meta_cache.get(&self.cache_key) else {
+        let Some(cached) = ctx
+            .metadata
+            .meta_cache
+            .get(&self.cache_key)
+        else {
             return Ok(None);
         };
         handle_cache_hit(
@@ -387,7 +418,8 @@ impl<'a> PickState<'a> {
             return Ok(meta);
         }
         if !opts.request.dry_run {
-            if let Some(reloaded) = self.pkg_mirror
+            if let Some(reloaded) = self
+                .pkg_mirror
                 .as_deref()
                 .and_then(|path| {
                     persist_upgraded_to_mirror(path, &meta, self.use_filtered_full_metadata)
@@ -397,7 +429,9 @@ impl<'a> PickState<'a> {
             }
             // The upgrade fetched a registry-validated document; don't
             // downgrade it to an unverified marking.
-            ctx.metadata.meta_cache.set(self.cache_key.clone(), Arc::clone(&meta));
+            ctx.metadata
+                .meta_cache
+                .set(self.cache_key.clone(), Arc::clone(&meta));
         }
         Ok(meta)
     }
@@ -418,7 +452,10 @@ impl<'a> PickState<'a> {
         let meta = match fetch_full_metadata_cached(&spec.name, &fetch_opts).await {
             Ok(meta) => Arc::new(meta),
             Err(error) => {
-                let Some(disk) = self.disk_fallback(&error, disk_meta).await else {
+                let Some(disk) = self
+                    .disk_fallback(&error, disk_meta)
+                    .await
+                else {
                     return Err(error.into());
                 };
                 tracing::debug!(
@@ -451,7 +488,9 @@ impl<'a> PickState<'a> {
         // threads `dry_run` into the fetcher can restore a fully
         // no-disk-side-effect dry-run.
         if !opts.request.dry_run {
-            ctx.metadata.meta_cache.set(self.cache_key.clone(), Arc::clone(&meta));
+            ctx.metadata
+                .meta_cache
+                .set(self.cache_key.clone(), Arc::clone(&meta));
         }
         let (meta, picked) = pick_from_meta(&self.picker_opts, spec, meta, opts.blocked_versions)?;
         Ok(PickPackageResult { meta, picked_package: picked })
@@ -466,7 +505,8 @@ impl<'a> PickState<'a> {
         let mut meta = upgrade.meta;
         if upgrade.upgraded {
             if !opts.request.dry_run
-                && let Some(reloaded) = self.pkg_mirror
+                && let Some(reloaded) = self
+                    .pkg_mirror
                     .as_deref()
                     .and_then(|path| {
                         persist_upgraded_to_mirror(path, &meta, self.use_filtered_full_metadata)
@@ -474,7 +514,9 @@ impl<'a> PickState<'a> {
             {
                 meta = Arc::new(reloaded);
             }
-            ctx.metadata.fetch_locker.mark_release_age_upgrade_checked(&self.cache_key, &meta);
+            ctx.metadata
+                .fetch_locker
+                .mark_release_age_upgrade_checked(&self.cache_key, &meta);
         }
 
         meta
@@ -521,7 +563,9 @@ impl<'a> PickState<'a> {
         }
         match disk_meta {
             Some(meta) => Some(meta),
-            None => load_meta_async(self.pkg_mirror.as_deref()).await.map(Arc::new),
+            None => load_meta_async(self.pkg_mirror.as_deref())
+                .await
+                .map(Arc::new),
         }
     }
 }
@@ -572,15 +616,19 @@ async fn handle_cache_hit<Cache: PackageMetaCache>(
     // The upgrade fetch (re)validated the packument against the registry.
     let registry_verified = cached.registry_verified || upgrade.upgraded;
     if upgrade.upgraded && !opts.request.dry_run {
-        if let Some(reloaded) = pkg_mirror.and_then(|path| {
-            persist_upgraded_to_mirror(path, &meta, use_filtered_full_metadata)
-        }) {
+        if let Some(reloaded) = pkg_mirror
+            .and_then(|path| persist_upgraded_to_mirror(path, &meta, use_filtered_full_metadata))
+        {
             meta = Arc::new(reloaded);
         }
-        ctx.metadata.meta_cache.set(cache_key.to_string(), Arc::clone(&meta));
+        ctx.metadata
+            .meta_cache
+            .set(cache_key.to_string(), Arc::clone(&meta));
     }
     if upgrade.upgraded {
-        ctx.metadata.fetch_locker.mark_release_age_upgrade_checked(cache_key, &meta);
+        ctx.metadata
+            .fetch_locker
+            .mark_release_age_upgrade_checked(cache_key, &meta);
     }
     let (meta, picked) = pick_from_meta(picker_opts, spec, meta, opts.blocked_versions)?;
     if !ctx.cache_policy.offline

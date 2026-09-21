@@ -89,20 +89,23 @@ fn include_optional_false_clears_importer_section() {
     let filtered = super::super::filter_lockfile_for_current(&lockfile, include, &skipped);
 
     assert!(
-        filtered.importers
+        filtered
+            .importers
             .get(".")
             .unwrap()
             .optional_dependencies
             .is_none(),
     );
     assert!(
-        !filtered.snapshots
+        !filtered
+            .snapshots
             .as_ref()
             .unwrap()
             .contains_key(&key("opt", "1.0.0")),
     );
     assert!(
-        filtered.snapshots
+        filtered
+            .snapshots
             .as_ref()
             .unwrap()
             .contains_key(&key("keep", "1.0.0")),
@@ -172,7 +175,8 @@ fn link_optional_entries_survive_post_filter() {
         &SkippedSnapshots::new(),
     );
 
-    let opt = filtered.importers
+    let opt = filtered
+        .importers
         .get(".")
         .unwrap()
         .optional_dependencies
@@ -271,12 +275,28 @@ fn materialization_closure_keeps_importer_links_shallow_and_traverses_snapshot_l
     );
 
     assert_eq!(closure.importer_ids, HashSet::from([nested_id.clone(), shared_id]));
-    assert!(!closure.importer_ids.contains(&linked_id));
-    assert!(!closure.importer_ids.contains(&disjoint_id));
-    let nested = closure.lockfile.importers.get(&nested_id).unwrap();
+    assert!(
+        !closure
+            .importer_ids
+            .contains(&linked_id)
+    );
+    assert!(
+        !closure
+            .importer_ids
+            .contains(&disjoint_id)
+    );
+    let nested = closure
+        .lockfile
+        .importers
+        .get(&nested_id)
+        .unwrap();
     assert!(nested.dev_dependencies.is_none());
     assert!(nested.optional_dependencies.is_none());
-    let reached = closure.lockfile.snapshots.as_ref().unwrap();
+    let reached = closure
+        .lockfile
+        .snapshots
+        .as_ref()
+        .unwrap();
     for reached_key in [
         key("start", "1.0.0"),
         key("child", "1.0.0"),
@@ -329,8 +349,16 @@ fn materialization_closure_does_not_follow_reverse_workspace_links() {
     );
 
     assert_eq!(closure.importer_ids, HashSet::from([selected_id]));
-    assert!(!closure.importer_ids.contains(&dependent_id));
-    let snapshots = closure.lockfile.snapshots.as_ref().unwrap();
+    assert!(
+        !closure
+            .importer_ids
+            .contains(&dependent_id)
+    );
+    let snapshots = closure
+        .lockfile
+        .snapshots
+        .as_ref()
+        .unwrap();
     assert!(snapshots.contains_key(&key("shared-only", "1.0.0")));
     assert!(!snapshots.contains_key(&key("app-only", "1.0.0")));
 }

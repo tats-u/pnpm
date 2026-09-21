@@ -245,7 +245,9 @@ impl PackageVersions {
     pub fn decode_error(&self, version: &str) -> Option<String> {
         let slot = self.slot(version)?;
         let json = slot.source.json()?;
-        serde_json::from_str::<PackageVersion>(&json).err().map(|error| error.to_string())
+        serde_json::from_str::<PackageVersion>(&json)
+            .err()
+            .map(|error| error.to_string())
     }
 
     /// Whether `version` is marked deprecated, equivalent to
@@ -263,19 +265,22 @@ impl PackageVersions {
     pub fn is_deprecated(&self, version: &str) -> bool {
         let Some(slot) = self.slot(version) else { return false };
         if let Some(parsed) = slot.parsed.get() {
-            return parsed.as_ref().is_some_and(|manifest| manifest.deprecated.is_some());
+            return parsed
+                .as_ref()
+                .is_some_and(|manifest| manifest.deprecated.is_some());
         }
         let Some(json) = slot.source.json() else { return false };
         if !json.contains(r#""deprecated""#) {
             return false;
         }
-        serde_json::from_str::<DeprecatedProbe>(&json)
-            .is_ok_and(|probe| probe.deprecated.is_some())
+        serde_json::from_str::<DeprecatedProbe>(&json).is_ok_and(|probe| probe.deprecated.is_some())
     }
 
     /// Version strings in lexical order. Never hydrates.
     pub fn keys(&self) -> impl Iterator<Item = &String> {
-        self.slots.iter().map(|(version, _)| version)
+        self.slots
+            .iter()
+            .map(|(version, _)| version)
     }
 
     #[must_use]
@@ -305,7 +310,8 @@ impl PackageVersions {
     #[must_use]
     pub fn filtered(&self, mut keep: impl FnMut(&str) -> bool) -> PackageVersions {
         PackageVersions {
-            slots: self.slots
+            slots: self
+                .slots
                 .iter()
                 .filter(|(version, _)| keep(version))
                 .map(|(version, slot)| (version.clone(), slot.clone()))
@@ -314,7 +320,8 @@ impl PackageVersions {
     }
 
     fn slot(&self, version: &str) -> Option<&VersionSlot> {
-        let index = self.slots
+        let index = self
+            .slots
             .binary_search_by(|(candidate, _)| candidate.as_str().cmp(version))
             .ok()?;
         Some(&self.slots[index].1)

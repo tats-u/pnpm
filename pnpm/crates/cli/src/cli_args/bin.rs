@@ -14,15 +14,17 @@ pub struct BinArgs {
 impl BinArgs {
     pub fn run(self, dir: &Path, config: &Config) -> miette::Result<()> {
         let bin = if self.global {
-            let bin = config.global_bin.clone().ok_or(GlobalError::NoGlobalBinDir)?;
+            let bin = config
+                .global_bin
+                .clone()
+                .ok_or(GlobalError::NoGlobalBinDir)?;
             // Mirror pnpm's config reader: create then validate the global bin
             // dir for every `--global` command. `should_allow_write` is true for
             // all but `root` and `prefix`, so `bin` checks writability too.
-            std::fs::create_dir_all(&bin)
-                .map_err(|error| {
-                    let bin_dir = bin.display();
-                    miette::miette!("failed to create the global bin directory {bin_dir}: {error}")
-                })?;
+            std::fs::create_dir_all(&bin).map_err(|error| {
+                let bin_dir = bin.display();
+                miette::miette!("failed to create the global bin directory {bin_dir}: {error}")
+            })?;
             check_global_bin_dir(&bin, std::env::var("PATH").ok().as_deref(), true)
                 .map_err(miette::Report::new)?;
             bin

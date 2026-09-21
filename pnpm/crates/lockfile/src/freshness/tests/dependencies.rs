@@ -18,7 +18,9 @@ fn dependencies_meta_mismatch_returns_dependencies_meta_mismatch() {
         "        injected: true"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -46,7 +48,9 @@ fn dependencies_meta_empty_object_equivalent_to_absent() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -70,7 +74,9 @@ fn same_dep_in_prod_and_optional_counts_under_optional() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -97,7 +103,9 @@ fn dev_only_dependency_match_satisfies() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -120,7 +128,9 @@ fn optional_only_dependency_match_satisfies() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -152,7 +162,9 @@ fn peer_only_dependency_is_satisfied_when_auto_install_peers() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -184,7 +196,9 @@ fn peers_also_declared_as_regular_deps_still_satisfy() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -213,7 +227,9 @@ fn peer_only_dependency_is_stale_without_auto_install_peers() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -247,7 +263,9 @@ fn ignored_optional_without_filter_surfaces_as_drift() {
         "        version: 2.0.0"
     })
     .expect("parse lockfile");
-    let importer = lockfile.root_project().expect("root importer");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -277,7 +295,9 @@ fn ignored_optional_dependencies_round_trips_through_yaml() {
     };
     let parsed: Lockfile = serde_saphyr::from_str(yaml).expect("parse lockfile");
     assert_eq!(
-        parsed.ignored_optional_dependencies.as_deref(),
+        parsed
+            .ignored_optional_dependencies
+            .as_deref(),
         Some(&["foo".to_string(), "@scope/bar".to_string()][..]),
     );
 }
@@ -300,7 +320,9 @@ fn ignored_optional_does_not_apply_to_dev_dependencies() {
         "        version: 1.0.0"
     })
     .expect("parse lockfile");
-    let importer = lockfile.root_project().expect("root importer");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",

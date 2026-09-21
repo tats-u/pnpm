@@ -50,7 +50,10 @@ impl StoreCommand {
             StoreCommand::Status => status::run::<Reporter>(config, dir).await,
             StoreCommand::Add(args) => add::run::<Reporter>(config, dir, &args.packages).await,
             StoreCommand::Prune => {
-                config.store_dir.prune().wrap_err("pruning store")?;
+                config
+                    .store_dir
+                    .prune()
+                    .wrap_err("pruning store")?;
                 Ok(())
             }
             StoreCommand::Path => {

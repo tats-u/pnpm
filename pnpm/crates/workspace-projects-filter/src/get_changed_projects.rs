@@ -47,7 +47,9 @@ pub fn get_changed_projects(
         .collect();
     for (changed_dir, change_type) in changed_dirs {
         let owner = owning_project(&repo_root, &changed_dir, &project_change_types);
-        let entry = project_change_types.entry(owner).or_insert(None);
+        let entry = project_change_types
+            .entry(owner)
+            .or_insert(None);
         // `source` is sticky: a later test change never downgrades it.
         if *entry != Some(ChangeType::Source) {
             *entry = Some(change_type);
@@ -113,7 +115,9 @@ fn get_changed_dirs_since_commit(
     for line in diff.split('\n') {
         // git wraps paths with non-ASCII characters in quotes.
         let changed_file = line.strip_prefix('"').unwrap_or(line);
-        let changed_file = changed_file.strip_suffix('"').unwrap_or(changed_file);
+        let changed_file = changed_file
+            .strip_suffix('"')
+            .unwrap_or(changed_file);
         if ignore_globs
             .iter()
             .any(|glob| glob.is_match(changed_file))
@@ -174,11 +178,10 @@ fn compile_globs(patterns: &[String]) -> Result<Vec<Glob<'_>>, FilterError> {
         .iter()
         .filter(|pattern| !pattern.is_empty())
         .map(|pattern| {
-            Glob::new(pattern)
-                .map_err(|err| FilterError::InvalidPattern {
-                    pattern: pattern.clone(),
-                    message: err.to_string(),
-                })
+            Glob::new(pattern).map_err(|err| FilterError::InvalidPattern {
+                pattern: pattern.clone(),
+                message: err.to_string(),
+            })
         })
         .collect()
 }

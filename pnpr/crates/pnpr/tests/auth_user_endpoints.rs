@@ -44,7 +44,10 @@ fn persistent_config(storage: PathBuf, htpasswd: PathBuf, tokens_db: PathBuf) ->
 }
 
 async fn body_bytes(body: Body) -> Vec<u8> {
-    to_bytes(body, usize::MAX).await.expect("read body").to_vec()
+    to_bytes(body, usize::MAX)
+        .await
+        .expect("read body")
+        .to_vec()
 }
 
 async fn body_json(body: Body) -> Value {
@@ -155,7 +158,9 @@ async fn adduser_issues_token_for_canonical_username() {
     let payload = body_json(response.into_body()).await;
     assert_eq!(payload["id"].as_str(), Some("org.couchdb.user:Alice"));
     assert_eq!(payload["ok"].as_str(), Some("you are authenticated as 'Alice'"));
-    let token = payload["token"].as_str().expect("token in response");
+    let token = payload["token"]
+        .as_str()
+        .expect("token in response");
 
     let response = app
         .oneshot(get_with_bearer("/-/whoami", token))
@@ -291,13 +296,19 @@ async fn token_list_returns_only_callers_tokens() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
     let payload = body_json(response.into_body()).await;
-    let objects = payload["objects"].as_array().expect("objects array");
+    let objects = payload["objects"]
+        .as_array()
+        .expect("objects array");
     assert_eq!(objects.len(), 2, "alice owns two tokens, bob's must not leak");
     for entry in objects {
         assert_eq!(entry["user"].as_str(), Some("alice"));
-        let key = entry["key"].as_str().expect("key field");
+        let key = entry["key"]
+            .as_str()
+            .expect("key field");
         assert_eq!(key.len(), 64, "key is the SHA-256 hex of the raw token");
-        let preview = entry["token"].as_str().expect("token preview");
+        let preview = entry["token"]
+            .as_str()
+            .expect("token preview");
         assert_eq!(preview.len(), 6, "token preview is the leading 6 chars of the key");
         assert!(key.starts_with(preview), "preview must match the key prefix");
     }

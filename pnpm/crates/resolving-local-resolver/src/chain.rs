@@ -192,10 +192,14 @@ impl LocalResolver {
 }
 
 fn wanted_local(wanted_dependency: &WantedDependency) -> Option<WantedLocalDependency> {
-    let bare = wanted_dependency.bare_specifier.clone()?;
+    let bare = wanted_dependency
+        .bare_specifier
+        .clone()?;
     Some(WantedLocalDependency {
         bare_specifier: bare,
-        injected: wanted_dependency.injected.unwrap_or(false),
+        injected: wanted_dependency
+            .injected
+            .unwrap_or(false),
     })
 }
 
@@ -219,6 +223,8 @@ fn into_chain_result(
     wanted_dependency: &WantedDependency,
 ) -> ResolveResult {
     let mut chain: ResolveResult = result.into();
-    chain.alias.clone_from(&wanted_dependency.alias);
+    chain
+        .alias
+        .clone_from(&wanted_dependency.alias);
     chain
 }

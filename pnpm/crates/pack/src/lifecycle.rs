@@ -17,7 +17,9 @@ pub(super) async fn apply_before_packing<Reporter: self::Reporter>(
 ) -> Result<Value, PackError> {
     let prefix = project_dir.to_string_lossy();
     for hook in hooks {
-        let pnpmfile = hook.source_path().unwrap_or_else(|| Path::new("<pnpmfile>"));
+        let pnpmfile = hook
+            .source_path()
+            .unwrap_or_else(|| Path::new("<pnpmfile>"));
         let ctx =
             HookContext { log: before_packing_logger::<Reporter>(pnpmfile, &prefix), dir: None };
         manifest = hook

@@ -16,7 +16,10 @@ pub(in super::super) fn install_test<'a>(
         dry_run: false,
         json: false,
         workspace: crate::cli_args::recursive::RecursiveExecutionArgs {
-            resume_from: ctx.workspace.resume_from.map(str::to_string),
+            resume_from: ctx
+                .workspace
+                .resume_from
+                .map(str::to_string),
             report_summary: ctx.workspace.report_summary,
             no_bail: false,
             sort: true,
@@ -100,7 +103,10 @@ fn watch_invocation(args: PipelineArgs, cfg: &Config) -> WatchInvocation {
         report_to: args.reporting.report_to,
         npmrc_auth_file: cfg.npmrc_auth_file.clone(),
         polling: crate::cli_args::pipeline::WatchPolling {
-            repo: args.agent.repo.expect("clap requires --repo with --watch"),
+            repo: args
+                .agent
+                .repo
+                .expect("clap requires --repo with --watch"),
             branch: args.agent.branch,
             interval: std::time::Duration::from_secs(args.agent.interval),
             once: args.agent.once,
@@ -114,7 +120,10 @@ fn pipeline_invocation(args: PipelineArgs) -> (PipelineInvocation, InstallArgs) 
         name: args.name,
         // `--dry-run` prints the task graph and runs nothing, the
         // install included.
-        dry_run: args.install_args.materialization.dry_run,
+        dry_run: args
+            .install_args
+            .materialization
+            .dry_run,
         json: args.json,
         no_cache: args.no_cache,
         full: args.full,
@@ -157,7 +166,10 @@ async fn report_pipeline_run(
         summary: upload.summary,
         events: upload.events,
     };
-    match client.publish_pipeline_run(&request, authorization.as_deref()).await {
+    match client
+        .publish_pipeline_run(&request, authorization.as_deref())
+        .await
+    {
         Ok(()) => emit(&pnpm_reporter::LogEvent::Pnpm(pnpm_reporter::PnpmLog {
             level: pnpm_reporter::LogLevel::Info,
             message: format!(

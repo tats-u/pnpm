@@ -87,7 +87,11 @@ impl GitSource {
             let source = redact_and_sanitize(&source.to_string());
             return Err(miette::miette!("Cargo source {source} pins no commit"));
         };
-        if commit.len() != 40 || !commit.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        if commit.len() != 40
+            || !commit
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit())
+        {
             let repository = redact_and_sanitize(&url);
             return Err(miette::miette!(
                 "Cargo source {repository} names {commit:?}, which is not a commit hash",
@@ -104,7 +108,8 @@ impl GitSource {
     /// The `[source."…"]` block that sends this git source to the vendored
     /// directory, keyed the way `cargo vendor` writes it.
     pub(crate) fn config_block(&self) -> String {
-        let reference = self.reference
+        let reference = self
+            .reference
             .as_ref()
             .map_or_else(String::new, |(key, value)| {
                 format!("{key} = {}\n", toml::Value::from(value.as_str()))
@@ -213,7 +218,10 @@ fn vendor_source<Reporter: self::Reporter>(
         let slot = package.store_slot(options.store_dir.root());
         // The checksum manifest sorts first among a crate's files, which
         // makes it the completion marker `import_indexed_dir` writes last.
-        if slot.join(".cargo-checksum.json").exists() {
+        if slot
+            .join(".cargo-checksum.json")
+            .exists()
+        {
             linked.push((package.link_name(), slot));
         } else {
             missing.push((package, slot));
@@ -338,7 +346,8 @@ fn import_file(
     executable: bool,
 ) -> Result<PathBuf> {
     if relative == "Cargo.toml" {
-        return context.store_dir
+        return context
+            .store_dir
             .write_cas_file(context.manifest.as_bytes(), executable)
             .into_diagnostic()
             .map(|(cas_path, _)| cas_path)
@@ -349,7 +358,8 @@ fn import_file(
     let mut file = fs::File::open(path)
         .into_diagnostic()
         .wrap_err_with(|| format!("read {}", path.display()))?;
-    context.store_dir
+    context
+        .store_dir
         .write_cas_file_from_reader(&mut file, executable, None)
         .into_diagnostic()
         .map(|(cas_path, _, _)| cas_path)

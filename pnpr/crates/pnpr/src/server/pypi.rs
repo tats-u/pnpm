@@ -162,8 +162,21 @@ async fn visible_project_names(
 ) -> Result<BTreeSet<String>, RegistryError> {
     let mut names = BTreeSet::new();
     for source in hosted_sources(state, target, ECOSYSTEM) {
-        let Some(hosted) = state.inner.config.routing.hosted.get(&source) else { continue };
-        let listed = state.inner.storage.for_hosted(&hosted.org).hosted_package_names().await?;
+        let Some(hosted) = state
+            .inner
+            .config
+            .routing
+            .hosted
+            .get(&source)
+        else {
+            continue;
+        };
+        let listed = state
+            .inner
+            .storage
+            .for_hosted(&hosted.org)
+            .hosted_package_names()
+            .await?;
         for name in listed {
             if visible_here(state, identity, target, &VisibleName { source: &source, name: &name })
             {
@@ -220,7 +233,8 @@ async fn get_project_page(
             read_hosted_document::<ProjectDocument>(&state, &identity, &source, &key).await
         }
         source @ RegistrySource::Upstream(_) => {
-            load_upstream_page(&state, &identity, &source, &key, project).await
+            load_upstream_page(&state, &identity, &source, &key, project)
+                .await
                 .map(|page| page.map(|(document, _)| document))
         }
         RegistrySource::Unclaimed | RegistrySource::NotFound => Ok(None),
@@ -258,11 +272,12 @@ async fn load_upstream_page(
         limit: PAGE_LIMIT,
     };
     let Some(bytes) = load_upstream_document(state, upstream, &namespace, request, |document| {
-        let body = serde_json::from_slice::<Box<RawValue>>(&document.bytes)
-            .map_err(|_| RegistryError::UpstreamResponse {
+        let body = serde_json::from_slice::<Box<RawValue>>(&document.bytes).map_err(|_| {
+            RegistryError::UpstreamResponse {
                 url: document.url.clone(),
                 reason: "the upstream index must support the Simple JSON API (PEP 691)".to_string(),
-            })?;
+            }
+        })?;
         Ok(serde_json::to_vec(&CachedPage { url: document.url, body })?)
     })
     .await?
@@ -271,11 +286,10 @@ async fn load_upstream_page(
     };
     let page: CachedPage = serde_json::from_slice(&bytes)?;
     let document = ProjectDocument::parse(page.body.get().as_bytes())?;
-    let base = url::Url::parse(&page.url)
-        .map_err(|err| RegistryError::UpstreamResponse {
-            url: page.url.clone(),
-            reason: format!("cached page URL is invalid: {err}"),
-        })?;
+    let base = url::Url::parse(&page.url).map_err(|err| RegistryError::UpstreamResponse {
+        url: page.url.clone(),
+        reason: format!("cached page URL is invalid: {err}"),
+    })?;
     Ok(Some((document, base)))
 }
 
@@ -350,7 +364,10 @@ async fn file_via_upstream(
         Ok(url) if is_fetchable_artifact_url(&url) => url,
         _ => return bad_entry(format!("file {filename} has no fetchable HTTP(S) URL")),
     };
-    let Some(integrity) = entry.sha256().and_then(sha256_integrity) else {
+    let Some(integrity) = entry
+        .sha256()
+        .and_then(sha256_integrity)
+    else {
         return bad_entry(format!("file {filename} has no SHA-256 hash"));
     };
     serve_upstream_artifact(state, upstream, &namespace, key, filename, url.as_str(), &integrity)

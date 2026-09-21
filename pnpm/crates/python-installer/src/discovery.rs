@@ -84,7 +84,9 @@ impl Discovery {
     /// others, so it is not by itself a reason to start an interpreter.
     #[must_use]
     pub fn has_projects(&self) -> bool {
-        self.roots.iter().any(|(_, manifest)| manifest.project.is_some())
+        self.roots
+            .iter()
+            .any(|(_, manifest)| manifest.project.is_some())
     }
 
     /// The directory of every discovered project, in discovery order.
@@ -105,17 +107,24 @@ impl Discovery {
     ) -> Result<Self> {
         for root in edited {
             let path = root.join("pyproject.toml");
-            let contents = tokio::fs::read_to_string(&path).await
+            let contents = tokio::fs::read_to_string(&path)
+                .await
                 .into_diagnostic()
                 .wrap_err_with(|| format!("read {}", path.display()))?;
-            let allowed_root = config.workspace_dir.as_deref().unwrap_or(root);
+            let allowed_root = config
+                .workspace_dir
+                .as_deref()
+                .unwrap_or(root);
             let manifest = Arc::new(read_manifest(&path, &contents, allowed_root).await?);
-            match self.roots
+            match self
+                .roots
                 .iter_mut()
                 .find(|(discovered, _)| discovered == root)
             {
                 Some((_, discovered)) => *discovered = manifest,
-                None => self.roots.push((root.clone(), manifest)),
+                None => self
+                    .roots
+                    .push((root.clone(), manifest)),
             }
         }
         self.workspace = Workspace::new(&self.roots)?;
@@ -141,11 +150,17 @@ impl Discovery {
             .iter()
             .filter(|(_, manifest)| manifest.project.is_some())
             .map(|(root, manifest)| {
-                let package =
-                    PythonProject { root, name: manifest.distribution().map(PackageName::as_ref) };
+                let package = PythonProject {
+                    root,
+                    name: manifest
+                        .distribution()
+                        .map(PackageName::as_ref),
+                };
                 let node = ProjectGraphNode {
                     package,
-                    dependencies: self.workspace.declared_sources(root, manifest, scope),
+                    dependencies: self
+                        .workspace
+                        .declared_sources(root, manifest, scope),
                 };
                 (root.clone(), node)
             })
@@ -165,7 +180,9 @@ async fn read_project_manifests(
     let mut candidates = ProjectManifests { pyprojects, declared, workspace_root, allowed_root };
     let mut roots = Vec::new();
     for path in manifests {
-        let root = path.parent().expect("manifest has a parent");
+        let root = path
+            .parent()
+            .expect("manifest has a parent");
         let Some(manifest) = candidates.read(path).await? else { continue };
         if declares_python_project(&manifest) {
             roots.push((root.to_path_buf(), manifest));
@@ -183,7 +200,9 @@ struct ProjectManifests<'a> {
 
 impl ProjectManifests<'_> {
     async fn read(&mut self, path: &Path) -> Result<Option<Manifest>> {
-        let root = path.parent().expect("manifest has a parent");
+        let root = path
+            .parent()
+            .expect("manifest has a parent");
         if is_pyproject(path) {
             let Some(manifest) = self.pyprojects.remove(path) else { return Ok(None) };
             return read_adjacent_requirements(path, manifest, self.allowed_root.unwrap_or(root))
@@ -193,7 +212,9 @@ impl ProjectManifests<'_> {
         if !is_discovered(root, self.workspace_root, &self.declared) {
             return Ok(None);
         }
-        read_manifest(path, "", self.allowed_root.unwrap_or(root)).await.map(Some)
+        read_manifest(path, "", self.allowed_root.unwrap_or(root))
+            .await
+            .map(Some)
     }
 }
 
@@ -216,7 +237,9 @@ async fn read_pyprojects(
     paths.sort_by(|left, right| compare_manifest_paths(left, right));
     let mut declared = DeclaredWorkspaces::default();
     for path in paths {
-        let root = path.parent().expect("manifest has a parent");
+        let root = path
+            .parent()
+            .expect("manifest has a parent");
         let declared_membership = declared.contains(root);
         let workspace_declaration_only = declared_membership == Some(false)
             || declared_membership.is_none() && is_ignored_by_default(root, workspace_root);
@@ -283,16 +306,12 @@ fn is_ignored_by_default(project: &Path, workspace_root: &Path) -> bool {
     project
         .strip_prefix(workspace_root)
         .is_ok_and(|relative| {
-            relative
-                .components()
-                .any(|component| {
-                    component
-                        .as_os_str()
-                        .to_str()
-                        .is_some_and(|basename| {
-                            DEFAULT_IGNORED_DIRECTORY_BASENAMES.contains(&basename)
-                        })
-                })
+            relative.components().any(|component| {
+                component
+                    .as_os_str()
+                    .to_str()
+                    .is_some_and(|basename| DEFAULT_IGNORED_DIRECTORY_BASENAMES.contains(&basename))
+            })
         })
 }
 
@@ -309,7 +328,10 @@ async fn read_adjacent_requirements(
 ) -> Result<Manifest> {
     if manifest.project.is_none() {
         let requirements_path = path.with_file_name("requirements.txt");
-        if tokio::fs::try_exists(&requirements_path).await.into_diagnostic()? {
+        if tokio::fs::try_exists(&requirements_path)
+            .await
+            .into_diagnostic()?
+        {
             let allowed_root = allowed_root.to_path_buf();
             let requirements = tokio::task::spawn_blocking(move || {
                 requirements::read(&requirements_path, &allowed_root)

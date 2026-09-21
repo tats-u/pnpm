@@ -158,10 +158,9 @@ impl StagePaths {
         if !keep_modules_dir {
             return Ok(None);
         }
-        existing_dirent_kind(&self.target_modules)
-            .inspect_err(|_| {
-                let _ = fs::remove_dir_all(&self.stage);
-            })
+        existing_dirent_kind(&self.target_modules).inspect_err(|_| {
+            let _ = fs::remove_dir_all(&self.stage);
+        })
     }
 
     fn cleanup_after_failure(&self, preserved: &PreservedModules) {
@@ -207,14 +206,13 @@ pub(super) fn merge_preserved_modules(
     backup: &Path,
 ) -> Result<PreservedModules, PreserveModulesFailure> {
     let destination_entries = preserved_destination_entries(destination, backup)?;
-    let source_entries = fs::read_dir(backup)
-        .map_err(|error| PreserveModulesFailure {
-            error,
-            preserved: PreservedModules::Merged {
-                backup: backup.to_path_buf(),
-                moved_entries: Vec::new(),
-            },
-        })?;
+    let source_entries = fs::read_dir(backup).map_err(|error| PreserveModulesFailure {
+        error,
+        preserved: PreservedModules::Merged {
+            backup: backup.to_path_buf(),
+            moved_entries: Vec::new(),
+        },
+    })?;
     let mut moved_entries = Vec::new();
 
     for entry in source_entries {
@@ -229,14 +227,15 @@ pub(super) fn merge_preserved_modules(
         if destination_entries.contains(&name) {
             continue;
         }
-        rename_even_across_devices::<Host>(&entry.path(), &destination.join(&name))
-            .map_err(|error| PreserveModulesFailure {
+        rename_even_across_devices::<Host>(&entry.path(), &destination.join(&name)).map_err(
+            |error| PreserveModulesFailure {
                 error,
                 preserved: PreservedModules::Merged {
                     backup: backup.to_path_buf(),
                     moved_entries: moved_entries.clone(),
                 },
-            })?;
+            },
+        )?;
         moved_entries.push(name);
     }
     Ok(PreservedModules::Merged { backup: backup.to_path_buf(), moved_entries })
@@ -311,9 +310,8 @@ pub(super) fn restore_preserved_node_modules(
                         &backup.join(entry),
                     )
                 });
-            restored_backup.and_then(|()| {
-                rename_even_across_devices::<Host>(backup, target_modules)
-            })
+            restored_backup
+                .and_then(|()| rename_even_across_devices::<Host>(backup, target_modules))
         }
     };
     if let Err(error) = result {
@@ -369,13 +367,17 @@ pub(super) fn leak_stage(stage: &Path, stage_modules: &Path, preserved_modules: 
 /// callers.
 pub(super) fn pick_stage_path(target: &Path) -> PathBuf {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let parent = target.parent().unwrap_or_else(|| Path::new("."));
+    let parent = target
+        .parent()
+        .unwrap_or_else(|| Path::new("."));
     let name = target
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("dir");
     let pid = std::process::id();
     let ctr = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_nanos());
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos());
     parent.join(format!("{name}_pacquet-stage_{pid}_{nanos}_{ctr}"))
 }

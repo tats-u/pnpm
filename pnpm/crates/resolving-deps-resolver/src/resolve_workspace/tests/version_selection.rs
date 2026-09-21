@@ -43,7 +43,9 @@ async fn time_based_cutoff_is_newest_direct_publish_plus_one_hour() {
     .await
     .unwrap();
 
-    let expected_cutoff = Utc.with_ymd_and_hms(2024, 5, 20, 9, 0, 0).unwrap();
+    let expected_cutoff = Utc
+        .with_ymd_and_hms(2024, 5, 20, 9, 0, 0)
+        .unwrap();
     assert_eq!(
         resolver.opts_for("a"),
         (true, None),
@@ -67,7 +69,9 @@ async fn time_based_cutoff_is_newest_direct_publish_plus_one_hour() {
 
 #[tokio::test]
 async fn time_based_cutoff_is_clamped_by_minimum_release_age() {
-    let maximum = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+    let maximum = Utc
+        .with_ymd_and_hms(2024, 1, 1, 0, 0, 0)
+        .unwrap();
     let mut table = HashMap::default();
     table.insert(
         ("a".to_string(), "^1.0.0".to_string()),

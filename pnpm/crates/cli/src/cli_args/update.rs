@@ -53,7 +53,8 @@ impl UpdateDependencyOptions {
         // CLI flags are read rather than the merged config.
         let production = self.prod.then_some(true);
         let dev = self.dev.then_some(true);
-        let optional = self.optional
+        let optional = self
+            .optional
             .then_some(true)
             .or_else(|| self.no_optional.then_some(false));
 
@@ -175,7 +176,8 @@ impl UpdateArgs {
     }
 
     pub async fn run<Reporter: self::Reporter + 'static>(self, state: State) -> miette::Result<()> {
-        self.run_inner::<Reporter>(state, None).await
+        self.run_inner::<Reporter>(state, None)
+            .await
     }
 
     pub(crate) async fn run_selected<Reporter: self::Reporter + 'static>(
@@ -183,7 +185,8 @@ impl UpdateArgs {
         state: State,
         selection: InstallFamilySelection,
     ) -> miette::Result<()> {
-        self.run_inner::<Reporter>(state, Some(selection)).await
+        self.run_inner::<Reporter>(state, Some(selection))
+            .await
     }
 
     fn interactive_options<'a>(
@@ -277,8 +280,9 @@ impl UpdateArgs {
         } else {
             None
         };
-        let supported_architectures =
-            self.supported_architectures.apply_to(config.supported_architectures.clone());
+        let supported_architectures = self
+            .supported_architectures
+            .apply_to(config.supported_architectures.clone());
         let range_spec_style = RangeSpecStyle::from_save_options(
             self.save.exact || config.save_exact,
             config.save_prefix.as_deref(),
@@ -344,7 +348,10 @@ impl UpdateArgs {
         super::install::PnprLink {
             dependency_groups: included_direct_groups(state.config.optional).collect(),
             supported_architectures: self.supported_architectures.apply_to(
-                state.config.supported_architectures.clone(),
+                state
+                    .config
+                    .supported_architectures
+                    .clone(),
             ),
             node_linker: state.config.node_linker,
             skip_runtimes: state.config.skip_runtimes,

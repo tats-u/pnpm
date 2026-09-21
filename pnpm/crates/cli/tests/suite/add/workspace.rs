@@ -63,12 +63,15 @@ fn add_accepts_multiple_local_package_selectors() {
         std::fs::read_to_string(workspace.join(Lockfile::FILE_NAME)).expect("read pnpm-lock.yaml");
     let lockfile: Lockfile = serde_saphyr::from_str(&lockfile_text)
         .unwrap_or_else(|error| panic!("parse pnpm-lock.yaml: {error}\n{lockfile_text}"));
-    let dependencies = lockfile.importers
+    let dependencies = lockfile
+        .importers
         .get(Lockfile::ROOT_IMPORTER_KEY)
         .and_then(|importer| importer.dependencies.as_ref())
         .expect("root importer dependencies");
     for package_name in ["local-a", "local-b"] {
-        let parsed_name: PkgName = package_name.parse().expect("parse local package name");
+        let parsed_name: PkgName = package_name
+            .parse()
+            .expect("parse local package name");
         assert!(dependencies.contains_key(&parsed_name), "lockfile contains {package_name}");
         assert!(
             workspace
@@ -106,7 +109,11 @@ fn add_installs_a_local_package_reached_through_a_symlinked_directory() {
         .success();
 
     assert_eq!(prod_spec(&workspace, "local"), "file:fixtures/linked-local");
-    assert!(workspace.join("node_modules/local/index.js").is_file());
+    assert!(
+        workspace
+            .join("node_modules/local/index.js")
+            .is_file()
+    );
 
     drop(root); // cleanup
 }
@@ -228,13 +235,8 @@ fn add_workspace_root_saves_to_the_root_manifest_from_a_subdir() {
 
 #[test]
 fn add_lockfile_only_from_workspace_subdir_prints_manifest_summary() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
     let mut workspace_yaml =
@@ -304,7 +306,10 @@ fn add_lockfile_only_from_workspace_subdir_prints_manifest_summary() {
     let initial_manifest_count = records
         .iter()
         .filter(|record| {
-            record.get("name").and_then(|name| name.as_str()) == Some("pnpm:package-manifest")
+            record
+                .get("name")
+                .and_then(|name| name.as_str())
+                == Some("pnpm:package-manifest")
                 && record.get("initial").is_some()
         })
         .count();
@@ -314,7 +319,12 @@ fn add_lockfile_only_from_workspace_subdir_prints_manifest_summary() {
     );
     let summary_count = records
         .iter()
-        .filter(|record| record.get("name").and_then(|name| name.as_str()) == Some("pnpm:summary"))
+        .filter(|record| {
+            record
+                .get("name")
+                .and_then(|name| name.as_str())
+                == Some("pnpm:summary")
+        })
         .count();
     assert_eq!(summary_count, 1, "ndjson should emit one pnpm:summary\nstderr:\n{stderr}");
 

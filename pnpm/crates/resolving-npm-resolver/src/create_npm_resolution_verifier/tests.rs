@@ -37,11 +37,15 @@ use crate::{
 const FAKE_INTEGRITY: &str = "sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
 
 fn now_at(date: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(date).expect("parse rfc3339").with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(date)
+        .expect("parse rfc3339")
+        .with_timezone(&Utc)
 }
 
 fn fake_integrity() -> Integrity {
-    FAKE_INTEGRITY.parse::<Integrity>().expect("parse fake integrity")
+    FAKE_INTEGRITY
+        .parse::<Integrity>()
+        .expect("parse fake integrity")
 }
 
 fn registry_resolution() -> LockfileResolution {
@@ -223,9 +227,14 @@ const REVISION_TWO_DIGEST: &str =
     "rMKNsr63tCuqHLAkPUAcy04_zkTXsCh5pSeZqt_1QVItiCJZiy-mZPnVFWwAySSAXXXDhovVbCrLgdN-mONa3A";
 
 fn revision_integrity(digest: &str) -> Integrity {
-    format!("sha512-{}==", digest.replace('_', "/").replace('-', "+"))
-        .parse()
-        .expect("revision integrity")
+    format!(
+        "sha512-{}==",
+        digest
+            .replace('_', "/")
+            .replace('-', "+")
+    )
+    .parse()
+    .expect("revision integrity")
 }
 
 /// Same fixture as [`trust_downgrade_packument`] minus the `time` map:

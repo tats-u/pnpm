@@ -18,7 +18,11 @@ fn expand(tokens: &[&str]) -> Vec<String> {
             .collect(),
     )
     .into_iter()
-    .map(|token| token.into_string().expect("test tokens are UTF-8"))
+    .map(|token| {
+        token
+            .into_string()
+            .expect("test tokens are UTF-8")
+    })
     .collect()
 }
 

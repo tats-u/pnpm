@@ -111,12 +111,15 @@ fn get_bare_specifier_to_save(
     preserve_workspace_protocol: bool,
 ) -> String {
     if let Some(catalog_lookup) = &resolved.catalog_lookup {
-        return catalog_lookup.user_specified_bare_specifier.clone();
+        return catalog_lookup
+            .user_specified_bare_specifier
+            .clone();
     }
     if preserve_workspace_protocol && is_workspace_local_path_specifier(&wanted.bare_specifier) {
         return wanted.bare_specifier.clone();
     }
-    resolved.normalized_bare_specifier
+    resolved
+        .normalized_bare_specifier
         .clone()
         .unwrap_or_else(|| wanted.bare_specifier.clone())
 }
@@ -126,7 +129,8 @@ fn preserve_unresolved_specs(
     opts: &UpdateProjectManifestOptions<'_>,
 ) {
     for wanted in opts.wanted_dependencies {
-        let Some(alias) = wanted.alias
+        let Some(alias) = wanted
+            .alias
             .as_deref()
             .filter(|alias| !alias.is_empty())
         else {

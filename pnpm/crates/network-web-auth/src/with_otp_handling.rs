@@ -55,7 +55,10 @@ pub fn otp_challenge_from_unauthorized_body(body: &[u8]) -> Option<OtpChallenge>
             }),
         });
     }
-    if String::from_utf8_lossy(body).to_ascii_lowercase().contains("one-time pass") {
+    if String::from_utf8_lossy(body)
+        .to_ascii_lowercase()
+        .contains("one-time pass")
+    {
         return Some(OtpChallenge { body: None });
     }
     None
@@ -152,8 +155,12 @@ impl OtpNonInteractiveError {
     pub fn new(body: Option<OtpErrorBody>) -> Self {
         match body {
             Some(OtpErrorBody { auth_url, done_url }) => OtpNonInteractiveError {
-                auth_url: auth_url.as_deref().and_then(canonical_http_url),
-                done_url: done_url.as_deref().and_then(canonical_http_url),
+                auth_url: auth_url
+                    .as_deref()
+                    .and_then(canonical_http_url),
+                done_url: done_url
+                    .as_deref()
+                    .and_then(canonical_http_url),
             },
             None => OtpNonInteractiveError { auth_url: None, done_url: None },
         }
@@ -310,10 +317,9 @@ where
     }
 
     let web_auth_urls = match &challenge.body {
-        Some(OtpErrorBody {
-            auth_url: Some(auth_url),
-            done_url: Some(done_url),
-        }) => canonical_http_url(auth_url).zip(canonical_http_url(done_url)),
+        Some(OtpErrorBody { auth_url: Some(auth_url), done_url: Some(done_url) }) => {
+            canonical_http_url(auth_url).zip(canonical_http_url(done_url))
+        }
         _ => None,
     };
 
@@ -325,7 +331,8 @@ where
                 fetch_options,
                 timeout_ms: None,
             });
-            prompt_browser_open::<Sys, Reporter, _, _>(&auth_url, poll).await
+            prompt_browser_open::<Sys, Reporter, _, _>(&auth_url, poll)
+                .await
                 .map(Some)
                 .map_err(WithOtpError::Timeout)
         }
@@ -376,7 +383,8 @@ where
     Operation: FnMut(Option<String>) -> Fut,
     Fut: Future<Output = Result<Token, Error>>,
 {
-    OtpSession::new(fetch_options).run::<Sys, Reporter, Token, Error, Operation, Fut>(operation)
+    OtpSession::new(fetch_options)
+        .run::<Sys, Reporter, Token, Error, Operation, Fut>(operation)
         .await
 }
 

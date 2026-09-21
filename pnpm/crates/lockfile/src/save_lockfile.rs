@@ -101,7 +101,10 @@ pub fn save_value_to_path<Document: serde::Serialize>(
         Err(error) if error.kind() == io::ErrorKind::NotFound => None,
         Err(error) => return Err(SaveLockfileError::WriteFile(error)),
     };
-    let output = match existing.as_deref().and_then(extract_env_document) {
+    let output = match existing
+        .as_deref()
+        .and_then(extract_env_document)
+    {
         Some(env) => {
             let env = preserved_env_document(&env, path)?;
             format!("{YAML_DOCUMENT_START}{env}{YAML_DOCUMENT_SEPARATOR}{content}")
@@ -146,12 +149,17 @@ fn preserved_env_document<'a>(
         return Err(SaveLockfileError::UnmergeableEnvDocument { path: path.to_path_buf() });
     };
     let merged_conflict_files = parsed.merged_conflict_files;
-    let Some(merged) = parsed.value.filter(|_| merged_conflict_files > 0) else {
+    let Some(merged) = parsed
+        .value
+        .filter(|_| merged_conflict_files > 0)
+    else {
         // Nothing was merged, so the document parsed as it stands: the
         // markers are inside a comment or a scalar. Preserve its bytes.
         return Ok(Cow::Borrowed(env));
     };
-    serialize_yaml::to_string(&merged).map(Cow::Owned).map_err(SaveLockfileError::SerializeYaml)
+    serialize_yaml::to_string(&merged)
+        .map(Cow::Owned)
+        .map_err(SaveLockfileError::SerializeYaml)
 }
 
 /// Refuses a symlinked lockfile before a write, which would land on the link's
@@ -187,8 +195,9 @@ impl Lockfile {
 
     /// Save lockfile to `pnpm-lock.yaml` in the current directory.
     pub fn save_to_current_dir(&self) -> Result<(), SaveLockfileError> {
-        let file_path =
-            env::current_dir().map_err(SaveLockfileError::CurrentDir)?.join(Lockfile::FILE_NAME);
+        let file_path = env::current_dir()
+            .map_err(SaveLockfileError::CurrentDir)?
+            .join(Lockfile::FILE_NAME);
         self.save_to_path(&file_path)
     }
 
@@ -215,11 +224,9 @@ impl Lockfile {
                 Err(error) => Err(SaveLockfileError::RemoveFile { path: target, error }),
             }
         } else {
-            fs::create_dir_all(virtual_store_dir)
-                .map_err(|error| SaveLockfileError::CreateDir {
-                    dir: virtual_store_dir.to_path_buf(),
-                    error,
-                })?;
+            fs::create_dir_all(virtual_store_dir).map_err(|error| {
+                SaveLockfileError::CreateDir { dir: virtual_store_dir.to_path_buf(), error }
+            })?;
             let content = self.to_yaml_string()?;
             write_atomic(&target, content.as_bytes())
         }
@@ -275,7 +282,9 @@ fn write_atomic(target: &Path, content: &[u8]) -> Result<(), SaveLockfileError> 
 
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let pid = std::process::id();
-    let parent = target.parent().unwrap_or_else(|| Path::new("."));
+    let parent = target
+        .parent()
+        .unwrap_or_else(|| Path::new("."));
     let file_name = target
         .file_name()
         .map_or_else(|| String::from("lock.yaml"), |name| name.to_string_lossy().into_owned());
@@ -326,13 +335,12 @@ fn write_atomic(target: &Path, content: &[u8]) -> Result<(), SaveLockfileError> 
 }
 
 fn commit_temp_file(tmp: PathBuf, target: &Path) -> Result<(), SaveLockfileError> {
-    fs::rename(&tmp, target)
-        .map_err(|error| {
-            // Best-effort cleanup so a failed rename doesn't leak temp
-            // files in the virtual store.
-            let _ = fs::remove_file(&tmp);
-            SaveLockfileError::RenameFile { tmp, target: target.to_path_buf(), error }
-        })
+    fs::rename(&tmp, target).map_err(|error| {
+        // Best-effort cleanup so a failed rename doesn't leak temp
+        // files in the virtual store.
+        let _ = fs::remove_file(&tmp);
+        SaveLockfileError::RenameFile { tmp, target: target.to_path_buf(), error }
+    })
 }
 
 #[cfg(test)]

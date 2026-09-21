@@ -221,15 +221,15 @@ impl SkippedSnapshots {
         snapshots: &HashMap<PackageKey, SnapshotEntry>,
     ) {
         self.installability.retain(|key| {
-            snapshots.get(key).is_some_and(|snapshot| snapshot.optional)
+            snapshots
+                .get(key)
+                .is_some_and(|snapshot| snapshot.optional)
         });
     }
 
     #[must_use]
     pub fn len(&self) -> usize {
-        self.installability.len()
-            + self.fetch_failed.len()
-            + self.optional_excluded.len()
+        self.installability.len() + self.fetch_failed.len() + self.optional_excluded.len()
     }
 
     #[must_use]
@@ -407,7 +407,9 @@ impl SkipScan<'_, '_> {
         // have changed since the skip was recorded, and pnpm recomputes
         // installability fresh on every install. The other categories
         // carry per-run state, not a verdict to re-check.
-        let seeded = self.skipped.contains_installability(snapshot_key);
+        let seeded = self
+            .skipped
+            .contains_installability(snapshot_key);
         if !seeded && self.skipped.contains(snapshot_key) {
             return Ok(());
         }
@@ -419,8 +421,17 @@ impl SkipScan<'_, '_> {
         // keep the lockfile-propagated flag. The skip check runs with
         // `optional: true` whenever a skip is possible so the
         // platform-from-name inference applies to it.
-        let (skip_check_optional, required) = if self.reach.reachable.contains(snapshot_key) {
-            (true, self.reach.required.contains(snapshot_key))
+        let (skip_check_optional, required) = if self
+            .reach
+            .reachable
+            .contains(snapshot_key)
+        {
+            (
+                true,
+                self.reach
+                    .required
+                    .contains(snapshot_key),
+            )
         } else {
             (snapshot.optional, !snapshot.optional)
         };
@@ -433,7 +444,8 @@ impl SkipScan<'_, '_> {
             &self.base_options,
         )?;
         // Whatever the seed recorded, this pass's verdict replaces it.
-        self.skipped.remove_installability(snapshot_key);
+        self.skipped
+            .remove_installability(snapshot_key);
         let Some(warn) = warn else { return Ok(()) };
 
         if !required {
@@ -449,8 +461,12 @@ impl SkipScan<'_, '_> {
         metadata_key: &PackageKey,
         warn: &InstallabilityError,
     ) {
-        self.skipped.insert_installability(snapshot_key.clone());
-        if self.seen_emit.insert(metadata_key.clone()) {
+        self.skipped
+            .insert_installability(snapshot_key.clone());
+        if self
+            .seen_emit
+            .insert(metadata_key.clone())
+        {
             emit_skipped::<Reporter>(
                 &metadata_key.to_string(),
                 warn.skip_reason(),

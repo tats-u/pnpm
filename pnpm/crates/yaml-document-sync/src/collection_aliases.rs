@@ -44,18 +44,23 @@ impl<'value> Collector<'_, 'value> {
         if !original.is_object() && !original.is_array() {
             return Ok(());
         }
-        let exact = self.document
+        let exact = self
+            .document
             .query_exact(route)
             .map_err(Error::from)?
             .ok_or_else(|| Error::InvalidOperation("Expected a YAML collection".to_string()))?;
-        let pretty = self.document.query_pretty(route).map_err(Error::from)?;
+        let pretty = self
+            .document
+            .query_pretty(route)
+            .map_err(Error::from)?;
         let (start, end) = pretty.location.byte_span;
         let (value_start, value_end) = exact.location.byte_span;
         if value_start < start || value_end > end {
             self.detach_alias(start..end, value_start, original, target)?;
             return Ok(());
         }
-        self.definitions.insert(value_start, target);
+        self.definitions
+            .insert(value_start, target);
         self.visit_children(route, original, target)
     }
 
@@ -96,7 +101,8 @@ impl<'value> Collector<'_, 'value> {
         target: Option<&Value>,
     ) -> Result<(), Box<Error>> {
         if target == Some(original)
-            && self.definitions
+            && self
+                .definitions
                 .get(&definition)
                 .copied()
                 .flatten()
@@ -104,13 +110,15 @@ impl<'value> Collector<'_, 'value> {
         {
             return Ok(());
         }
-        let range = self.aliases
+        let range = self
+            .aliases
             .iter()
             .find(|range| range.start >= span.start && range.end <= span.end)
             .ok_or_else(|| {
                 Error::InvalidOperation("Cannot locate the collection alias".to_string())
             })?;
-        self.edits.push((range.clone(), inline(original)?));
+        self.edits
+            .push((range.clone(), inline(original)?));
         Ok(())
     }
 }

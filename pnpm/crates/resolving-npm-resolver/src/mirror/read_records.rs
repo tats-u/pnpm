@@ -79,8 +79,12 @@ pub(super) fn read_mirror_records(
     if u64::try_from(layout.fragment_base).ok()? > file_size {
         return None;
     }
-    let mut records =
-        vec![0u8; layout.fragment_base.checked_sub(prefix.len().min(layout.fragment_base))?];
+    let mut records = vec![
+        0u8;
+        layout
+            .fragment_base
+            .checked_sub(prefix.len().min(layout.fragment_base))?
+    ];
     file.read_exact(&mut records).ok()?;
     let mut prefixed = Vec::with_capacity(layout.fragment_base);
     prefixed.extend_from_slice(&prefix[..prefix.len().min(layout.fragment_base)]);

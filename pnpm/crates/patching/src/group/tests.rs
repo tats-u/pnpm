@@ -36,8 +36,9 @@ fn groups_by_name_match_type_and_version() {
 
     let result = group_patched_dependencies(entries).expect("valid input");
 
-    let exact_version_only =
-        result.get("exact-version-only").expect("exact-version-only group present");
+    let exact_version_only = result
+        .get("exact-version-only")
+        .expect("exact-version-only group present");
     assert_eq!(
         exact_version_only.exact.get("0.0.0"),
         Some(&info("exact-version-only@0.0.0", ZERO_HASH)),
@@ -53,8 +54,9 @@ fn groups_by_name_match_type_and_version() {
     assert!(exact_version_only.range.is_empty());
     assert_eq!(exact_version_only.all, None);
 
-    let version_range_only =
-        result.get("version-range-only").expect("version-range-only group present");
+    let version_range_only = result
+        .get("version-range-only")
+        .expect("version-range-only group present");
     assert!(version_range_only.exact.is_empty());
     // Insertion order matches input order (input listed `~1.2.0` then
     // `4`). Our iteration order is deterministic, so the assertion can
@@ -74,17 +76,23 @@ fn groups_by_name_match_type_and_version() {
     );
     assert_eq!(version_range_only.all, None);
 
-    let star = result.get("star-version-range").expect("star-version-range group present");
+    let star = result
+        .get("star-version-range")
+        .expect("star-version-range group present");
     assert!(star.exact.is_empty());
     assert!(star.range.is_empty());
     assert_eq!(star.all, Some(info("star-version-range@*", ZERO_HASH)));
 
-    let without_versions = result.get("without-versions").expect("without-versions group present");
+    let without_versions = result
+        .get("without-versions")
+        .expect("without-versions group present");
     assert!(without_versions.exact.is_empty());
     assert!(without_versions.range.is_empty());
     assert_eq!(without_versions.all, Some(info("without-versions", ZERO_HASH)));
 
-    let mixed = result.get("mixed-style").expect("mixed-style group present");
+    let mixed = result
+        .get("mixed-style")
+        .expect("mixed-style group present");
     assert_eq!(mixed.exact.get("0.1.2"), Some(&info("mixed-style@0.1.2", ZERO_HASH)));
     assert_eq!(
         mixed.range,

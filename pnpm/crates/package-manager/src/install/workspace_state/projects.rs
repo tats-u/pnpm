@@ -132,7 +132,9 @@ pub(in super::super) fn projects_running_own_scripts<'manifest>(
     let full_install = match inputs.mutation {
         ProjectMutation::NoInstall | ProjectMutation::UninstallSome => return Vec::new(),
         ProjectMutation::InstallWorkspace => {
-            return inputs.materialized_project_manifests.to_vec();
+            return inputs
+                .materialized_project_manifests
+                .to_vec();
         }
         ProjectMutation::InstallSelected => true,
         ProjectMutation::InstallSome => false,
@@ -155,13 +157,15 @@ pub(in super::super) fn projects_running_own_scripts<'manifest>(
     // from the lockfile alone; pnpm runs the scripts of everything it did
     // mutate, whatever the inputs.mutation. Only when the mutated set covers the
     // whole workspace does the `inputs.mutation === 'install'` filter decide.
-    let covers_workspace = inputs.project_manifests
+    let covers_workspace = inputs
+        .project_manifests
         .iter()
         .all(|(project_dir, _)| {
             let project_dir = pnpm_fs::lexical_normalize(project_dir);
             mutated_dirs.contains(&project_dir) || is_pushed_root(&project_dir)
         });
-    inputs.materialized_project_manifests
+    inputs
+        .materialized_project_manifests
         .iter()
         .filter(|(project_dir, _)| {
             let project_dir = pnpm_fs::lexical_normalize(project_dir);

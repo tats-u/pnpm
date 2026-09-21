@@ -58,7 +58,9 @@ snapshots:
 ",
     )
     .expect("write lockfile");
-    let virtual_store = workspace.path().join("node_modules/.pnpm");
+    let virtual_store = workspace
+        .path()
+        .join("node_modules/.pnpm");
     let a_dash_b_dir = virtual_store.join("a-b@1.0.0/node_modules/a-b");
     let a_underscore_b_dir = virtual_store.join("a_b@1.0.0/node_modules/a_b");
     let alpha_dir = virtual_store.join("alpha@1.0.0/node_modules/alpha");
@@ -142,13 +144,8 @@ snapshots:
 
 #[test]
 fn licenses_reads_global_store_metadata_with_a_manifest_selected_runtime() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let config_home = root.path().join("config");
     fs::create_dir(&config_home).expect("create empty config home");
@@ -200,11 +197,15 @@ fn licenses_reads_global_store_metadata_with_a_manifest_selected_runtime() {
         );
 
         let licenses: Value = serde_json::from_slice(&output.stdout).expect("parse licenses JSON");
-        let packages = licenses["MIT"].as_array().expect("MIT license group");
+        let packages = licenses["MIT"]
+            .as_array()
+            .expect("MIT license group");
         assert_eq!(
             packages
                 .iter()
-                .map(|package| package["name"].as_str().expect("package name"))
+                .map(|package| package["name"]
+                    .as_str()
+                    .expect("package name"))
                 .collect::<Vec<_>>(),
             [
                 "@pnpm.e2e/for-legacy-node",

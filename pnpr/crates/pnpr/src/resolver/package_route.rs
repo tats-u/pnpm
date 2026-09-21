@@ -23,7 +23,8 @@ impl PackageRoute {
 
 impl UpstreamRouteHook for PackageRoute {
     fn authorize(&self, url: &str, _package: Option<&str>) -> Option<String> {
-        self.hook.authorize(url, Some(&self.canonical_name))
+        self.hook
+            .authorize(url, Some(&self.canonical_name))
     }
 
     fn allows_fetch(&self, url: &str) -> bool {
@@ -31,6 +32,7 @@ impl UpstreamRouteHook for PackageRoute {
     }
 
     fn metadata_scope(&self, url: &str, _package: Option<&str>) -> MetadataCacheScope {
-        self.hook.metadata_scope(url, Some(&self.canonical_name))
+        self.hook
+            .metadata_scope(url, Some(&self.canonical_name))
     }
 }

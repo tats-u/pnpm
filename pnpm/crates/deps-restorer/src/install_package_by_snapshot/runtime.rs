@@ -91,7 +91,9 @@ pub fn runtime_platform_selector(supported: Option<&SupportedArchitectures>) -> 
     match supported {
         Some(SupportedArchitectures::Platforms(platforms)) => runtime_platform_of(platforms, host),
         Some(SupportedArchitectures::Axes(axes)) => PlatformSelector {
-            os: pick_supported(axes.os.as_deref(), Some(&host.os)).unwrap_or(&host.os).to_string(),
+            os: pick_supported(axes.os.as_deref(), Some(&host.os))
+                .unwrap_or(&host.os)
+                .to_string(),
             cpu: pick_supported(axes.cpu.as_deref(), Some(&host.cpu))
                 .unwrap_or(&host.cpu)
                 .to_string(),
@@ -119,7 +121,8 @@ pub(super) fn runtime_platform_of(
         let selector = PlatformSelector {
             os: named.os.name().to_string(),
             cpu: named.architecture.cpu().to_string(),
-            libc: named.libc
+            libc: named
+                .libc
                 .as_ref()
                 .map(|libc| libc.name().to_string()),
         };
@@ -162,7 +165,9 @@ pub(super) fn node_extras_filter(path: &str) -> bool {
 }
 /// `^(?:lib/)?node_modules/(?:npm|corepack)(?:/|$)`
 pub(super) fn bundled_tooling_module(path: &str) -> bool {
-    let after_lib = path.strip_prefix("lib/").unwrap_or(path);
+    let after_lib = path
+        .strip_prefix("lib/")
+        .unwrap_or(path);
     let Some(rest) = after_lib.strip_prefix("node_modules/") else {
         return false;
     };
@@ -305,7 +310,9 @@ impl BinaryArchiveFetch<'_> {
                 index: self.store.store_index.cloned(),
                 index_writer: self.store.store_index_writer.cloned(),
                 verify_integrity: self.config.verify_store_integrity,
-                strict_pkg_content_check: self.config.strict_store_pkg_content_check,
+                strict_pkg_content_check: self
+                    .config
+                    .strict_store_pkg_content_check,
                 verified_files_cache: Arc::clone(self.store.verified_files_cache),
                 prefetched_cas_paths: self.store.prefetched_cas_paths,
             },
@@ -346,7 +353,9 @@ impl BinaryArchiveFetch<'_> {
                 index: self.store.store_index.cloned(),
                 index_writer: self.store.store_index_writer.cloned(),
                 verify_integrity: self.config.verify_store_integrity,
-                strict_pkg_content_check: self.config.strict_store_pkg_content_check,
+                strict_pkg_content_check: self
+                    .config
+                    .strict_store_pkg_content_check,
                 verified_files_cache: Arc::clone(self.store.verified_files_cache),
                 prefetched_cas_paths: self.store.prefetched_cas_paths,
             },
@@ -391,11 +400,12 @@ pub(super) fn synthesize_runtime_manifest_bytes(
         "version": stripped.suffix.version().to_string(),
         "bin": bin_value,
     });
-    serde_json::to_vec(&manifest)
-        .map_err(|error| InstallPackageBySnapshotError::SynthesizeRuntimeManifest {
+    serde_json::to_vec(&manifest).map_err(|error| {
+        InstallPackageBySnapshotError::SynthesizeRuntimeManifest {
             package_key: package_key.to_string(),
             error,
-        })
+        }
+    })
 }
 /// Render a variant's target list as a human-readable string for
 /// inclusion in the [`InstallPackageBySnapshotError::NoMatchingPlatformVariant`]

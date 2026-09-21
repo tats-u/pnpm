@@ -9,7 +9,9 @@ fn pkg_name(input: &str) -> PkgName {
 }
 
 fn dep_ref(input: &str) -> SnapshotDepRef {
-    input.parse().expect("valid snapshot dep ref")
+    input
+        .parse()
+        .expect("valid snapshot dep ref")
 }
 
 /// A symlink in the slot's `node_modules` matches the alias and points
@@ -85,7 +87,9 @@ fn links_matching_optional_sibling_alongside_regular_deps() {
         &virtual_node_modules_dir,
         "matching-optional",
         &layout,
-        &"matching-optional@2.0.0".parse().unwrap(),
+        &"matching-optional@2.0.0"
+            .parse()
+            .unwrap(),
     );
 }
 
@@ -141,7 +145,11 @@ fn skips_optional_siblings_that_are_in_skipped() {
     optional.insert(pkg_name("mismatched-optional"), dep_ref("3.0.0"));
 
     let mut skipped_set = std::collections::HashSet::<PackageKey>::new();
-    skipped_set.insert("mismatched-optional@3.0.0".parse().unwrap());
+    skipped_set.insert(
+        "mismatched-optional@3.0.0"
+            .parse()
+            .unwrap(),
+    );
     let skipped = SkippedSnapshots::from_set(skipped_set);
 
     let virtual_node_modules_dir = tmp.path().join("self/node_modules");
@@ -238,7 +246,9 @@ fn both_dep_maps_absent_is_a_noop() {
     )
     .expect("create_symlink_layout should succeed with no deps");
 
-    let entries: Vec<_> = fs::read_dir(&virtual_node_modules_dir).unwrap().collect();
+    let entries: Vec<_> = fs::read_dir(&virtual_node_modules_dir)
+        .unwrap()
+        .collect();
     assert!(entries.is_empty(), "no symlinks should be created when both dep maps are absent");
 }
 
@@ -318,7 +328,9 @@ fn rejects_traversal_dependency_alias() {
 
     // The guard fires before any symlink is created, so nothing was
     // linked into (or out of) the slot's node_modules.
-    let linked = fs::read_dir(&virtual_node_modules_dir).unwrap().count();
+    let linked = fs::read_dir(&virtual_node_modules_dir)
+        .unwrap()
+        .count();
     assert_eq!(linked, 0);
 }
 
@@ -397,5 +409,10 @@ fn skips_a_link_dep_when_no_lockfile_dir_is_known() {
     )
     .expect("no lockfile dir is not an error");
 
-    assert_eq!(fs::read_dir(&virtual_node_modules_dir).unwrap().count(), 0);
+    assert_eq!(
+        fs::read_dir(&virtual_node_modules_dir)
+            .unwrap()
+            .count(),
+        0
+    );
 }

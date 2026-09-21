@@ -34,11 +34,23 @@ async fn failed_reclamation_releases_its_gate_for_later_retries() {
     let scratch = TempDir::new().unwrap();
     let store = SharedArtifactStore::new(&config, scratch.path()).unwrap();
     let publication = artifact_operation_id().unwrap();
-    store.begin_publication(&publication).await.unwrap();
-    store.reserve_quota(&owner, 6).await.unwrap();
-    store.finish_publication(&publication, true).await.unwrap();
+    store
+        .begin_publication(&publication)
+        .await
+        .unwrap();
+    store
+        .reserve_quota(&owner, 6)
+        .await
+        .unwrap();
+    store
+        .finish_publication(&publication, true)
+        .await
+        .unwrap();
 
-    store.try_reclaim_unreferenced_blobs().await.unwrap_err();
+    store
+        .try_reclaim_unreferenced_blobs()
+        .await
+        .unwrap_err();
 
     let usage_path = ObjectPath::from(".pnpr-artifacts/v0/quota.json");
     let usage: ArtifactUsage = serde_json::from_slice(
@@ -63,14 +75,19 @@ async fn failed_reclamation_releases_its_gate_for_later_retries() {
 async fn a_renewal_waiting_for_the_lock_does_not_stop_the_publication() {
     let storage = TempDir::new().unwrap();
     let store = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap();
-    store.begin_publication("a-publication").await.unwrap();
+    store
+        .begin_publication("a-publication")
+        .await
+        .unwrap();
     let lock_path = storage
         .path()
         .join(super::super::ARTIFACT_CACHE_DIR)
         .join(".locks")
         .join("usage.lock");
     let holding_the_lock = async {
-        let _lock = super::super::acquire_artifact_lock(lock_path).await.unwrap();
+        let _lock = super::super::acquire_artifact_lock(lock_path)
+            .await
+            .unwrap();
         // Long enough that renewals tick while the lock is held, which is what
         // a publication does across every usage mutation it makes.
         tokio::time::sleep(super::super::ARTIFACT_LOCK_POLL_INTERVAL * 4).await;
@@ -178,7 +195,10 @@ async fn renewing_a_publication_that_finished_records_nothing() {
     let storage = TempDir::new().unwrap();
     let store = SharedArtifactStore::new(&HostedStoreConfig::Fs, storage.path()).unwrap();
 
-    store.renew_publication("a-publication-that-finished").await.unwrap();
+    store
+        .renew_publication("a-publication-that-finished")
+        .await
+        .unwrap();
 
     let usage: ArtifactUsage = serde_json::from_slice(
         &store
@@ -188,5 +208,9 @@ async fn renewing_a_publication_that_finished_records_nothing() {
             .unwrap_or_default(),
     )
     .unwrap_or_default();
-    assert!(usage.active_publication_times.is_empty());
+    assert!(
+        usage
+            .active_publication_times
+            .is_empty()
+    );
 }

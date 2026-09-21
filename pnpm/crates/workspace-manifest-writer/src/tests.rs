@@ -38,7 +38,9 @@ fn run(original: Option<&str>, updated: &Catalogs) -> Option<String> {
 
 fn run_with(original: Option<&str>, opts: &UpdateWorkspaceManifestOptions<'_>) -> Option<String> {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -72,7 +74,9 @@ fn project(manifest: serde_json::Value) -> PackageManifest {
 /// (when `Some`) and return the resulting file contents.
 fn run_config_dep(original: Option<&str>, name: &str, specifier: &str) -> String {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -84,7 +88,9 @@ fn run_config_dep(original: Option<&str>, name: &str, specifier: &str) -> String
 /// resulting file contents (or `None` when no file exists afterward).
 fn run_allow_builds(original: Option<&str>, entries: &[(&str, bool)]) -> Option<String> {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -97,7 +103,9 @@ fn run_allow_builds(original: Option<&str>, entries: &[(&str, bool)]) -> Option<
 /// afterward).
 fn run_scaffold_allow_builds(original: Option<&str>, names: &[&str]) -> Option<String> {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -116,7 +124,9 @@ fn patched_deps(entries: &[(&str, &str)]) -> IndexMap<String, String> {
 /// the resulting file contents.
 fn run_patched_deps(original: Option<&str>, entries: &[(&str, &str)]) -> String {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -126,7 +136,9 @@ fn run_patched_deps(original: Option<&str>, entries: &[(&str, &str)]) -> String 
 
 fn run_patched_deps_path(original: Option<&str>, entries: &[(&str, &str)]) -> (TempDir, PathBuf) {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -145,7 +157,9 @@ fn overrides(entries: &[(&str, &str)]) -> IndexMap<String, String> {
 /// resulting file contents, or `None` when no file exists afterward.
 fn run_overrides(original: Option<&str>, entries: &IndexMap<String, String>) -> Option<String> {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -163,7 +177,9 @@ fn run_overrides(original: Option<&str>, entries: &IndexMap<String, String>) -> 
 /// the resulting file contents, or `None` when no file exists afterward.
 fn run_ignore_ghsas(original: Option<&str>, ghsas: &[&str]) -> Option<String> {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -179,7 +195,9 @@ fn run_ignore_ghsas(original: Option<&str>, ghsas: &[&str]) -> Option<String> {
 /// contents, or `None` when no file exists afterward.
 fn run_remove_overrides(original: Option<&str>, selectors: &[&str]) -> Option<String> {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -197,7 +215,9 @@ fn run_allow_builds_clearing_legacy(
     entries: &[(&str, bool)],
 ) -> Option<String> {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -210,7 +230,9 @@ fn run_allow_builds_clearing_legacy(
 /// resulting file contents, or `None` when no file exists afterward.
 fn run_age_excludes(original: Option<&str>, excludes: &[&str]) -> Option<String> {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }
@@ -231,7 +253,9 @@ fn run_update_field(
     value: &serde_json::Value,
 ) -> Option<String> {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     if let Some(text) = original {
         fs::write(&path, text).expect("seed manifest");
     }

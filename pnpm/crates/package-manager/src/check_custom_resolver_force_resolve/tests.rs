@@ -62,7 +62,8 @@ impl CustomResolver for MockResolver {
         dep_path: &PackageKey,
         pkg_snapshot: Value,
     ) -> Result<bool, HookError> {
-        self.call_count.fetch_add(1, Ordering::SeqCst);
+        self.call_count
+            .fetch_add(1, Ordering::SeqCst);
         self.calls
             .lock()
             .unwrap()
@@ -129,7 +130,12 @@ async fn skips_resolvers_without_the_hook() {
         .unwrap();
 
     assert!(!result);
-    assert_eq!(resolver.call_count.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        resolver
+            .call_count
+            .load(Ordering::SeqCst),
+        0
+    );
 }
 
 #[tokio::test]
@@ -176,7 +182,11 @@ async fn propagates_hook_errors() {
     )
     .await;
     let err = result.expect_err("hook error must propagate");
-    assert!(err.to_string().contains("resolver crashed"), "got: {err}");
+    assert!(
+        err.to_string()
+            .contains("resolver crashed"),
+        "got: {err}"
+    );
 }
 
 #[tokio::test]
@@ -200,7 +210,9 @@ async fn passes_dep_path_and_merged_package_snapshot() {
         },
     }));
 
-    check_custom_resolver_force_resolve(&list, &lockfile).await.unwrap();
+    check_custom_resolver_force_resolve(&list, &lockfile)
+        .await
+        .unwrap();
 
     let calls = resolver.calls.lock().unwrap();
     let (dep_path, snapshot) = calls.first().expect("hook called once");

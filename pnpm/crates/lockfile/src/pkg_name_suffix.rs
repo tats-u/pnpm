@@ -53,8 +53,9 @@ impl<Suffix: FromStr> FromStr for PkgNameSuffix<Suffix> {
         let (name, suffix) = match value.split_first_char() {
             None => return Err(ParsePkgNameSuffixError::EmptyInput),
             Some(('@', rest)) => {
-                let (name_without_at, suffix) =
-                    rest.split_once('@').ok_or(ParsePkgNameSuffixError::MissingSuffix)?;
+                let (name_without_at, suffix) = rest
+                    .split_once('@')
+                    .ok_or(ParsePkgNameSuffixError::MissingSuffix)?;
                 let name = &value[..=name_without_at.len()];
                 #[cfg(debug_assertions)]
                 {
@@ -63,7 +64,9 @@ impl<Suffix: FromStr> FromStr for PkgNameSuffix<Suffix> {
                 }
                 (name, suffix)
             }
-            Some((_, _)) => value.split_once('@').ok_or(ParsePkgNameSuffixError::MissingSuffix)?,
+            Some((_, _)) => value
+                .split_once('@')
+                .ok_or(ParsePkgNameSuffixError::MissingSuffix)?,
         };
         if matches!(name, "" | "@" | "@/") {
             return Err(ParsePkgNameSuffixError::EmptyName);
@@ -71,9 +74,12 @@ impl<Suffix: FromStr> FromStr for PkgNameSuffix<Suffix> {
         if suffix.is_empty() {
             return Err(ParsePkgNameSuffixError::MissingSuffix);
         }
-        let suffix =
-            suffix.parse::<Suffix>().map_err(ParsePkgNameSuffixError::ParseSuffixFailure)?;
-        let name = name.parse().map_err(ParsePkgNameSuffixError::ParseNameFailure)?;
+        let suffix = suffix
+            .parse::<Suffix>()
+            .map_err(ParsePkgNameSuffixError::ParseSuffixFailure)?;
+        let name = name
+            .parse()
+            .map_err(ParsePkgNameSuffixError::ParseNameFailure)?;
         Ok(PkgNameSuffix { name, suffix })
     }
 }

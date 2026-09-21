@@ -6,8 +6,13 @@ use super::{
 #[test]
 fn package_lock_is_the_lockfile_fallback() {
     let package_lock_only = tempdir().unwrap();
-    fs::write(package_lock_only.path().join("pnpm-workspace.yaml"), "packageLock: false\n")
-        .unwrap();
+    fs::write(
+        package_lock_only
+            .path()
+            .join("pnpm-workspace.yaml"),
+        "packageLock: false\n",
+    )
+    .unwrap();
     let config = Config::new()
         .current::<HostNoHome>(package_lock_only.path())
         .expect("packageLock config loads");
@@ -16,7 +21,9 @@ fn package_lock_is_the_lockfile_fallback() {
 
     let explicit_lockfile = tempdir().unwrap();
     fs::write(
-        explicit_lockfile.path().join("pnpm-workspace.yaml"),
+        explicit_lockfile
+            .path()
+            .join("pnpm-workspace.yaml"),
         "packageLock: false\nlockfile: true\n",
     )
     .unwrap();
@@ -36,7 +43,9 @@ pub fn gvs_disabled_or_extend_node_path_off_injects_no_resolution_env() {
         let tmp = tempdir().unwrap();
         fs::write(tmp.path().join("pnpm-workspace.yaml"), yaml)
             .expect("write to pnpm-workspace.yaml");
-        let config = Config::new().current::<HostNoHome>(tmp.path()).expect("yaml is valid");
+        let config = Config::new()
+            .current::<HostNoHome>(tmp.path())
+            .expect("yaml is valid");
         assert_eq!(config.extra_env.get("NODE_PATH"), None, "yaml: {yaml}");
         assert_eq!(config.extra_env.get("NODE_OPTIONS"), None, "yaml: {yaml}");
     }
@@ -52,9 +61,16 @@ pub fn git_branch_lockfile_names_the_lockfile_after_the_current_branch() {
         .expect("set once");
     host_in_repo!(HostOnBranch);
 
-    let config = Config::new().current::<HostOnBranch>(repo.path()).expect("yaml is valid");
+    let config = Config::new()
+        .current::<HostOnBranch>(repo.path())
+        .expect("yaml is valid");
     assert!(config.use_git_branch_lockfile);
-    assert_eq!(config.git_branch_lockfile_name.as_deref(), Some("pnpm-lock.feat!login.yaml"));
+    assert_eq!(
+        config
+            .git_branch_lockfile_name
+            .as_deref(),
+        Some("pnpm-lock.feat!login.yaml")
+    );
     assert_eq!(config.wanted_lockfile_name(), "pnpm-lock.feat!login.yaml");
 }
 
@@ -74,9 +90,16 @@ pub fn merging_puts_the_install_back_on_the_shared_lockfile() {
         .expect("set once");
     host_in_repo!(HostMerging);
 
-    let config = Config::new().current::<HostMerging>(repo.path()).expect("yaml is valid");
+    let config = Config::new()
+        .current::<HostMerging>(repo.path())
+        .expect("yaml is valid");
     assert!(config.merge_git_branch_lockfiles);
-    assert_eq!(config.git_branch_lockfile_name.as_deref(), Some("pnpm-lock.main.yaml"));
+    assert_eq!(
+        config
+            .git_branch_lockfile_name
+            .as_deref(),
+        Some("pnpm-lock.main.yaml")
+    );
     assert_eq!(config.wanted_lockfile_name(), "pnpm-lock.yaml");
 }
 
@@ -92,7 +115,9 @@ pub fn a_detached_head_leaves_the_install_on_the_shared_lockfile() {
         .expect("set once");
     host_in_repo!(HostDetached);
 
-    let config = Config::new().current::<HostDetached>(repo.path()).expect("yaml is valid");
+    let config = Config::new()
+        .current::<HostDetached>(repo.path())
+        .expect("yaml is valid");
     assert!(config.use_git_branch_lockfile);
     assert_eq!(config.git_branch_lockfile_name, None);
     assert_eq!(config.wanted_lockfile_name(), "pnpm-lock.yaml");

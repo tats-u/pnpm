@@ -154,7 +154,10 @@ impl VersionArgs {
         recursive: bool,
     ) -> miette::Result<()> {
         let raw = self.params[0].as_str();
-        let git_cwd = config.workspace_dir.clone().unwrap_or_else(|| dir.to_path_buf());
+        let git_cwd = config
+            .workspace_dir
+            .clone()
+            .unwrap_or_else(|| dir.to_path_buf());
         let bump = if raw == "from-git" {
             Bump::Explicit(version_from_git(&git_cwd, &self.git.tag_version_prefix)?)
         } else {
@@ -212,13 +215,17 @@ impl VersionArgs {
             let change = self.bump_package_version::<Reporter>(dir, bump, config, dir)?;
             return Ok(change.into_iter().collect());
         }
-        let base = config.workspace_dir.clone().unwrap_or_else(|| dir.to_path_buf());
+        let base = config
+            .workspace_dir
+            .clone()
+            .unwrap_or_else(|| dir.to_path_buf());
         let (projects, _) = discover_workspace_projects(&base, config)?;
         let selection =
             select_recursive_projects(&projects, config, &base, AutoExcludeRoot::Disabled)?;
         let mut changes = Vec::new();
         for pkg_dir in selection.selected.keys() {
-            if let Some(change) = self.bump_package_version::<Reporter>(pkg_dir, bump, config, dir)?
+            if let Some(change) =
+                self.bump_package_version::<Reporter>(pkg_dir, bump, config, dir)?
             {
                 changes.push(change);
             }
@@ -395,7 +402,10 @@ fn run_version_lifecycle_hook<Reporter: pnpm_reporter::Reporter>(
     };
 
     let root_modules_dir = change.path.join(&config.modules_dir);
-    let script_shell = config.script_shell.as_ref().map(PathBuf::from);
+    let script_shell = config
+        .script_shell
+        .as_ref()
+        .map(PathBuf::from);
     let run_opts = RunPostinstallHooks {
         environment: super::run::script_environment(config, init_cwd, &config.extra_env),
         execution: pnpm_executor::ScriptExecutionOptions {

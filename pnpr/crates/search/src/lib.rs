@@ -141,7 +141,12 @@ async fn hosted_package_has_maintainer(storage: &Storage, name: &str, needle: &s
     let Ok(parsed) = CanonicalPackageName::parse(name, pnpr_package_name::Ecosystem::Npm) else {
         return false;
     };
-    let Ok(Some(bytes)) = storage.read_hosted_document(&parsed).await else { return false };
+    let Ok(Some(bytes)) = storage
+        .read_hosted_document(&parsed)
+        .await
+    else {
+        return false;
+    };
     let Ok(packument) = serde_json::from_slice::<Value>(&bytes) else { return false };
     packument_has_maintainer(&packument, needle)
 }
@@ -149,7 +154,10 @@ async fn hosted_package_has_maintainer(storage: &Storage, name: &str, needle: &s
 pub async fn local_search_entry(storage: &Storage, name: &str) -> Value {
     let entry = async {
         let parsed = CanonicalPackageName::parse(name, pnpr_package_name::Ecosystem::Npm).ok()?;
-        let bytes = storage.read_hosted_document(&parsed).await.ok()??;
+        let bytes = storage
+            .read_hosted_document(&parsed)
+            .await
+            .ok()??;
         let packument = serde_json::from_slice::<Value>(&bytes).ok()?;
         build_search_entry(name, &packument)
     }
@@ -180,9 +188,13 @@ fn build_search_entry(name: &str, packument: &Value) -> Option<Value> {
 /// `description` / `keywords`.
 fn build_search_package(name: &str, packument: &Value) -> Option<Value> {
     let obj = packument.as_object()?;
-    let versions = obj.get("versions").and_then(Value::as_object)?;
+    let versions = obj
+        .get("versions")
+        .and_then(Value::as_object)?;
     let version_id = latest_version_id(obj, versions)?;
-    let version_obj = versions.get(version_id).and_then(Value::as_object);
+    let version_obj = versions
+        .get(version_id)
+        .and_then(Value::as_object);
     let mut pkg = Map::new();
     pkg.insert("name".to_string(), Value::String(name.to_string()));
     pkg.insert("version".to_string(), Value::String(version_id.to_string()));
@@ -194,7 +206,10 @@ fn build_search_package(name: &str, packument: &Value) -> Option<Value> {
         pkg.insert("maintainers".to_string(), maintainers.clone());
     }
     // `time.<version>` if present, else `time.modified` as a fallback.
-    if let Some(time) = obj.get("time").and_then(Value::as_object) {
+    if let Some(time) = obj
+        .get("time")
+        .and_then(Value::as_object)
+    {
         let date = time
             .get(version_id)
             .cloned()
@@ -217,7 +232,9 @@ fn latest_version_id<'p>(
     obj: &'p Map<String, Value>,
     versions: &'p Map<String, Value>,
 ) -> Option<&'p str> {
-    let dist_tags = obj.get("dist-tags").and_then(Value::as_object);
+    let dist_tags = obj
+        .get("dist-tags")
+        .and_then(Value::as_object);
     dist_tags
         .and_then(|tags| tags.get("latest"))
         .and_then(Value::as_str)
@@ -254,15 +271,15 @@ fn packument_has_maintainer(packument: &Value, needle: &str) -> bool {
     if maintainer_value_matches(packument.get("maintainers"), needle) {
         return true;
     }
-    let versions = packument.get("versions").and_then(Value::as_object);
+    let versions = packument
+        .get("versions")
+        .and_then(Value::as_object);
     versions.is_some_and(|versions| {
-        versions
-            .values()
-            .any(|version| {
-                maintainer_value_matches(version.get("maintainers"), needle)
-                    || maintainer_value_matches(version.get("_npmUser"), needle)
-                    || maintainer_value_matches(version.get("publisher"), needle)
-            })
+        versions.values().any(|version| {
+            maintainer_value_matches(version.get("maintainers"), needle)
+                || maintainer_value_matches(version.get("_npmUser"), needle)
+                || maintainer_value_matches(version.get("publisher"), needle)
+        })
     })
 }
 
@@ -274,7 +291,11 @@ fn maintainer_value_matches(value: Option<&Value>, needle: &str) -> bool {
             .any(|value| maintainer_value_matches(Some(value), needle)),
         Some(Value::Object(value)) => ["username", "name", "email"]
             .iter()
-            .filter_map(|field| value.get(*field).and_then(Value::as_str))
+            .filter_map(|field| {
+                value
+                    .get(*field)
+                    .and_then(Value::as_str)
+            })
             .any(|value| value.to_lowercase().contains(needle)),
         _ => false,
     }

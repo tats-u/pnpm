@@ -25,7 +25,8 @@ pub(super) fn build_importers(
     let importer_results: Vec<(
         &String,
         Result<ProjectSnapshot, DependenciesGraphToLockfileError>,
-    )> = opts.importers
+    )> = opts
+        .importers
         .iter()
         .collect::<Vec<_>>()
         .into_par_iter()
@@ -34,10 +35,14 @@ pub(super) fn build_importers(
                 input,
                 opts.graph,
                 &ImporterLockfileFlags {
-                    exclude_links_from_lockfile: opts.settings.exclude_links_from_lockfile,
+                    exclude_links_from_lockfile: opts
+                        .settings
+                        .exclude_links_from_lockfile,
                     auto_install_peers: opts.settings.auto_install_peers,
                 },
-                opts.reuse.previous_importers.and_then(|importers| importers.get(id)),
+                opts.reuse
+                    .previous_importers
+                    .and_then(|importers| importers.get(id)),
                 effective_update_reuse_scope(opts, id),
             );
             (id, importer)
@@ -63,7 +68,10 @@ pub(super) fn effective_update_reuse_scope<'o>(
     if matches!(opts.reuse.scope, UpdateReuseScope::None) {
         &opts.reuse.scope
     } else {
-        opts.reuse.scopes_by_importer.get(importer_id).unwrap_or(&opts.reuse.scope)
+        opts.reuse
+            .scopes_by_importer
+            .get(importer_id)
+            .unwrap_or(&opts.reuse.scope)
     }
 }
 /// The `version` a catalog snapshot records for `alias` in `importer`:
@@ -88,7 +96,8 @@ pub(super) fn catalog_snapshot_version(
             .flatten()
             .find_map(|map| map.get(&key))?;
     Some(
-        resolved.version
+        resolved
+            .version
             .ver_peer()
             .map_or_else(|| entry_specifier.to_string(), |version| version.version().to_string()),
     )
@@ -185,7 +194,9 @@ pub(super) fn importer_direct_entry(
         dep_path,
         &specifier,
         sources.graph,
-        sources.flags.exclude_links_from_lockfile,
+        sources
+            .flags
+            .exclude_links_from_lockfile,
     )?
     else {
         return Ok(None);
@@ -285,8 +296,9 @@ pub(super) fn preserved_link_version(
     lookup: &PreservedLinkLookup<'_>,
 ) -> Option<ImporterDepVersion> {
     let ImporterDepVersion::File(_) = version else { return None };
-    let previous =
-        lookup.previous_importer.and_then(|prev| previous_importer_dep(prev, lookup.name_for_key))?;
+    let previous = lookup
+        .previous_importer
+        .and_then(|prev| previous_importer_dep(prev, lookup.name_for_key))?;
     let ImporterDepVersion::Link(_) = &previous.version else { return None };
     let targeted_by_update = match lookup.update_reuse_scope {
         UpdateReuseScope::All => false,
@@ -294,7 +306,8 @@ pub(super) fn preserved_link_version(
         // By name alone: this runs after resolution, where the
         // version in hand is the one the update just produced, not
         // the line the selector asked to move.
-        UpdateReuseScope::Except(targets) => lookup.graph
+        UpdateReuseScope::Except(targets) => lookup
+            .graph
             .get(lookup.dep_path)
             .and_then(node_pkg_name)
             .is_some_and(|name| targets.covers(&name, None)),
@@ -330,7 +343,8 @@ pub(super) fn manifest_alias_to_group(
     let mut out: HashMap<String, DependencyGroup> = HashMap::new();
     for group in [DependencyGroup::Optional, DependencyGroup::Prod, DependencyGroup::Dev] {
         for (alias, _) in manifest.dependencies([group]) {
-            out.entry(alias.to_string()).or_insert(group);
+            out.entry(alias.to_string())
+                .or_insert(group);
         }
     }
     out
@@ -424,14 +438,11 @@ pub(super) fn self_aliased_file_ver<'a>(
         Some(scope) => alias
             .strip_prefix('@')
             .and_then(|unscoped| unscoped.split_once('/'))
-            .is_some_and(|(alias_scope, bare)| {
-                alias_scope == scope && bare == key.name.bare
-            }),
+            .is_some_and(|(alias_scope, bare)| alias_scope == scope && bare == key.name.bare),
         None => alias == key.name.bare,
     };
-    (aliased_to_own_name && matches!(key.suffix.version(), VersionPart::File(_))).then_some(
-        &key.suffix,
-    )
+    (aliased_to_own_name && matches!(key.suffix.version(), VersionPart::File(_)))
+        .then_some(&key.suffix)
 }
 /// The previous importer's recorded entry for `name`, searched across
 /// its `dependencies` / `optionalDependencies` / `devDependencies` maps
@@ -443,16 +454,19 @@ pub(super) fn previous_importer_dep<'a>(
     importer: &'a ProjectSnapshot,
     name: &PkgName,
 ) -> Option<&'a ResolvedDependencySpec> {
-    importer.dependencies
+    importer
+        .dependencies
         .as_ref()
         .and_then(|map| map.get(name))
         .or_else(|| {
-            importer.optional_dependencies
+            importer
+                .optional_dependencies
                 .as_ref()
                 .and_then(|map| map.get(name))
         })
         .or_else(|| {
-            importer.dev_dependencies
+            importer
+                .dev_dependencies
                 .as_ref()
                 .and_then(|map| map.get(name))
         })
@@ -463,10 +477,17 @@ pub(super) fn previous_importer_dep<'a>(
 /// whose `name_ver` is unset). Used to match a workspace dependency
 /// against an `update <name>` scope in [`build_importer`].
 pub(super) fn node_pkg_name(node: &DependenciesGraphNode) -> Option<String> {
-    if let Some(name_ver) = node.resolve_result.package.name_ver.as_ref() {
+    if let Some(name_ver) = node
+        .resolve_result
+        .package
+        .name_ver
+        .as_ref()
+    {
         return Some(name_ver.name.to_string());
     }
-    node.resolve_result.package.manifest
+    node.resolve_result
+        .package
+        .manifest
         .as_ref()?
         .get("name")?
         .as_str()
@@ -501,7 +522,9 @@ pub(super) fn real_name(result: &ResolveResult) -> Option<String> {
     if !reads_name_from_manifest {
         return None;
     }
-    result.package.manifest
+    result
+        .package
+        .manifest
         .as_ref()?
         .get("name")?
         .as_str()

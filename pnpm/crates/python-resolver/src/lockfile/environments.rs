@@ -71,7 +71,8 @@ impl Solved {
         let mut directories = BTreeMap::new();
         let mut vcs = BTreeMap::new();
         for (name, version) in &solution {
-            let candidate = packages.candidates
+            let candidate = packages
+                .candidates
                 .get(name)
                 .and_then(|versions| versions.get(version))
                 .ok_or_else(|| {
@@ -112,11 +113,9 @@ impl Solved {
             return serde_json::to_string(directory).into_diagnostic();
         }
         if self.direct_urls.contains_key(name) {
-            let wheel = self.wheels
-                .get(name)
-                .ok_or_else(|| {
-                    miette::miette!("direct Python source {name} pins no verified wheel")
-                })?;
+            let wheel = self.wheels.get(name).ok_or_else(|| {
+                miette::miette!("direct Python source {name} pins no verified wheel")
+            })?;
             return serde_json::to_string(wheel).into_diagnostic();
         }
         Ok(String::new())
@@ -142,7 +141,8 @@ impl Solved {
             // A declared environment names a Python minor and is resolved
             // as that minor's first release, so the patch release it ran
             // as is not something the lockfile can claim either.
-            if self.declared
+            if self
+                .declared
                 .iter()
                 .any(|key| key == "python_version")
             {
@@ -173,7 +173,9 @@ pub fn environment_marker(
         .iter()
         .filter(|(key, _)| keys.contains(key.as_str()))
         .map(|(key, value)| {
-            let value = value.as_str().expect("marker environment values are strings");
+            let value = value
+                .as_str()
+                .expect("marker environment values are strings");
             if value.contains(['\'', '"', '\n', '\r']) {
                 bail!("Python environment value cannot be represented as a lockfile marker: {key}");
             }
@@ -200,7 +202,11 @@ pub(super) fn check_environment_decides(
         for requirement in &metadata.requires_dist {
             check_decided(marker, written, &parse_requirement(requirement)?.marker)?;
         }
-        if let Some(specifiers) = metadata.requires_python.as_deref().and_then(declared_range) {
+        if let Some(specifiers) = metadata
+            .requires_python
+            .as_deref()
+            .and_then(declared_range)
+        {
             check_decided(marker, written, &interpreter_range(&specifiers))?;
         }
     }
@@ -212,14 +218,18 @@ pub(super) fn check_environment_decides(
 /// environment, so a requirement an extra brings in is read as brought
 /// in.
 fn check_decided(environment: &MarkerTree, written: &str, marker: &MarkerTree) -> Result<()> {
-    let marker = marker.clone().simplify_extras_with(|_| true);
+    let marker = marker
+        .clone()
+        .simplify_extras_with(|_| true);
     if environment.is_disjoint(&marker) || environment.is_disjoint(&marker.negate()) {
         return Ok(());
     }
     bail!(
         "the environment {written} leaves the Python marker {} undecided: \
          name the Python version in full, or lock for the interpreter running the install",
-        marker.try_to_string().unwrap_or_default(),
+        marker
+            .try_to_string()
+            .unwrap_or_default(),
     );
 }
 
@@ -274,20 +284,20 @@ fn splits_a_minor_release(
     solution: &BTreeMap<PackageName, Version>,
     environment: &MarkerEnvironment,
 ) -> bool {
-    solution
-        .iter()
-        .any(|(name, version)| {
-            metadata
-                .get(&(name.clone(), version.clone()))
-                .and_then(|metadata| metadata.requires_python.as_deref())
-                .and_then(declared_range)
-                .is_some_and(|specifiers| {
-                    !admits_every_patch_release(
-                        &specifiers,
-                        &environment.python_full_version().version,
-                    )
-                })
-        })
+    solution.iter().any(|(name, version)| {
+        metadata
+            .get(&(name.clone(), version.clone()))
+            .and_then(|metadata| metadata.requires_python.as_deref())
+            .and_then(declared_range)
+            .is_some_and(|specifiers| {
+                !admits_every_patch_release(
+                    &specifiers,
+                    &environment
+                        .python_full_version()
+                        .version,
+                )
+            })
+    })
 }
 
 /// Whether `specifiers`, which `running` satisfies, admit every patch
@@ -302,24 +312,22 @@ fn admits_every_patch_release(specifiers: &VersionSpecifiers, running: &Version)
         [release.first().copied().unwrap_or(0), release.get(1).copied().unwrap_or(0)]
     };
     let running_minor = minor(running);
-    specifiers
-        .iter()
-        .all(|specifier| {
-            if minor(specifier.version()) != running_minor {
-                return true;
-            }
-            if significant_release_segments(specifier) > 2 || falls_between_releases(specifier) {
-                return false;
-            }
-            matches!(
-                specifier.operator(),
-                Operator::GreaterThanEqual
-                    | Operator::TildeEqual
-                    | Operator::EqualStar
-                    | Operator::NotEqualStar
-                    | Operator::LessThan,
-            )
-        })
+    specifiers.iter().all(|specifier| {
+        if minor(specifier.version()) != running_minor {
+            return true;
+        }
+        if significant_release_segments(specifier) > 2 || falls_between_releases(specifier) {
+            return false;
+        }
+        matches!(
+            specifier.operator(),
+            Operator::GreaterThanEqual
+                | Operator::TildeEqual
+                | Operator::EqualStar
+                | Operator::NotEqualStar
+                | Operator::LessThan,
+        )
+    })
 }
 
 /// Whether a specifier's version falls between two releases. A post or

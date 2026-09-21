@@ -68,7 +68,9 @@ pub(super) fn hardened_install_config(
 ) -> Config {
     let mut install_config = config;
     install_config.modules_dir = environment_dir.join("node_modules");
-    install_config.virtual_store_dir = environment_dir.join("node_modules").join(".pnpm");
+    install_config.virtual_store_dir = environment_dir
+        .join("node_modules")
+        .join(".pnpm");
     install_config.enable_global_virtual_store = true;
     install_config.global_virtual_store_dir = global_virtual_store_dir;
     install_config.node_linker = NodeLinker::Isolated;
@@ -130,14 +132,23 @@ pub(super) fn managed_runtime_bin(
     name: &str,
     global_virtual_store_dir: &Path,
 ) -> Option<PathBuf> {
-    let package_dir = dunce::canonicalize(environment_dir.join("node_modules").join(name)).ok()?;
+    let package_dir = dunce::canonicalize(
+        environment_dir
+            .join("node_modules")
+            .join(name),
+    )
+    .ok()?;
     let store_dir = dunce::canonicalize(global_virtual_store_dir).ok()?;
     if !package_dir.starts_with(&store_dir) {
         return None;
     }
     let manifest: Value =
         serde_json::from_slice(&fs::read(package_dir.join("package.json")).ok()?).ok()?;
-    if manifest.get("name").and_then(Value::as_str) != Some(name) {
+    if manifest
+        .get("name")
+        .and_then(Value::as_str)
+        != Some(name)
+    {
         return None;
     }
     let bin_path = match manifest.get("bin")? {
@@ -188,7 +199,9 @@ async fn install_runtime(
         RangeSpecStyle::Patch,
         None,
         false,
-        install_config.supported_architectures.clone(),
+        install_config
+            .supported_architectures
+            .clone(),
         [DependencyGroup::Prod],
     )
     .await

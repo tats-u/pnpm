@@ -7,13 +7,8 @@ use std::fs;
 #[test]
 fn forced_install_removes_obsolete_child_links() {
     for frozen in [false, true] {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
         fs::write(
             workspace.join("package.json"),
@@ -64,11 +59,15 @@ fn forced_install_removes_obsolete_child_links() {
             );
         }
         assert!(
-            modules.join("@pnpm.e2e/foobar/package.json").is_file(),
+            modules
+                .join("@pnpm.e2e/foobar/package.json")
+                .is_file(),
             "package must remain installed",
         );
         assert!(
-            modules.join("@pnpm.e2e/foo/package.json").is_file(),
+            modules
+                .join("@pnpm.e2e/foo/package.json")
+                .is_file(),
             "declared child must remain linked",
         );
         drop((root, mock_instance));

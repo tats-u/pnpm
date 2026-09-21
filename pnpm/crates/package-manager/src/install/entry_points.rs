@@ -267,13 +267,17 @@ where
     }
 }
 pub fn apply_deploy_manifest_hook(manifest: &mut serde_json::Value) {
-    let names = deploy_workspace_dependency_names(manifest).map(str::to_owned).collect::<Vec<_>>();
+    let names = deploy_workspace_dependency_names(manifest)
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
     inject_deploy_dependencies_meta(manifest, names);
 }
 pub(crate) fn apply_deploy_manifest_hook_to_arc(
     mut manifest: Arc<serde_json::Value>,
 ) -> Arc<serde_json::Value> {
-    let names = deploy_workspace_dependency_names(&manifest).map(str::to_owned).collect::<Vec<_>>();
+    let names = deploy_workspace_dependency_names(&manifest)
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
     if names.is_empty() {
         return manifest;
     }
@@ -307,7 +311,9 @@ pub(super) fn inject_deploy_dependencies_meta(
         .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
     let Some(meta_object) = dependencies_meta.as_object_mut() else { return };
     for name in names {
-        let dependency_meta = meta_object.entry(name).or_insert(serde_json::Value::Null);
+        let dependency_meta = meta_object
+            .entry(name)
+            .or_insert(serde_json::Value::Null);
         match dependency_meta {
             serde_json::Value::Object(object) => {
                 object.insert("injected".to_owned(), serde_json::Value::Bool(true));

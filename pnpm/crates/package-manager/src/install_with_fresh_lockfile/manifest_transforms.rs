@@ -59,7 +59,9 @@ pub(super) fn build_manifest_transforms(
         ImporterTransforms::new(config, versions_overrider.clone(), deploy_manifest_hook)?;
     let effective_importer_manifests = transforms.apply_to_all(importer_manifests);
     Ok(ManifestTransforms {
-        resolved_overrides: parsed_overrides.as_deref().map(resolved_overrides_map),
+        resolved_overrides: parsed_overrides
+            .as_deref()
+            .map(resolved_overrides_map),
         package_extensions_checksum: super::compute_package_extensions_checksum(config),
         parsed_overrides,
         versions_overrider,
@@ -126,14 +128,16 @@ impl ImporterTransforms {
         deploy_manifest_hook: bool,
     ) -> Result<Self, InstallWithFreshLockfileError> {
         Ok(Self {
-            compat_package_extender: (!config.ignore_compatibility_db).then(
-                crate::compat_package_extensions::compat_package_extender,
-            ),
+            compat_package_extender: (!config.ignore_compatibility_db)
+                .then(crate::compat_package_extensions::compat_package_extender),
             package_extender: configured_package_extender(config)?,
             versions_overrider: versions_overrider.filter(|overrider| !overrider.is_empty()),
             deploy_manifest_hook,
             ignored_optional_matcher: create_matcher(
-                config.ignored_optional_dependencies.as_deref().unwrap_or_default(),
+                config
+                    .ignored_optional_dependencies
+                    .as_deref()
+                    .unwrap_or_default(),
             ),
         })
     }
@@ -173,13 +177,13 @@ impl ImporterTransforms {
             .map(|extender| {
                 Arc::new(move |manifest| extender.apply_to_arc(manifest)) as ManifestHook
             });
-        let package_extensions_hook: Option<ManifestHook> = self
-            .package_extender
-            .as_ref()
-            .map(|extender| {
-                let extender = Arc::clone(extender);
-                Arc::new(move |manifest| extender.apply_to_arc(manifest)) as ManifestHook
-            });
+        let package_extensions_hook: Option<ManifestHook> =
+            self.package_extender
+                .as_ref()
+                .map(|extender| {
+                    let extender = Arc::clone(extender);
+                    Arc::new(move |manifest| extender.apply_to_arc(manifest)) as ManifestHook
+                });
         compose_manifest_hooks(compat_package_extensions_hook, package_extensions_hook)
     }
 
@@ -197,9 +201,11 @@ impl ImporterTransforms {
     /// The deploy hook, the overrides and the `ignoredOptionalDependencies`
     /// removal, in that order.
     fn into_overrides_hook(self) -> Option<ManifestHook> {
-        let overrides_hook: Option<ManifestHook> = self.versions_overrider.map(|overrider| {
-            Arc::new(move |manifest| overrider.apply_to_arc(manifest, None)) as ManifestHook
-        });
+        let overrides_hook: Option<ManifestHook> = self
+            .versions_overrider
+            .map(|overrider| {
+                Arc::new(move |manifest| overrider.apply_to_arc(manifest, None)) as ManifestHook
+            });
         let deploy_manifest_hook: Option<ManifestHook> = self
             .deploy_manifest_hook
             .then(|| Arc::new(apply_deploy_manifest_hook_to_arc) as ManifestHook);
@@ -279,7 +285,10 @@ fn ignored_optional_names(manifest: &Value, matcher: &Matcher) -> Vec<String> {
 /// both declarations or the required one would pull it back in.
 fn remove_ignored_dependencies(manifest: &mut Value, ignored: &[String]) {
     for field in ["optionalDependencies", "dependencies"] {
-        if let Some(dependencies) = manifest.get_mut(field).and_then(Value::as_object_mut) {
+        if let Some(dependencies) = manifest
+            .get_mut(field)
+            .and_then(Value::as_object_mut)
+        {
             for name in ignored {
                 dependencies.remove(name);
             }

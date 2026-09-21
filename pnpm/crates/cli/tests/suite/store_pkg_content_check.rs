@@ -21,18 +21,15 @@ fn make_the_store_row_hold_another_package(store_dir: &Path) {
         .expect("read the row")
         .expect("the row exists");
     entry.manifest = Some(serde_json::json!({ "name": "not-is-odd", "version": "3.0.1" }));
-    index.set(&key, &entry).expect("rewrite the row");
+    index
+        .set(&key, &entry)
+        .expect("rewrite the row");
 }
 
 #[test]
 fn install_fails_when_the_store_holds_another_package() {
-    let CommandTempCwd {
-        mut pacquet,
-        workspace,
-        root: _root,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, workspace, root: _root, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .arg("add")
@@ -55,13 +52,8 @@ fn install_fails_when_the_store_holds_another_package() {
 
 #[test]
 fn strict_store_pkg_content_check_false_downgrades_the_failure_to_a_warning() {
-    let CommandTempCwd {
-        mut pacquet,
-        workspace,
-        root: _root,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, workspace, root: _root, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .arg("add")
@@ -90,5 +82,9 @@ fn strict_store_pkg_content_check_false_downgrades_the_failure_to_a_warning() {
         "{stdout}",
     );
     assert!(stdout.contains("Actual package in the store: not-is-odd@3.0.1."), "{stdout}");
-    assert!(workspace.join("node_modules/is-odd/package.json").exists());
+    assert!(
+        workspace
+            .join("node_modules/is-odd/package.json")
+            .exists()
+    );
 }

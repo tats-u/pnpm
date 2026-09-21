@@ -23,7 +23,8 @@ pub(super) fn project_dir(manifest: &PackageManifest) -> &std::path::Path {
 }
 
 pub(super) fn loaded_lockfile(state: &State) -> miette::Result<Option<&Lockfile>> {
-    state.lockfile
+    state
+        .lockfile
         .get()
         .map_err(|err| miette::Report::new(err).wrap_err("load the lockfile"))
 }
@@ -106,11 +107,19 @@ async fn outdated_for_project(
     )
     .await?;
     let dependent = DependentProject {
-        name: project.manifest
+        name: project
+            .manifest
             .value()
             .get("name")
             .and_then(|name| name.as_str())
-            .map_or_else(|| project_dir.to_string_lossy().into_owned(), str::to_owned),
+            .map_or_else(
+                || {
+                    project_dir
+                        .to_string_lossy()
+                        .into_owned()
+                },
+                str::to_owned,
+            ),
         location: project_dir.to_path_buf(),
     };
     Ok((project_outdated, dependent))
@@ -126,7 +135,8 @@ pub(super) fn recursive_project_inputs<'a>(
     let mut project_inputs = Vec::new();
     for (project_dir, node) in &selection.selected {
         let project = node.package.project;
-        let has_any_dependency = project.manifest
+        let has_any_dependency = project
+            .manifest
             .dependencies([DependencyGroup::Prod, DependencyGroup::Dev, DependencyGroup::Optional])
             .next()
             .is_some();
@@ -156,7 +166,9 @@ fn group_workspace_outdated(
             let dependency_type: &'static str = package.belongs_to.into();
             let key = format!("{}\0{}\0{}", package.package_name, package.current, dependency_type);
             if let Some(&index) = outdated_indexes.get(&key) {
-                outdated[index].dependents.push(dependent.clone());
+                outdated[index]
+                    .dependents
+                    .push(dependent.clone());
             } else {
                 outdated_indexes.insert(key, outdated.len());
                 outdated.push(OutdatedInWorkspace { package, dependents: vec![dependent.clone()] });

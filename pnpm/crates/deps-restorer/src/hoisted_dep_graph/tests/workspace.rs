@@ -36,15 +36,24 @@ fn walker_multi_importer_emits_per_importer_direct_deps() {
     let result = lockfile_to_hoisted_dep_graph(&lockfile, None, &opts).expect("walker succeeds");
 
     let modules = lockfile_dir.join("node_modules");
-    assert!(result.graph.contains_key(&modules.join("a")));
-    assert!(result.graph.contains_key(&modules.join("b")));
+    assert!(
+        result
+            .graph
+            .contains_key(&modules.join("a"))
+    );
+    assert!(
+        result
+            .graph
+            .contains_key(&modules.join("b"))
+    );
     assert_eq!(
         result.direct_dependencies_by_importer_id[Lockfile::ROOT_IMPORTER_KEY]["a"],
         modules.join("a"),
     );
     assert_eq!(result.direct_dependencies_by_importer_id["packages/foo"]["b"], modules.join("b"));
     assert!(
-        !result.graph
+        !result
+            .graph
             .values()
             .any(|node| node.alias.as_deref() == Some("packages%2Ffoo")),
     );
@@ -81,11 +90,21 @@ fn walker_multi_importer_emits_per_importer_hierarchy() {
     let result = lockfile_to_hoisted_dep_graph(&lockfile, None, &opts).expect("walker succeeds");
 
     let importer_root = lockfile_dir.join("packages/foo");
-    assert!(result.hierarchy.contains_key(&lockfile_dir), "root importer hierarchy missing");
     assert!(
-        result.hierarchy.contains_key(&importer_root),
+        result
+            .hierarchy
+            .contains_key(&lockfile_dir),
+        "root importer hierarchy missing"
+    );
+    assert!(
+        result
+            .hierarchy
+            .contains_key(&importer_root),
         "packages/foo hierarchy missing: {:?}",
-        result.hierarchy.keys().collect::<Vec<_>>(),
+        result
+            .hierarchy
+            .keys()
+            .collect::<Vec<_>>(),
     );
 }
 /// `hoist_workspace_packages: false` must NOT drop non-root
@@ -126,13 +145,37 @@ fn walker_hoist_workspace_packages_false_keeps_importer_deps() {
     };
     let result = lockfile_to_hoisted_dep_graph(&lockfile, None, &opts).expect("walker succeeds");
 
-    assert!(result.graph.contains_key(&lockfile_dir.join("node_modules").join("a")));
+    assert!(
+        result.graph.contains_key(
+            &lockfile_dir
+                .join("node_modules")
+                .join("a")
+        )
+    );
     // `b` is only used by `packages/foo`; with no conflict it hoists
     // to the root — the importer's subtree participates in the walk.
-    assert!(result.graph.contains_key(&lockfile_dir.join("node_modules").join("b")));
-    assert!(result.direct_dependencies_by_importer_id.contains_key(Lockfile::ROOT_IMPORTER_KEY));
-    assert!(result.direct_dependencies_by_importer_id.contains_key("packages/foo"));
-    assert!(result.hierarchy.contains_key(&lockfile_dir));
+    assert!(
+        result.graph.contains_key(
+            &lockfile_dir
+                .join("node_modules")
+                .join("b")
+        )
+    );
+    assert!(
+        result
+            .direct_dependencies_by_importer_id
+            .contains_key(Lockfile::ROOT_IMPORTER_KEY)
+    );
+    assert!(
+        result
+            .direct_dependencies_by_importer_id
+            .contains_key("packages/foo")
+    );
+    assert!(
+        result
+            .hierarchy
+            .contains_key(&lockfile_dir)
+    );
 }
 #[test]
 fn walker_multi_importer_version_conflict_nests_loser() {
@@ -206,19 +249,25 @@ fn walker_workspace_root_version_wins_root_slot() {
     };
     let result = lockfile_to_hoisted_dep_graph(&lockfile, None, &opts).expect("walker succeeds");
 
-    let root_webby = lockfile_dir.join("node_modules").join("webby");
+    let root_webby = lockfile_dir
+        .join("node_modules")
+        .join("webby");
     let nested_webby = lockfile_dir
         .join("packages/app")
         .join("node_modules")
         .join("webby");
 
     assert_eq!(
-        result.graph[&root_webby].package.dep_path,
+        result.graph[&root_webby]
+            .package
+            .dep_path,
         DepPath::from("webby@5.0.0".to_string()),
         "the root importer's version wins the top-level slot",
     );
     assert_eq!(
-        result.graph[&nested_webby].package.dep_path,
+        result.graph[&nested_webby]
+            .package
+            .dep_path,
         DepPath::from("webby@2.0.0".to_string()),
         "the workspace project's conflicting version nests under the project",
     );

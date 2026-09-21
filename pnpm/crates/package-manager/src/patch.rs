@@ -113,11 +113,15 @@ pub fn patch_candidates_from_lockfile(
     current_lockfile: &Lockfile,
 ) -> Result<PatchCandidateSet, PatchTargetError> {
     let parsed = parse_wanted_dependency(raw_dependency);
-    let package_name = parsed.alias
+    let package_name = parsed
+        .alias
         .as_deref()
         .or(parsed.bare_specifier.as_deref())
         .unwrap_or(raw_dependency);
-    let alias = parsed.alias.clone().unwrap_or_else(|| raw_dependency.to_string());
+    let alias = parsed
+        .alias
+        .clone()
+        .unwrap_or_else(|| raw_dependency.to_string());
     let bare_specifier = parsed.bare_specifier.clone();
 
     let versions = lockfile_candidates(current_lockfile, package_name);
@@ -152,7 +156,8 @@ pub fn patch_candidates_from_lockfile(
 fn lockfile_candidates(current_lockfile: &Lockfile, package_name: &str) -> Vec<PatchCandidate> {
     let mut versions = Vec::new();
     let mut seen = BTreeSet::new();
-    for (key, metadata) in current_lockfile.packages
+    for (key, metadata) in current_lockfile
+        .packages
         .as_ref()
         .into_iter()
         .flatten()
@@ -162,7 +167,8 @@ fn lockfile_candidates(current_lockfile: &Lockfile, package_name: &str) -> Vec<P
         if name != package_name {
             continue;
         }
-        let version = metadata.version
+        let version = metadata
+            .version
             .clone()
             .unwrap_or_else(|| package_key.suffix.version().to_string());
         let git_tarball_url = git_tarball_url(&metadata.resolution);
@@ -179,9 +185,14 @@ pub fn default_patch_target(set: &PatchCandidateSet) -> Option<PatchTarget> {
     if set.preferred_versions.len() != 1 {
         return None;
     }
-    let preferred = set.preferred_versions.first().expect("len checked");
-    let bare_specifier =
-        preferred.git_tarball_url.clone().unwrap_or_else(|| preferred.version.clone());
+    let preferred = set
+        .preferred_versions
+        .first()
+        .expect("len checked");
+    let bare_specifier = preferred
+        .git_tarball_url
+        .clone()
+        .unwrap_or_else(|| preferred.version.clone());
     Some(PatchTarget {
         alias: set.alias.clone(),
         version: preferred.version.clone(),
@@ -194,8 +205,11 @@ pub fn default_patch_target(set: &PatchCandidateSet) -> Option<PatchTarget> {
 
 impl WritePackageForPatch<'_> {
     pub async fn run<Reporter: self::Reporter>(self) -> Result<(), WritePackageForPatchError> {
-        self.http_client.set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
-        let metadata = self.current_lockfile.packages
+        self.http_client
+            .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+        let metadata = self
+            .current_lockfile
+            .packages
             .as_ref()
             .and_then(|packages| packages.get(&self.target.package_key))
             .ok_or_else(|| WritePackageForPatchError::MissingPackageMetadata {
@@ -224,15 +238,16 @@ impl WritePackageForPatch<'_> {
         let (store_index_writer, writer_task) =
             StoreIndexWriter::spawn_for(&self.config.store_dir, self.config.frozen_store);
 
-        let result = self.import_for_patch::<Reporter>(
-            &metadata.resolution,
-            &tarball_url,
-            integrity,
-            &package_id,
-            store_index,
-            &store_index_writer,
-        )
-        .await;
+        let result = self
+            .import_for_patch::<Reporter>(
+                &metadata.resolution,
+                &tarball_url,
+                integrity,
+                &package_id,
+                store_index,
+                &store_index_writer,
+            )
+            .await;
 
         shutdown_store_index_writer_for_patch(store_index_writer, writer_task).await;
         result
@@ -246,14 +261,15 @@ impl WritePackageForPatch<'_> {
         store_index: Option<pnpm_store_dir::SharedReadonlyStoreIndex>,
         store_index_writer: &Arc<StoreIndexWriter>,
     ) -> Result<(), WritePackageForPatchError> {
-        let cas_paths = self.download_for_patch::<Reporter>(
-            tarball_url,
-            integrity,
-            package_id,
-            store_index,
-            store_index_writer,
-        )
-        .await?;
+        let cas_paths = self
+            .download_for_patch::<Reporter>(
+                tarball_url,
+                integrity,
+                package_id,
+                store_index,
+                store_index_writer,
+            )
+            .await?;
         let cas_paths = git_hosted_cas_paths::<Reporter>(
             self.config,
             resolution,
@@ -298,7 +314,9 @@ impl WritePackageForPatch<'_> {
                 index: store_index,
                 index_writer: Some(Arc::clone(store_index_writer)),
                 verify_integrity: self.config.verify_store_integrity,
-                strict_pkg_content_check: self.config.strict_store_pkg_content_check,
+                strict_pkg_content_check: self
+                    .config
+                    .strict_store_pkg_content_check,
                 verified_files_cache: SharedVerifiedFilesCache::default(),
                 prefetched_cas_paths: None,
             },
@@ -392,9 +410,11 @@ async fn shutdown_store_index_writer_for_patch(
 
 fn git_tarball_url(resolution: &LockfileResolution) -> Option<String> {
     let LockfileResolution::Tarball(tarball) = resolution else { return None };
-    (tarball.is_git_hosted() || tarball.tarball.starts_with("https://pkg.pr.new/")).then(|| {
-        tarball.tarball.clone()
-    })
+    (tarball.is_git_hosted()
+        || tarball
+            .tarball
+            .starts_with("https://pkg.pr.new/"))
+    .then(|| tarball.tarball.clone())
 }
 
 fn version_satisfies(version: &str, range: &str) -> bool {

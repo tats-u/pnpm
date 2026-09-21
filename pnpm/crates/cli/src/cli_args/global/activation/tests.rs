@@ -227,8 +227,9 @@ impl FsWrite for BackupCleanupFailure {
 static BACKUP_BLOCKER_BIN_DIR: Mutex<Option<PathBuf>> = Mutex::new(None);
 
 fn arm_backup_cleanup_blocker(global_bin_dir: &Path) {
-    *BACKUP_BLOCKER_BIN_DIR.lock().unwrap_or_else(std::sync::PoisonError::into_inner) =
-        Some(global_bin_dir.to_path_buf());
+    *BACKUP_BLOCKER_BIN_DIR
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(global_bin_dir.to_path_buf());
 }
 
 /// Swap the pending backup directory for a regular file of the same
@@ -251,7 +252,9 @@ fn replace_backup_dir_with_file(global_bin_dir: &Path) -> io::Result<()> {
 
 /// Leave a file inside the pending backup directory so removing it fails.
 fn block_backup_cleanup() -> io::Result<()> {
-    let guard = BACKUP_BLOCKER_BIN_DIR.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let guard = BACKUP_BLOCKER_BIN_DIR
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let Some(global_bin_dir) = guard.as_ref() else { return Ok(()) };
     for entry in fs::read_dir(global_bin_dir)? {
         let entry = entry?;
@@ -391,7 +394,9 @@ fn the_hash_link_is_swapped_before_the_bins_are_linked() {
 fn a_retained_bin_target_that_disappears_during_activation_rolls_back() {
     let fixture = ActivationFixture::new(&["tool"]);
     let old_slot = fixture.seed_file_slot("tool", b"old tool\n", 0o751);
-    let bin_target = fixture.packages[0].location.join("bin/tool.js");
+    let bin_target = fixture.packages[0]
+        .location
+        .join("bin/tool.js");
 
     let error = activate_global_install_with_extra_bin_names::<Host>(
         &fixture.fresh_install_dir,
@@ -424,19 +429,27 @@ fn a_retained_bin_target_that_disappears_during_activation_rolls_back() {
 fn a_selected_duplicate_bin_target_that_disappears_during_activation_rolls_back() {
     let mut fixture = ActivationFixture::new(&["tool"]);
     let old_slot = fixture.seed_file_slot("tool", b"old tool\n", 0o751);
-    let winner_dir = fixture.fresh_install_dir.join("node_modules/tool");
+    let winner_dir = fixture
+        .fresh_install_dir
+        .join("node_modules/tool");
     let winner_target = winner_dir.join("bin/tool.js");
-    fs::create_dir_all(winner_target.parent().expect("winner target parent"))
-        .expect("create winning package bin directory");
+    fs::create_dir_all(
+        winner_target
+            .parent()
+            .expect("winner target parent"),
+    )
+    .expect("create winning package bin directory");
     fs::write(&winner_target, b"#!/usr/bin/env node\n").expect("write winning bin target");
-    fixture.packages.push(PackageBinSource::new(
-        winner_dir,
-        Arc::new(json!({
-            "name": "tool",
-            "version": "2.0.0",
-            "bin": { "tool": "bin/tool.js" },
-        })),
-    ));
+    fixture
+        .packages
+        .push(PackageBinSource::new(
+            winner_dir,
+            Arc::new(json!({
+                "name": "tool",
+                "version": "2.0.0",
+                "bin": { "tool": "bin/tool.js" },
+            })),
+        ));
 
     let error = activate_global_install_with_extra_bin_names::<Host>(
         &fixture.fresh_install_dir,
@@ -500,18 +513,22 @@ fn directory_removal_uses_the_current_slot_kind() {
 fn successful_activation_returns_deduped_unskipped_bins_and_removes_backup() {
     let mut fixture = ActivationFixture::new(&["tool", "skip"]);
     let skipped = fixture.seed_file_slot("skip", b"other owner\n", 0o740);
-    let duplicate_dir = fixture.fresh_install_dir.join("node_modules/duplicate");
+    let duplicate_dir = fixture
+        .fresh_install_dir
+        .join("node_modules/duplicate");
     fs::create_dir_all(duplicate_dir.join("bin")).expect("create duplicate bin directory");
     fs::write(duplicate_dir.join("bin/tool.js"), b"#!/usr/bin/env node\n")
         .expect("write duplicate bin source");
-    fixture.packages.push(PackageBinSource::new(
-        duplicate_dir,
-        Arc::new(json!({
-            "name": "duplicate",
-            "version": "1.0.0",
-            "bin": { "tool": "bin/tool.js" },
-        })),
-    ));
+    fixture
+        .packages
+        .push(PackageBinSource::new(
+            duplicate_dir,
+            Arc::new(json!({
+                "name": "duplicate",
+                "version": "1.0.0",
+                "bin": { "tool": "bin/tool.js" },
+            })),
+        ));
 
     let activated = activate_global_install::<Host>(
         &fixture.fresh_install_dir,
@@ -564,8 +581,14 @@ fn a_committed_activation_reports_a_leftover_backup_instead_of_failing() {
     .expect("a leftover backup directory must not fail a committed activation");
 
     assert_eq!(activation.activated_bins, HashSet::from(["tool".to_string()]));
-    let leftover = activation.leftover_backup.expect("the leftover backup must be reported");
-    assert!(leftover.to_string().contains("Failed to remove the global bin backup directory"));
+    let leftover = activation
+        .leftover_backup
+        .expect("the leftover backup must be reported");
+    assert!(
+        leftover
+            .to_string()
+            .contains("Failed to remove the global bin backup directory")
+    );
     assert_eq!(backup_dirs(&fixture.global_bin_dir).len(), 1);
     assert_eq!(resolved_hash_target(&fixture.hash_link), canonical(&fixture.fresh_install_dir));
 }
@@ -650,7 +673,9 @@ impl ActivationFixture {
 
     fn seed_link_or_file_slot(&self, name: &str) -> SlotState {
         let path = self.global_bin_dir.join(name);
-        let target = self.old_install_dir.join(format!("{name}.js"));
+        let target = self
+            .old_install_dir
+            .join(format!("{name}.js"));
         fs::write(&target, b"old linked target\n").expect("write old symlink target");
         #[cfg(unix)]
         {
@@ -671,7 +696,9 @@ fn global_package_with_bins(
     bins: &[&str],
 ) -> GlobalPackageBinSnapshot {
     let alias = "old-package";
-    let package_dir = install_dir.join("node_modules").join(alias);
+    let package_dir = install_dir
+        .join("node_modules")
+        .join(alias);
     fs::create_dir_all(&package_dir).expect("create installed package directory");
     let bin = bins
         .iter()
@@ -751,11 +778,15 @@ fn diagnostic_source_messages(diagnostic: &(dyn miette::Diagnostic + Send + Sync
 }
 
 fn hash_failure_guard() -> MutexGuard<'static, ()> {
-    HASH_FAILURE_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    HASH_FAILURE_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 fn backup_cleanup_guard() -> MutexGuard<'static, ()> {
-    BACKUP_CLEANUP_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    BACKUP_CLEANUP_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 #[cfg(unix)]

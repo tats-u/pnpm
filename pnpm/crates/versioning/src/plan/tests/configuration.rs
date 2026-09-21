@@ -23,7 +23,11 @@ fn a_package_matched_by_two_epics_is_a_configuration_error() {
         &AssembleReleasePlanOptions::default(),
     )
     .expect_err("plan must fail");
-    assert!(err.to_string().contains("at most one epic"), "unexpected error: {err}");
+    assert!(
+        err.to_string()
+            .contains("at most one epic"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -47,7 +51,11 @@ fn a_fixed_group_straddling_an_epic_boundary_is_a_configuration_error() {
         &AssembleReleasePlanOptions::default(),
     )
     .expect_err("plan must fail");
-    assert!(err.to_string().contains("straddles the epic"), "unexpected error: {err}");
+    assert!(
+        err.to_string()
+            .contains("straddles the epic"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -59,5 +67,9 @@ fn check_versioning_invariants_surfaces_malformed_configuration() {
     };
     let error = check_versioning_invariants(&projects, Path::new("/ws"), Some(&versioning))
         .expect_err("unknown lead must error");
-    assert!(error.to_string().contains("is not a releasable workspace project"));
+    assert!(
+        error
+            .to_string()
+            .contains("is not a releasable workspace project")
+    );
 }

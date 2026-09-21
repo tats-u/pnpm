@@ -11,10 +11,9 @@ use p256::{
 use sha2::Digest as _;
 
 fn decode_payload_json(payload_bytes: &[u8]) -> Result<ArtifactPayload, ArtifactProtocolError> {
-    serde_json::from_slice(payload_bytes)
-        .map_err(|error| {
-            ArtifactProtocolError::InvalidEnvelope(format!("payload is not valid JSON: {error}"))
-        })
+    serde_json::from_slice(payload_bytes).map_err(|error| {
+        ArtifactProtocolError::InvalidEnvelope(format!("payload is not valid JSON: {error}"))
+    })
 }
 
 impl SignedArtifactEnvelope {
@@ -26,23 +25,21 @@ impl SignedArtifactEnvelope {
         payload.validate()?;
         let key_id = key_id.into();
         validate_scalar("key id", &key_id, 256)?;
-        let payload_bytes = serde_json::to_vec(payload)
-            .map_err(|error| {
-                ArtifactProtocolError::InvalidEnvelope(format!(
-                    "payload could not be serialized: {error}",
-                ))
-            })?;
+        let payload_bytes = serde_json::to_vec(payload).map_err(|error| {
+            ArtifactProtocolError::InvalidEnvelope(format!(
+                "payload could not be serialized: {error}",
+            ))
+        })?;
         if payload_bytes.len() > MAX_SIGNED_PAYLOAD_SIZE {
             return Err(ArtifactProtocolError::InvalidEnvelope(format!(
                 "signed payload exceeds {MAX_SIGNED_PAYLOAD_SIZE} bytes",
             )));
         }
-        let private_key = SigningKey::from_pkcs8_der(private_key_pkcs8)
-            .map_err(|_| {
-                ArtifactProtocolError::InvalidEnvelope(
-                    "private key is not PKCS#8-encoded P-256 key material".to_string(),
-                )
-            })?;
+        let private_key = SigningKey::from_pkcs8_der(private_key_pkcs8).map_err(|_| {
+            ArtifactProtocolError::InvalidEnvelope(
+                "private key is not PKCS#8-encoded P-256 key material".to_string(),
+            )
+        })?;
         let signature: Signature = private_key.sign(&payload_bytes);
         Ok(Self {
             algorithm: SIGNATURE_ALGORITHM.to_string(),
@@ -150,12 +147,11 @@ impl SignedArtifactEnvelope {
                 "signature is not canonical base64".to_string(),
             ));
         }
-        let signature = Signature::from_der(&signature_bytes)
-            .map_err(|_| {
-                ArtifactProtocolError::InvalidEnvelope(
-                    "signature is not a DER-encoded P-256 signature".to_string(),
-                )
-            })?;
+        let signature = Signature::from_der(&signature_bytes).map_err(|_| {
+            ArtifactProtocolError::InvalidEnvelope(
+                "signature is not a DER-encoded P-256 signature".to_string(),
+            )
+        })?;
         if signature.to_der().as_bytes() != signature_bytes {
             return Err(ArtifactProtocolError::InvalidEnvelope(
                 "signature is not canonical DER".to_string(),

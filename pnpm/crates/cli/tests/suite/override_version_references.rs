@@ -41,7 +41,8 @@ fn write_manifest(workspace: &Path, dep_spec: &str) {
 fn lockfile_overrides(workspace: &Path) -> Vec<(String, String)> {
     let text = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read pnpm-lock.yaml");
     let lockfile: Lockfile = serde_saphyr::from_str(&text).expect("parse pnpm-lock.yaml");
-    lockfile.overrides
+    lockfile
+        .overrides
         .iter()
         .flatten()
         .map(|(selector, spec)| (selector.clone(), spec.clone()))
@@ -50,13 +51,8 @@ fn lockfile_overrides(workspace: &Path) -> Vec<(String, String)> {
 
 #[test]
 fn install_resolves_a_reference_and_a_frozen_install_accepts_the_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, "^100.0.0");
@@ -94,13 +90,8 @@ fn install_resolves_a_reference_and_a_frozen_install_accepts_the_lockfile() {
 
 #[test]
 fn install_rejects_a_reference_to_a_package_that_is_not_a_direct_dependency() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, "^100.0.0");

@@ -52,10 +52,15 @@ pub fn scaffold_template(
 ) -> Result<PathBuf, String> {
     let template_dir = template_root.join(stack.name);
     let project_dir = template_dir.join(PROJECT_DIR);
-    if reuse && project_dir.join("package.json").is_file() {
+    if reuse
+        && project_dir
+            .join("package.json")
+            .is_file()
+    {
         return Ok(project_dir);
     }
-    fs::create_dir_all(&template_dir).map_err(|error| format!("create {template_dir:?}: {error}"))?;
+    fs::create_dir_all(&template_dir)
+        .map_err(|error| format!("create {template_dir:?}: {error}"))?;
     for command in stack.scaffold {
         let mut process = sandboxed_command(pnpm);
         process
@@ -112,7 +117,9 @@ pub fn run_cell(
         return failed;
     }
 
-    let serve_spec = serve.then_some(cell.stack.serve.as_ref()).flatten();
+    let serve_spec = serve
+        .then_some(cell.stack.serve.as_ref())
+        .flatten();
     if let Some(spec) = serve_spec
         && let Some(failed) = outcome("serve", run_serve(&project_dir, spec, &log_path))
     {
@@ -134,15 +141,13 @@ fn failed_outcome(
     started: Instant,
     log_path: &Path,
 ) -> Option<Outcome> {
-    result
-        .err()
-        .map(|message| Outcome {
-            passed: false,
-            duration_secs: started.elapsed().as_secs_f64(),
-            stage,
-            message,
-            log_path: log_path.to_path_buf(),
-        })
+    result.err().map(|message| Outcome {
+        passed: false,
+        duration_secs: started.elapsed().as_secs_f64(),
+        stage,
+        message,
+        log_path: log_path.to_path_buf(),
+    })
 }
 
 fn run_install(
@@ -157,7 +162,9 @@ fn run_install(
         Binary::Pacquet => pacquet,
     };
     let mut install = sandboxed_command(install_binary);
-    install.current_dir(project_dir).arg("install");
+    install
+        .current_dir(project_dir)
+        .arg("install");
     run("install", &mut install, log_path)
 }
 
@@ -169,7 +176,8 @@ fn prepare_cell(
 ) -> Result<(), String> {
     fs::create_dir_all(cell_dir).map_err(|error| format!("create {cell_dir:?}: {error}"))?;
     if project_dir.exists() {
-        fs::remove_dir_all(project_dir).map_err(|error| format!("clean {project_dir:?}: {error}"))?;
+        fs::remove_dir_all(project_dir)
+            .map_err(|error| format!("clean {project_dir:?}: {error}"))?;
     }
     copy_tree(template_project, project_dir)?;
     write_workspace_yaml(cell_dir, project_dir, cell.layout)
@@ -275,7 +283,9 @@ fn sandboxed_command(program: &str) -> Command {
 /// `PATH` with the project's `node_modules/.bin` prepended, so locally
 /// installed binaries (next, vite, etc.) resolve ahead of anything global.
 fn bin_path(project_dir: &Path) -> Result<OsString, String> {
-    let bin_dir = project_dir.join("node_modules").join(".bin");
+    let bin_dir = project_dir
+        .join("node_modules")
+        .join(".bin");
     match std::env::var_os("PATH") {
         Some(existing) => {
             let mut entries = vec![bin_dir];
@@ -292,11 +302,14 @@ fn bin_path(project_dir: &Path) -> Result<OsString, String> {
 /// returning, whatever the outcome.
 fn run_serve(project_dir: &Path, serve: &Serve, log_path: &Path) -> Result<(), String> {
     let port = pick_free_port()?;
-    let args: Vec<String> = serve.command
+    let args: Vec<String> = serve
+        .command
         .iter()
         .map(|token| token.replace("{port}", &port.to_string()))
         .collect();
-    let (program, rest) = args.split_first().ok_or("serve command is empty")?;
+    let (program, rest) = args
+        .split_first()
+        .ok_or("serve command is empty")?;
     // Run the argv directly off the project's `.bin` instead of joining it
     // into a `sh -c` string, so tokens keep their boundaries and don't need
     // shell quoting. The spawned PID is the server itself, so it's killable.

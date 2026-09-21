@@ -30,7 +30,9 @@ async fn frozen_lockfile_install_errors_when_no_variant_matches_host() {
 
     let manifest_path = dirs.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("node", "runtime:22.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("node", "runtime:22.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -152,7 +154,9 @@ async fn frozen_lockfile_install_skips_runtime_when_skip_runtimes_set() {
 
     let manifest_path = dirs.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("node", "runtime:22.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("node", "runtime:22.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -250,7 +254,9 @@ workspace_projects_override: None
     // a broken symlink at `<dirs.modules_dir>/node` would still mean
     // the install created an entry the skip set was supposed to
     // suppress.
-    let runtime_slot = dirs.virtual_store_dir.join("node@runtime:22.0.0");
+    let runtime_slot = dirs
+        .virtual_store_dir
+        .join("node@runtime:22.0.0");
     assert!(
         std::fs::symlink_metadata(&runtime_slot).is_err(),
         "runtime slot should not be materialized under --no-runtime, got {runtime_slot:?}",
@@ -392,10 +398,15 @@ async fn frozen_lockfile_gate_rejects_under_huge_minimum_release_age() {
 
     // The gate must short-circuit before any virtual-store
     // materialization — no slot, no project-side symlink.
-    let slot = dirs.project_root.join("node_modules/.pacquet/@pnpm.e2e+hello-world-js-bin@1.0.0");
+    let slot = dirs
+        .project_root
+        .join("node_modules/.pacquet/@pnpm.e2e+hello-world-js-bin@1.0.0");
     assert!(!slot.exists(), "the gate must fail before any virtual-store materialization");
     assert!(
-        !dirs.project_root.join("node_modules/@pnpm.e2e/hello-world-js-bin").exists(),
+        !dirs
+            .project_root
+            .join("node_modules/@pnpm.e2e/hello-world-js-bin")
+            .exists(),
         "the gate must fail before any project-side symlinks are created",
     );
 
@@ -478,7 +489,9 @@ async fn prefer_frozen_install_writes_missing_current_lockfile() {
     .await
     .expect("first install should succeed");
 
-    let current_lockfile_path = dirs.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME);
+    let current_lockfile_path = dirs
+        .virtual_store_dir
+        .join(Lockfile::CURRENT_FILE_NAME);
     fs::remove_file(&current_lockfile_path).expect("remove current lockfile");
     let wanted = Lockfile::load_wanted_from_dir(&dirs.project_root)
         .expect("parse wanted lockfile")
@@ -563,7 +576,9 @@ async fn prefer_frozen_lockfile_takes_frozen_path_when_lockfile_is_fresh() {
 
     let manifest_path = dirs.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("placeholder", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("placeholder", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -658,7 +673,9 @@ async fn no_prefer_frozen_lockfile_flag_forces_fresh_resolve() {
 
     let manifest_path = dirs.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("placeholder", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("placeholder", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -776,7 +793,9 @@ async fn frozen_install_short_circuits_when_modules_and_lockfile_are_consistent(
     // requiring registry fetches — the gate fires on the eligibility
     // checks alone, materialization is never reached so the
     // (non-existent) link target doesn't matter.
-    manifest.add_dependency("sibling", "link:../sibling", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("sibling", "link:../sibling", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -842,7 +861,9 @@ async fn frozen_install_short_circuits_when_modules_and_lockfile_are_consistent(
     // modified against itself on the next `pnpm run`.
     let validated_at = std::time::SystemTime::UNIX_EPOCH + Duration::from_secs(1_700_000_000);
     pnpm_testing_utils::fs::set_mtime(
-        &dirs.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME),
+        &dirs
+            .virtual_store_dir
+            .join(Lockfile::CURRENT_FILE_NAME),
         validated_at,
     );
     pnpm_testing_utils::fs::set_mtime(manifest.path(), validated_at + Duration::from_micros(500));
@@ -908,13 +929,11 @@ async fn frozen_install_short_circuits_when_modules_and_lockfile_are_consistent(
 
     let captured = EVENTS.lock().unwrap();
     assert!(
-        captured
-            .iter()
-            .any(|event| matches!(
-                event,
-                LogEvent::Pnpm(log)
-                    if log.message == "Lockfile is up to date, resolution step is skipped"
-            )),
+        captured.iter().any(|event| matches!(
+            event,
+            LogEvent::Pnpm(log)
+                if log.message == "Lockfile is up to date, resolution step is skipped"
+        )),
         r#"the `name: "pnpm"` up-to-date log must be emitted when the install short-circuits"#,
     );
 

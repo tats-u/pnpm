@@ -34,9 +34,15 @@ pub enum ParseComVerError {
 impl FromStr for ComVer {
     type Err = ParseComVerError;
     fn from_str(text: &str) -> Result<Self, Self::Err> {
-        let (major, minor) = text.split_once('.').ok_or(ParseComVerError::MissingDot)?;
-        let major = major.parse::<u16>().map_err(ParseComVerError::InvalidMajor)?;
-        let minor = minor.parse::<u16>().map_err(ParseComVerError::InvalidMinor)?;
+        let (major, minor) = text
+            .split_once('.')
+            .ok_or(ParseComVerError::MissingDot)?;
+        let major = major
+            .parse::<u16>()
+            .map_err(ParseComVerError::InvalidMajor)?;
+        let minor = minor
+            .parse::<u16>()
+            .map_err(ParseComVerError::InvalidMinor)?;
         Ok(ComVer::new(major, minor))
     }
 }

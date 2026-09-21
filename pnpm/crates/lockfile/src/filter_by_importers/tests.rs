@@ -91,7 +91,8 @@ fn has_alias(group: Option<&crate::ResolvedDependencyMap>, alias: &str) -> bool 
 }
 
 fn snapshot_keys(lockfile: &Lockfile) -> Vec<String> {
-    let mut keys: Vec<String> = lockfile.snapshots
+    let mut keys: Vec<String> = lockfile
+        .snapshots
         .as_ref()
         .map(|snapshots| {
             snapshots
@@ -130,7 +131,10 @@ fn prunes_the_metadata_map_too() {
         )
         .expect("filter lockfile");
 
-    let packages = filtered.packages.as_ref().expect("packages survive");
+    let packages = filtered
+        .packages
+        .as_ref()
+        .expect("packages survive");
     assert!(
         !packages
             .keys()
@@ -159,7 +163,8 @@ fn an_excluded_group_is_emptied_and_its_edges_are_not_walked() {
     assert_eq!(snapshot_keys(&filtered), vec!["deep@1.0.0", "prod-dep@1.0.0"]);
     let importer = &filtered.importers["packages/app"];
     assert!(
-        importer.dev_dependencies
+        importer
+            .dev_dependencies
             .as_ref()
             .expect("group present")
             .is_empty(),
@@ -213,5 +218,10 @@ fn a_missing_dependency_is_reported_only_when_asked_for() {
     let error = lockfile
         .filter_by_importers(vec!["packages/app".to_string()], &strict)
         .expect_err("the missing snapshot is reported");
-    assert!(error.to_string().contains("prod-dep@1.0.0"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("prod-dep@1.0.0"),
+        "{error}"
+    );
 }

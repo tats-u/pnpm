@@ -39,7 +39,9 @@ impl CommandTempCwd<()> {
             .expect("find the pnpm binary")
             .with_current_dir(&workspace)
             .without_ambient_pnpm_config();
-        let pnpm = Command::new("pnpm").with_current_dir(&workspace).without_ambient_pnpm_config();
+        let pnpm = Command::new("pnpm")
+            .with_current_dir(&workspace)
+            .without_ambient_pnpm_config();
         CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info: () }
     }
 }
@@ -68,7 +70,8 @@ impl AddMockedRegistry {
     /// moves under a packument it already holds is a caching question of
     /// its own, and not what any of these tests are about.
     pub fn set_dist_tag(&self, package: &str, version: &str, tag: &str) {
-        self.mock_instance.set_dist_tag(package, version, tag);
+        self.mock_instance
+            .set_dist_tag(package, version, tag);
         if self.cache_dir.exists() {
             fs::remove_dir_all(&self.cache_dir).expect("drop the cached registry metadata");
         }
@@ -152,7 +155,9 @@ impl CommandTempCwd<()> {
         // on macOS by default). Tests that exercise GVS explicitly
         // override this — see `enable_gvs_in_workspace_yaml` in
         // `pnpm/crates/cli/tests/_utils.rs`.
-        let workspace_yaml = self.workspace.join("pnpm-workspace.yaml");
+        let workspace_yaml = self
+            .workspace
+            .join("pnpm-workspace.yaml");
         let workspace_yaml_text = text_block_fnl! {
             "storeDir: ../pacquet-store"
             "cacheDir: ../pacquet-cache"
@@ -161,13 +166,7 @@ impl CommandTempCwd<()> {
         fs::write(&workspace_yaml, workspace_yaml_text).expect("write to pnpm-workspace.yaml");
 
         let npmrc_info = AddMockedRegistry { npmrc_path, store_dir, cache_dir, mock_instance };
-        let CommandTempCwd {
-            pacquet,
-            pnpm,
-            root,
-            workspace,
-            npmrc_info: (),
-        } = self;
+        let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info: () } = self;
         CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info }
     }
 }

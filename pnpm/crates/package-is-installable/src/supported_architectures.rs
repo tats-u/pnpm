@@ -182,15 +182,11 @@ impl ArchitectureAxes {
         for os in named(self.os.as_deref(), current_os, Os::parse) {
             let libcs = self.libcs(os, current_libc);
             for architecture in &architectures {
-                platforms.extend(
-                    libcs
-                        .iter()
-                        .map(|libc| NamedPlatform {
-                            os,
-                            architecture: *architecture,
-                            libc: libc.clone(),
-                        }),
-                );
+                platforms.extend(libcs.iter().map(|libc| NamedPlatform {
+                    os,
+                    architecture: *architecture,
+                    libc: libc.clone(),
+                }));
             }
         }
         platforms
@@ -203,7 +199,8 @@ impl ArchitectureAxes {
         if os != Os::Linux {
             return vec![None];
         }
-        let values = self.libc
+        let values = self
+            .libc
             .as_deref()
             .filter(|values| !values.is_empty());
         let Some(values) = values else {

@@ -67,7 +67,8 @@ pub fn sanitize_registry_tarball_url(url: &str) -> String {
 }
 
 pub(super) fn scheme_of(url: &str) -> Option<&str> {
-    url.split_once("://").map(|(scheme, _)| scheme)
+    url.split_once("://")
+        .map(|(scheme, _)| scheme)
 }
 
 /// The nerf-darted registry prefix used to match fetches to a hosted, public,

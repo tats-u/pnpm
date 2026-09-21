@@ -46,8 +46,14 @@ fn push_bad_sections(project_issues: &PeerIssues, sections: &mut Vec<String>) {
 /// conflict that cannot be satisfied at all.
 fn push_missing_sections(project_issues: &PeerIssues, sections: &mut Vec<String>) {
     for (peer_name, issues) in &project_issues.missing {
-        let is_conflict = project_issues.conflicts.contains(peer_name);
-        if !project_issues.intersections.contains_key(peer_name) && !is_conflict {
+        let is_conflict = project_issues
+            .conflicts
+            .contains(peer_name);
+        if !project_issues
+            .intersections
+            .contains_key(peer_name)
+            && !is_conflict
+        {
             continue;
         }
         let label = if is_conflict { "✕ conflicting peer" } else { "✕ missing peer" };

@@ -70,7 +70,9 @@ pub fn extract_attachments(body: &mut Value) -> Result<Vec<PendingAttachment>, R
                 reason: "missing string field `data`".to_string(),
             });
         };
-        let declared_length = value_obj.get("length").and_then(Value::as_u64);
+        let declared_length = value_obj
+            .get("length")
+            .and_then(Value::as_u64);
         out.push(PendingAttachment { filename, data, declared_length });
     }
     Ok(out)
@@ -141,7 +143,9 @@ impl<'a> ExpectedAttachment<'a> {
             .ok_or_else(|| invalid("EINTEGRITY: dist.integrity is required".to_string()))?;
         let integrity = parse_integrity(declared_integrity)
             .map_err(|err| invalid(format!("EINTEGRITY: malformed dist.integrity: {err}")))?;
-        let shasum = dist.get("shasum").and_then(Value::as_str);
+        let shasum = dist
+            .get("shasum")
+            .and_then(Value::as_str);
         Ok(Self { filename, integrity, shasum, length })
     }
 
@@ -189,7 +193,8 @@ fn decode_and_write(
 ) -> Result<u64, RegistryError> {
     let mut checker = integrity_checker(&expected.integrity)
         .map_err(|err| expected.invalid(format!("EINTEGRITY: malformed dist.integrity: {err}")))?;
-    let mut shasum_hasher = expected.shasum
+    let mut shasum_hasher = expected
+        .shasum
         .is_some()
         .then(|| IntegrityOpts::new().algorithm(Algorithm::Sha1));
 
@@ -206,7 +211,8 @@ fn decode_and_write(
             break;
         }
         let chunk = &buf[..bytes_read];
-        file.write_all(chunk).map_err(RegistryError::Io)?;
+        file.write_all(chunk)
+            .map_err(RegistryError::Io)?;
         checker.input(chunk);
         if let Some(hasher) = shasum_hasher.as_mut() {
             hasher.input(chunk);
@@ -215,7 +221,8 @@ fn decode_and_write(
     }
 
     expected.verify(total, checker, shasum_hasher)?;
-    file.sync_all().map_err(RegistryError::Io)?;
+    file.sync_all()
+        .map_err(RegistryError::Io)?;
     Ok(total)
 }
 
@@ -225,12 +232,15 @@ fn decode_and_write(
 /// we decode and re-encode as hex for the comparison.
 fn sha1_hex_from_integrity_opts(opts: IntegrityOpts) -> String {
     let integrity = opts.result();
-    let digest_base64 = integrity.hashes
+    let digest_base64 = integrity
+        .hashes
         .first()
         .expect("ssri produces a Sha1 hash entry when requested")
         .digest
         .as_str();
-    let digest_bytes = BASE64.decode(digest_base64).expect("ssri produces valid base64 digests");
+    let digest_bytes = BASE64
+        .decode(digest_base64)
+        .expect("ssri produces valid base64 digests");
     let mut hex = String::with_capacity(digest_bytes.len() * 2);
     for byte in &digest_bytes {
         write!(hex, "{byte:02x}").expect("writing to String never fails");
@@ -282,7 +292,10 @@ pub fn merge_manifest(
     // stable across runs. Use a BTreeMap to take advantage of
     // serde_json's `preserve_order` feature — without sorting, two
     // publishes of the same package can produce different bytes.
-    if let Some(versions) = out.get_mut("versions").and_then(Value::as_object_mut) {
+    if let Some(versions) = out
+        .get_mut("versions")
+        .and_then(Value::as_object_mut)
+    {
         let sorted: BTreeMap<String, Value> = versions
             .iter()
             .map(|(k, v)| (k.clone(), v.clone()))
@@ -392,9 +405,13 @@ fn stamp_time_entries(out: &mut Map<String, Value>, now_iso: &str) {
         return;
     };
     time_obj.insert("modified".to_string(), Value::String(now_iso.to_string()));
-    time_obj.entry("created".to_string()).or_insert_with(|| Value::String(now_iso.to_string()));
+    time_obj
+        .entry("created".to_string())
+        .or_insert_with(|| Value::String(now_iso.to_string()));
     for version_id in version_ids {
-        time_obj.entry(version_id).or_insert_with(|| Value::String(now_iso.to_string()));
+        time_obj
+            .entry(version_id)
+            .or_insert_with(|| Value::String(now_iso.to_string()));
     }
 }
 
@@ -449,9 +466,15 @@ fn with_incoming_deprecation(
 pub fn merge_journaled_packument(merge: &DocumentMerge<'_>) -> Result<Option<Vec<u8>>> {
     let mut journaled: Value = serde_json::from_slice(merge.journaled)?;
     if !merge.lost_blobs.is_empty() {
-        let lost_versions = merge.lost_blobs
+        let lost_versions = merge
+            .lost_blobs
             .iter()
-            .map(|filename| merge.name.parse_tarball_name(filename).map(|(_, version)| version))
+            .map(|filename| {
+                merge
+                    .name
+                    .parse_tarball_name(filename)
+                    .map(|(_, version)| version)
+            })
             .collect::<Result<HashSet<String>>>()?;
         drop_lost_versions(&mut journaled, &lost_versions);
     }
@@ -470,7 +493,10 @@ pub fn merge_journaled_packument(merge: &DocumentMerge<'_>) -> Result<Option<Vec
 /// version before reaching this helper instead of trusting a publisher-
 /// supplied `dist.tarball` URL as the transaction identity.
 fn drop_lost_versions(journaled: &mut Value, lost: &HashSet<String>) {
-    let Some(versions) = journaled.get_mut("versions").and_then(Value::as_object_mut) else {
+    let Some(versions) = journaled
+        .get_mut("versions")
+        .and_then(Value::as_object_mut)
+    else {
         return;
     };
     let mut removed_versions = HashSet::new();
@@ -482,14 +508,20 @@ fn drop_lost_versions(journaled: &mut Value, lost: &HashSet<String>) {
         keep
     });
 
-    if let Some(tags) = journaled.get_mut("dist-tags").and_then(Value::as_object_mut) {
+    if let Some(tags) = journaled
+        .get_mut("dist-tags")
+        .and_then(Value::as_object_mut)
+    {
         tags.retain(|_, version| {
             version
                 .as_str()
                 .is_none_or(|version| !removed_versions.contains(version))
         });
     }
-    if let Some(time) = journaled.get_mut("time").and_then(Value::as_object_mut) {
+    if let Some(time) = journaled
+        .get_mut("time")
+        .and_then(Value::as_object_mut)
+    {
         time.retain(|version, _| !removed_versions.contains(version));
     }
 }
@@ -500,7 +532,9 @@ fn drop_lost_versions(journaled: &mut Value, lost: &HashSet<String>) {
 #[must_use]
 pub fn now_iso() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let since_epoch = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let since_epoch = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
     iso_from_unix_millis(since_epoch.as_millis() as i64)
 }
 

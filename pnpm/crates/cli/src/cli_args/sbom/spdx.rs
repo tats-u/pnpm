@@ -90,8 +90,14 @@ fn spdx_relationships(
 
 /// One installed package as an SPDX package.
 fn spdx_component_package(component: &SbomComponent, spdx_id: &str) -> serde_json::Value {
-    let comp_license = component.license.as_deref().unwrap_or("NOASSERTION");
-    let download_loc = component.tarball_url.as_deref().unwrap_or("NOASSERTION");
+    let comp_license = component
+        .license
+        .as_deref()
+        .unwrap_or("NOASSERTION");
+    let download_loc = component
+        .tarball_url
+        .as_deref()
+        .unwrap_or("NOASSERTION");
     let mut pkg = serde_json::json!({
         "SPDXID": spdx_id,
         "name": component.name,
@@ -131,7 +137,10 @@ fn spdx_root_package(
     root_spdx_id: &str,
     root_purpose: &str,
 ) -> serde_json::Value {
-    let license_value = result.root_license.as_deref().unwrap_or("NOASSERTION");
+    let license_value = result
+        .root_license
+        .as_deref()
+        .unwrap_or("NOASSERTION");
     let mut root_package = serde_json::json!({
         "SPDXID": root_spdx_id,
         "name": result.root_name,

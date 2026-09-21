@@ -22,18 +22,22 @@ impl ReporterState {
         };
         let key = diff_key(kind);
         let opposite_key = format!("{}{}", if entry.added { '-' } else { '+' }, entry.name);
-        if let Some(prev) = self.summary.diff
+        if let Some(prev) = self
+            .summary
+            .diff
             .get(key)
             .and_then(|b| b.get(&opposite_key))
             && prev.version == entry.version
         {
-            self.summary.diff
+            self.summary
+                .diff
                 .get_mut(key)
                 .unwrap()
                 .remove(&opposite_key);
             return;
         }
-        self.summary.diff
+        self.summary
+            .diff
             .get_mut(key)
             .unwrap()
             .insert(format!("{}{}", if entry.added { '+' } else { '-' }, entry.name), entry);
@@ -47,13 +51,18 @@ impl ReporterState {
         if !self.is_current_prefix(prefix) {
             return;
         }
-        let should_render_after_update = matches!(message, PackageManifestMessage::Updated { .. })
-            && self.summary.seen;
+        let should_render_after_update =
+            matches!(message, PackageManifestMessage::Updated { .. }) && self.summary.seen;
         {
-            let diff = self.summary.manifest_diffs.entry(prefix.clone()).or_default();
+            let diff = self
+                .summary
+                .manifest_diffs
+                .entry(prefix.clone())
+                .or_default();
             match message {
                 PackageManifestMessage::Initial { initial, .. } => {
-                    diff.initial.get_or_insert_with(|| initial.clone());
+                    diff.initial
+                        .get_or_insert_with(|| initial.clone());
                 }
                 PackageManifestMessage::Updated { updated, .. } => {
                     diff.updated = Some(updated.clone());
@@ -86,7 +95,9 @@ impl ReporterState {
         }
         self.summary.rendered = true;
         let mut slot = std::mem::take(&mut self.summary.slot);
-        self.display.frame.emit(&mut slot, msg, false);
+        self.display
+            .frame
+            .emit(&mut slot, msg, false);
         self.summary.slot = slot;
     }
 
@@ -117,7 +128,12 @@ impl ReporterState {
                     .then(u8::from(a.added).cmp(&u8::from(b.added)))
             });
             msg.push('\n');
-            msg.push_str(&self.rendering.colors.cyan_bright(&format!("{}:", kind.header())));
+            msg.push_str(
+                &self
+                    .rendering
+                    .colors
+                    .cyan_bright(&format!("{}:", kind.header())),
+            );
             msg.push('\n');
             let lines: Vec<String> = diffs
                 .iter()
@@ -134,7 +150,11 @@ impl ReporterState {
     /// hidden: the same package really installed from the registry is a
     /// change worth reporting.
     pub(super) fn is_hidden_linked(&self, pkg: &PackageDiff) -> bool {
-        pkg.from.is_some() && self.rendering.hidden_linked_pkgs.matches(&pkg.name)
+        pkg.from.is_some()
+            && self
+                .rendering
+                .hidden_linked_pkgs
+                .matches(&pkg.name)
     }
 
     pub(super) fn diff_line(&self, pkg: &PackageDiff) -> String {
@@ -160,7 +180,12 @@ impl ReporterState {
             let rel = relative(&self.rendering.cwd, from);
             let shown = if rel.is_empty() { from.clone() } else { rel };
             result.push(' ');
-            result.push_str(&self.rendering.colors.grey(&format!("<- {shown}")));
+            result.push_str(
+                &self
+                    .rendering
+                    .colors
+                    .grey(&format!("<- {shown}")),
+            );
         }
         result
     }
@@ -178,13 +203,19 @@ impl ReporterState {
         if latest == version || !is_strictly_newer(latest, version) {
             return String::new();
         }
-        format!(" {}", self.rendering.colors.grey(&format!("({latest} is available)")))
+        format!(
+            " {}",
+            self.rendering
+                .colors
+                .grey(&format!("({latest} is available)"))
+        )
     }
 }
 
 impl SummaryState {
     pub(super) fn apply_manifest_diff(&mut self) {
-        let manifest_diffs: Vec<(Value, Value)> = self.manifest_diffs
+        let manifest_diffs: Vec<(Value, Value)> = self
+            .manifest_diffs
             .values()
             .filter_map(|diff| {
                 Some((diff.initial.as_ref()?.clone(), diff.updated.as_ref()?.clone()))
@@ -204,7 +235,8 @@ impl SummaryState {
             let prop = kind.header();
             let initial_deps = manifest_dep_versions(&initial, prop);
             let updated_deps = manifest_dep_versions(&updated, prop);
-            let bucket = self.diff
+            let bucket = self
+                .diff
                 .get_mut(diff_key(kind))
                 .unwrap();
             record_missing(bucket, &initial_deps, &updated_deps, false);

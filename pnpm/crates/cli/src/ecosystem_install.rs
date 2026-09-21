@@ -57,15 +57,25 @@ pub(crate) async fn plan<Reporter: pnpm_reporter::Reporter + 'static>(
     // The workspace the npm selection reads, so a project of another
     // ecosystem is discovered where that selection would name it.
     // `lockfileDir` moves the lockfile, not the projects.
-    let workspace_root = config.workspace_dir.clone().unwrap_or_else(|| prefix.to_path_buf());
+    let workspace_root = config
+        .workspace_dir
+        .clone()
+        .unwrap_or_else(|| prefix.to_path_buf());
     let inventory = EcosystemWorkspaceInventory::new(workspace_root, config);
-    let mut plan = InstallPlan::new(config.workspace_dir.clone().unwrap_or(root));
+    let mut plan = InstallPlan::new(
+        config
+            .workspace_dir
+            .clone()
+            .unwrap_or(root),
+    );
     let mut python = PythonProjects::default();
     if config.cargo.enabled {
         plan = plan.with_task(cargo_deps::plan::<Reporter>(context.clone(), &inventory).await?);
     }
     if config.python.enabled {
-        let groups = dependencies.dependency_groups(config.optional).collect::<Vec<_>>();
+        let groups = dependencies
+            .dependency_groups(config.optional)
+            .collect::<Vec<_>>();
         let discovery = python::discover(config, &inventory).await?;
         let selected = python::selected_projects(config, prefix, &discovery, scope)?;
         python = PythonProjects {

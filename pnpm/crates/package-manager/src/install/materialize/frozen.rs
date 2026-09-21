@@ -14,14 +14,29 @@ impl<'a> MaterializationInputs<'a, '_> {
         pnpm_deps_restorer::FrozenLockfileInputs {
             wanted: scope.lockfile(),
             verified: lockfile,
-            path: self.lockfiles.verification.derived_lockfile_path.as_deref(),
+            path: self
+                .lockfiles
+                .verification
+                .derived_lockfile_path
+                .as_deref(),
             current: self.lockfiles.current,
             current_entries: LockfileEntries::of_previous_install(self.lockfiles.current),
-            resolution_verifiers: self.workspace.requested_importer_ids.map_or(
-                self.lockfiles.verification.resolution_verifiers.as_slice(),
-                |_| &[][..],
+            resolution_verifiers: self
+                .workspace
+                .requested_importer_ids
+                .map_or(
+                    self.lockfiles
+                        .verification
+                        .resolution_verifiers
+                        .as_slice(),
+                    |_| &[][..],
+                ),
+            planned_canonical_fetches: Some(
+                &self
+                    .lockfiles
+                    .verification
+                    .planned_canonical_fetches,
             ),
-            planned_canonical_fetches: Some(&self.lockfiles.verification.planned_canonical_fetches),
         }
     }
 
@@ -30,11 +45,18 @@ impl<'a> MaterializationInputs<'a, '_> {
         frozen_verification_override: Option<crate::LockfileVerificationOverride<'b>>,
     ) -> pnpm_deps_restorer::FrozenInstallSeed<'b> {
         pnpm_deps_restorer::FrozenInstallSeed {
-            early_host_detection: self.execution.early_host_detection.take(),
-            node_version: self.execution.effective_node_version.take(),
-            skipped: self.modules.modules_manifest.map(|manifest| {
-                manifest.skipped.clone()
-            }),
+            early_host_detection: self
+                .execution
+                .early_host_detection
+                .take(),
+            node_version: self
+                .execution
+                .effective_node_version
+                .take(),
+            skipped: self
+                .modules
+                .modules_manifest
+                .map(|manifest| manifest.skipped.clone()),
             lockfile_verification_override: frozen_verification_override,
         }
     }
@@ -90,12 +112,21 @@ impl<'a> MaterializationInputs<'a, '_> {
     pub(super) async fn frozen<Reporter: self::Reporter + 'static>(
         mut self,
     ) -> Result<MaterializationOutput, InstallError> {
-        let lockfile = self.lockfiles.wanted.expect("dispatch verified lockfile is present");
+        let lockfile = self
+            .lockfiles
+            .wanted
+            .expect("dispatch verified lockfile is present");
         announce_headless_install::<Reporter>(
             lockfile,
             self.modules.rebuild,
-            self.install.lockfile_policy.ignore_manifest_check
-                && !self.install.execution.mutation.is_full_install(),
+            self.install
+                .lockfile_policy
+                .ignore_manifest_check
+                && !self
+                    .install
+                    .execution
+                    .mutation
+                    .is_full_install(),
             self.execution.prefix,
         );
         let scope = self.workspace.frozen_scope(
@@ -108,10 +139,18 @@ impl<'a> MaterializationInputs<'a, '_> {
 
         let frozen_verification_override = settle_frozen_verification::<Reporter>(
             self.workspace.requested_importer_ids,
-            self.lockfiles.verification_override.take(),
+            self.lockfiles
+                .verification_override
+                .take(),
             lockfile,
-            &self.lockfiles.verification.resolution_verifiers,
-            self.lockfiles.verification.derived_lockfile_path.as_deref(),
+            &self
+                .lockfiles
+                .verification
+                .resolution_verifiers,
+            self.lockfiles
+                .verification
+                .derived_lockfile_path
+                .as_deref(),
             &self.install.context.config.cache_dir,
         )
         .await?;

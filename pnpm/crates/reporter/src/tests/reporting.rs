@@ -148,7 +148,11 @@ fn fetching_progress_event_matches_pnpm_wire_shape() {
         .expect("serialize envelope")
         .pipe_as_ref(serde_json::from_str)
         .expect("parse JSON");
-    assert!(json.get("size").is_some_and(serde_json::Value::is_null), "size must be JSON null");
+    assert!(
+        json.get("size")
+            .is_some_and(serde_json::Value::is_null),
+        "size must be JSON null"
+    );
 
     let event = LogEvent::FetchingProgress(FetchingProgressLog {
         level: LogLevel::Debug,

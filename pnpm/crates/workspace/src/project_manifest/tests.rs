@@ -18,10 +18,13 @@ fn write_yaml_manifest(dir: &std::path::Path, body: &str) {
 fn try_read_returns_manifest_when_present() {
     let tmp = TempDir::new().unwrap();
     write_manifest(tmp.path(), r#"{"name": "alpha", "version": "1.2.3"}"#);
-    let result = try_read_project_manifest(tmp.path()).unwrap().unwrap();
+    let result = try_read_project_manifest(tmp.path())
+        .unwrap()
+        .unwrap();
     assert_eq!(result.0, "package.json");
     assert_eq!(
-        result.1
+        result
+            .1
             .value()
             .get("name")
             .and_then(|v| v.as_str()),
@@ -33,10 +36,13 @@ fn try_read_returns_manifest_when_present() {
 fn try_read_returns_yaml_manifest_when_json_is_missing() {
     let tmp = TempDir::new().unwrap();
     write_yaml_manifest(tmp.path(), "name: alpha\nversion: 1.2.3\n");
-    let result = try_read_project_manifest(tmp.path()).unwrap().unwrap();
+    let result = try_read_project_manifest(tmp.path())
+        .unwrap()
+        .unwrap();
     assert_eq!(result.0, "package.yaml");
     assert_eq!(
-        result.1
+        result
+            .1
             .value()
             .get("name")
             .and_then(|v| v.as_str()),
@@ -49,10 +55,13 @@ fn try_read_prefers_json_over_yaml() {
     let tmp = TempDir::new().unwrap();
     write_manifest(tmp.path(), r#"{"name": "json", "version": "1.2.3"}"#);
     write_yaml_manifest(tmp.path(), "name: yaml\nversion: 1.2.3\n");
-    let result = try_read_project_manifest(tmp.path()).unwrap().unwrap();
+    let result = try_read_project_manifest(tmp.path())
+        .unwrap()
+        .unwrap();
     assert_eq!(result.0, "package.json");
     assert_eq!(
-        result.1
+        result
+            .1
             .value()
             .get("name")
             .and_then(|v| v.as_str()),
@@ -63,13 +72,21 @@ fn try_read_prefers_json_over_yaml() {
 #[test]
 fn try_read_returns_none_when_missing() {
     let tmp = TempDir::new().unwrap();
-    assert!(try_read_project_manifest(tmp.path()).unwrap().is_none());
+    assert!(
+        try_read_project_manifest(tmp.path())
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[test]
 fn safe_read_returns_none_when_missing() {
     let tmp = TempDir::new().unwrap();
-    assert!(safe_read_project_manifest_only(tmp.path()).unwrap().is_none());
+    assert!(
+        safe_read_project_manifest_only(tmp.path())
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[test]

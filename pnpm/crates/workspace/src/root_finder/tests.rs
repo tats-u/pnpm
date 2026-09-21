@@ -11,7 +11,12 @@ use tempfile::TempDir;
 #[test]
 fn finds_workspace_dir_at_start() {
     let tmp = TempDir::new().unwrap();
-    fs::write(tmp.path().join(WORKSPACE_MANIFEST_FILENAME), "packages:\n  - pkgs/*\n").unwrap();
+    fs::write(
+        tmp.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
+        "packages:\n  - pkgs/*\n",
+    )
+    .unwrap();
     let found = find_workspace_dir(tmp.path()).unwrap();
     assert_eq!(found.as_deref(), Some(tmp.path()));
 }
@@ -21,7 +26,12 @@ fn finds_workspace_dir_in_ancestor() {
     let tmp = TempDir::new().unwrap();
     let nested = tmp.path().join("packages").join("a");
     fs::create_dir_all(&nested).unwrap();
-    fs::write(tmp.path().join(WORKSPACE_MANIFEST_FILENAME), "packages:\n  - packages/*\n").unwrap();
+    fs::write(
+        tmp.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
+        "packages:\n  - packages/*\n",
+    )
+    .unwrap();
     let found = find_workspace_dir(&nested).unwrap();
     assert_eq!(found.as_deref(), Some(tmp.path()));
 }
@@ -57,7 +67,12 @@ fn rejects_invalid_filenames() {
 #[test]
 fn correct_filename_wins_over_misnamed_sibling() {
     let tmp = TempDir::new().unwrap();
-    fs::write(tmp.path().join(WORKSPACE_MANIFEST_FILENAME), "packages:\n  - pkgs/*\n").unwrap();
+    fs::write(
+        tmp.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
+        "packages:\n  - pkgs/*\n",
+    )
+    .unwrap();
     fs::write(tmp.path().join("pnpm-workspace.yml"), "packages: [bad]\n").unwrap();
     let found = find_workspace_dir(tmp.path()).unwrap();
     assert_eq!(found.as_deref(), Some(tmp.path()));
@@ -125,7 +140,12 @@ mod workspace_membership {
 
     fn prepare_workspace(packages: &str) -> TempDir {
         let tmp = TempDir::new().unwrap();
-        fs::write(tmp.path().join(WORKSPACE_MANIFEST_FILENAME), packages).unwrap();
+        fs::write(
+            tmp.path()
+                .join(WORKSPACE_MANIFEST_FILENAME),
+            packages,
+        )
+        .unwrap();
         for project in [".", "packages/pkg-1", "examples/example-1", "docs"] {
             let dir = tmp.path().join(project);
             fs::create_dir_all(&dir).unwrap();

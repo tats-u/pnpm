@@ -18,7 +18,8 @@ fn empty_selection_upload_has_a_summary_and_an_opaque_run_id() {
     assert_eq!(upload.summary["tasks"], serde_json::json!({}));
     assert_eq!(upload.summary["selection"]["requestedProjects"], 0);
     assert!(
-        upload.run_id
+        upload
+            .run_id
             .bytes()
             .all(|byte| byte.is_ascii_hexdigit() || byte == b'-'),
     );

@@ -69,8 +69,9 @@ impl PeerHoistDiscovery {
         let revision = workspace.tree.revision();
         if self.synced_revision != Some(revision) {
             let children_rewrites = workspace.tree.children_rewrites();
-            let stale =
-                self.synced_children_rewrites.is_some_and(|synced| synced != children_rewrites);
+            let stale = self
+                .synced_children_rewrites
+                .is_some_and(|synced| synced != children_rewrites);
             if stale || !workspace.sync_discovery_tree(&mut self.tree, &mut self.cursor) {
                 self.tree = ResolvedTree::default();
                 self.caches = PeerDiscoveryCaches::default();
@@ -159,9 +160,14 @@ fn discover_peers(
     let mut walker =
         Walker::new(tree, opts, HashMap::default(), current_provider_sources, caches, true);
     let root = RootWalk::of(&walker, parents_direct);
-    let (own_direct, provider_direct): (Vec<&DirectDep>, Vec<&DirectDep>) = walk_direct
-        .iter()
-        .partition(|dep| !walker.opts.scope.hoisted_peer_provider_node_ids.contains(&dep.node_id));
+    let (own_direct, provider_direct): (Vec<&DirectDep>, Vec<&DirectDep>) =
+        walk_direct.iter().partition(|dep| {
+            !walker
+                .opts
+                .scope
+                .hoisted_peer_provider_node_ids
+                .contains(&dep.node_id)
+        });
     let mut result = PeerDiscoveryResult::default();
     for dep in &own_direct {
         walker.remember_parent_context_if_peer_provider(
@@ -178,7 +184,11 @@ fn discover_peers(
     // walk above; only one whose position was pruned still needs the
     // root-context fallback.
     for dep in &provider_direct {
-        if walker.traversal.visited_this_call.contains(&dep.node_id) {
+        if walker
+            .traversal
+            .visited_this_call
+            .contains(&dep.node_id)
+        {
             continue;
         }
         walker.remember_parent_context_if_peer_provider(
@@ -197,10 +207,14 @@ fn discover_peers(
 impl PeerDiscoveryResult {
     fn fold(&mut self, output: NodeOutput) {
         for (peer_alias, peer_node_id) in output.auto_install_resolved_peers {
-            self.resolved_peer_providers_by_alias.insert(peer_alias, peer_node_id);
+            self.resolved_peer_providers_by_alias
+                .insert(peer_alias, peer_node_id);
         }
         if let Some(summary) = output.subtree_missing_by_pkg
-            && !self.missing_summaries.iter().any(|seen| Arc::ptr_eq(seen, &summary))
+            && !self
+                .missing_summaries
+                .iter()
+                .any(|seen| Arc::ptr_eq(seen, &summary))
         {
             self.missing_summaries.push(summary);
         }
@@ -211,20 +225,27 @@ pub(crate) fn apply_hoist_missing_scope(
     result: &mut PeerDiscoveryResult,
     scope: &HoistMissingScope,
 ) {
-    result.peer_dependency_issues.missing.retain(|peer_name, issues| {
-        let ancestor_chains = result.missing_ancestor_pkg_ids.remove(peer_name).unwrap_or_default();
-        // The issues reported for one peer come from occurrences spread
-        // through the tree, whose ancestor chains share long suffixes.
-        let mut memo = ChainSuffixMemo::default();
-        *issues = std::mem::take(issues)
-            .into_iter()
-            .zip(ancestor_chains.iter())
-            .filter_map(|(issue, ancestor_pkg_ids)| {
-                (!scope.suppresses_chain(ancestor_pkg_ids, peer_name, &mut memo)).then_some(issue)
-            })
-            .collect();
-        !issues.is_empty()
-    });
+    result
+        .peer_dependency_issues
+        .missing
+        .retain(|peer_name, issues| {
+            let ancestor_chains = result
+                .missing_ancestor_pkg_ids
+                .remove(peer_name)
+                .unwrap_or_default();
+            // The issues reported for one peer come from occurrences spread
+            // through the tree, whose ancestor chains share long suffixes.
+            let mut memo = ChainSuffixMemo::default();
+            *issues = std::mem::take(issues)
+                .into_iter()
+                .zip(ancestor_chains.iter())
+                .filter_map(|(issue, ancestor_pkg_ids)| {
+                    (!scope.suppresses_chain(ancestor_pkg_ids, peer_name, &mut memo))
+                        .then_some(issue)
+                })
+                .collect();
+            !issues.is_empty()
+        });
 }
 
 #[cfg(test)]
@@ -239,8 +260,12 @@ fn discovery_provider_sources(
             .iter()
             .map(|dep| (dep.alias.clone(), dep.node_id.clone()))
             .collect(),
-        declared_direct_dependencies: opts.scope.declared_direct_dependencies.clone(),
-        explicitly_requested_direct_dependencies: opts.scope
+        declared_direct_dependencies: opts
+            .scope
+            .declared_direct_dependencies
+            .clone(),
+        explicitly_requested_direct_dependencies: opts
+            .scope
             .explicitly_requested_direct_dependencies
             .clone(),
     }]

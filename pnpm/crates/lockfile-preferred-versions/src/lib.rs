@@ -114,7 +114,9 @@ fn add_preferred_versions_from_lockfile(
     }
 
     for (name, versions) in unique_name_versions {
-        let bucket = preferred.entry(name.clone()).or_default();
+        let bucket = preferred
+            .entry(name.clone())
+            .or_default();
         for version in versions {
             let entry = weighted_lockfile_version(bucket.get(&version), &name, &version);
             bucket.insert(version, entry);

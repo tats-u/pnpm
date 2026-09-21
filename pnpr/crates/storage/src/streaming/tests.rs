@@ -21,7 +21,10 @@ fn accepts_integrity_with_supported_hash() {
 fn rejects_integrity_without_hashes() {
     for value in ["", " \t\n "] {
         let err = parse_integrity(value).unwrap_err();
-        assert!(err.to_string().contains("no supported hashes"));
+        assert!(
+            err.to_string()
+                .contains("no supported hashes")
+        );
     }
 
     let zero_hash = Integrity { hashes: Vec::new() };
@@ -42,7 +45,9 @@ fn sha512_integrity(bytes: &[u8]) -> String {
 }
 
 async fn spawn_stalled_response() -> (String, Arc<Notify>, tokio::task::JoinHandle<()>) {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let addr = listener.local_addr().unwrap();
     let release = Arc::new(Notify::new());
     let release_for_server = Arc::clone(&release);
@@ -71,7 +76,9 @@ async fn spawn_stalled_response() -> (String, Arc<Notify>, tokio::task::JoinHand
 }
 
 async fn spawn_response(bytes: &'static [u8]) -> String {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
         let (mut socket, _) = listener.accept().await.unwrap();
@@ -85,7 +92,10 @@ async fn spawn_response(bytes: &'static [u8]) -> String {
              \r\n",
             bytes.len(),
         );
-        socket.write_all(headers.as_bytes()).await.unwrap();
+        socket
+            .write_all(headers.as_bytes())
+            .await
+            .unwrap();
         socket.write_all(bytes).await.unwrap();
         socket.flush().await.unwrap();
     });
@@ -103,7 +113,8 @@ fn blob_tmp_entries(dir: &Path) -> Vec<String> {
                         .file_name()
                         .to_string_lossy()
                         .into_owned();
-                    name.starts_with("foo-1.0.0.tgz.tmp.").then_some(name)
+                    name.starts_with("foo-1.0.0.tgz.tmp.")
+                        .then_some(name)
                 })
                 .collect::<Vec<_>>()
         })
@@ -139,8 +150,10 @@ async fn cancelling_in_flight_response_body_removes_tmp_file() {
     let storage =
         Storage::new(&HostedStoreConfig::Fs, tmp.path().join("hosted"), cache.clone()).unwrap();
     let name = CanonicalPackageName::parse("foo", pnpr_package_name::Ecosystem::Npm).unwrap();
-    let write =
-        storage.open_upstream_blob_tmp("~public/test", &name, "foo-1.0.0.tgz").await.unwrap();
+    let write = storage
+        .open_upstream_blob_tmp("~public/test", &name, "foo-1.0.0.tgz")
+        .await
+        .unwrap();
 
     let body = stream_verified_to_cache(response, write, &integrity, u64::MAX).unwrap();
     let mut chunks = body.into_data_stream();
@@ -158,7 +171,11 @@ async fn cancelling_in_flight_response_body_removes_tmp_file() {
     // `BlobWrite` is dropped and removes the tmp file.
     drop(chunks);
     assert!(blob_tmp_entries(&package_dir).is_empty());
-    assert!(!package_dir.join("foo-1.0.0.tgz").exists());
+    assert!(
+        !package_dir
+            .join("foo-1.0.0.tgz")
+            .exists()
+    );
 
     release.notify_one();
     server.await.unwrap();
@@ -175,8 +192,10 @@ async fn oversized_response_is_rejected_and_tmp_is_removed() {
     let storage =
         Storage::new(&HostedStoreConfig::Fs, tmp.path().join("hosted"), cache.clone()).unwrap();
     let name = CanonicalPackageName::parse("foo", pnpr_package_name::Ecosystem::Npm).unwrap();
-    let write =
-        storage.open_upstream_blob_tmp("~public/test", &name, "foo-1.0.0.tgz").await.unwrap();
+    let write = storage
+        .open_upstream_blob_tmp("~public/test", &name, "foo-1.0.0.tgz")
+        .await
+        .unwrap();
 
     // An upstream that declares an oversize body is rejected up front, before
     // any bytes stream, so the caller turns it into an error response.
@@ -186,7 +205,11 @@ async fn oversized_response_is_rejected_and_tmp_is_removed() {
     // The temp file the rejected writer held is removed (its `Drop`).
     let package_dir = cache.join("~public/test").join("foo");
     assert!(blob_tmp_entries(&package_dir).is_empty());
-    assert!(!package_dir.join("foo-1.0.0.tgz").exists());
+    assert!(
+        !package_dir
+            .join("foo-1.0.0.tgz")
+            .exists()
+    );
 }
 
 async fn throttled_response(url: String) -> pnpm_network::ThrottledResponse {

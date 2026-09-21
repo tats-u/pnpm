@@ -238,12 +238,7 @@ fn apply_write_msg(
         WriteMsg::Replace { key, value } => {
             pending.insert(key, value);
         }
-        WriteMsg::SideEffectsUpload {
-            key,
-            cache_key,
-            current_files,
-            response,
-        } => {
+        WriteMsg::SideEffectsUpload { key, cache_key, current_files, response } => {
             let diff = load_pending_row(index, pending, &key)
                 .and_then(|row| record_local_side_effects(row, &key, cache_key, &current_files));
             if let Some(response) = response {
@@ -252,7 +247,9 @@ fn apply_write_msg(
         }
         WriteMsg::RemoteSideEffects { key, cache_key, diff } => {
             if let Some(row) = load_pending_row(index, pending, &key) {
-                row.side_effects.get_or_insert_with(HashMap::new).insert(cache_key, diff);
+                row.side_effects
+                    .get_or_insert_with(HashMap::new)
+                    .insert(cache_key, diff);
             }
         }
         WriteMsg::QuarantineRemoteSideEffects { key, channel, envelope_digest } => {
@@ -282,14 +279,17 @@ fn record_local_side_effects(
         return None;
     }
     let diff = crate::upload::calculate_diff(&row.files, current_files);
-    row.side_effects.get_or_insert_with(HashMap::new).insert(cache_key, diff.clone());
+    row.side_effects
+        .get_or_insert_with(HashMap::new)
+        .insert(cache_key, diff.clone());
     Some(diff)
 }
 
 /// Remember a rejected remote envelope so it is not re-fetched, keeping only
 /// the most recent [`MAX_QUARANTINED_REMOTE_SIDE_EFFECTS`] per channel.
 fn quarantine_digest(row: &mut PackageFilesIndex, channel: String, envelope_digest: String) {
-    let digests = row.remote_side_effects_quarantine
+    let digests = row
+        .remote_side_effects_quarantine
         .get_or_insert_with(HashMap::new)
         .entry(channel)
         .or_default();
@@ -408,7 +408,9 @@ impl StoreIndexWriter {
 
     fn send_msg(&self, msg: WriteMsg) {
         if let Err(error) = self.tx.send(msg)
-            && self.warn_on_send_failure.swap(false, Ordering::Relaxed)
+            && self
+                .warn_on_send_failure
+                .swap(false, Ordering::Relaxed)
         {
             tracing::warn!(
                 target: "pacquet::store_index",

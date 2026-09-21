@@ -28,8 +28,10 @@ pub(super) async fn maybe_upgrade_abbreviated_meta_for_release_age<Cache: Packag
         return Ok(UpgradeOutcome { meta, upgraded: false });
     }
     let limit = release_age_upgrade_limit(ctx.metadata.fetch_locker, cache_key);
-    let _permit =
-        limit.acquire().await.expect("release-age upgrade semaphore should not be closed");
+    let _permit = limit
+        .acquire()
+        .await
+        .expect("release-age upgrade semaphore should not be closed");
     // Waiting for the permit may have handed the winner's work to us: pick up
     // whatever it left in the cache and re-run the guards before spending a
     // round trip of our own. A checksum refresh skips the cache on purpose —
@@ -39,7 +41,10 @@ pub(super) async fn maybe_upgrade_abbreviated_meta_for_release_age<Cache: Packag
     {
         meta = cached.meta;
     }
-    if ctx.metadata.fetch_locker.release_age_upgrade_was_checked(cache_key, &meta)
+    if ctx
+        .metadata
+        .fetch_locker
+        .release_age_upgrade_was_checked(cache_key, &meta)
         || meta.time.is_some()
     {
         return Ok(UpgradeOutcome { meta, upgraded: false });
@@ -70,7 +75,9 @@ pub(super) async fn maybe_upgrade_abbreviated_meta_for_release_age<Cache: Packag
         // succeed: the maturity check falls back to the warn-or-error gate
         // `minimum_release_age_ignore_missing_time` already governs.
         Ok(FetchFullMetadataOutcome::NotModified) | Err(_) => {
-            ctx.metadata.fetch_locker.mark_release_age_upgrade_checked(cache_key, &meta);
+            ctx.metadata
+                .fetch_locker
+                .mark_release_age_upgrade_checked(cache_key, &meta);
             // A `Modified` outcome is marked by the caller instead: it persists
             // the response to the mirror and may hand back a reloaded document,
             // so only the caller knows the `Arc` that ends up in the cache.
@@ -78,7 +85,9 @@ pub(super) async fn maybe_upgrade_abbreviated_meta_for_release_age<Cache: Packag
             // more complete than its abbreviated one would otherwise be
             // re-asked once per dependency edge.
             if !opts.request.dry_run {
-                ctx.metadata.meta_cache.set(cache_key.to_string(), Arc::clone(&meta));
+                ctx.metadata
+                    .meta_cache
+                    .set(cache_key.to_string(), Arc::clone(&meta));
             }
             Ok(UpgradeOutcome { meta, upgraded: false })
         }
@@ -134,13 +143,17 @@ pub(super) fn release_age_upgrade_needed<Cache: PackageMetaCache>(
     }
     let Some(cutoff) = opts.policy.published_by else { return false };
     if meta.time.is_some()
-        || ctx.metadata.fetch_locker.release_age_upgrade_was_checked(cache_key, meta)
+        || ctx
+            .metadata
+            .fetch_locker
+            .release_age_upgrade_was_checked(cache_key, meta)
     {
         return false;
     }
-    let fully_excluded = opts.policy.published_by_exclude.is_some_and(|policy| {
-        matches!(policy.matches(&spec.name), PolicyMatch::AnyVersion)
-    });
+    let fully_excluded = opts
+        .policy
+        .published_by_exclude
+        .is_some_and(|policy| matches!(policy.matches(&spec.name), PolicyMatch::AnyVersion));
     if fully_excluded {
         return false;
     }
@@ -148,7 +161,8 @@ pub(super) fn release_age_upgrade_needed<Cache: PackageMetaCache>(
     // `filter_pkg_metadata_by_publish_date`. When `modified` is missing or
     // unparsable this falls through to the upgrade — better to spend one
     // extra fetch than to silently bypass the maturity check.
-    let modified_before_cutoff = meta.modified
+    let modified_before_cutoff = meta
+        .modified
         .as_deref()
         .and_then(parse_packument_timestamp)
         .is_some_and(|modified| modified <= cutoff);
@@ -216,7 +230,8 @@ pub(super) fn release_age_upgrade_limit(
     cache_key: &str,
 ) -> Arc<Semaphore> {
     Arc::clone(
-        fetch_locker.limits
+        fetch_locker
+            .limits
             .entry(format!("{cache_key}#release-age-upgrade"))
             .or_insert_with(|| Arc::new(Semaphore::new(1)))
             .value(),

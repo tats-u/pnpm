@@ -62,20 +62,16 @@ impl FindHashArgs {
         let mut results = Vec::new();
 
         store_index.for_each_raw(|index_key, bytes| -> Result<(), FindHashError> {
-            let data = decode_find_hash_index(&bytes)
-                .map_err(|source| FindHashError::CorruptStoreIndexRow {
-                    key: index_key.clone(),
-                    source,
-                })?;
+            let data = decode_find_hash_index(&bytes).map_err(|source| {
+                FindHashError::CorruptStoreIndexRow { key: index_key.clone(), source }
+            })?;
             if !contains_hash(&data, &hash) {
                 return Ok(());
             }
 
-            let (name, version) = package_identity(&bytes)
-                .map_err(|source| FindHashError::CorruptStoreIndexRow {
-                    key: index_key.clone(),
-                    source,
-                })?;
+            let (name, version) = package_identity(&bytes).map_err(|source| {
+                FindHashError::CorruptStoreIndexRow { key: index_key.clone(), source }
+            })?;
             results.push((name, version, index_key));
             Ok(())
         })?;
@@ -115,7 +111,10 @@ fn parse_hash(mut hash: String) -> miette::Result<String> {
     if hash.contains('-') {
         return parse_sri_hash(&hash);
     }
-    if !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+    if !hash
+        .chars()
+        .all(|c| c.is_ascii_hexdigit())
+    {
         return Err(miette::miette!(
             "Invalid hash format: \"{hash}\" contains non-hexadecimal characters. \
              Expected a 128-character hex string or a sha512-base64 format."
@@ -200,8 +199,8 @@ struct FindHashSideEffectsDiff {
 }
 
 fn decode_find_hash_index(bytes: &[u8]) -> Result<FindHashPackageIndex, StoreIndexError> {
-    let plain =
-        transcode_to_plain_msgpack(bytes).map_err(|source| StoreIndexError::Transcode { source })?;
+    let plain = transcode_to_plain_msgpack(bytes)
+        .map_err(|source| StoreIndexError::Transcode { source })?;
     rmp_serde::from_slice(&plain).map_err(|source| StoreIndexError::Decode { source })
 }
 
@@ -237,7 +236,8 @@ fn contains_file_hash(files: &HashMap<String, FindHashFileInfo>, hash: &str) -> 
 
 fn package_identity(bytes: &[u8]) -> Result<(String, String), StoreIndexError> {
     let data = decode_package_files_index(bytes)?;
-    let name = data.manifest
+    let name = data
+        .manifest
         .as_ref()
         .and_then(|manifest| {
             manifest
@@ -246,7 +246,8 @@ fn package_identity(bytes: &[u8]) -> Result<(String, String), StoreIndexError> {
                 .map(std::string::ToString::to_string)
         })
         .unwrap_or_else(|| "unknown".to_string());
-    let version = data.manifest
+    let version = data
+        .manifest
         .as_ref()
         .and_then(|manifest| {
             manifest

@@ -116,7 +116,10 @@ async fn preparation_failure_settles_writers_before_restoring_metadata() {
         }
     };
     let projection = Projection::new(root.path(), "environment");
-    let resources = projection.resources.path().to_path_buf();
+    let resources = projection
+        .resources
+        .path()
+        .to_path_buf();
     let visible = projection.visible.clone();
     let error = InstallPlan::new(root.path().to_path_buf())
         .with_task(InstallTask::new(Vec::new(), async { Ok(vec![projection]) }))
@@ -137,7 +140,10 @@ async fn publishes_only_after_preparation_and_keeps_resources() {
     let root = tempfile::tempdir().unwrap();
     let projection = Projection::new(root.path(), "environment");
     let visible = projection.visible.clone();
-    let resources = projection.resources.path().to_path_buf();
+    let resources = projection
+        .resources
+        .path()
+        .to_path_buf();
     let check = {
         let visible = visible.clone();
         async move {
@@ -171,8 +177,12 @@ async fn publication_failure_restores_all_attempted_projections_and_metadata() {
     let second_visible = second.visible.clone();
     let third = Projection::new(root.path(), "third");
     let third_visible = third.visible.clone();
-    let resources =
-        [&first, &second, &third].map(|projection| projection.resources.path().to_path_buf());
+    let resources = [&first, &second, &third].map(|projection| {
+        projection
+            .resources
+            .path()
+            .to_path_buf()
+    });
     let prepare = {
         let metadata = metadata.clone();
         async move {

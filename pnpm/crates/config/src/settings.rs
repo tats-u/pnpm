@@ -1745,14 +1745,13 @@ impl Config {
     pub fn resolved_patched_dependencies(
         &self,
     ) -> Result<Option<PatchGroupRecord>, ResolvePatchedDependenciesError> {
-        if let Some(hashes) = self.patched_dependency_hashes_override.as_ref() {
-            let groups = group_patched_dependencies(
-                hashes
-                    .iter()
-                    .map(|(key, hash)| {
-                        (key.clone(), PatchInput { hash: hash.clone(), patch_file_path: None })
-                    }),
-            )?;
+        if let Some(hashes) = self
+            .patched_dependency_hashes_override
+            .as_ref()
+        {
+            let groups = group_patched_dependencies(hashes.iter().map(|(key, hash)| {
+                (key.clone(), PatchInput { hash: hash.clone(), patch_file_path: None })
+            }))?;
             return Ok((!groups.is_empty()).then_some(groups));
         }
         let (Some(workspace_dir), Some(raw)) = (&self.workspace_dir, &self.patched_dependencies)
@@ -1792,7 +1791,10 @@ impl Config {
     pub fn patched_dependency_hashes_in_config_order(
         &self,
     ) -> Result<Option<IndexMap<String, String>>, CalcPatchHashError> {
-        if let Some(hashes) = self.patched_dependency_hashes_override.as_ref() {
+        if let Some(hashes) = self
+            .patched_dependency_hashes_override
+            .as_ref()
+        {
             return Ok((!hashes.is_empty()).then(|| hashes.clone()));
         }
         let (Some(workspace_dir), Some(raw)) = (&self.workspace_dir, &self.patched_dependencies)

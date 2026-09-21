@@ -170,11 +170,18 @@ impl ReuseSeedInputs<'_> {
     /// what the resolver would read, and the seed has to be withheld for
     /// those subtrees to be resolved again.
     fn package_settings_match(&self, lockfile: &Lockfile) -> bool {
-        lockfile.package_extensions_checksum.as_deref() == self.lockfile.extensions_checksum
+        lockfile
+            .package_extensions_checksum
+            .as_deref()
+            == self.lockfile.extensions_checksum
             && lockfile.pnpmfile_checksum.as_deref() == self.lockfile.pnpmfile_checksum
             && super::super::ignored_optional_dependencies_match(
-                lockfile.ignored_optional_dependencies.as_deref(),
-                self.config.ignored_optional_dependencies.as_deref(),
+                lockfile
+                    .ignored_optional_dependencies
+                    .as_deref(),
+                self.config
+                    .ignored_optional_dependencies
+                    .as_deref(),
             )
     }
 
@@ -211,17 +218,21 @@ pub(in super::super) async fn lockfile_reuse_seed(
     use crate::fast_update_catalogs::{FastCatalogUpdate, try_fast_update_catalogs};
 
     let overrides_use_catalogs = overrides_use_catalogs(inputs.config);
-    let (catalogs_match, fast_catalog_seed) =
-        match inputs.lockfile.wanted.map_or(FastCatalogUpdate::Unchanged, |lockfile| {
+    let (catalogs_match, fast_catalog_seed) = match inputs
+        .lockfile
+        .wanted
+        .map_or(FastCatalogUpdate::Unchanged, |lockfile| {
             try_fast_update_catalogs(lockfile, inputs.catalogs, overrides_use_catalogs)
         }) {
-            FastCatalogUpdate::Unchanged => (true, None),
-            FastCatalogUpdate::Updated(lockfile) => (false, Some(*lockfile)),
-            FastCatalogUpdate::Unsupported => (false, None),
-        };
+        FastCatalogUpdate::Unchanged => (true, None),
+        FastCatalogUpdate::Updated(lockfile) => (false, Some(*lockfile)),
+        FastCatalogUpdate::Unsupported => (false, None),
+    };
 
-    let lockfile =
-        inputs.lockfile.wanted.filter(|lockfile| inputs.package_settings_match(lockfile))?;
+    let lockfile = inputs
+        .lockfile
+        .wanted
+        .filter(|lockfile| inputs.package_settings_match(lockfile))?;
     let override_settings_match = super::super::overrides_match(
         lockfile.overrides.as_ref(),
         inputs.lockfile.resolved_overrides,
@@ -275,7 +286,10 @@ pub(super) async fn reuse_or_rewrite_overrides(
             // `lockfile` is `wanted_lockfile` narrowed by the filter
             // above, so the loader's handle to it reuses the parsed
             // document verbatim.
-            None => inputs.lockfile.shared.map_or_else(|| Arc::new(lockfile.clone()), Arc::clone),
+            None => inputs
+                .lockfile
+                .shared
+                .map_or_else(|| Arc::new(lockfile.clone()), Arc::clone),
         });
     }
     if !inputs.fast_override_eligible {
@@ -283,7 +297,9 @@ pub(super) async fn reuse_or_rewrite_overrides(
     }
     let seed = try_fast_update_overrides(FastOverrideOptions {
         context: inputs.rewrite_context(
-            catalog_rewrite.as_ref().unwrap_or(lockfile),
+            catalog_rewrite
+                .as_ref()
+                .unwrap_or(lockfile),
             rewrite_manifest_hook,
         ),
         parsed_overrides: inputs.lockfile.parsed_overrides?,
@@ -293,7 +309,8 @@ pub(super) async fn reuse_or_rewrite_overrides(
     Some(Arc::new(seed))
 }
 pub(super) fn overrides_use_catalogs(config: &Config) -> bool {
-    config.overrides
+    config
+        .overrides
         .as_ref()
         .is_some_and(|overrides| {
             overrides

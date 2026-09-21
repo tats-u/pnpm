@@ -95,11 +95,13 @@ impl Resolution {
         // Only what an index offers is taken per target. A project in this
         // repository is the same directory on every environment, so it
         // stays offered rather than being seeded again for each.
-        self.packages.candidates.retain(|_, versions| {
-            versions
-                .values()
-                .all(|candidate| candidate.directory().is_some())
-        });
+        self.packages
+            .candidates
+            .retain(|_, versions| {
+                versions
+                    .values()
+                    .all(|candidate| candidate.directory().is_some())
+            });
         self.packages.direct_urls.clear();
         self.packages.rejected_sources.clear();
     }
@@ -109,22 +111,34 @@ impl Resolution {
     /// distribution.
     fn offer(&mut self, name: &PackageName, page: &CachedIndex) -> Result<()> {
         let offered = candidates_from_page(page.body.get(), &page.url, name, &self.target)?;
-        self.packages.candidates.insert(name.clone(), offered.candidates);
-        self.packages.excluded.insert(name.clone(), offered.excluded);
+        self.packages
+            .candidates
+            .insert(name.clone(), offered.candidates);
+        self.packages
+            .excluded
+            .insert(name.clone(), offered.excluded);
         Ok(())
     }
 }
 
 impl Registry<'_> {
     pub(super) async fn fetch_index(&mut self, name: &PackageName) -> Result<()> {
-        self.resolution.packages.candidates.insert(name.clone(), BTreeMap::new());
-        self.resolution.packages.excluded.insert(name.clone(), Excluded::default());
+        self.resolution
+            .packages
+            .candidates
+            .insert(name.clone(), BTreeMap::new());
+        self.resolution
+            .packages
+            .excluded
+            .insert(name.clone(), Excluded::default());
         let index = self.index.select(name.as_ref())?;
         let page = self.read_index(index, name).await?;
         if !page.missing {
             self.resolution.offer(name, &page)?;
         }
-        self.resolution.downloaded.insert(name.clone());
+        self.resolution
+            .downloaded
+            .insert(name.clone());
         if self.resolution.packages.candidates[name]
             .keys()
             .any(|version| {
@@ -133,7 +147,10 @@ impl Registry<'_> {
                     .is_some_and(|wheel| wheel.direct_url.is_some())
             })
         {
-            self.resolution.packages.metadata.retain(|(distribution, _), _| distribution != name);
+            self.resolution
+                .packages
+                .metadata
+                .retain(|(distribution, _), _| distribution != name);
         }
         Ok(())
     }
@@ -145,22 +162,33 @@ impl Registry<'_> {
         let index_url = index
             .join(&format!("{name}/"))
             .into_diagnostic()?;
-        let cache = self.config.cache_dir
+        let cache = self
+            .config
+            .cache_dir
             .join("python-index-v3")
             .join(format!("{}.json", self.index.cache_key(&index_url)));
-        let replayed = self.config.offline || self.resolution.downloaded.contains(name);
+        let replayed = self.config.offline
+            || self
+                .resolution
+                .downloaded
+                .contains(name);
         let cached = if replayed {
             read_cached_index(&cache, name).await?
         } else {
-            self.download_index(&index_url, name).await?
+            self.download_index(&index_url, name)
+                .await?
         };
         if cached.body.get().len() > MAX_INDEX_BYTES {
             bail!("Python index response for {name} exceeds {MAX_INDEX_BYTES} bytes");
         }
         if !replayed {
-            tokio::fs::create_dir_all(cache.parent().expect("cache file has a parent"))
-                .await
-                .into_diagnostic()?;
+            tokio::fs::create_dir_all(
+                cache
+                    .parent()
+                    .expect("cache file has a parent"),
+            )
+            .await
+            .into_diagnostic()?;
             let contents = serde_json::to_vec(&cached).into_diagnostic()?;
             if contents.len() > MAX_CACHE_BYTES {
                 bail!("Python index cache for {name} exceeds {MAX_CACHE_BYTES} bytes");
@@ -172,7 +200,8 @@ impl Registry<'_> {
 
     /// Fetch the Simple JSON index for `name` from the configured index.
     async fn download_index(&self, index_url: &Url, name: &PackageName) -> Result<CachedIndex> {
-        let response = self.client
+        let response = self
+            .client
             .get_limited_bytes_with_secure_auth_and_retry(
                 index_url.as_str(),
                 &self.index.auth,
@@ -190,7 +219,9 @@ impl Registry<'_> {
         name: &PackageName,
         version: &Version,
     ) -> Result<()> {
-        let wheel = self.download_wheel::<Reporter>(name, version).await?;
+        let wheel = self
+            .download_wheel::<Reporter>(name, version)
+            .await?;
         self.remember(name.clone(), version.clone(), wheel);
         Ok(())
     }
@@ -228,14 +259,22 @@ impl Registry<'_> {
                     .map(|wheel| ((name, version), wheel));
                 (position, result)
             })
-            .buffer_unordered(self.config.network_concurrency.clamp(1, 16))
+            .buffer_unordered(
+                self.config
+                    .network_concurrency
+                    .clamp(1, 16),
+            )
             .collect::<BTreeMap<_, _>>()
             .await;
-        for ((name, version), wheel) in results.into_values().collect::<Result<Vec<_>>>()? {
+        for ((name, version), wheel) in results
+            .into_values()
+            .collect::<Result<Vec<_>>>()?
+        {
             self.remember(name, version, wheel);
         }
         self.record_sources(&[])?;
-        self.fetch_vcs::<Reporter>(requirements).await?;
+        self.fetch_vcs::<Reporter>(requirements)
+            .await?;
         self.build_sdists::<Reporter>().await?;
         Ok(())
     }
@@ -243,21 +282,25 @@ impl Registry<'_> {
     /// Keep a downloaded wheel for both readers: the interpreter's full
     /// report for installing it, and the subset resolution reads.
     pub(super) fn remember(&mut self, name: PackageName, version: Version, wheel: Wheel) {
-        self.resolution.packages.metadata.insert(
-            (name.clone(), version.clone()),
-            pnpm_python_resolver::WheelMetadata {
-                name: wheel.metadata.name.clone(),
-                version: wheel.metadata.version.clone(),
-                requires_dist: wheel.metadata.requires_dist.clone(),
-                requires_python: wheel.metadata.requires_python.clone(),
-                provides_extra: wheel.metadata.provides_extra.clone(),
-            },
-        );
+        self.resolution
+            .packages
+            .metadata
+            .insert(
+                (name.clone(), version.clone()),
+                pnpm_python_resolver::WheelMetadata {
+                    name: wheel.metadata.name.clone(),
+                    version: wheel.metadata.version.clone(),
+                    requires_dist: wheel.metadata.requires_dist.clone(),
+                    requires_python: wheel.metadata.requires_python.clone(),
+                    provides_extra: wheel.metadata.provides_extra.clone(),
+                },
+            );
         self.sources.fetched.insert(
             (name.clone(), version.clone()),
             self.resolution.packages.candidates[&name][&version].clone(),
         );
-        self.wheels.insert((name, version), wheel);
+        self.wheels
+            .insert((name, version), wheel);
     }
 
     pub(super) async fn download_wheel_from_buffer<Reporter: self::Reporter + 'static>(
@@ -270,7 +313,9 @@ impl Registry<'_> {
             .wheel()
             .ok_or_else(|| miette::miette!("Python package {name} {version} is not a wheel"))?;
         validate_wheel_identity(wheel, &self.resolution.target.tags, name, version)?;
-        let files = self.ingest_wheel::<Reporter>(wheel, buffer).await?;
+        let files = self
+            .ingest_wheel::<Reporter>(wheel, buffer)
+            .await?;
         let files: BTreeMap<_, _> = files.into_iter().collect();
         let metadata = host::inspect(&self.interpreter.executable, &files).await?;
         validate_wheel_metadata(&metadata, name, version)?;
@@ -311,8 +356,16 @@ impl Registry<'_> {
             store_projection: ArchiveStoreProjection::RawArchive,
         };
         match buffer {
-            Some(buffer) => ingestion.run_with_buffer::<Reporter>(buffer).await,
-            None => ingestion.run_without_mem_cache::<Reporter>().await,
+            Some(buffer) => {
+                ingestion
+                    .run_with_buffer::<Reporter>(buffer)
+                    .await
+            }
+            None => {
+                ingestion
+                    .run_without_mem_cache::<Reporter>()
+                    .await
+            }
         }
         .into_diagnostic()
     }
@@ -322,7 +375,8 @@ impl Registry<'_> {
         name: &PackageName,
         version: &Version,
     ) -> Result<Wheel> {
-        self.download_wheel_from_buffer::<Reporter>(name, version, None).await
+        self.download_wheel_from_buffer::<Reporter>(name, version, None)
+            .await
     }
 }
 
@@ -339,19 +393,34 @@ fn validate_wheel_metadata(
     name: &PackageName,
     version: &Version,
 ) -> Result<()> {
-    if metadata.name.parse::<PackageName>().into_diagnostic()? != *name
-        || metadata.version.parse::<Version>().into_diagnostic()? != *version
+    if metadata
+        .name
+        .parse::<PackageName>()
+        .into_diagnostic()?
+        != *name
+        || metadata
+            .version
+            .parse::<Version>()
+            .into_diagnostic()?
+            != *version
     {
         bail!("Python wheel metadata identity mismatch for {name}=={version}");
     }
-    let (directory_name, directory_version) = metadata.dist_info
+    let (directory_name, directory_version) = metadata
+        .dist_info
         .strip_suffix(".dist-info")
         .and_then(|stem| stem.rsplit_once('-'))
         .ok_or_else(|| {
             miette::miette!("invalid Python dist-info directory for {name}=={version}")
         })?;
-    if directory_name.parse::<PackageName>().into_diagnostic()? != *name
-        || directory_version.parse::<Version>().into_diagnostic()? != *version
+    if directory_name
+        .parse::<PackageName>()
+        .into_diagnostic()?
+        != *name
+        || directory_version
+            .parse::<Version>()
+            .into_diagnostic()?
+            != *version
     {
         bail!("Python dist-info directory identity mismatch for {name}=={version}");
     }

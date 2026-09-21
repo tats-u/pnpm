@@ -63,9 +63,9 @@ pub fn importer_root_ids(
         .iter()
         .map(|dir| TreeNodeId::Importer(importer_id_for(lockfile_dir, dir)))
         .filter(|id| match id {
-            TreeNodeId::Importer(importer_id) => {
-                lockfile.importers.contains_key(importer_id.as_str())
-            }
+            TreeNodeId::Importer(importer_id) => lockfile
+                .importers
+                .contains_key(importer_id.as_str()),
             TreeNodeId::Package(_) => false,
         })
         .collect()
@@ -100,7 +100,11 @@ fn hierarchy_for_project(
     opts: &BuildTreeOptions<'_>,
 ) -> miette::Result<DependenciesHierarchy> {
     let importer_id = importer_id_for(opts.lockfile_dir, project_dir);
-    let Some(importer) = env.current_lockfile.importers.get(importer_id.as_str()) else {
+    let Some(importer) = env
+        .current_lockfile
+        .importers
+        .get(importer_id.as_str())
+    else {
         return Ok(DependenciesHierarchy::default());
     };
 
@@ -163,7 +167,9 @@ fn distribute_dependencies(
                 hierarchy.dev_dependencies.push(node);
             }
             Some(DependenciesField::OptionalDependencies) => {
-                hierarchy.optional_dependencies.push(node);
+                hierarchy
+                    .optional_dependencies
+                    .push(node);
             }
             None => {}
         }
@@ -305,7 +311,11 @@ fn collect_module_names(
 /// `.pnpm`, ...) and plain files never do.
 fn package_dir_name(entry: &std::fs::DirEntry) -> Option<String> {
     let name = entry.file_name().to_str()?.to_string();
-    if name.starts_with('.') || entry.file_type().is_ok_and(|file_type| file_type.is_file()) {
+    if name.starts_with('.')
+        || entry
+            .file_type()
+            .is_ok_and(|file_type| file_type.is_file())
+    {
         return None;
     }
     Some(name)
@@ -318,11 +328,21 @@ fn build_unsaved_node(name: &str, modules_dir: &Path, project_dir: &Path) -> Dep
     let entry_path = modules_dir.join(name);
     let (path, version) = if let Some(target) = resolve_link_target(&entry_path) {
         let relative = pathdiff::diff_paths(&target, project_dir).unwrap_or_else(|| target.clone());
-        let version = format!("link:{}", relative.to_string_lossy().replace('\\', "/"));
+        let version = format!(
+            "link:{}",
+            relative
+                .to_string_lossy()
+                .replace('\\', "/")
+        );
         (target.to_string_lossy().into_owned(), version)
     } else {
         let version = read_package_version(&entry_path).unwrap_or_else(|| "undefined".to_string());
-        (entry_path.to_string_lossy().into_owned(), version)
+        (
+            entry_path
+                .to_string_lossy()
+                .into_owned(),
+            version,
+        )
     };
     DependencyNode {
         alias: name.to_string(),

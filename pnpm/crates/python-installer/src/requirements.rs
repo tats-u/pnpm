@@ -23,7 +23,10 @@ pub(super) fn read(path: &Path, root: &Path) -> Result<Vec<String>> {
         requirements: BTreeSet::new(),
     };
     parser.read_file(path)?;
-    Ok(parser.requirements.into_iter().collect())
+    Ok(parser
+        .requirements
+        .into_iter()
+        .collect())
 }
 
 struct Parser {
@@ -101,13 +104,15 @@ impl Parser {
                 .parent()
                 .expect("requirements file has a parent")
                 .join(include);
-            self.read_file(&included).wrap_err_with(context)?;
+            self.read_file(&included)
+                .wrap_err_with(context)?;
         } else {
             if entry.starts_with('-') {
                 bail!("unsupported Python requirements directive at {}: {entry}", context());
             }
             let requirement = parse_requirement(entry).wrap_err_with(context)?;
-            self.requirements.insert(requirement.to_string());
+            self.requirements
+                .insert(requirement.to_string());
             if self.requirements.len() > MAX_REQUIREMENTS {
                 bail!("Python requirement count limit exceeded at {}", context());
             }
@@ -125,7 +130,9 @@ fn read_regular_file(path: &Path) -> Result<String> {
     {
         bail!("Python requirements must be a regular file: {}", path.display());
     }
-    let file = fs::File::open(path).into_diagnostic().wrap_err_with(context)?;
+    let file = fs::File::open(path)
+        .into_diagnostic()
+        .wrap_err_with(context)?;
     if !file
         .metadata()
         .into_diagnostic()?

@@ -179,12 +179,17 @@ async fn router_not_found_does_not_fall_through_to_public() {
 
     let tmp = TempDir::new().unwrap();
     let mut config = config_for("http://127.0.0.1:1", tmp.path().to_path_buf());
-    let mut corp_upstream = config.routing.upstreams
+    let mut corp_upstream = config
+        .routing
+        .upstreams
         .get("npmjs")
         .expect("default `npmjs` upstream")
         .clone();
     corp_upstream.url = corp.url();
-    config.routing.upstreams.insert("corp".to_string(), corp_upstream);
+    config
+        .routing
+        .upstreams
+        .insert("corp".to_string(), corp_upstream);
     let graph = vec![
         (
             "corp".to_string(),
@@ -244,12 +249,17 @@ async fn router_unavailable_source_errors_not_404() {
     let tmp = TempDir::new().unwrap();
     // Point `corp` at a closed port so every fetch is a transport failure.
     let mut config = config_for("http://127.0.0.1:1", tmp.path().to_path_buf());
-    let mut corp_upstream = config.routing.upstreams
+    let mut corp_upstream = config
+        .routing
+        .upstreams
         .get("npmjs")
         .expect("default `npmjs` upstream")
         .clone();
     corp_upstream.url = "http://127.0.0.1:1".to_string();
-    config.routing.upstreams.insert("corp".to_string(), corp_upstream);
+    config
+        .routing
+        .upstreams
+        .insert("corp".to_string(), corp_upstream);
     let graph = vec![
         (
             "corp".to_string(),
@@ -333,7 +343,9 @@ async fn building_the_server_rejects_a_name_shared_by_two_registry_kinds() {
     // Upstream serving config under a name the graph declares as hosted.
     let mut config = config_for("http://127.0.0.1:1", tmp.path().to_path_buf());
     config.routing.registries = Registries::new(
-        vec![("npmjs".to_string(), Registry::Hosted { patterns: vec![] })].into_iter().collect(),
+        vec![("npmjs".to_string(), Registry::Hosted { patterns: vec![] })]
+            .into_iter()
+            .collect(),
         None,
     );
     let err = pnpr::try_router(config).expect_err("an upstream/hosted name collision must fail");
@@ -341,7 +353,10 @@ async fn building_the_server_rejects_a_name_shared_by_two_registry_kinds() {
 
     // A hosted serving row under a name the graph declares as a router.
     let mut config = config_for("http://127.0.0.1:1", tmp.path().to_path_buf());
-    config.routing.hosted.insert("corp".to_string(), hosted_with_access("corp", "$all"));
+    config
+        .routing
+        .hosted
+        .insert("corp".to_string(), hosted_with_access("corp", "$all"));
     config.routing.registries = Registries::new(
         vec![("corp".to_string(), Registry::Router { sources: vec!["npmjs".to_string()] })]
             .into_iter()
@@ -696,7 +711,11 @@ async fn same_named_registries_keep_ecosystem_access_and_defaults_separate() {
     let tmp = TempDir::new().unwrap();
     let config = registry_groups::grouped_config(tmp.path(), "alice");
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
     for authenticated in [false, true] {
         let directory = read_registry_directory(&app, authenticated.then_some(&token)).await;

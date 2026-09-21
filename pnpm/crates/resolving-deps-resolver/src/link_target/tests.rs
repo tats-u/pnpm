@@ -19,7 +19,9 @@ fn rel_space_matches_absolute_space() {
         assert_eq!(rel, Path::new(importer));
         let anchor = ImporterAnchor::new(&project_dir, lockfile_dir);
         for target in ["packages/lib", "packages/group/other", "tools"] {
-            let via_rel = anchor.target_relative_to_importer(target).expect("clean target renders");
+            let via_rel = anchor
+                .target_relative_to_importer(target)
+                .expect("clean target renders");
             let via_abs = pathdiff::diff_paths(lockfile_dir.join(target), &project_dir)
                 .expect("diff")
                 .display()

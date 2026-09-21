@@ -15,14 +15,17 @@ pub(super) async fn serve_org_packages(
     registry: Option<&str>,
     raw_scope: &str,
 ) -> Response {
-    let scope = raw_scope.strip_prefix('@').unwrap_or(raw_scope);
+    let scope = raw_scope
+        .strip_prefix('@')
+        .unwrap_or(raw_scope);
     if CanonicalPackageName::parse(&format!("@{scope}/package"), pnpr_package_name::Ecosystem::Npm)
         .is_err()
     {
         return not_found();
     }
-    let Some(registry) =
-        registry.map(str::to_string).or_else(|| default_registry_target(state, Ecosystem::Npm))
+    let Some(registry) = registry
+        .map(str::to_string)
+        .or_else(|| default_registry_target(state, Ecosystem::Npm))
     else {
         return not_found();
     };
@@ -72,7 +75,13 @@ pub(super) async fn add_hosted_org_packages(
     scan: OrgScan<'_>,
     packages: &mut Map<String, Value>,
 ) -> Result<(), RegistryError> {
-    let Some(hosted) = state.inner.config.routing.hosted.get(scan.source) else {
+    let Some(hosted) = state
+        .inner
+        .config
+        .routing
+        .hosted
+        .get(scan.source)
+    else {
         return Ok(());
     };
     if !hosted.rules.any_access_admits(identity) {
@@ -117,20 +126,35 @@ pub(super) async fn add_upstream_org_packages(
     scope: &str,
     packages: &mut Map<String, Value>,
 ) -> Result<(), RegistryError> {
-    let Some(config) = state.inner.config.routing.upstreams.get(scan.source) else {
+    let Some(config) = state
+        .inner
+        .config
+        .routing
+        .upstreams
+        .get(scan.source)
+    else {
         return Ok(());
     };
     if !config.search
-        || config.access
+        || config
+            .access
             .as_ref()
             .is_some_and(|access| !access.allows(identity))
     {
         return Ok(());
     }
-    let Some(upstream) = state.inner.proxy.upstreams.get(scan.source) else {
+    let Some(upstream) = state
+        .inner
+        .proxy
+        .upstreams
+        .get(scan.source)
+    else {
         return Ok(());
     };
-    let upstream_packages = match upstream.fetch_org_packages(scope).await? {
+    let upstream_packages = match upstream
+        .fetch_org_packages(scope)
+        .await?
+    {
         FetchOutcome::Ok(packages) => packages,
         FetchOutcome::NotFound => return Ok(()),
     };
@@ -139,7 +163,9 @@ pub(super) async fn add_upstream_org_packages(
         if !upstream_org_package_is_visible(state, identity, &scan, &resolved, &name) {
             continue;
         }
-        packages.entry(name).or_insert_with(|| Value::String("read".to_string()));
+        packages
+            .entry(name)
+            .or_insert_with(|| Value::String("read".to_string()));
     }
     Ok(())
 }
@@ -195,10 +221,20 @@ pub(super) fn team_registry<'a>(
     let RegistrySource::Hosted(source) = resolve_registry_source(state, &target, &probe) else {
         return Err(RegistryError::NotFound);
     };
-    let Some(hosted) = state.inner.config.routing.hosted.get(&source) else {
+    let Some(hosted) = state
+        .inner
+        .config
+        .routing
+        .hosted
+        .get(&source)
+    else {
         return Err(RegistryError::NotFound);
     };
-    if !hosted.rules.default_access().allows(identity) {
+    if !hosted
+        .rules
+        .default_access()
+        .allows(identity)
+    {
         return Err(RegistryError::NotFound);
     }
     Ok(hosted)
@@ -217,7 +253,8 @@ pub(super) fn get_org_teams(
         Ok(hosted) => hosted,
         Err(err) => return err.into_response(),
     };
-    let teams: Vec<Value> = hosted.teams
+    let teams: Vec<Value> = hosted
+        .teams
         .keys()
         .map(|name| json!({ "name": name }))
         .collect();

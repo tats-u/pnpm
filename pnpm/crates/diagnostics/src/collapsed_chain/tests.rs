@@ -150,7 +150,12 @@ fn the_head_keeps_its_diagnostic_code() {
 
     let collapsed = Collapsed::new(&wrapped);
 
-    assert_eq!(collapsed.code().map(|code| code.to_string()), Some("ERR_PNPM_LEAF".to_string()));
+    assert_eq!(
+        collapsed
+            .code()
+            .map(|code| code.to_string()),
+        Some("ERR_PNPM_LEAF".to_string())
+    );
 }
 
 /// A wrapper that offers its inner error as a *diagnostic* source.

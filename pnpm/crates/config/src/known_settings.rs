@@ -174,7 +174,12 @@ pub fn annotate_unknown_setting(key: &str) -> String {
     {
         return format!(r#""{key}" (a {version} setting)"#);
     }
-    match did_you_mean(&camel, known_setting_keys_sorted().iter().map(String::as_str)) {
+    match did_you_mean(
+        &camel,
+        known_setting_keys_sorted()
+            .iter()
+            .map(String::as_str),
+    ) {
         Some(suggestion) => format!(r#""{key}" (did you mean "{suggestion}"?)"#),
         None => format!(r#""{key}""#),
     }
@@ -190,15 +195,25 @@ fn did_you_mean<'a>(input: &str, candidates: impl IntoIterator<Item = &'a str>) 
     let mut best: Option<(&str, f64)> = None;
     for candidate in candidates {
         candidate_chars.clear();
-        candidate_chars.extend(candidate.chars().flat_map(char::to_lowercase));
-        let max_len = input_chars.len().max(candidate_chars.len());
+        candidate_chars.extend(
+            candidate
+                .chars()
+                .flat_map(char::to_lowercase),
+        );
+        let max_len = input_chars
+            .len()
+            .max(candidate_chars.len());
         if max_len == 0 {
             continue;
         }
         // The distance is at least the length difference, so a candidate whose
         // length alone puts it past the threshold cannot clear it, and the
         // matrix does not have to be filled to find that out.
-        if input_chars.len().abs_diff(candidate_chars.len()) > max_len * 3 / 5 {
+        if input_chars
+            .len()
+            .abs_diff(candidate_chars.len())
+            > max_len * 3 / 5
+        {
             continue;
         }
         let distance = rows.levenshtein(&input_chars, &candidate_chars);
@@ -232,7 +247,11 @@ impl LevenshteinRows {
                 let substitution = self.previous[column] + usize::from(left_char != right_char);
                 let insertion = self.current[column] + 1;
                 let deletion = self.previous[column + 1] + 1;
-                self.current.push(substitution.min(insertion).min(deletion));
+                self.current.push(
+                    substitution
+                        .min(insertion)
+                        .min(deletion),
+                );
             }
             std::mem::swap(&mut self.previous, &mut self.current);
         }

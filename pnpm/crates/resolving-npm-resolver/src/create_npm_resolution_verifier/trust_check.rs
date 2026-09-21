@@ -14,13 +14,20 @@ impl NpmResolutionVerifier {
         let recorded_every_unconditional_rule =
             ["tarballUrlBinding", "revisionHistoryBinding", "integrityRequired"]
                 .into_iter()
-                .all(|flag| cached_policy.get(flag).and_then(JsonValue::as_bool) == Some(true));
+                .all(|flag| {
+                    cached_policy
+                        .get(flag)
+                        .and_then(JsonValue::as_bool)
+                        == Some(true)
+                });
         if !recorded_every_unconditional_rule {
             return false;
         }
 
         if cached_policy.get("namedRegistriesRouting")
-            != self.policy_snapshot.get("namedRegistriesRouting")
+            != self
+                .policy_snapshot
+                .get("namedRegistriesRouting")
         {
             return false;
         }
@@ -36,7 +43,10 @@ impl NpmResolutionVerifier {
         name: &PkgName,
         version: &str,
     ) -> Option<ResolutionVerification> {
-        let meta = match self.fetch_full_meta_for_trust(registry, name).await {
+        let meta = match self
+            .fetch_full_meta_for_trust(registry, name)
+            .await
+        {
             Ok(meta) => meta,
             // A transport failure propagates the registry's own fetch error so
             // the install aborts with it rather than folding it into a policy

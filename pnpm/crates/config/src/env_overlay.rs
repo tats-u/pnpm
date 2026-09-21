@@ -60,11 +60,10 @@ fn parse_json<Target: DeserializeOwned>(value: &str) -> Option<Target> {
 /// raw env var value isn't valid JSON on its own but becomes valid
 /// once quoted.
 fn parse_json_or_string<Target: DeserializeOwned>(value: &str) -> Option<Target> {
-    parse_json(value)
-        .or_else(|| {
-            let quoted = serde_json::to_string(value).ok()?;
-            parse_json(&quoted)
-        })
+    parse_json(value).or_else(|| {
+        let quoted = serde_json::to_string(value).ok()?;
+        parse_json(&quoted)
+    })
 }
 
 /// Parse a `hoist_pattern` / `public_hoist_pattern` env var into the

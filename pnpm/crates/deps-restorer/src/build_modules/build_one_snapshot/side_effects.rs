@@ -26,14 +26,20 @@ pub(super) fn side_effects_cache_key(
     snapshot_key: &PackageKey,
     candidate: &BuildCandidate<'_>,
 ) -> Option<String> {
-    let (graph, engine) = context.progress.dep_graph.zip(context.cache.engine_name)?;
+    let (graph, engine) = context
+        .progress
+        .dep_graph
+        .zip(context.cache.engine_name)?;
     // Poison-recover: `calc_dep_state` mutates the cache by
     // inserting one entry per recursive walk node, each
     // insert atomic from `HashMap`'s POV. A panic mid-walk
     // leaves the map in a usable state — the worst case is
     // an unfinished sub-walk that the next caller will redo.
-    let mut cache_guard =
-        context.progress.deps_state_cache.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut cache_guard = context
+        .progress
+        .deps_state_cache
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     Some(pnpm_graph_hasher::calc_dep_state(
         graph,
         &mut cache_guard,
@@ -42,7 +48,9 @@ pub(super) fn side_effects_cache_key(
             engine_name: engine,
             // `None` for unpatched snapshots leaves the
             // `;patch=...` segment off the cache key entirely.
-            patch_file_hash: candidate.patch.map(|patch| patch.hash.as_str()),
+            patch_file_hash: candidate
+                .patch
+                .map(|patch| patch.hash.as_str()),
             // The deps-graph hash is included only when scripts
             // will run. A patched-only snapshot leaves it off so
             // the cache key stays stable across dep-graph changes
@@ -106,7 +114,10 @@ pub(super) fn satisfy_from_side_effects_cache<Reporter: self::Reporter>(
     }
     // The overlay carries the patched / built contents, so it has to reach
     // every hoisted copy for the same reason patch application does.
-    context.progress.slot_mutations.store(true, Ordering::Relaxed);
+    context
+        .progress
+        .slot_mutations
+        .store(true, Ordering::Relaxed);
     for pkg_dir in context.pkg_roots().all(snapshot_key) {
         // No slot to materialize into (skipped / never linked) — nothing for
         // the build phase to do either.
@@ -220,9 +231,10 @@ pub(super) fn upload_side_effects_cache(
     };
     let Some(metadata) = packages.get(upload.metadata_key) else { return };
     let publishes_remotely = upload.has_side_effects
-        && context.cache.publisher.is_some_and(|publisher| {
-            publisher.can_publish(upload.metadata_key, metadata)
-        });
+        && context
+            .cache
+            .publisher
+            .is_some_and(|publisher| publisher.can_publish(upload.metadata_key, metadata));
     if !context.cache.write && !publishes_remotely {
         return;
     }
@@ -277,7 +289,9 @@ pub(super) fn upload_and_publish(
             snapshot_key,
             metadata,
             graph,
-            upload.patch.map(|patch| patch.hash.as_str()),
+            upload
+                .patch
+                .map(|patch| patch.hash.as_str()),
             diff,
             store,
         )

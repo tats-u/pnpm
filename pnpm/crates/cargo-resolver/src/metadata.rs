@@ -6,13 +6,16 @@ use miette::{IntoDiagnostic, Result, WrapErr};
 use std::collections::BTreeMap;
 
 pub(crate) fn parse_metadata(metadata: &str) -> Result<CargoMetadata> {
-    serde_json::from_str(metadata).into_diagnostic().wrap_err("parse cargo metadata")
+    serde_json::from_str(metadata)
+        .into_diagnostic()
+        .wrap_err("parse cargo metadata")
 }
 
 /// Git sources declared by the packages in a Cargo metadata document.
 /// The metadata need not contain a resolved dependency graph.
 pub fn git_dependency_sources(metadata: &str) -> Result<Vec<cargo_lock::SourceId>> {
-    parse_metadata(metadata)?.packages
+    parse_metadata(metadata)?
+        .packages
         .into_iter()
         .flat_map(|package| package.dependencies)
         .filter_map(|dependency| dependency.source)
@@ -46,8 +49,9 @@ const DEPENDENCY_KEYS: [&str; 8] =
 /// so a document that leaves the machine — to a pnpr server resolving on the
 /// client's behalf — carries the dependency graph alone.
 pub fn resolve_inputs(metadata: &str) -> Result<String> {
-    let document: serde_json::Value =
-        serde_json::from_str(metadata).into_diagnostic().wrap_err("parse cargo metadata")?;
+    let document: serde_json::Value = serde_json::from_str(metadata)
+        .into_diagnostic()
+        .wrap_err("parse cargo metadata")?;
     let packages = document
         .get("packages")
         .and_then(serde_json::Value::as_array)
@@ -86,7 +90,9 @@ pub fn resolve_inputs(metadata: &str) -> Result<String> {
 
 fn reduce_package(package: &serde_json::Value, ids: &BTreeMap<&str, String>) -> serde_json::Value {
     let mut reduced = retained_keys(package, &PACKAGE_KEYS);
-    if let Some(id) = package.get("id").and_then(serde_json::Value::as_str)
+    if let Some(id) = package
+        .get("id")
+        .and_then(serde_json::Value::as_str)
         && let Some(position) = ids.get(id)
     {
         reduced.insert("id".to_string(), position.as_str().into());
@@ -118,9 +124,14 @@ fn retained_keys(
 }
 
 pub(crate) fn root_dependencies(metadata: &CargoMetadata) -> Result<Vec<RegistryDependency>> {
-    metadata.packages
+    metadata
+        .packages
         .iter()
-        .filter(|package| metadata.workspace_members.contains(&package.id))
+        .filter(|package| {
+            metadata
+                .workspace_members
+                .contains(&package.id)
+        })
         .map(locked_metadata_dependencies)
         .collect::<Result<Vec<_>>>()
         .map(|dependencies| {
@@ -135,17 +146,22 @@ pub(crate) fn root_dependencies(metadata: &CargoMetadata) -> Result<Vec<Registry
 pub(crate) fn locked_metadata_dependencies(
     package: &MetadataPackage,
 ) -> Result<Vec<RegistryDependency>> {
-    let dependencies = package.dependencies
+    let dependencies = package
+        .dependencies
         .iter()
         .map(|dependency| RegistryDependency {
-            alias: dependency.rename.clone().unwrap_or_else(|| dependency.name.clone()),
+            alias: dependency
+                .rename
+                .clone()
+                .unwrap_or_else(|| dependency.name.clone()),
             name: dependency.name.clone(),
             requirement: dependency.req.clone(),
             kind: dependency.kind,
             registry: dependency.source.clone(),
             optional: dependency.optional,
             default_features: dependency.uses_default_features,
-            features: dependency.features
+            features: dependency
+                .features
                 .iter()
                 .cloned()
                 .collect(),
@@ -156,7 +172,8 @@ pub(crate) fn locked_metadata_dependencies(
         &package.features,
         &FeatureSelection {
             default_features: true,
-            features: package.features
+            features: package
+                .features
                 .keys()
                 .cloned()
                 .collect(),

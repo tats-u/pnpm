@@ -50,7 +50,9 @@ fn directory_deps_get_a_slot_per_project() {
     // the hash directory's parent. Compared as a component rather than a
     // substring: the separator is native, `\` on Windows.
     assert_eq!(
-        in_project_a.parent().and_then(Path::file_name),
+        in_project_a
+            .parent()
+            .and_then(Path::file_name),
         Some(OsStr::new("directory")),
         "directory deps take the anchored version segment; got {in_project_a:?}",
     );
@@ -62,7 +64,9 @@ fn directory_deps_get_a_slot_per_project() {
 /// is the only thing that can tell two slots apart.
 #[test]
 fn link_deps_resolving_to_one_directory_share_a_slot_across_projects() {
-    let key: PackageKey = "react-dom@18.3.1(react@shared)".parse().unwrap();
+    let key: PackageKey = "react-dom@18.3.1(react@shared)"
+        .parse()
+        .unwrap();
     let mut snapshots = HashMap::new();
     // Both projects sit one level under `/home/user`, so `../shared`
     // resolves to `/home/user/shared` from either.

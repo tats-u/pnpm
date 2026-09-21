@@ -83,7 +83,9 @@ fn descend_for_set<'a>(
 }
 
 fn descend_array(current: &mut Value, index: usize, needs_array: bool) -> &mut Value {
-    let arr = current.as_array_mut().expect("the caller checked the value is an array");
+    let arr = current
+        .as_array_mut()
+        .expect("the caller checked the value is an array");
     if index >= arr.len() {
         arr.resize(index.saturating_add(1), Value::Null);
     }
@@ -97,11 +99,17 @@ fn descend_object<'a>(current: &'a mut Value, key: &str, needs_array: bool) -> &
     if !current.is_object() {
         *current = Value::Object(Map::new());
     }
-    let obj = current.as_object_mut().expect("current was just made an object");
-    if !obj.get(key).is_some_and(|entry| container_matches(entry, needs_array)) {
+    let obj = current
+        .as_object_mut()
+        .expect("current was just made an object");
+    if !obj
+        .get(key)
+        .is_some_and(|entry| container_matches(entry, needs_array))
+    {
         obj.insert(key.to_owned(), empty_container(needs_array));
     }
-    obj.get_mut(key).expect("the entry was just inserted")
+    obj.get_mut(key)
+        .expect("the entry was just inserted")
 }
 
 /// Write the value at the path's last segment.
@@ -133,7 +141,9 @@ fn place_at_index(current: &mut Value, index: usize, value: Value) {
     if !current.is_array() {
         *current = Value::Array(Vec::new());
     }
-    let arr = current.as_array_mut().expect("current was just made an array");
+    let arr = current
+        .as_array_mut()
+        .expect("current was just made an array");
     if index >= arr.len() {
         arr.resize(index.saturating_add(1), Value::Null);
     }
@@ -193,7 +203,9 @@ fn descend_for_delete<'a>(
         Segment::Index(idx) => {
             let index = validate_index(*idx)?;
             if current.is_array() {
-                let arr = current.as_array_mut().expect("the value is an array");
+                let arr = current
+                    .as_array_mut()
+                    .expect("the value is an array");
                 return Ok(arr.get_mut(index));
             }
             if !current.is_object() {
@@ -214,7 +226,9 @@ fn remove_value(current: &mut Value, last: &Segment) -> miette::Result<bool> {
         Segment::Index(idx) => {
             let index = validate_index(*idx)?;
             if current.is_array() {
-                let arr = current.as_array_mut().expect("the value is an array");
+                let arr = current
+                    .as_array_mut()
+                    .expect("the value is an array");
                 if index >= arr.len() {
                     return Ok(false);
                 }

@@ -182,7 +182,10 @@ impl SccPass {
 
     pub(super) fn close_scc(&mut self, root: usize) {
         loop {
-            let member = self.tarjan_stack.pop().expect("Tarjan stack holds the open SCC");
+            let member = self
+                .tarjan_stack
+                .pop()
+                .expect("Tarjan stack holds the open SCC");
             self.on_stack[member] = false;
             self.scc_of_index[member] = self.next_scc;
             if member == root {

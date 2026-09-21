@@ -22,7 +22,9 @@ use super::{
 /// `workspace:../xerox` resolves to a sibling at `<temp>/xerox`.
 fn workspace_fixture() -> (TempDir, std::path::PathBuf) {
     let temp = TempDir::new().expect("tempdir");
-    let project = temp.path().join("workspace-protocol-package");
+    let project = temp
+        .path()
+        .join("workspace-protocol-package");
     let modules = project.join("node_modules");
     fs::create_dir_all(&modules).unwrap();
 

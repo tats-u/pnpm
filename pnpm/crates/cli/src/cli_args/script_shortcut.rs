@@ -45,7 +45,8 @@ impl ScriptShortcutArgs {
         config: &pnpm_config::Config,
         reporter: ReporterType,
     ) -> miette::Result<()> {
-        self.into_run_args(script_name, if_present).run(dir, config, reporter)
+        self.into_run_args(script_name, if_present)
+            .run(dir, config, reporter)
     }
 }
 

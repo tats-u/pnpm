@@ -73,7 +73,9 @@ pub struct LibsqlAuth {
 
 impl std::fmt::Debug for LibsqlAuth {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.debug_struct("LibsqlAuth").finish_non_exhaustive()
+        formatter
+            .debug_struct("LibsqlAuth")
+            .finish_non_exhaustive()
     }
 }
 
@@ -90,14 +92,17 @@ impl LibsqlAuth {
     /// primary — always fresh, but a network round-trip on the auth hot
     /// path.
     pub async fn connect(settings: &LibsqlSettings, max_users: MaxUsers) -> Result<Self> {
-        let auth_token = settings.auth_token.clone().unwrap_or_default();
+        let auth_token = settings
+            .auth_token
+            .clone()
+            .unwrap_or_default();
         let db = match &settings.replica_path {
             Some(path) => {
                 let mut builder =
                     Builder::new_remote_replica(path, settings.url.clone(), auth_token);
-                let interval = settings.sync_interval_secs.unwrap_or(
-                    LibsqlSettings::DEFAULT_SYNC_INTERVAL_SECS,
-                );
+                let interval = settings
+                    .sync_interval_secs
+                    .unwrap_or(LibsqlSettings::DEFAULT_SYNC_INTERVAL_SECS);
                 if interval > 0 {
                     builder = builder.sync_interval(Duration::from_secs(interval));
                 }
@@ -134,11 +139,10 @@ impl LibsqlAuth {
     /// user exists.
     async fn stored_hash(&self, username: &str) -> Result<Option<String>> {
         with_auth_timeout::<_, RegistryError>(self.timeout, async {
-            let mut rows = self.conn.query(
-                "SELECT bcrypt_hash FROM users WHERE username = ?1",
-                params![username],
-            )
-            .await?;
+            let mut rows = self
+                .conn
+                .query("SELECT bcrypt_hash FROM users WHERE username = ?1", params![username])
+                .await?;
             match rows.next().await? {
                 Some(row) => Ok(Some(row.get::<String>(0)?)),
                 None => Ok(None),
@@ -151,7 +155,10 @@ impl LibsqlAuth {
     /// registration cap, never on the hot path.
     async fn user_count(&self) -> Result<u64> {
         with_auth_timeout::<_, RegistryError>(self.timeout, async {
-            let mut rows = self.conn.query("SELECT COUNT(*) FROM users", ()).await?;
+            let mut rows = self
+                .conn
+                .query("SELECT COUNT(*) FROM users", ())
+                .await?;
             let Some(row) = rows.next().await? else {
                 return Err(missing_count_row());
             };
@@ -190,16 +197,21 @@ impl LibsqlAuth {
         // Brand-new user. The cheap pre-check avoids the (expensive) hash
         // when the cap is already full; the insert below re-checks the
         // cap atomically so it holds even under a concurrent burst.
-        self.check_registration_allowed().await?;
+        self.check_registration_allowed()
+            .await?;
 
-        let hash =
-            hash.get_or_try_init(|| hash_bcrypt(password.to_string(), DEFAULT_BCRYPT_COST)).await?;
+        let hash = hash
+            .get_or_try_init(|| hash_bcrypt(password.to_string(), DEFAULT_BCRYPT_COST))
+            .await?;
         if matches!(self.max_users, MaxUsers::Unlimited) {
-            return self.insert_uncapped_user(username, password, hash).await;
+            return self
+                .insert_uncapped_user(username, password, hash)
+                .await;
         }
 
         let _registration_guard = self.registration_lock.lock().await;
-        self.insert_capped_user(username, password, hash).await
+        self.insert_capped_user(username, password, hash)
+            .await
     }
 
     /// Whether a new user may register at all, judged before the bcrypt cost
@@ -222,15 +234,18 @@ impl LibsqlAuth {
         password: &str,
         hash: &str,
     ) -> Result<(UpsertOutcome, String)> {
-        let inserted = self.conn.execute(
-            "INSERT INTO users (username, bcrypt_hash) VALUES (?1, ?2)",
-            params![username, hash],
-        )
-        .await;
+        let inserted = self
+            .conn
+            .execute(
+                "INSERT INTO users (username, bcrypt_hash) VALUES (?1, ?2)",
+                params![username, hash],
+            )
+            .await;
         match inserted {
             Ok(_) => Ok((UpsertOutcome::Created, username.to_string())),
             Err(err) if is_unique_violation(&err) => {
-                self.login_after_lost_insert(username, password).await
+                self.login_after_lost_insert(username, password)
+                    .await
             }
             Err(err) => Err(err.into()),
         }
@@ -246,7 +261,10 @@ impl LibsqlAuth {
     ) -> Result<(UpsertOutcome, String)> {
         let mut can_retry_after_reconcile = true;
         loop {
-            let tx = self.conn.transaction_with_behavior(TransactionBehavior::Immediate).await?;
+            let tx = self
+                .conn
+                .transaction_with_behavior(TransactionBehavior::Immediate)
+                .await?;
             // The counter can overcount after an interrupted write; reconcile it
             // once before believing the cap is full.
             let Some(tx) = self.claim_cap_slot(tx).await? else {
@@ -255,13 +273,16 @@ impl LibsqlAuth {
                 {
                     continue;
                 }
-                return self.reject_over_cap(username, password).await;
+                return self
+                    .reject_over_cap(username, password)
+                    .await;
             };
-            let inserted = tx.execute(
-                "INSERT INTO users (username, bcrypt_hash) VALUES (?1, ?2)",
-                params![username, hash],
-            )
-            .await;
+            let inserted = tx
+                .execute(
+                    "INSERT INTO users (username, bcrypt_hash) VALUES (?1, ?2)",
+                    params![username, hash],
+                )
+                .await;
             match inserted {
                 Ok(_) => {
                     tx.commit().await?;
@@ -269,7 +290,9 @@ impl LibsqlAuth {
                 }
                 Err(err) if is_unique_violation(&err) => {
                     tx.rollback().await?;
-                    return self.login_after_lost_insert(username, password).await;
+                    return self
+                        .login_after_lost_insert(username, password)
+                        .await;
                 }
                 Err(err) => return Err(err.into()),
             }
@@ -323,28 +346,30 @@ impl LibsqlAuth {
 #[async_trait]
 impl TokenBackend for LibsqlAuth {
     async fn issue(&self, username: &str) -> Result<String> {
-        let nonce = self.counter.fetch_add(1, Ordering::Relaxed);
+        let nonce = self
+            .counter
+            .fetch_add(1, Ordering::Relaxed);
         let raw = mint_token(&self.secret, nonce, username);
         let token_hash = sha256_hex(raw.as_bytes());
         let now = unix_seconds() as i64;
-        self.conn.execute(
-            "INSERT INTO tokens
+        self.conn
+            .execute(
+                "INSERT INTO tokens
                  (token_hash, username, created_at, last_used_at, readonly, cidr_whitelist)
              VALUES (?1, ?2, ?3, ?3, 0, '[]')",
-            params![token_hash, username, now],
-        )
-        .await?;
+                params![token_hash, username, now],
+            )
+            .await?;
         Ok(raw)
     }
 
     async fn lookup(&self, raw: &str) -> Result<Option<String>> {
         let token_hash = sha256_hex(raw.as_bytes());
         with_auth_timeout::<_, RegistryError>(self.timeout, async {
-            let mut rows = self.conn.query(
-                "SELECT username FROM tokens WHERE token_hash = ?1",
-                params![token_hash],
-            )
-            .await?;
+            let mut rows = self
+                .conn
+                .query("SELECT username FROM tokens WHERE token_hash = ?1", params![token_hash])
+                .await?;
             match rows.next().await? {
                 Some(row) => Ok(Some(row.get::<String>(0)?)),
                 None => Ok(None),
@@ -356,7 +381,10 @@ impl TokenBackend for LibsqlAuth {
     async fn find_by_key(&self, key: &str) -> Result<Option<TokenRecord>> {
         let query = format!("SELECT {TOKEN_COLUMNS} FROM tokens WHERE token_hash = ?1");
         with_auth_timeout::<_, RegistryError>(self.timeout, async {
-            let mut rows = self.conn.query(&query, params![key]).await?;
+            let mut rows = self
+                .conn
+                .query(&query, params![key])
+                .await?;
             match rows.next().await? {
                 Some(row) => Ok(Some(row_to_keyed_record(&row)?.1)),
                 None => Ok(None),
@@ -368,7 +396,10 @@ impl TokenBackend for LibsqlAuth {
     async fn list_for_user(&self, username: &str) -> Result<Vec<(String, TokenRecord)>> {
         let query = format!("SELECT {TOKEN_COLUMNS} FROM tokens WHERE username = ?1");
         with_auth_timeout::<_, RegistryError>(self.timeout, async {
-            let mut rows = self.conn.query(&query, params![username]).await?;
+            let mut rows = self
+                .conn
+                .query(&query, params![username])
+                .await?;
             let mut out = Vec::new();
             while let Some(row) = rows.next().await? {
                 out.push(row_to_keyed_record(&row)?);
@@ -382,7 +413,9 @@ impl TokenBackend for LibsqlAuth {
         let Some(record) = self.find_by_key(key).await? else {
             return Ok(None);
         };
-        self.conn.execute("DELETE FROM tokens WHERE token_hash = ?1", params![key]).await?;
+        self.conn
+            .execute("DELETE FROM tokens WHERE token_hash = ?1", params![key])
+            .await?;
         Ok(Some(record))
     }
 }
@@ -396,8 +429,8 @@ fn row_to_keyed_record(row: &Row) -> Result<(String, TokenRecord)> {
     let last_used_at: i64 = row.get(3)?;
     let readonly: i64 = row.get(4)?;
     let cidr_json: String = row.get(5)?;
-    let cidr_whitelist: Vec<String> = serde_json::from_str(&cidr_json)
-        .map_err(|err| RegistryError::Internal {
+    let cidr_whitelist: Vec<String> =
+        serde_json::from_str(&cidr_json).map_err(|err| RegistryError::Internal {
             reason: format!("token {token_hash} has an unreadable cidr_whitelist: {err}"),
         })?;
     Ok((

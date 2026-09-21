@@ -100,10 +100,9 @@ fn missing_or_cyclic_included_groups_are_still_errors() {
     for (entry, error) in
         [("missing", "unknown Python dependency group"), ("dev", "cyclic Python dependency group")]
     {
-        let manifest = Manifest::parse(&PROJECT.replace(
-            "dev = ['pytest']",
-            &format!("dev = [{{include-group = '{entry}'}}]"),
-        ))
+        let manifest = Manifest::parse(
+            &PROJECT.replace("dev = ['pytest']", &format!("dev = [{{include-group = '{entry}'}}]")),
+        )
         .unwrap();
         let result = manifest
             .requirements(&Config::new(), DependencySelection::ALL)

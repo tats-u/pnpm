@@ -12,7 +12,9 @@ pub(super) fn match_package(
     name: &str,
     version: &str,
 ) -> SearchMatch {
-    let matched = opts.search.matches(name, name, version, Some(node_id));
+    let matched = opts
+        .search
+        .matches(name, name, version, Some(node_id));
     if matched.is_match() {
         return matched;
     }
@@ -21,7 +23,10 @@ pub(super) fn match_package(
         .into_iter()
         .flatten()
         .filter(|edge| edge.alias != name)
-        .map(|edge| opts.search.matches(&edge.alias, name, version, Some(node_id)))
+        .map(|edge| {
+            opts.search
+                .matches(&edge.alias, name, version, Some(node_id))
+        })
         .find(SearchMatch::is_match)
         .unwrap_or(matched)
 }
@@ -80,7 +85,8 @@ pub fn resolve_package_nodes(
 }
 
 pub(super) fn has_snapshot(ctx: &WalkCtx<'_>, dep_path: &PkgNameVerPeer) -> bool {
-    ctx.lockfile.snapshots
+    ctx.lockfile
+        .snapshots
         .as_ref()
         .is_some_and(|snapshots| snapshots.contains_key(dep_path))
 }
@@ -90,7 +96,8 @@ pub(super) fn has_snapshot(ctx: &WalkCtx<'_>, dep_path: &PkgNameVerPeer) -> bool
 /// version encoded in the depPath.
 #[must_use]
 pub fn name_ver_from_dep_path(lockfile: &Lockfile, dep_path: &PkgNameVerPeer) -> (String, String) {
-    let version = lockfile.packages
+    let version = lockfile
+        .packages
         .as_ref()
         .and_then(|packages| packages.get(&dep_path.without_peer()))
         .and_then(|metadata| metadata.version.clone())

@@ -203,13 +203,25 @@ impl AccessArgs {
         let (action, rest) = parse_access_action(&first, second, params)?;
 
         match action {
-            "list_packages" => list_packages(&context, &rest).await.map(Some),
-            "list_collaborators" => list_collaborators(&context, &rest).await.map(Some),
-            "get_status" => get_status(&context, &rest).await.map(Some),
-            "set_status" => set_status(&context, &rest).await.map(Some),
+            "list_packages" => list_packages(&context, &rest)
+                .await
+                .map(Some),
+            "list_collaborators" => list_collaborators(&context, &rest)
+                .await
+                .map(Some),
+            "get_status" => get_status(&context, &rest)
+                .await
+                .map(Some),
+            "set_status" => set_status(&context, &rest)
+                .await
+                .map(Some),
             "set_mfa" => set_mfa(&context, &rest).await.map(Some),
-            "grant" => grant_access(&context, &rest).await.map(Some),
-            "revoke" => revoke_access(&context, &rest).await.map(Some),
+            "grant" => grant_access(&context, &rest)
+                .await
+                .map(Some),
+            "revoke" => revoke_access(&context, &rest)
+                .await
+                .map(Some),
             _ => unreachable!(),
         }
     }
@@ -263,7 +275,10 @@ fn access_args(lead: Option<String>, second: Option<String>, params: Vec<String>
 }
 
 async fn list_packages(context: &AccessContext<'_>, params: &[String]) -> miette::Result<String> {
-    let auth_header = context.config.auth_headers.for_url(&context.registry);
+    let auth_header = context
+        .config
+        .auth_headers
+        .for_url(&context.registry);
     let url = list_packages_url(&context.registry, params);
     fetch_list_response(context, &url, auth_header.as_deref()).await
 }
@@ -312,7 +327,8 @@ async fn fetch_list_response(
     url: &str,
     auth_header: Option<&str>,
 ) -> miette::Result<String> {
-    let (_guard, response) = send_get(context, url, auth_header).await
+    let (_guard, response) = send_get(context, url, auth_header)
+        .await
         .map_err(reqwest::Error::without_url)
         .into_diagnostic()
         .wrap_err("requesting the registry access list endpoint")?;
@@ -365,11 +381,15 @@ async fn list_collaborators(
     context: &AccessContext<'_>,
     params: &[String],
 ) -> miette::Result<String> {
-    let package_name = params.first().ok_or(AccessError::ListCollaboratorsPackageRequired)?;
+    let package_name = params
+        .first()
+        .ok_or(AccessError::ListCollaboratorsPackageRequired)?;
     let user = params.get(1);
 
-    let auth_header =
-        context.config.auth_headers.for_url_with_package(&context.registry, Some(package_name));
+    let auth_header = context
+        .config
+        .auth_headers
+        .for_url_with_package(&context.registry, Some(package_name));
 
     let base = format!(
         "{}-/package/{}/collaborators?format=cli",
@@ -415,9 +435,14 @@ fn render_collaborators(entries: Vec<CollaboratorEntry>) -> String {
     let mut lines: Vec<String> = entries
         .into_iter()
         .map(|entry| {
-            let user = entry.user.or(entry.username).unwrap_or_else(|| "unknown".to_string());
+            let user = entry
+                .user
+                .or(entry.username)
+                .unwrap_or_else(|| "unknown".to_string());
             let email = entry.email.unwrap_or_default();
-            let permissions = entry.permissions.unwrap_or_else(|| "read-only".to_string());
+            let permissions = entry
+                .permissions
+                .unwrap_or_else(|| "read-only".to_string());
             if email.is_empty() {
                 format!("{user}: {permissions}")
             } else {

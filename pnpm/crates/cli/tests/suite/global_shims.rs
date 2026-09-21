@@ -198,7 +198,9 @@ fn missing_global_target_reports_not_found() {
     let root = tempfile::tempdir().unwrap();
     let cwd = root.path().join("plain");
     fs::create_dir_all(&cwd).unwrap();
-    let output = shim_command(&root, &cwd, "tool", "/nonexistent/tool").assert().failure();
+    let output = shim_command(&root, &cwd, "tool", "/nonexistent/tool")
+        .assert()
+        .failure();
     assert_eq!(output.get_output().status.code(), Some(127));
 }
 
@@ -270,7 +272,9 @@ fn runtime_pin_downloads_node_on_demand() {
         .with_env("PNPM_CONFIG_GLOBAL_SHIMS", r#"{"tool": true}"#)
         .assert()
         .success();
-    let environments = root.path().join("state/pnpm/global-shim-runtimes");
+    let environments = root
+        .path()
+        .join("state/pnpm/global-shim-runtimes");
     let package_dir = fs::read_dir(&environments)
         .expect("the runtime environment should exist")
         .flatten()
@@ -483,7 +487,9 @@ fn global_fallback_preserves_quoted_shebang_arguments() {
     use std::os::unix::fs::PermissionsExt;
 
     let root = tempfile::tempdir().unwrap();
-    let target = root.path().join("global/node_modules/tool/cli");
+    let target = root
+        .path()
+        .join("global/node_modules/tool/cli");
     let interpreter = root.path().join("capture-argv");
     fs::create_dir_all(target.parent().unwrap()).unwrap();
     fs::write(&interpreter, "#!/bin/sh\nprintf '<%s>\\n' \"$@\"\n").unwrap();
@@ -516,7 +522,9 @@ fn global_fallback_preserves_quoted_shebang_arguments() {
 #[test]
 fn global_fallback_prefers_the_sibling_interpreter() {
     let root = tempfile::tempdir().unwrap();
-    let target = root.path().join("global/node_modules/tool/cli.js");
+    let target = root
+        .path()
+        .join("global/node_modules/tool/cli.js");
     fs::create_dir_all(target.parent().unwrap()).unwrap();
     fs::write(&target, "#!/usr/bin/env node\n").unwrap();
     write_script(&root.path().join("global-bin/node"), "sibling node");
@@ -540,8 +548,15 @@ fn a_shim_without_a_readable_target_fails() {
     let root = tempfile::tempdir().unwrap();
     let cwd = root.path().join("outside");
     fs::create_dir_all(&cwd).unwrap();
-    let shim = shim_command(&root, &cwd, "tool", "placeholder").get_program().to_owned();
-    fs::write(root.path().join("global-bin/.pnpm-shim-v1-tool-target"), b"pkg:not a name").unwrap();
+    let shim = shim_command(&root, &cwd, "tool", "placeholder")
+        .get_program()
+        .to_owned();
+    fs::write(
+        root.path()
+            .join("global-bin/.pnpm-shim-v1-tool-target"),
+        b"pkg:not a name",
+    )
+    .unwrap();
 
     let output = Command::new(&shim)
         .with_current_dir(&cwd)
@@ -550,7 +565,9 @@ fn a_shim_without_a_readable_target_fails() {
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("cannot read the global target"));
 
-    let output = shim_command(&root, &cwd, "tool", shim.to_str().unwrap()).output().unwrap();
+    let output = shim_command(&root, &cwd, "tool", shim.to_str().unwrap())
+        .output()
+        .unwrap();
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("points back at the shim"));
 }
@@ -642,8 +659,11 @@ fn shims_can_be_added_and_removed_for_a_package_that_is_not_installed() {
             .join(format!("yarnpkg{exe}"))
             .exists(),
     );
-    let config =
-        fs::read_to_string(root.path().join("config/pnpm/config.yaml")).expect("read config.yaml");
+    let config = fs::read_to_string(
+        root.path()
+            .join("config/pnpm/config.yaml"),
+    )
+    .expect("read config.yaml");
     assert!(config.contains("yarn: auto"), "{config}");
 
     let listed = pnpm_command(&root, &project)
@@ -670,8 +690,11 @@ fn shims_can_be_added_and_removed_for_a_package_that_is_not_installed() {
         .filter(|name| name.starts_with("yarn"))
         .collect();
     assert!(left.is_empty(), "{left:?}");
-    let config =
-        fs::read_to_string(root.path().join("config/pnpm/config.yaml")).expect("read config.yaml");
+    let config = fs::read_to_string(
+        root.path()
+            .join("config/pnpm/config.yaml"),
+    )
+    .expect("read config.yaml");
     assert!(!config.contains("yarn: auto"), "{config}");
 }
 

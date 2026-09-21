@@ -438,9 +438,24 @@ fn revision_history_package_body(registry: &str) -> String {
         "Umd2iCLuYk1I_OFexcp5y9YCy39MIVelFlVpkfIu-Me173sY0f9BxZNw77CFhlHUSpNsEbexRMSP4E3zxqPo2g";
     let digest_c =
         "rMKNsr63tCuqHLAkPUAcy04_zkTXsCh5pSeZqt_1QVItiCJZiy-mZPnVFWwAySSAXXXDhovVbCrLgdN-mONa3A";
-    let integrity_a = format!("sha512-{}==", digest_a.replace('_', "/").replace('-', "+"));
-    let integrity_b = format!("sha512-{}==", digest_b.replace('_', "/").replace('-', "+"));
-    let integrity_c = format!("sha512-{}==", digest_c.replace('_', "/").replace('-', "+"));
+    let integrity_a = format!(
+        "sha512-{}==",
+        digest_a
+            .replace('_', "/")
+            .replace('-', "+")
+    );
+    let integrity_b = format!(
+        "sha512-{}==",
+        digest_b
+            .replace('_', "/")
+            .replace('-', "+")
+    );
+    let integrity_c = format!(
+        "sha512-{}==",
+        digest_c
+            .replace('_', "/")
+            .replace('-', "+")
+    );
     json!({
         "name": "acme",
         "dist-tags": { "latest": "1.0.0" },

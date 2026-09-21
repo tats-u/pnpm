@@ -180,9 +180,11 @@ pub(super) struct GlobalRemovalTransaction<'a> {
 
 pub(super) trait FsGlobalRemoval: FsRename {
     fn remove_bin_slot(path: &Path) -> io::Result<()> {
-        if let (Some(bin_dir), Some(name)) =
-            (path.parent(), path.file_name().and_then(std::ffi::OsStr::to_str))
-        {
+        if let (Some(bin_dir), Some(name)) = (
+            path.parent(),
+            path.file_name()
+                .and_then(std::ffi::OsStr::to_str),
+        ) {
             remove_native_shim(bin_dir, name)?;
         }
         remove_cmd_shim(path)

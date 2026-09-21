@@ -42,7 +42,9 @@ impl CircuitBreaker {
     /// breaker only ever holds plain counters, so the worst a poisoned
     /// guard carries is a stale failure count, never an invariant break.
     pub(super) fn lock(&self) -> std::sync::MutexGuard<'_, BreakerState> {
-        self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+        self.state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     /// Try to admit one request. Returns `true` while under `max_fails`
@@ -60,7 +62,9 @@ impl CircuitBreaker {
         // lapses. (`failed_requests >= max_fails` always implies a
         // recorded `last_failure`, so the `None` arm is unreachable; it
         // fails open for safety.)
-        let cooled_down = state.last_failure.is_none_or(|at| at.elapsed() >= self.fail_timeout);
+        let cooled_down = state
+            .last_failure
+            .is_none_or(|at| at.elapsed() >= self.fail_timeout);
         if !cooled_down {
             return false;
         }

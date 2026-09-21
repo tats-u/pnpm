@@ -286,7 +286,8 @@ async fn fresh_install_hoisted_node_linker_records_modules_yaml() {
     .await
     .expect("fresh hoisted-linker install should succeed");
 
-    let written = dirs.modules_dir
+    let written = dirs
+        .modules_dir
         .pipe_as_ref(read_modules_manifest::<Host>)
         .expect("read .modules.yaml")
         .expect("modules manifest exists");
@@ -378,7 +379,12 @@ async fn fresh_install_honors_skip_runtimes() {
 
     result.expect("fresh install with skip_runtimes should succeed");
     let _ = dirs.virtual_store_dir;
-    assert!(dirs.modules_dir.join(".modules.yaml").exists(), "modules manifest written");
+    assert!(
+        dirs.modules_dir
+            .join(".modules.yaml")
+            .exists(),
+        "modules manifest written"
+    );
 
     drop(dirs.dir);
 }
@@ -436,8 +442,12 @@ async fn included_drift_keeps_user_node_modules_entry_while_layout_drift_wipes_i
     fs::create_dir_all(&dirs.project_root).unwrap();
     let manifest_path = dirs.project_root.join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("@pnpm.e2e/console-log", "1.0.0", DependencyGroup::Prod).unwrap();
-    manifest.add_dependency("@pnpm.e2e/hello-world-js-bin", "1.0.0", DependencyGroup::Dev).unwrap();
+    manifest
+        .add_dependency("@pnpm.e2e/console-log", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
+    manifest
+        .add_dependency("@pnpm.e2e/hello-world-js-bin", "1.0.0", DependencyGroup::Dev)
+        .unwrap();
     manifest.save().unwrap();
 
     let full = || vec![DependencyGroup::Prod, DependencyGroup::Dev, DependencyGroup::Optional];
@@ -455,14 +465,22 @@ async fn included_drift_keeps_user_node_modules_entry_while_layout_drift_wipes_i
     )
     .await;
 
-    let prod_link = dirs.modules_dir.join("@pnpm.e2e/console-log");
-    let dev_link = dirs.modules_dir.join("@pnpm.e2e/hello-world-js-bin");
-    let dev_shim = dirs.modules_dir.join(".bin/hello-world-js-bin");
+    let prod_link = dirs
+        .modules_dir
+        .join("@pnpm.e2e/console-log");
+    let dev_link = dirs
+        .modules_dir
+        .join("@pnpm.e2e/hello-world-js-bin");
+    let dev_shim = dirs
+        .modules_dir
+        .join(".bin/hello-world-js-bin");
     assert!(dev_link.symlink_metadata().is_ok(), "full install links the dev dep");
     assert!(dev_shim.exists(), "full install shims the dev dep's bin");
 
     // The user drops their own non-pnpm file directly into node_modules.
-    let vendored = dirs.modules_dir.join("vendored-by-user.txt");
+    let vendored = dirs
+        .modules_dir
+        .join("vendored-by-user.txt");
     fs::write(&vendored, b"keep me").unwrap();
 
     // 2. Switching to --prod is an included drift only, so the file survives —
@@ -657,7 +675,9 @@ async fn test_install_purges_node_modules_on_layout_mismatch() {
 
     assert!(!canary_path.exists(), "node_modules should be purged due to mismatch");
     assert_eq!(
-        std::fs::read_to_string(&store_marker).ok().as_deref(),
+        std::fs::read_to_string(&store_marker)
+            .ok()
+            .as_deref(),
         Some("keep"),
         "a store inside node_modules should survive the purge",
     );

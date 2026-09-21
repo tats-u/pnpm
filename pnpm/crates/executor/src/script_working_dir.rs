@@ -128,9 +128,8 @@ fn short_path(path: &Path) -> Option<PathBuf> {
         ),
         _ => false,
     };
-    (!still_verbatim && windows_path_len(short) < windows_path_len(path)).then(|| {
-        short.to_path_buf()
-    })
+    (!still_verbatim && windows_path_len(short) < windows_path_len(path))
+        .then(|| short.to_path_buf())
 }
 
 #[cfg(not(windows))]

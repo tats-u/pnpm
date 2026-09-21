@@ -62,7 +62,10 @@ fn decodes_two_file_fixture_with_record_reuse() {
     let decoded = decode(&bytes);
     assert_eq!(decoded.files.len(), 2);
 
-    let pkg_json = decoded.files.get("package.json").unwrap();
+    let pkg_json = decoded
+        .files
+        .get("package.json")
+        .unwrap();
     assert_eq!(pkg_json.digest, "abc");
     assert_eq!(pkg_json.mode, 0o644);
     assert_eq!(pkg_json.size, 17);
@@ -115,7 +118,9 @@ fn decodes_side_effects() {
         0x62, 0x62, 0x62, 0xcd, 0x01, 0xa4, 0x02, 0x14,
     ];
     let decoded = decode(&bytes);
-    let side = decoded.side_effects.expect("side_effects present");
+    let side = decoded
+        .side_effects
+        .expect("side_effects present");
     let linux = side.get("linux").expect("linux entry");
     let added = linux.added.as_ref().expect("added map");
     let b_so = added.get("b.so").expect("b.so entry");
@@ -352,7 +357,14 @@ fn encode_handles_fixint_in_slot_range_safely() {
         side_effects: None,
         remote_side_effects_quarantine: None,
     };
-    assert_eq!(roundtrip(&original).files.get("f").unwrap().size, 0x7b);
+    assert_eq!(
+        roundtrip(&original)
+            .files
+            .get("f")
+            .unwrap()
+            .size,
+        0x7b
+    );
 }
 
 #[test]
@@ -376,7 +388,14 @@ fn encode_omits_checked_at_when_none() {
             .all(|window| window != needle),
         "checkedAt leaked into output when the field was None: {bytes:02x?}",
     );
-    assert_eq!(roundtrip(&original).files.get("f").unwrap().checked_at, None);
+    assert_eq!(
+        roundtrip(&original)
+            .files
+            .get("f")
+            .unwrap()
+            .checked_at,
+        None
+    );
 }
 
 #[test]
@@ -470,7 +489,11 @@ fn encode_outer_field_order_matches_msgpackr() {
         assert!(matches!(hdr, 0xa0..=0xbf), "expected fixstr at {pos}, got {hdr:02x}");
         let len = (hdr & 0x1f) as usize;
         pos += 1;
-        names.push(std::str::from_utf8(&bytes[pos..pos + len]).unwrap().to_string());
+        names.push(
+            std::str::from_utf8(&bytes[pos..pos + len])
+                .unwrap()
+                .to_string(),
+        );
         pos += len;
     }
     assert_eq!(names, vec!["algo", "requiresBuild", "files"]);
@@ -640,9 +663,13 @@ fn allocate_slot_returns_error_past_0x7f() {
     // shape accounting.
     let mut state = EncodeState::default();
     for _ in FIRST_INNER_SLOT..=SLOT_HI {
-        state.allocate_slot().expect("should succeed within the slot range");
+        state
+            .allocate_slot()
+            .expect("should succeed within the slot range");
     }
-    let err = state.allocate_slot().expect_err("64th allocation must fail");
+    let err = state
+        .allocate_slot()
+        .expect_err("64th allocation must fail");
     assert!(matches!(err, EncodeError::OutOfRecordSlots { max: 63 }), "got {err:?}");
 }
 

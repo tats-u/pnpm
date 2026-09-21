@@ -15,14 +15,18 @@ impl SharedArtifactStore {
     /// the decision unwritten whenever the refusal happens, so a registration
     /// nobody keeps would be re-stamped on every read and outlive every pass.
     pub(super) async fn expire_publications(&self) -> Result<()> {
-        self.mutate_usage(|usage| Ok(expire_stranded_publications(usage))).await?;
+        self.mutate_usage(|usage| Ok(expire_stranded_publications(usage)))
+            .await?;
         Ok(())
     }
 
     pub(super) async fn begin_publication(&self, publication: &str) -> Result<()> {
         self.expire_publications().await?;
         for _ in 0..RECLAMATION_WAIT_RETRIES {
-            if self.try_begin_publication(publication).await? {
+            if self
+                .try_begin_publication(publication)
+                .await?
+            {
                 return Ok(());
             }
             sleep(ARTIFACT_LOCK_POLL_INTERVAL).await;
@@ -37,11 +41,19 @@ impl SharedArtifactStore {
     /// the usage document. A write that fails but landed anyway counts as
     /// registered, so the caller is not told a registration it now has failed.
     pub(super) async fn try_begin_publication(&self, publication: &str) -> Result<bool> {
-        let registered = self.mutate_usage(|usage| register_publication(usage, publication)).await;
+        let registered = self
+            .mutate_usage(|usage| register_publication(usage, publication))
+            .await;
         match registered {
             Ok(begun) => Ok(begun),
             Err(error) => {
-                if self.load_usage().await?.0.active_publications.contains(publication) {
+                if self
+                    .load_usage()
+                    .await?
+                    .0
+                    .active_publications
+                    .contains(publication)
+                {
                     return Ok(true);
                 }
                 Err(error)
@@ -55,23 +67,29 @@ impl SharedArtifactStore {
         reclamation_needed: bool,
     ) -> Result<()> {
         for attempt in 0..PUBLICATION_FINISH_RETRIES {
-            let finished = self.mutate_usage(|usage| {
-                // A registration missing here is not a fault: an expiry pass
-                // can write one off. What must not be lost is the request to
-                // reclaim, since the scopes a failed publication claimed come
-                // back only that way.
-                usage.active_publications.remove(publication);
-                usage.active_publication_times.remove(publication);
-                usage.reclamation_needed |= reclamation_needed;
-                Ok(true)
-            })
-            .await;
+            let finished = self
+                .mutate_usage(|usage| {
+                    // A registration missing here is not a fault: an expiry pass
+                    // can write one off. What must not be lost is the request to
+                    // reclaim, since the scopes a failed publication claimed come
+                    // back only that way.
+                    usage
+                        .active_publications
+                        .remove(publication);
+                    usage
+                        .active_publication_times
+                        .remove(publication);
+                    usage.reclamation_needed |= reclamation_needed;
+                    Ok(true)
+                })
+                .await;
             let error = match finished {
                 Ok(updated) => return finish_outcome(updated),
                 Err(error) => error,
             };
-            let Some(retry_error) =
-                self.publication_finish_retry_error(publication, reclamation_needed, error).await?
+            let Some(retry_error) = self
+                .publication_finish_retry_error(publication, reclamation_needed, error)
+                .await?
             else {
                 return Ok(());
             };
@@ -99,13 +117,16 @@ impl SharedArtifactStore {
             Ok(usage) => usage,
             Err(read_error) => return Ok(Some(read_error)),
         };
-        let settled = !usage.active_publications.contains(publication)
+        let settled = !usage
+            .active_publications
+            .contains(publication)
             && (!reclamation_needed || usage.reclamation_needed);
         Ok((!settled).then_some(error))
     }
 
     pub(super) async fn reserve_quota(&self, owner: &str, added_bytes: u64) -> Result<()> {
-        self.change_quota(owner, added_bytes, QuotaChange::Reserve).await
+        self.change_quota(owner, added_bytes, QuotaChange::Reserve)
+            .await
     }
 
     pub(super) async fn release_uncommitted(
@@ -114,10 +135,12 @@ impl SharedArtifactStore {
         reserved_bytes: u64,
         retained_bytes: u64,
     ) -> Result<()> {
-        let unused_bytes =
-            reserved_bytes.checked_sub(retained_bytes).ok_or_else(quota_counter_underflow)?;
+        let unused_bytes = reserved_bytes
+            .checked_sub(retained_bytes)
+            .ok_or_else(quota_counter_underflow)?;
         if unused_bytes != 0 {
-            self.change_quota(owner, unused_bytes, QuotaChange::Release).await?;
+            self.change_quota(owner, unused_bytes, QuotaChange::Release)
+                .await?;
         }
         Ok(())
     }
@@ -128,11 +151,12 @@ impl SharedArtifactStore {
         bytes: u64,
         change: QuotaChange,
     ) -> Result<()> {
-        let changed = self.mutate_usage(|usage| {
-            self.change_usage(usage, owner, bytes, change)?;
-            Ok(true)
-        })
-        .await?;
+        let changed = self
+            .mutate_usage(|usage| {
+                self.change_usage(usage, owner, bytes, change)?;
+                Ok(true)
+            })
+            .await?;
         if !changed {
             return Err(RegistryError::Internal {
                 reason: "shared artifact quota update did not change usage".to_string(),
@@ -147,9 +171,13 @@ impl SharedArtifactStore {
     ) -> Result<bool> {
         match &self.quota {
             QuotaCoordination::Local { lock_path } => {
-                self.mutate_usage_under_lock(lock_path.clone(), mutation).await
+                self.mutate_usage_under_lock(lock_path.clone(), mutation)
+                    .await
             }
-            QuotaCoordination::Conditional => self.mutate_usage_conditionally(mutation).await,
+            QuotaCoordination::Conditional => {
+                self.mutate_usage_conditionally(mutation)
+                    .await
+            }
         }
     }
 
@@ -165,7 +193,8 @@ impl SharedArtifactStore {
         if !mutation(&mut usage)? {
             return Ok(false);
         }
-        self.write_usage(&usage, PutMode::Overwrite).await?;
+        self.write_usage(&usage, PutMode::Overwrite)
+            .await?;
         Ok(true)
     }
 
@@ -202,24 +231,38 @@ impl SharedArtifactStore {
         change: QuotaChange,
     ) -> Result<()> {
         if matches!(change, QuotaChange::Release) {
-            usage.global_bytes =
-                usage.global_bytes.checked_sub(bytes).ok_or_else(quota_counter_underflow)?;
-            let owner_bytes =
-                usage.owner_bytes.get_mut(owner).ok_or_else(quota_counter_underflow)?;
-            *owner_bytes = owner_bytes.checked_sub(bytes).ok_or_else(quota_counter_underflow)?;
+            usage.global_bytes = usage
+                .global_bytes
+                .checked_sub(bytes)
+                .ok_or_else(quota_counter_underflow)?;
+            let owner_bytes = usage
+                .owner_bytes
+                .get_mut(owner)
+                .ok_or_else(quota_counter_underflow)?;
+            *owner_bytes = owner_bytes
+                .checked_sub(bytes)
+                .ok_or_else(quota_counter_underflow)?;
             return Ok(());
         }
-        let owner_bytes = usage.owner_bytes
+        let owner_bytes = usage
+            .owner_bytes
             .get(owner)
             .copied()
             .unwrap_or(0);
-        let next_owner = owner_bytes.checked_add(bytes).ok_or_else(storage_quota_error)?;
-        let next_global = usage.global_bytes.checked_add(bytes).ok_or_else(storage_quota_error)?;
+        let next_owner = owner_bytes
+            .checked_add(bytes)
+            .ok_or_else(storage_quota_error)?;
+        let next_global = usage
+            .global_bytes
+            .checked_add(bytes)
+            .ok_or_else(storage_quota_error)?;
         if next_owner > self.owner_limit || next_global > self.global_limit {
             return Err(storage_quota_error());
         }
         usage.global_bytes = next_global;
-        usage.owner_bytes.insert(owner.to_string(), next_owner);
+        usage
+            .owner_bytes
+            .insert(owner.to_string(), next_owner);
         Ok(())
     }
 
@@ -254,21 +297,29 @@ impl SharedArtifactStore {
             }
             let Some((owner, _)) = relative.split_once('/') else { continue };
             let size = entry.size;
-            usage.global_bytes =
-                usage.global_bytes.checked_add(size).ok_or_else(storage_quota_error)?;
-            let owner_bytes = usage.owner_bytes.entry(owner.to_string()).or_default();
-            *owner_bytes = owner_bytes.checked_add(size).ok_or_else(storage_quota_error)?;
+            usage.global_bytes = usage
+                .global_bytes
+                .checked_add(size)
+                .ok_or_else(storage_quota_error)?;
+            let owner_bytes = usage
+                .owner_bytes
+                .entry(owner.to_string())
+                .or_default();
+            *owner_bytes = owner_bytes
+                .checked_add(size)
+                .ok_or_else(storage_quota_error)?;
         }
         Ok(usage)
     }
 
     pub(super) async fn write_usage(&self, usage: &ArtifactUsage, mode: PutMode) -> Result<()> {
-        self.store.put_opts(
-            &self.object_path(self.quota_object()),
-            PutPayload::from(serde_json::to_vec(usage)?),
-            PutOptions { mode, ..PutOptions::default() },
-        )
-        .await?;
+        self.store
+            .put_opts(
+                &self.object_path(self.quota_object()),
+                PutPayload::from(serde_json::to_vec(usage)?),
+                PutOptions { mode, ..PutOptions::default() },
+            )
+            .await?;
         Ok(())
     }
 }

@@ -43,17 +43,16 @@ pub(crate) struct ImporterAnchor {
 impl ImporterAnchor {
     pub(crate) fn new(project_dir: &Path, lockfile_dir: &Path) -> Self {
         ImporterAnchor {
-            rel_components: importer_rel_dir(project_dir, lockfile_dir)
-                .and_then(|rel| {
-                    rel.components()
-                        .map(|component| {
-                            component
-                                .as_os_str()
-                                .to_str()
-                                .map(str::to_owned)
-                        })
-                        .collect()
-                }),
+            rel_components: importer_rel_dir(project_dir, lockfile_dir).and_then(|rel| {
+                rel.components()
+                    .map(|component| {
+                        component
+                            .as_os_str()
+                            .to_str()
+                            .map(str::to_owned)
+                    })
+                    .collect()
+            }),
         }
     }
 
@@ -289,7 +288,9 @@ pub(crate) fn importer_rel_dir<'dir>(
     if !is_clean_absolute(lockfile_dir) {
         return None;
     }
-    let rel = project_dir.strip_prefix(lockfile_dir).ok()?;
+    let rel = project_dir
+        .strip_prefix(lockfile_dir)
+        .ok()?;
     all_normal(rel).then_some(rel)
 }
 

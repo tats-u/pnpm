@@ -73,14 +73,13 @@ struct StoredImageDocument {
 
 impl From<StoredImageDocument> for ImageDocument {
     fn from(stored: StoredImageDocument) -> Self {
-        let StoredImageDocument {
-            name,
-            mut manifests,
-            mut tags,
-            generation,
-            deleting_blob,
-        } = stored;
-        manifests.sort_by(|left, right| left.digest.hex().cmp(right.digest.hex()));
+        let StoredImageDocument { name, mut manifests, mut tags, generation, deleting_blob } =
+            stored;
+        manifests.sort_by(|left, right| {
+            left.digest
+                .hex()
+                .cmp(right.digest.hex())
+        });
         tags.sort_by(|left, right| left.tag.cmp(&right.tag));
         Self { name, manifests, tags, generation, deleting_blob }
     }
@@ -177,14 +176,21 @@ impl ImageDocument {
     }
 
     pub fn insert_manifest(&mut self, entry: ManifestEntry) {
-        match self.manifests.binary_search_by(|held| held.digest.hex().cmp(entry.digest.hex())) {
+        match self.manifests.binary_search_by(|held| {
+            held.digest
+                .hex()
+                .cmp(entry.digest.hex())
+        }) {
             Ok(index) => self.manifests[index] = entry,
             Err(index) => self.manifests.insert(index, entry),
         }
     }
 
     pub fn set_tag(&mut self, entry: TagEntry) {
-        match self.tags.binary_search_by(|held| held.tag.cmp(&entry.tag)) {
+        match self
+            .tags
+            .binary_search_by(|held| held.tag.cmp(&entry.tag))
+        {
             Ok(index) => self.tags[index] = entry,
             Err(index) => self.tags.insert(index, entry),
         }
@@ -193,19 +199,25 @@ impl ImageDocument {
     /// Every tag that named the manifest goes with it. `false` when the
     /// repository held no such manifest.
     pub fn remove_manifest(&mut self, digest: &Digest) -> bool {
-        let Ok(index) = self.manifests.binary_search_by(|held| held.digest.hex().cmp(digest.hex()))
+        let Ok(index) = self
+            .manifests
+            .binary_search_by(|held| held.digest.hex().cmp(digest.hex()))
         else {
             return false;
         };
         self.manifests.remove(index);
-        self.tags.retain(|tag| &tag.digest != digest);
+        self.tags
+            .retain(|tag| &tag.digest != digest);
         true
     }
 
     /// The manifest the tag named stays, still reachable by digest. `false`
     /// when the repository held no such tag.
     pub fn remove_tag(&mut self, tag: &str) -> bool {
-        let Ok(index) = self.tags.binary_search_by(|held| held.tag.as_str().cmp(tag)) else {
+        let Ok(index) = self
+            .tags
+            .binary_search_by(|held| held.tag.as_str().cmp(tag))
+        else {
             return false;
         };
         self.tags.remove(index);

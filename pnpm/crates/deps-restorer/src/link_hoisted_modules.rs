@@ -138,7 +138,8 @@ pub fn link_hoisted_modules<Reporter: self::Reporter>(
     // installs (Slice 9) will have multiple importers; the
     // single-importer case has one and rayon's overhead is
     // negligible.
-    let added: u64 = opts.hierarchy
+    let added: u64 = opts
+        .hierarchy
         .par_iter()
         .map(|(parent_dir, deps_hierarchy)| {
             link_all_pkgs_in_order::<Reporter>(deps_hierarchy, parent_dir, opts)
@@ -198,11 +199,9 @@ fn remove_orphans(
             confined
         })
         .collect();
-    orphan_dirs
-        .par_iter()
-        .for_each(|dir| {
-            let _ = try_remove_dir(dir);
-        });
+    orphan_dirs.par_iter().for_each(|dir| {
+        let _ = try_remove_dir(dir);
+    });
     orphan_dirs.len() as u64
 }
 
@@ -239,10 +238,12 @@ fn link_all_pkgs_in_order<Reporter: self::Reporter>(
     // one's children. `par_iter` is sufficient — the side effects
     // are on disk and target disjoint directories. Returns how many
     // packages this subtree imported.
-    let imported: u64 = hierarchy.0
+    let imported: u64 = hierarchy
+        .0
         .par_iter()
         .map(|(dir, sub_hierarchy)| {
-            let node = opts.graph
+            let node = opts
+                .graph
                 .get(dir)
                 .ok_or_else(|| LinkHoistedModulesError::MissingGraphNode { dir: dir.clone() })?;
             let here = u64::from(import_node::<Reporter>(node, opts)?);
@@ -264,7 +265,8 @@ fn link_hierarchy_bins(
     opts: &LinkHoistedModulesOpts<'_>,
 ) -> Result<(), LinkHoistedModulesError> {
     let modules_dir = parent_dir.join("node_modules");
-    let dep_names: Vec<String> = hierarchy.0
+    let dep_names: Vec<String> = hierarchy
+        .0
         .keys()
         .filter_map(|child_dir| opts.graph.get(child_dir))
         .filter_map(|node| node.alias.clone())
@@ -278,8 +280,10 @@ fn link_hierarchy_bins(
     // nodes, so the pass above never sees them; their bins are reachable
     // only from inside the bundling package.
     for child_dir in hierarchy.0.keys() {
-        let bundles =
-            opts.graph.get(child_dir).is_some_and(|node| node.package.has_bundled_dependencies);
+        let bundles = opts
+            .graph
+            .get(child_dir)
+            .is_some_and(|node| node.package.has_bundled_dependencies);
         if !bundles {
             continue;
         }
@@ -305,19 +309,26 @@ fn import_node<Reporter: self::Reporter>(
     if node.present {
         return Ok(false);
     }
-    let Some(cas_paths) = opts.cas_paths_by_pkg_id.get(&node.package.pkg_id_with_patch_hash) else {
+    let Some(cas_paths) = opts
+        .cas_paths_by_pkg_id
+        .get(&node.package.pkg_id_with_patch_hash)
+    else {
         if node.optional {
             return Ok(false);
         }
         return Err(LinkHoistedModulesError::MissingCasPaths {
-            pkg_id_with_patch_hash: node.package.pkg_id_with_patch_hash.clone(),
+            pkg_id_with_patch_hash: node
+                .package
+                .pkg_id_with_patch_hash
+                .clone(),
             dir: node.dir.clone(),
         });
     };
 
-    if !opts.dir_clone_cache.is_some_and(|cache| {
-        cache.try_import::<Reporter>(node, opts.import, cas_paths)
-    }) {
+    if !opts
+        .dir_clone_cache
+        .is_some_and(|cache| cache.try_import::<Reporter>(node, opts.import, cas_paths))
+    {
         import_indexed_dir::<Reporter>(
             opts.import.logged_methods,
             opts.import.method,

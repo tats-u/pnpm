@@ -57,7 +57,9 @@ fn gvs_hashes_are_engine_agnostic_for_packages_not_in_allow_builds() {
         "the engine-agnostic and engine-specific hashes must differ",
     );
     assert!(
-        pkg_in_slot(&hash_no_builds, "@pnpm.e2e/pkg-with-1-dep").join("package.json").exists(),
+        pkg_in_slot(&hash_no_builds, "@pnpm.e2e/pkg-with-1-dep")
+            .join("package.json")
+            .exists(),
         "the engine-agnostic slot must still be a valid layout",
     );
     assert!(
@@ -204,11 +206,13 @@ fn gvs_successful_build_creates_package_directory_with_build_artifacts() {
 
     assert!(pkg.join("package.json").exists(), "the built package must be in its GVS slot");
     assert!(
-        pkg.join("generated-by-preinstall.js").exists(),
+        pkg.join("generated-by-preinstall.js")
+            .exists(),
         "the preinstall artifact must be written into the GVS slot",
     );
     assert!(
-        pkg.join("generated-by-postinstall.js").exists(),
+        pkg.join("generated-by-postinstall.js")
+            .exists(),
         "the postinstall artifact must be written into the GVS slot",
     );
     assert!(
@@ -231,7 +235,8 @@ fn gvs_successful_build_creates_package_directory_with_build_artifacts() {
     if let Some(side_effects) = row.side_effects {
         for diff in side_effects.values() {
             assert!(
-                !diff.added
+                !diff
+                    .added
                     .as_ref()
                     .is_some_and(|added| added.contains_key(".pnpm-needs-build")),
                 "the incomplete-build marker must not be uploaded to the side-effects cache",
@@ -300,11 +305,13 @@ fn gvs_approve_builds_scenario_moves_artifacts_to_a_new_hash_dir() {
         "@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     assert!(
-        pkg.join("generated-by-preinstall.js").exists(),
+        pkg.join("generated-by-preinstall.js")
+            .exists(),
         "the preinstall artifact must land in the new hash directory",
     );
     assert!(
-        pkg.join("generated-by-postinstall.js").exists(),
+        pkg.join("generated-by-postinstall.js")
+            .exists(),
         "the postinstall artifact must land in the new hash directory",
     );
 
@@ -312,11 +319,15 @@ fn gvs_approve_builds_scenario_moves_artifacts_to_a_new_hash_dir() {
     let linked = workspace.join("node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example");
     assert!(is_symlink_or_junction(&linked).expect("stat the direct dep link"));
     assert!(
-        linked.join("generated-by-preinstall.js").exists(),
+        linked
+            .join("generated-by-preinstall.js")
+            .exists(),
         "the project link must resolve to the built slot",
     );
     assert!(
-        linked.join("generated-by-postinstall.js").exists(),
+        linked
+            .join("generated-by-postinstall.js")
+            .exists(),
         "the project link must resolve to the built slot",
     );
 
@@ -623,13 +634,21 @@ fn approve_builds_updates_gvs_symlinks_and_runs_builds_at_the_new_hash_dir() {
         &version_dir.join(&hash_after),
         "@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
-    assert!(pkg.join("generated-by-preinstall.js").exists());
-    assert!(pkg.join("generated-by-postinstall.js").exists());
+    assert!(
+        pkg.join("generated-by-preinstall.js")
+            .exists()
+    );
+    assert!(
+        pkg.join("generated-by-postinstall.js")
+            .exists()
+    );
 
     eprintln!("The artifacts must be reachable through node_modules...");
     let linked = workspace.join("node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example");
     assert!(
-        linked.join("generated-by-postinstall.js").exists(),
+        linked
+            .join("generated-by-postinstall.js")
+            .exists(),
         "approve-builds must repoint the project link at the built slot",
     );
 

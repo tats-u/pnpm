@@ -90,7 +90,9 @@ fn drop_removed_config_deps(
 ) -> bool {
     let importer = env_lockfile.root_importer_mut();
     let before = importer.config_dependencies.len();
-    importer.config_dependencies.retain(|name, _| config_deps.contains_key(name));
+    importer
+        .config_dependencies
+        .retain(|name, _| config_deps.contains_key(name));
     importer.config_dependencies.len() != before
 }
 
@@ -168,7 +170,9 @@ fn plan_specifier(
 ) -> Result<ConfigDepPlan, ConfigDepError> {
     if let Some(existing) = config_dep(env_lockfile, name)
         && existing.specifier == *specifier
-        && env_lockfile.packages.contains_key(&pkg_key(name, &existing.version)?)
+        && env_lockfile
+            .packages
+            .contains_key(&pkg_key(name, &existing.version)?)
     {
         return Ok(ConfigDepPlan::Satisfied);
     }
@@ -205,7 +209,9 @@ async fn resolve_one(
     if !crate::resolve_optional_subdeps::resolution_has_integrity(&result.resolution) {
         return Err(no_integrity());
     }
-    let version = result.package.name_ver
+    let version = result
+        .package
+        .name_ver
         .as_ref()
         .ok_or_else(no_integrity)?
         .suffix
@@ -325,8 +331,12 @@ fn migrate_into_lockfile(
     })
     .to_lockfile_form(name, version, npm_lockfile_form(registry))
     .map_err(ConfigDepError::LockfileForm)?;
-    env_lockfile.packages.insert(key.clone(), registry_package_metadata(resolution));
-    env_lockfile.snapshots.insert(key, SnapshotEntry::default());
+    env_lockfile
+        .packages
+        .insert(key.clone(), registry_package_metadata(resolution));
+    env_lockfile
+        .snapshots
+        .insert(key, SnapshotEntry::default());
     Ok(())
 }
 
@@ -354,7 +364,11 @@ fn has_config_dep(env_lockfile: &EnvLockfile, name: &str) -> bool {
 }
 
 fn config_dep<'a>(env_lockfile: &'a EnvLockfile, name: &str) -> Option<&'a SpecifierAndResolution> {
-    env_lockfile.importers.get(EnvLockfile::ROOT_IMPORTER_KEY)?.config_dependencies.get(name)
+    env_lockfile
+        .importers
+        .get(EnvLockfile::ROOT_IMPORTER_KEY)?
+        .config_dependencies
+        .get(name)
 }
 
 fn pkg_key(name: &str, version: &str) -> Result<PackageKey, ConfigDepError> {

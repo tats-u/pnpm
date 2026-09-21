@@ -103,9 +103,18 @@ async fn opt_in_upstream_discovery_serves_search_and_organization_packages() {
         .await;
     let tmp = TempDir::new().unwrap();
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -175,7 +184,12 @@ async fn upstream_search_exhausts_results_to_return_an_exact_total() {
         .await;
     let tmp = TempDir::new().unwrap();
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let app = router(config);
 
     let response = app
@@ -212,7 +226,12 @@ async fn upstream_search_bounds_the_walk_for_a_huge_offset() {
         .await;
     let tmp = TempDir::new().unwrap();
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let app = router(config);
 
     let response = app
@@ -252,7 +271,12 @@ async fn upstream_search_stops_after_eight_short_pages() {
         .await;
     let tmp = TempDir::new().unwrap();
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let app = router(config);
 
     let response = app
@@ -291,7 +315,9 @@ async fn upstream_search_stops_at_the_request_cap_however_many_sources_route() {
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
     // Forty search-enabled upstreams, each of which would otherwise be
     // guaranteed its own fetch.
-    let template = config.routing.upstreams
+    let template = config
+        .routing
+        .upstreams
         .get("npmjs")
         .expect("default `npmjs` upstream")
         .clone();
@@ -301,7 +327,10 @@ async fn upstream_search_stops_at_the_request_cap_however_many_sources_route() {
         let name = format!("mirror-{index}");
         let mut mirror = template.clone();
         mirror.search = true;
-        config.routing.upstreams.insert(name.clone(), mirror);
+        config
+            .routing
+            .upstreams
+            .insert(name.clone(), mirror);
         // A distinct pattern per mirror, so the router reaches every one of
         // them; only the last is a catch-all.
         let patterns = if index == 39 {
@@ -314,7 +343,9 @@ async fn upstream_search_stops_at_the_request_cap_however_many_sources_route() {
     }
     graph.push(("main".to_string(), Registry::Router { sources }));
     let registries = Registries::new(graph.into_iter().collect(), Some("main".to_string()));
-    registries.validate().expect("router config is valid");
+    registries
+        .validate()
+        .expect("router config is valid");
     config.routing.registries = registries;
     let app = router(config);
 
@@ -345,7 +376,12 @@ async fn upstream_search_reporting_results_but_returning_none_is_a_gateway_error
         .await;
     let tmp = TempDir::new().unwrap();
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let app = router(config);
 
     let response = app
@@ -374,7 +410,12 @@ async fn upstream_without_a_search_endpoint_is_skipped() {
     let tmp = TempDir::new().unwrap();
     seed_hosted(tmp.path(), "ajv");
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().search = true;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .search = true;
     let app = router(config);
 
     let response = app
@@ -397,14 +438,21 @@ async fn upstream_without_a_search_endpoint_is_skipped() {
 async fn registry_directory_hides_upstream_access_and_package_rule_metadata() {
     let tmp = TempDir::new().unwrap();
     let mut config = config_for("http://example.invalid", tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").unwrap().access =
-        Some(AccessList::from_tokens(["alice"]));
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap()
+        .access = Some(AccessList::from_tokens(["alice"]));
     let mut hosted = hosted_with_access("public", "$all");
     hosted.rules = PackageRules::new(
         vec![access_rule("secret-package", "alice")],
         Some(AccessList::from_tokens(["$all"])),
     );
-    config.routing.hosted.insert("public".to_string(), hosted);
+    config
+        .routing
+        .hosted
+        .insert("public".to_string(), hosted);
     config.routing.registries = Registries::new(
         [
             (
@@ -428,7 +476,9 @@ async fn registry_directory_hides_upstream_access_and_package_rule_metadata() {
         )
         .await
         .unwrap();
-    let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let bytes = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let body: Value = serde_json::from_slice(&bytes).unwrap();
     let text = String::from_utf8_lossy(&bytes);
     assert!(!text.contains("secret-package"), "directory exposes a restricted package name");
@@ -493,7 +543,11 @@ async fn search_excludes_an_upstream_with_a_denying_package_rule() {
     let tmp = TempDir::new().unwrap();
     seed_hosted(tmp.path(), "ajv");
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    let npmjs = config.routing.upstreams.get_mut("npmjs").unwrap();
+    let npmjs = config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .unwrap();
     npmjs.search = true;
     npmjs.rules = PackageRules::new(vec![access_rule("@corp/*", "alice")], None);
     let app = router(config);

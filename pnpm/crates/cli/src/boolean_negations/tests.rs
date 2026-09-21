@@ -7,7 +7,9 @@ use clap::{CommandFactory, FromArgMatches};
 /// path `main` uses.
 fn install_flag(argv: &[&str], flag_id: &str) -> Result<bool, clap::Error> {
     let matches = with_boolean_negations(CliArgs::command()).try_get_matches_from(argv)?;
-    let (name, install) = matches.subcommand().expect("a subcommand");
+    let (name, install) = matches
+        .subcommand()
+        .expect("a subcommand");
     assert_eq!(name, "install");
     Ok(install.get_flag(flag_id))
 }

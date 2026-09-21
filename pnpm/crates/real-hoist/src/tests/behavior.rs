@@ -201,7 +201,8 @@ fn conflict_nested_shared_cycle_is_cut() {
             node.references.borrow(),
         );
         path.push(Rc::as_ptr(node));
-        let children: Vec<Rc<HoisterResult>> = node.dependencies
+        let children: Vec<Rc<HoisterResult>> = node
+            .dependencies
             .borrow()
             .iter()
             .map(|dep| Rc::clone(&dep.0))
@@ -211,7 +212,8 @@ fn conflict_nested_shared_cycle_is_cut() {
         }
         path.pop();
     }
-    let root_children: Vec<Rc<HoisterResult>> = result.dependencies
+    let root_children: Vec<Rc<HoisterResult>> = result
+        .dependencies
         .borrow()
         .iter()
         .map(|dep| Rc::clone(&dep.0))
@@ -342,7 +344,13 @@ fn ancestor_conflict_blocks_dedup_against_the_root_copy() {
         .iter()
         .find(|dep| dep.0.name == "x")
         .unwrap_or_else(|| panic!("b@1 keeps its own x@1 below a's conflicting x@2: {node_a:#?}"));
-    assert!(x_kept.0.references.borrow().contains("x@1.0.0"));
+    assert!(
+        x_kept
+            .0
+            .references
+            .borrow()
+            .contains("x@1.0.0")
+    );
 }
 
 /// A nested hoist root must not take a name slot that its subtree
@@ -409,10 +417,18 @@ fn nested_root_does_not_shadow_names_its_subtree_uses_from_above() {
         .find(|dep| dep.0.name == "d")
         .expect("d@1 nests under e")
         .0;
-    let m_kept = d_nested.dependencies
+    let m_kept = d_nested
+        .dependencies
         .borrow()
         .iter()
-        .any(|dep| dep.0.name == "m" && dep.0.references.borrow().contains("m@1.0.0"));
+        .any(|dep| {
+            dep.0.name == "m"
+                && dep
+                    .0
+                    .references
+                    .borrow()
+                    .contains("m@1.0.0")
+        });
     assert!(m_kept, "d@1 keeps its own m@1 nested: {d_nested:#?}");
 }
 

@@ -22,9 +22,15 @@ impl ScriptBudget {
 
     /// Wait for a permit, then hold it until the returned guard drops.
     pub(super) fn acquire(&self) -> ScriptPermit<'_> {
-        let mut free = self.free.lock().expect("script budget lock is not poisoned");
+        let mut free = self
+            .free
+            .lock()
+            .expect("script budget lock is not poisoned");
         while *free == 0 {
-            free = self.freed.wait(free).expect("script budget lock is not poisoned");
+            free = self
+                .freed
+                .wait(free)
+                .expect("script budget lock is not poisoned");
         }
         *free -= 1;
         ScriptPermit { budget: self }
@@ -38,7 +44,11 @@ pub(super) struct ScriptPermit<'a> {
 
 impl Drop for ScriptPermit<'_> {
     fn drop(&mut self) {
-        *self.budget.free.lock().expect("script budget lock is not poisoned") += 1;
+        *self
+            .budget
+            .free
+            .lock()
+            .expect("script budget lock is not poisoned") += 1;
         self.budget.freed.notify_one();
     }
 }

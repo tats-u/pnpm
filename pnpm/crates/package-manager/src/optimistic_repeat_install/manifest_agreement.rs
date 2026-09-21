@@ -25,7 +25,8 @@ impl ManifestStat<'_> {
     /// Whether the manifest may have changed at or after `reference_ms`. A
     /// manifest without an on-disk mtime always may have.
     pub(crate) fn possibly_modified_since(&self, reference_ms: i64) -> bool {
-        self.mtime.is_none_or(|mtime| modified_at_or_after(mtime, reference_ms))
+        self.mtime
+            .is_none_or(|mtime| modified_at_or_after(mtime, reference_ms))
     }
 }
 
@@ -39,19 +40,26 @@ pub(crate) fn modified_manifests_match_lockfile(
 ) -> Result<Option<Lockfile>, &'static str> {
     let mut loaded_current: Option<Lockfile> = None;
     let mut wanted_is_current = false;
-    let lockfile =
-        check.lockfile.get().map_err(|_| "the wanted lockfile cannot be read or parsed")?;
+    let lockfile = check
+        .lockfile
+        .get()
+        .map_err(|_| "the wanted lockfile cannot be read or parsed")?;
     let (wanted, wanted_mtime): (&Lockfile, FileMtime) = if let Some(wanted) = lockfile {
-        let Some(mtime) =
-            file_mtime(&check.workspace_root.join(check.config.wanted_lockfile_name()))
-        else {
+        let Some(mtime) = file_mtime(
+            &check
+                .workspace_root
+                .join(check.config.wanted_lockfile_name()),
+        ) else {
             return Err(
                 "a manifest is newer than the last validation and the wanted lockfile cannot be stat'd",
             );
         };
         (wanted, mtime)
     } else {
-        let current_path = check.config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME);
+        let current_path = check
+            .config
+            .virtual_store_dir
+            .join(Lockfile::CURRENT_FILE_NAME);
         let Some(mtime) = file_mtime(&current_path) else {
             return Err("a manifest is newer than the last validation and no lockfile is loaded");
         };
@@ -112,7 +120,11 @@ pub(super) fn check_projects_content(
         check.project_manifests,
     );
     let ignored_optional_matcher = pnpm_matcher::create_matcher(
-        check.config.ignored_optional_dependencies.as_deref().unwrap_or_default(),
+        check
+            .config
+            .ignored_optional_dependencies
+            .as_deref()
+            .unwrap_or_default(),
     );
     let content_check = ProjectContentCheck {
         workspace_root: check.workspace_root,
@@ -178,13 +190,19 @@ fn single_project_projects_to_check<'a>(
     modified: &'a [&'a ManifestStat<'a>],
     wanted: &WantedLockfileStat<'_>,
 ) -> Result<&'a [&'a ManifestStat<'a>], &'static str> {
-    let current_mtime_ms = mtime_ms(&config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME));
+    let current_mtime_ms = mtime_ms(
+        &config
+            .virtual_store_dir
+            .join(Lockfile::CURRENT_FILE_NAME),
+    );
     if let Some(current_mtime_ms) = current_mtime_ms
         && modified_at_or_after(wanted.mtime, current_mtime_ms)
     {
         assert_wanted_lockfile_equals_current(wanted.wanted, config, included)?;
     }
-    let root = modified.first().expect("modified-manifests branch requires a modified project");
+    let root = modified
+        .first()
+        .expect("modified-manifests branch requires a modified project");
     // An in-memory manifest has no mtime to compare with the lockfile's, so
     // it takes the content check outright.
     if root.possibly_modified_since(wanted.mtime.ms) {
@@ -234,7 +252,11 @@ fn project_content_check(
         tracing::debug!(target: "pacquet::install", %error, importer_id, "repeat-install content check: manifest no longer satisfied");
         return Err("a modified manifest is no longer satisfied by the lockfile");
     }
-    let Some(importer) = context.wanted.importers.get(&importer_id) else {
+    let Some(importer) = context
+        .wanted
+        .importers
+        .get(&importer_id)
+    else {
         return Err("a modified project has no importer entry in the lockfile");
     };
     if !linked_packages_are_up_to_date(
@@ -302,7 +324,10 @@ fn linked_group_is_up_to_date(
 ) -> bool {
     for (dep_name, dep) in lockfile_deps {
         let dep_name = dep_name.to_string();
-        let Some(current_spec) = manifest_deps.get(&dep_name).and_then(|v| v.as_str()) else {
+        let Some(current_spec) = manifest_deps
+            .get(&dep_name)
+            .and_then(|v| v.as_str())
+        else {
             continue;
         };
         if !linked_dep_is_up_to_date(ctx, project_dir, &dep_name, dep, current_spec) {
@@ -365,10 +390,15 @@ fn linked_package_dir<'a>(
 ) -> Option<std::borrow::Cow<'a, Path>> {
     match link_target {
         Some(target) => Some(std::borrow::Cow::Owned(project_dir.join(target))),
-        None => dep.version
+        None => dep
+            .version
             .as_regular()
             .map(std::string::ToString::to_string)
-            .and_then(|version| ctx.workspace_packages.get(dep_name)?.get(&version))
+            .and_then(|version| {
+                ctx.workspace_packages
+                    .get(dep_name)?
+                    .get(&version)
+            })
             .map(|dir| std::borrow::Cow::Borrowed(*dir)),
     }
 }
@@ -389,7 +419,9 @@ pub(crate) fn ref_is_local_directory(specifier: &str) -> bool {
 /// never match.
 pub(crate) fn spec_is_distribution_tag(spec: &str) -> bool {
     !spec.is_empty()
-        && spec.parse::<node_semver::Range>().is_err()
+        && spec
+            .parse::<node_semver::Range>()
+            .is_err()
         && spec
             .chars()
             .all(|char| char.is_ascii_alphanumeric() || matches!(char, '-' | '_' | '.'))
@@ -434,12 +466,11 @@ pub(crate) fn stat_manifests<'a>(
     project_manifests
         .iter()
         .map(|(root_dir, manifest)| {
-            file_mtime(manifest.path())
-                .map(|mtime| ManifestStat {
-                    root_dir: root_dir.as_path(),
-                    manifest,
-                    mtime: Some(mtime),
-                })
+            file_mtime(manifest.path()).map(|mtime| ManifestStat {
+                root_dir: root_dir.as_path(),
+                manifest,
+                mtime: Some(mtime),
+            })
         })
         .collect()
 }

@@ -37,7 +37,10 @@ fn persistent_config(storage: PathBuf, htpasswd: PathBuf, tokens_db: PathBuf) ->
 }
 
 async fn body_bytes(body: Body) -> Vec<u8> {
-    to_bytes(body, usize::MAX).await.expect("read body").to_vec()
+    to_bytes(body, usize::MAX)
+        .await
+        .expect("read body")
+        .to_vec()
 }
 
 async fn body_json(body: Body) -> Value {
@@ -190,7 +193,11 @@ async fn invalid_usernames_do_not_change_htpasswd_across_restart() {
         .await
         .expect("reload after restart");
     // The reloaded htpasswd still logs the user in with the original password.
-    let (_, username) = auth.users.add_or_login("alice", "secret").await.unwrap();
+    let (_, username) = auth
+        .users
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap();
     assert_eq!(username, "alice");
     assert_eq!(std::fs::read_to_string(&htpasswd).unwrap(), original_htpasswd);
 }

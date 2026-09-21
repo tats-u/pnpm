@@ -320,17 +320,19 @@ fn prepare_global_install<Sys: FsWalkFiles>(
         .union(bin_sets.extra)
         .cloned()
         .collect();
-    let backup_dir =
-        match tempfile::Builder::new().prefix(".pnpm-bin-backup-").tempdir_in(global_bin_dir) {
-            Ok(backup_dir) => backup_dir,
-            Err(error) => {
-                let report = io_error_report(
-                    error,
-                    format!("create global bin backup directory in {}", global_bin_dir.display()),
-                );
-                return cleanup_failed_preparation(install_dir, None, report);
-            }
-        };
+    let backup_dir = match tempfile::Builder::new()
+        .prefix(".pnpm-bin-backup-")
+        .tempdir_in(global_bin_dir)
+    {
+        Ok(backup_dir) => backup_dir,
+        Err(error) => {
+            let report = io_error_report(
+                error,
+                format!("create global bin backup directory in {}", global_bin_dir.display()),
+            );
+            return cleanup_failed_preparation(install_dir, None, report);
+        }
+    };
     let saved_bin_slots =
         match backup_bin_slots(&affected_bin_names, backup_dir.path(), global_bin_dir) {
             Ok(saved_bin_slots) => saved_bin_slots,

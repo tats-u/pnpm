@@ -112,10 +112,20 @@ std = []
     let actual = fs::read_to_string(root.path().join("Cargo.lock")).unwrap();
     eprintln!("Cargo lockfile:\n{expected}\npnpm lockfile:\n{actual}");
     assert_eq!(
-        cargo_lock::Lockfile::from_str(&actual).unwrap().packages,
-        cargo_lock::Lockfile::from_str(&expected).unwrap().packages,
+        cargo_lock::Lockfile::from_str(&actual)
+            .unwrap()
+            .packages,
+        cargo_lock::Lockfile::from_str(&expected)
+            .unwrap()
+            .packages,
     );
-    assert_eq!(cargo_lock::Lockfile::from_str(&actual).unwrap().packages.len(), 4);
+    assert_eq!(
+        cargo_lock::Lockfile::from_str(&actual)
+            .unwrap()
+            .packages
+            .len(),
+        4
+    );
     fs::write(pristine.path().join("Cargo.lock"), &actual).unwrap();
     Command::new("cargo")
         .with_current_dir(pristine.path())

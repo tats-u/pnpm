@@ -11,7 +11,9 @@ fn patch_remove_removes_patch_file_manifest_entry_and_reinstalls() {
         setup_configured_patch("is-positive@1.0.0", "is-positive@1.0.0.patch");
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
-    pacquet(&workspace, ["install", "--reporter=silent"]).assert().success();
+    pacquet(&workspace, ["install", "--reporter=silent"])
+        .assert()
+        .success();
     let patched = fs::read_to_string(workspace.join("node_modules/is-positive/index.js")).unwrap();
     assert!(patched.contains("// patched"), "patched install: {patched}");
 
@@ -23,7 +25,9 @@ fn patch_remove_removes_patch_file_manifest_entry_and_reinstalls() {
         fs::read_to_string(workspace.join("pnpm-workspace.yaml")).expect("workspace yaml");
     assert!(!workspace_yaml.contains("patchedDependencies:"), "workspace yaml: {workspace_yaml}");
     assert!(
-        !workspace.join("patches/is-positive@1.0.0.patch").exists(),
+        !workspace
+            .join("patches/is-positive@1.0.0.patch")
+            .exists(),
         "patch file should be removed",
     );
     let installed =
@@ -68,7 +72,9 @@ fn patch_remove_errors_when_requested_patch_is_missing_from_manifest() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("ERR_PNPM_PATCH_NOT_FOUND"), "stderr: {stderr}");
     assert!(
-        workspace.join("patches/is-positive@1.0.0.patch").exists(),
+        workspace
+            .join("patches/is-positive@1.0.0.patch")
+            .exists(),
         "existing patch should not be removed",
     );
 
@@ -118,7 +124,12 @@ fn patch_remove_rejects_traversal_before_deleting_any_patch() {
     assert!(!output.status.success(), "outside patch should fail");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("ERR_PNPM_PATCH_FILE_OUTSIDE_PATCHES_DIR"), "stderr: {stderr}");
-    assert!(workspace.join("patches/good.patch").exists(), "good patch must remain");
+    assert!(
+        workspace
+            .join("patches/good.patch")
+            .exists(),
+        "good patch must remain"
+    );
     assert!(
         root.path()
             .join("outside.patch")
@@ -146,7 +157,12 @@ fn patch_remove_rejects_directory_entries_before_deleting_any_patch() {
     assert!(!output.status.success(), "directory patch target should fail");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("ERR_PNPM_PATCH_FILE_IS_DIRECTORY"), "stderr: {stderr}");
-    assert!(workspace.join("patches/good.patch").exists(), "good patch must remain");
+    assert!(
+        workspace
+            .join("patches/good.patch")
+            .exists(),
+        "good patch must remain"
+    );
 
     drop((root, mock_instance));
 }
@@ -219,7 +235,9 @@ fn unused_patch_fails_with_err_pnpm_unused_patch() {
     );
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
-    let output = pacquet(&workspace, ["install"]).output().expect("run install");
+    let output = pacquet(&workspace, ["install"])
+        .output()
+        .expect("run install");
 
     assert!(!output.status.success(), "install with unused patch should fail");
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -246,7 +264,9 @@ fn unused_patch_warns_when_allow_unused_patches_is_set() {
     );
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
-    let output = pacquet(&workspace, ["install"]).output().expect("run install");
+    let output = pacquet(&workspace, ["install"])
+        .output()
+        .expect("run install");
 
     assert!(output.status.success(), "install should succeed with allowUnusedPatches");
     let combined = format!(
@@ -286,7 +306,9 @@ fn legacy_deploy_honors_allow_unused_patches_overrides() {
     )
     .expect("write app manifest");
 
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     pacquet(
         &workspace,
         [
@@ -315,8 +337,9 @@ fn unused_patch_is_not_checked_on_a_filtered_install() {
     append_unused_filtered_patch(&workspace);
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
-    let output =
-        pacquet(&workspace, ["install", "--filter", "pkg-a"]).output().expect("run install");
+    let output = pacquet(&workspace, ["install", "--filter", "pkg-a"])
+        .output()
+        .expect("run install");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(output.status.success(), "filtered install should succeed: {stderr}");
@@ -335,11 +358,14 @@ fn unused_patch_is_not_checked_on_a_filtered_install() {
 fn unused_patch_is_checked_for_a_complete_root_augmented_filtered_install() {
     let (root, workspace, npmrc_info) = setup_filtered_patch_workspace();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     append_unused_filtered_patch(&workspace);
 
-    let output =
-        pacquet(&workspace, ["install", "--filter", "pkg-a"]).output().expect("run install");
+    let output = pacquet(&workspace, ["install", "--filter", "pkg-a"])
+        .output()
+        .expect("run install");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(!output.status.success(), "complete filtered install should fail: {stderr}");

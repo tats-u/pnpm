@@ -8,7 +8,9 @@ pub(super) async fn read_json<Cached: DeserializeOwned>(
     limit: usize,
     description: &str,
 ) -> Result<Cached> {
-    let file = tokio::fs::File::open(path).await.into_diagnostic()?;
+    let file = tokio::fs::File::open(path)
+        .await
+        .into_diagnostic()?;
     let mut contents = Vec::new();
     file.take(limit as u64 + 1)
         .read_to_end(&mut contents)

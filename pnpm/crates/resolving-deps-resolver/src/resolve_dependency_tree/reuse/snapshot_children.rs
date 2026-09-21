@@ -71,7 +71,8 @@ pub(super) async fn resolve_snapshot_children<Chain>(
 where
     Chain: Resolver + ?Sized,
 {
-    context.child_refs
+    context
+        .child_refs
         .iter()
         .map(|(child_alias, child_key)| {
             let child_wanted = WantedDependency {
@@ -80,7 +81,12 @@ where
                 // the bare specifier so the per-wanted dedup cache
                 // key is stable and a fresh fallback (if reuse were
                 // ever disabled) would still target the right pin.
-                bare_specifier: Some(child_key.suffix.without_peer().to_string()),
+                bare_specifier: Some(
+                    child_key
+                        .suffix
+                        .without_peer()
+                        .to_string(),
+                ),
                 ..WantedDependency::default()
             };
             let next_ancestors = Arc::clone(&context.ancestry.next_ancestors);
@@ -111,7 +117,8 @@ pub(super) fn record_reused_children(
 ) -> (crate::resolved_tree::TreeChildren, bool) {
     let mut realized: BTreeMap<String, NodeId> = BTreeMap::new();
     let mut by_id: Vec<crate::resolved_tree::ChildEdge> = Vec::new();
-    let optional_by_alias: HashMap<&str, bool> = context.child_refs
+    let optional_by_alias: HashMap<&str, bool> = context
+        .child_refs
         .iter()
         .map(|(alias, _)| (alias.as_str(), is_optional_child(context.snapshot, alias)))
         .collect();
@@ -164,7 +171,8 @@ pub(super) fn snapshot_child_refs(
     peer_dependencies: &BTreeMap<String, PeerDep>,
 ) -> Vec<(String, PkgNameVerPeer)> {
     let Some(snapshot) = snapshot else { return Vec::new() };
-    let transitive_peers: HashSet<&str> = snapshot.transitive_peer_dependencies
+    let transitive_peers: HashSet<&str> = snapshot
+        .transitive_peer_dependencies
         .iter()
         .flatten()
         .map(String::as_str)
@@ -208,7 +216,8 @@ pub(super) fn push_snapshot_child_refs(
 pub(super) fn is_optional_child(snapshot: Option<&SnapshotEntry>, alias: &str) -> bool {
     let Some(snapshot) = snapshot else { return false };
     let Ok(name) = alias.parse::<pnpm_lockfile::PkgName>() else { return false };
-    snapshot.optional_dependencies
+    snapshot
+        .optional_dependencies
         .as_ref()
         .is_some_and(|deps| deps.contains_key(&name))
 }

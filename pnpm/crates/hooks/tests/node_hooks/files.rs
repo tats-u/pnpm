@@ -10,7 +10,11 @@ fn test_find_pnpmfile_uses_mjs() {
     std::fs::write(root.join(".pnpmfile.cjs"), "// cjs").expect("write cjs");
 
     let found = finder::find_pnpmfile(root);
-    assert!(found.unwrap().ends_with(".pnpmfile.mjs"));
+    assert!(
+        found
+            .unwrap()
+            .ends_with(".pnpmfile.mjs")
+    );
 }
 
 #[test]
@@ -21,7 +25,11 @@ fn test_find_pnpmfile_fallback_to_cjs() {
     std::fs::write(root.join(".pnpmfile.cjs"), "// cjs").expect("write cjs");
 
     let found = finder::find_pnpmfile(root);
-    assert!(found.unwrap().ends_with(".pnpmfile.cjs"));
+    assert!(
+        found
+            .unwrap()
+            .ends_with(".pnpmfile.cjs")
+    );
 }
 
 #[test]
@@ -89,11 +97,19 @@ export const fetchers = [{
     )
     .expect("write pnpmfile");
     let hooks = pnpm_hooks::node_runtime::NodeJsHooks::new(pnpmfile_path);
-    let fetchers = hooks.get_custom_fetchers().await.expect("load fetchers");
+    let fetchers = hooks
+        .get_custom_fetchers()
+        .await
+        .expect("load fetchers");
 
     assert_eq!(fetchers.len(), 1);
     let resolution = serde_json::json!({ "type": "@custom/esm" });
-    assert!(fetchers[0].can_fetch("x@1.0.0", resolution.clone()).await.unwrap());
+    assert!(
+        fetchers[0]
+            .can_fetch("x@1.0.0", resolution.clone())
+            .await
+            .unwrap()
+    );
     let result = fetchers[0]
         .fetch("x@1.0.0", resolution, serde_json::json!({}))
         .await

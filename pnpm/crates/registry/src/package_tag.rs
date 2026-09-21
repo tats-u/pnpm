@@ -43,7 +43,9 @@ impl FromStr for PackageTag {
             // registry endpoint. Report it as an error (the range never
             // parses as a `Version`) rather than treating it as a literal tag
             // that would issue a doomed `/pkg/^18` request.
-            value.parse::<Version>().map(PackageTag::Version)
+            value
+                .parse::<Version>()
+                .map(PackageTag::Version)
         } else {
             Ok(PackageTag::Tag(value.to_owned()))
         }

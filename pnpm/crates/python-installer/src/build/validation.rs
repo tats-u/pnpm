@@ -25,7 +25,8 @@ pub(super) fn identify_identity(
     let Some(name) = manifest.distribution() else {
         return Ok(());
     };
-    if metadata.name
+    if metadata
+        .name
         .parse::<PackageName>()
         .ok()
         .as_ref()
@@ -39,12 +40,15 @@ pub(super) fn identify_identity(
     }
     // A project may leave its version to the backend, and then what the
     // backend says it is is the only answer there is.
-    let Some(version) =
-        manifest.project.as_ref().and_then(|project| project.version.as_ref())
+    let Some(version) = manifest
+        .project
+        .as_ref()
+        .and_then(|project| project.version.as_ref())
     else {
         return Ok(());
     };
-    if metadata.version
+    if metadata
+        .version
         .parse::<pep440_rs::Version>()
         .ok()
         .as_ref()
@@ -111,7 +115,8 @@ fn validate_prepared_metadata(
     root: &Path,
 ) -> Result<()> {
     let python = |metadata: &host::WheelMetadata| {
-        metadata.requires_python
+        metadata
+            .requires_python
             .as_deref()
             .map(str::parse::<pep440_rs::VersionSpecifiers>)
             .transpose()

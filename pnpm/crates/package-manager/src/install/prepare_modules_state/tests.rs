@@ -49,7 +49,12 @@ fn purge_removes_directory_links_without_following_them() {
         .collect::<Vec<_>>();
     dbg!(&remaining);
     assert!(remaining.is_empty());
-    assert!(link_target.join("package.json").exists(), "the purge must not follow the link");
+    assert!(
+        link_target
+            .join("package.json")
+            .exists(),
+        "the purge must not follow the link"
+    );
 }
 
 /// A shim target no move can keep working, so a tree holding one is refused.
@@ -170,7 +175,9 @@ fn short_circuits_over_a_bin(
         .expect("write the shim");
     fs::create_dir_all(&config.modules_dir).expect("create the modules dir");
     fs::write(
-        config.modules_dir.join(pnpm_modules_yaml::MODULES_FILENAME),
+        config
+            .modules_dir
+            .join(pnpm_modules_yaml::MODULES_FILENAME),
         format!("hoistedLocations:\n  nested@1.0.0:\n    - {HOISTED_LOCATION}\n"),
     )
     .expect("write the modules manifest");
@@ -338,8 +345,13 @@ fn moved_tree_is_reusable_over(
     config.modules_dir = project_root.join("node_modules");
     config.virtual_store_dir = config.modules_dir.join(".pnpm");
     fs::create_dir_all(&config.modules_dir).expect("create the modules dir");
-    fs::write(config.modules_dir.join(pnpm_modules_yaml::MODULES_FILENAME), modules_yaml)
-        .expect("write the modules manifest");
+    fs::write(
+        config
+            .modules_dir
+            .join(pnpm_modules_yaml::MODULES_FILENAME),
+        modules_yaml,
+    )
+    .expect("write the modules manifest");
     if let Some(absolute_bin) = absolute_bin {
         let bin_dir = project_root.join(absolute_bin);
         fs::create_dir_all(&bin_dir).expect("create the bin dir");
@@ -398,7 +410,9 @@ fn a_tree_recorded_elsewhere_is_moved_only_where_a_moved_tree_may_be_reused() {
 
     let in_place = WorkspaceState {
         projects: BTreeMap::from([(
-            project_root.to_string_lossy().into_owned(),
+            project_root
+                .to_string_lossy()
+                .into_owned(),
             ProjectEntry::default(),
         )]),
         ..WorkspaceState::default()
@@ -441,7 +455,9 @@ fn missing_or_corrupt_state_requires_relinking_only_for_an_existing_tree() {
         let manifest =
             PackageManifest::from_value(root.join("package.json"), serde_json::json!({}));
         let projects = [(root.to_path_buf(), &manifest)];
-        let state = load_workspace_state(root).ok().flatten();
+        let state = load_workspace_state(root)
+            .ok()
+            .flatten();
         assert!(state.is_none(), "the fixture must not provide a readable state");
 
         let existing =

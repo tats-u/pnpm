@@ -256,7 +256,8 @@ impl SchedulerState {
             return;
         };
         let admitted = {
-            let group = self.concurrency_groups
+            let group = self
+                .concurrency_groups
                 .entry(limit.group.clone())
                 .or_insert_with(|| ConcurrencyGroup {
                     limit: limit.limit,
@@ -323,11 +324,13 @@ impl SchedulerState {
     fn release_concurrency(&mut self, index: usize, limits: &[Option<NodeConcurrencyLimit>]) {
         let Some(limit) = &limits[index] else { return };
         let next = {
-            let group = self.concurrency_groups
+            let group = self
+                .concurrency_groups
                 .get_mut(&limit.group)
                 .expect("running task has a concurrency group");
             group.reserved -= 1;
-            group.waiting
+            group
+                .waiting
                 .pop_front()
                 .inspect(|_| group.reserved += 1)
         };

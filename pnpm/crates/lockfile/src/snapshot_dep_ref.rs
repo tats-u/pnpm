@@ -132,12 +132,14 @@ impl FromStr for SnapshotDepRef {
             return Ok(SnapshotDepRef::Link(target.to_string()));
         }
         if looks_like_alias(value) {
-            let key =
-                value.parse::<PkgNameVerPeer>().map_err(ParseSnapshotDepRefError::ParseAlias)?;
+            let key = value
+                .parse::<PkgNameVerPeer>()
+                .map_err(ParseSnapshotDepRefError::ParseAlias)?;
             Ok(SnapshotDepRef::Alias(key))
         } else {
-            let ver_peer =
-                value.parse::<PkgVerPeer>().map_err(ParseSnapshotDepRefError::ParsePlain)?;
+            let ver_peer = value
+                .parse::<PkgVerPeer>()
+                .map_err(ParseSnapshotDepRefError::ParsePlain)?;
             Ok(SnapshotDepRef::Plain(ver_peer))
         }
     }

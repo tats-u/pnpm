@@ -6,7 +6,12 @@ use crate::Ecosystem;
 
 fn load(yaml: &str) -> Result<Config, String> {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join(WORKSPACE_MANIFEST_FILENAME), yaml).unwrap();
+    fs::write(
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
+        yaml,
+    )
+    .unwrap();
     let settings = WorkspaceSettings::load_at(dir.path())
         .map_err(|error| error.to_string())?
         .expect("the workspace manifest was just written");
@@ -19,7 +24,10 @@ fn load(yaml: &str) -> Result<Config, String> {
 fn an_entry_that_names_no_ecosystem_is_an_npm_registry() {
     let config = load("registries:\n  https://npm.example.com/:\n    scopes: ['@acme']\n").unwrap();
     assert_eq!(
-        config.registries_by_scope.get("@acme").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@acme")
+            .map(String::as_str),
         Some("https://npm.example.com/"),
     );
     assert!(config.indexes_by_ecosystem.is_empty());
@@ -141,13 +149,18 @@ fn two_spellings_of_one_index_are_refused() {
 fn a_url_a_layer_serves_to_pypi_loses_the_npm_routes_it_had() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  https://one.example.com/:\n    ecosystem: pypi\n",
     )
     .unwrap();
     let mut config = Config::default();
-    config.registries_by_scope.insert("@acme".to_string(), "https://one.example.com/".to_string());
-    config.registries_by_prefix.insert("work".to_string(), "https://one.example.com/".to_string());
+    config
+        .registries_by_scope
+        .insert("@acme".to_string(), "https://one.example.com/".to_string());
+    config
+        .registries_by_prefix
+        .insert("work".to_string(), "https://one.example.com/".to_string());
     config.registry_options_by_url.insert(
         "https://one.example.com/".to_string(),
         pnpm_lockfile::RegistryOptions {
@@ -163,9 +176,17 @@ fn a_url_a_layer_serves_to_pypi_loses_the_npm_routes_it_had() {
     assert_eq!(config.python_indexes(), ["https://one.example.com/"]);
     assert!(config.registries_by_scope.is_empty(), "{:?}", config.registries_by_scope);
     assert!(config.registries_by_prefix.is_empty(), "{:?}", config.registries_by_prefix);
-    assert!(config.registry_options_by_url.is_empty(), "{:?}", config.registry_options_by_url);
+    assert!(
+        config
+            .registry_options_by_url
+            .is_empty(),
+        "{:?}",
+        config.registry_options_by_url
+    );
     let declarations = config.resolved_registry_declarations();
-    let entry = declarations.get("https://one.example.com/").expect("the index is declared");
+    let entry = declarations
+        .get("https://one.example.com/")
+        .expect("the index is declared");
     assert_eq!(entry.ecosystem(), Ecosystem::Pypi);
     assert!(entry.scopes.is_none(), "{entry:?}");
     assert!(entry.prefix.is_none(), "{entry:?}");
@@ -180,14 +201,19 @@ fn a_url_a_layer_serves_to_pypi_loses_the_npm_routes_it_had() {
 fn a_url_a_layer_routes_to_npm_loses_the_index_role_it_had() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  https://one.example.com/:\n    scopes: ['@acme']\n",
     )
     .unwrap();
     let mut config = Config::default();
     config.indexes_by_ecosystem.insert(
         Ecosystem::Pypi,
-        vec!["https://one.example.com/".to_string().into()],
+        vec![
+            "https://one.example.com/"
+                .to_string()
+                .into(),
+        ],
     );
     WorkspaceSettings::load_at(dir.path())
         .unwrap()
@@ -195,7 +221,10 @@ fn a_url_a_layer_routes_to_npm_loses_the_index_role_it_had() {
         .apply_to(&mut config, Path::new("/workspace"));
 
     assert_eq!(
-        config.registries_by_scope.get("@acme").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@acme")
+            .map(String::as_str),
         Some("https://one.example.com/"),
         "the scope the later layer routed was dropped",
     );
@@ -208,14 +237,19 @@ fn a_url_a_layer_routes_to_npm_loses_the_index_role_it_had() {
 fn a_url_reclassified_to_another_ecosystem_leaves_the_first_one() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  https://one.example.com/:\n    ecosystem: pypi\n",
     )
     .unwrap();
     let mut config = Config::default();
     config.indexes_by_ecosystem.insert(
         Ecosystem::Cargo,
-        vec!["https://one.example.com/".to_string().into()],
+        vec![
+            "https://one.example.com/"
+                .to_string()
+                .into(),
+        ],
     );
     WorkspaceSettings::load_at(dir.path())
         .unwrap()
@@ -241,12 +275,17 @@ fn a_named_registry_alias_does_not_address_an_index() {
     .unwrap();
     assert_eq!(config.python_indexes(), ["https://pypi.example.com/simple/"]);
     assert!(
-        !config.registries_by_prefix.contains_key("work"),
+        !config
+            .registries_by_prefix
+            .contains_key("work"),
         "the alias addressed the PyPI index: {:?}",
         config.registries_by_prefix,
     );
     assert_eq!(
-        config.registries_by_prefix.get("other").map(String::as_str),
+        config
+            .registries_by_prefix
+            .get("other")
+            .map(String::as_str),
         Some("https://npm.example.com/"),
         "an alias addressing an npm registry is still declared",
     );
@@ -259,14 +298,19 @@ fn a_named_registry_alias_does_not_address_an_index() {
 fn a_later_alias_does_not_address_an_index_an_earlier_layer_declared() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "namedRegistries:\n  work: https://pypi.example.com/simple\n",
     )
     .unwrap();
     let mut config = Config::default();
     config.indexes_by_ecosystem.insert(
         Ecosystem::Pypi,
-        vec!["https://pypi.example.com/simple/".to_string().into()],
+        vec![
+            "https://pypi.example.com/simple/"
+                .to_string()
+                .into(),
+        ],
     );
     WorkspaceSettings::load_at(dir.path())
         .unwrap()
@@ -275,7 +319,9 @@ fn a_later_alias_does_not_address_an_index_an_earlier_layer_declared() {
 
     assert_eq!(config.python_indexes(), ["https://pypi.example.com/simple/"]);
     assert!(
-        !config.registries_by_prefix.contains_key("work"),
+        !config
+            .registries_by_prefix
+            .contains_key("work"),
         "the alias addressed the PyPI index: {:?}",
         config.registries_by_prefix,
     );

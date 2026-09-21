@@ -153,9 +153,13 @@ fn star_pattern_hoists_all_transitives_privately() {
         vec![("b".to_string(), HoistKind::Private)],
     );
     assert!(
-        !result.hoisted_dependencies.contains_key("a@1.0.0"),
+        !result
+            .hoisted_dependencies
+            .contains_key("a@1.0.0"),
         "direct deps must not be hoisted: {:?}",
-        result.hoisted_dependencies.get("a@1.0.0"),
+        result
+            .hoisted_dependencies
+            .get("a@1.0.0"),
     );
 }
 
@@ -229,9 +233,15 @@ fn negation_pattern_excludes_alias() {
     })
     .expect("non-empty graph");
 
-    assert!(result.hoisted_dependencies.contains_key("ok@1.0.0"));
     assert!(
-        !result.hoisted_dependencies.contains_key("banned@1.0.0"),
+        result
+            .hoisted_dependencies
+            .contains_key("ok@1.0.0")
+    );
+    assert!(
+        !result
+            .hoisted_dependencies
+            .contains_key("banned@1.0.0"),
         "banned must be excluded by `!banned` ignore pattern",
     );
 }
@@ -257,9 +267,15 @@ fn first_seen_wins_per_alias() {
     })
     .expect("non-empty graph");
 
-    assert!(result.hoisted_dependencies.contains_key("shared@1.0.0"));
     assert!(
-        !result.hoisted_dependencies.contains_key("shared@2.0.0"),
+        result
+            .hoisted_dependencies
+            .contains_key("shared@1.0.0")
+    );
+    assert!(
+        !result
+            .hoisted_dependencies
+            .contains_key("shared@2.0.0"),
         "second-seen alias must not be hoisted",
     );
 }
@@ -294,7 +310,8 @@ fn traversal_matches_pnpm_graph_walker_ownership() {
     })
     .expect("non-empty graph");
 
-    let choices: Vec<_> = result.hoisted_dependencies
+    let choices: Vec<_> = result
+        .hoisted_dependencies
         .keys()
         .filter(|key| key.starts_with("chosen-through-"))
         .map(String::as_str)
@@ -329,7 +346,8 @@ fn traversal_includes_alias_collisions_from_every_importer() {
     })
     .expect("non-empty graph");
 
-    let hoisted_keys: Vec<_> = result.hoisted_dependencies
+    let hoisted_keys: Vec<_> = result
+        .hoisted_dependencies
         .keys()
         .map(String::as_str)
         .collect();
@@ -360,7 +378,9 @@ fn direct_dep_blocks_same_alias_transitive() {
     .expect("non-empty graph");
 
     assert!(
-        !result.hoisted_dependencies.contains_key("shared@2.0.0"),
+        !result
+            .hoisted_dependencies
+            .contains_key("shared@2.0.0"),
         "direct-dep `shared@1` must block hoisting of transitive `shared@2`",
     );
 }
@@ -386,7 +406,9 @@ fn skipped_snapshot_is_excluded() {
     .expect("non-empty graph");
 
     assert!(
-        !result.hoisted_dependencies.contains_key("opt@1.0.0"),
+        !result
+            .hoisted_dependencies
+            .contains_key("opt@1.0.0"),
         "skipped snapshot must not appear in hoistedDependencies",
     );
     // The by-node-id map records the entry before the skip check;
@@ -394,7 +416,11 @@ fn skipped_snapshot_is_excluded() {
     // node IDs out of the symlink work (the `graph.get(node_id)` guard
     // alone isn't enough — `build_hoist_graph` only filters by missing
     // metadata, so `graph` contains every snapshot, skipped or not).
-    assert!(result.hoisted_dependencies_by_node_id.contains_key(&key("opt", "1.0.0")));
+    assert!(
+        result
+            .hoisted_dependencies_by_node_id
+            .contains_key(&key("opt", "1.0.0"))
+    );
 }
 
 /// `symlink_hoisted_dependencies` filters entries whose key is in
@@ -424,10 +450,8 @@ fn symlink_skips_dropped_nodes() {
     let dropped_key = key("dropped", "1.0.0");
     let mut hoisted: HashMap<PackageKey, HashMap<String, HoistKind>> = HashMap::new();
     hoisted.insert(kept_key.clone(), HashMap::from([("kept".to_string(), HoistKind::Private)]));
-    hoisted.insert(
-        dropped_key.clone(),
-        HashMap::from([("dropped".to_string(), HoistKind::Private)]),
-    );
+    hoisted
+        .insert(dropped_key.clone(), HashMap::from([("dropped".to_string(), HoistKind::Private)]));
 
     let mut graph: HashMap<PackageKey, HoistGraphNode> = HashMap::new();
     graph.insert(
@@ -457,7 +481,12 @@ fn symlink_skips_dropped_nodes() {
         &virtual_store_dir,
         pnpm_config::default_virtual_store_dir_max_length() as usize,
     );
-    std::fs::create_dir_all(layout.slot_dir(&kept_key).join("node_modules/kept")).unwrap();
+    std::fs::create_dir_all(
+        layout
+            .slot_dir(&kept_key)
+            .join("node_modules/kept"),
+    )
+    .unwrap();
 
     let mut skipped: HashSet<PackageKey> = HashSet::new();
     skipped.insert(dropped_key);
@@ -559,7 +588,8 @@ fn private_hoist_with_bins_collected_for_bin_link() {
     })
     .expect("non-empty graph");
 
-    let bin_aliases: Vec<&str> = result.hoisted_aliases_with_bins
+    let bin_aliases: Vec<&str> = result
+        .hoisted_aliases_with_bins
         .iter()
         .map(|(alias, _)| alias.as_str())
         .collect();
@@ -589,7 +619,11 @@ fn public_hoist_does_not_contribute_to_bin_aliases() {
     })
     .expect("non-empty graph");
 
-    assert!(result.hoisted_aliases_with_bins.is_empty());
+    assert!(
+        result
+            .hoisted_aliases_with_bins
+            .is_empty()
+    );
 }
 
 #[test]
@@ -609,7 +643,9 @@ fn build_direct_deps_by_importer_collects_from_importers() {
         &importers,
         [DependencyGroup::Prod, DependencyGroup::Dev, DependencyGroup::Optional],
     );
-    let dot = result.get(".").expect("root importer present");
+    let dot = result
+        .get(".")
+        .expect("root importer present");
     assert_eq!(dot.get("a"), Some(&key("a", "1.0.0")));
 }
 
@@ -754,7 +790,9 @@ fn update_stale_hoist_symlink_preserves_external_symlink() {
     std::fs::create_dir_all(&dep_dir).unwrap();
     let dest = private_hoisted.join("external-dep");
 
-    let external_target = dir.path().join("some-project/node_modules/external-pkg");
+    let external_target = dir
+        .path()
+        .join("some-project/node_modules/external-pkg");
     std::fs::create_dir_all(external_target.parent().unwrap()).unwrap();
     std::fs::create_dir_all(&external_target).unwrap();
     pnpm_fs::symlink_dir(&external_target, &dest).unwrap();
@@ -820,7 +858,9 @@ fn update_stale_hoist_symlink_is_noop_when_already_correct() {
     let dest = private_hoisted.join("already-correct-dep");
     pnpm_fs::symlink_dir(&dep_dir, &dest).unwrap();
 
-    let ino_before = std::fs::symlink_metadata(&dest).unwrap().ino();
+    let ino_before = std::fs::symlink_metadata(&dest)
+        .unwrap()
+        .ino();
 
     crate::hoist::symlinks::update_stale_hoist_symlink(
         &dep_dir,
@@ -830,7 +870,9 @@ fn update_stale_hoist_symlink_is_noop_when_already_correct() {
     )
     .expect("should leave an already-correct symlink untouched");
 
-    let ino_after = std::fs::symlink_metadata(&dest).unwrap().ino();
+    let ino_after = std::fs::symlink_metadata(&dest)
+        .unwrap()
+        .ino();
     assert_eq!(
         ino_before, ino_after,
         "an already-correct symlink must not be unlinked and recreated",
@@ -907,9 +949,13 @@ fn workspace_packages_hoist_privately_with_lowest_precedence() {
     // The claimed alias blocks the transitive `pkg-b@9.9.9`, and no
     // workspace package leaks into `.modules.yaml`'s map.
     assert!(
-        !result.hoisted_dependencies.contains_key("pkg-b@9.9.9"),
+        !result
+            .hoisted_dependencies
+            .contains_key("pkg-b@9.9.9"),
         "workspace-claimed alias must block the transitive: {:?}",
-        result.hoisted_dependencies.get("pkg-b@9.9.9"),
+        result
+            .hoisted_dependencies
+            .get("pkg-b@9.9.9"),
     );
     for alias_map in result.hoisted_dependencies.values() {
         assert!(!alias_map.contains_key("pkg-a") && !alias_map.contains_key("taken"));

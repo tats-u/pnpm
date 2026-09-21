@@ -80,7 +80,8 @@ pub(super) struct SelectAffectedOptions<'a> {
 pub(super) fn select_affected_projects(
     options: &SelectAffectedOptions<'_>,
 ) -> miette::Result<Selection> {
-    let all_dirs: Vec<PathBuf> = options.graph
+    let all_dirs: Vec<PathBuf> = options
+        .graph
         .keys()
         .filter(|dir| {
             options.config.include_workspace_root || dir.as_path() != options.workspace_root
@@ -98,7 +99,10 @@ pub(super) fn select_affected_projects(
                 "Cannot resolve the merge base of HEAD and {}; running the pipeline over every project.",
                 options.base,
             ),
-            prefix: options.workspace_root.to_string_lossy().into_owned(),
+            prefix: options
+                .workspace_root
+                .to_string_lossy()
+                .into_owned(),
         }));
         return Ok(full_selection(&all_dirs, None, 0));
     };
@@ -212,18 +216,23 @@ fn select_changed_projects(
         &GetChangedProjectsOptions {
             workspace_dir: options.workspace_root,
             test_pattern: &options.config.test_pattern,
-            changed_files_ignore_pattern: &options.config.changed_files_ignore_pattern,
+            changed_files_ignore_pattern: &options
+                .config
+                .changed_files_ignore_pattern,
         },
     )
     .map_err(miette::Report::new)?;
-    let changed_count =
-        changed.changed_projects.len() + changed.ignore_dependent_for_projects.len();
+    let changed_count = changed.changed_projects.len()
+        + changed
+            .ignore_dependent_for_projects
+            .len();
 
     // A changed file above every package maps to the workspace root
     // project: the root manifest, the lockfile, a shared config. Those
     // feed every project in ways project topology cannot see, so pruning
     // is disabled for the run rather than guessed at.
-    if changed.changed_projects
+    if changed
+        .changed_projects
         .iter()
         .chain(&changed.ignore_dependent_for_projects)
         .any(|dir| dir == options.workspace_root)
@@ -233,7 +242,10 @@ fn select_changed_projects(
             message:
                 "The diff touches workspace-root files; running the pipeline over every project."
                     .to_string(),
-            prefix: options.workspace_root.to_string_lossy().into_owned(),
+            prefix: options
+                .workspace_root
+                .to_string_lossy()
+                .into_owned(),
         }));
         return Ok(full_selection(all_dirs, Some(merge_base), changed_count));
     }
@@ -264,7 +276,12 @@ fn affected_selection(
     let mut affected = projects_with_dependents(options.graph, &changed.changed_projects);
     // A project whose only changes match `testPattern` is selected itself
     // without pulling in its dependents.
-    affected.extend(changed.ignore_dependent_for_projects.iter().cloned());
+    affected.extend(
+        changed
+            .ignore_dependent_for_projects
+            .iter()
+            .cloned(),
+    );
     if !options.config.include_workspace_root {
         affected.remove(options.workspace_root);
     }
@@ -277,7 +294,8 @@ fn affected_selection(
 
     // In the workspace graph's deterministic order, which is the
     // dispatch tie-break order.
-    let requested: Vec<PathBuf> = options.graph
+    let requested: Vec<PathBuf> = options
+        .graph
         .keys()
         .filter(|dir| affected.contains(dir.as_path()))
         .cloned()

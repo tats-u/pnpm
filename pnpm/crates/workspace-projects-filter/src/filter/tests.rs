@@ -284,10 +284,8 @@ fn select_package_without_specifying_scope() {
 #[test]
 fn scoped_package_with_same_name_picks_exact_match() {
     let mut graph: ProjectGraph<TestPkg> = IndexMap::new();
-    graph.insert(
-        PathBuf::from("/packages/@foo/bar"),
-        node("/packages/@foo/bar", "@foo/bar", &[]).1,
-    );
+    graph
+        .insert(PathBuf::from("/packages/@foo/bar"), node("/packages/@foo/bar", "@foo/bar", &[]).1);
     graph.insert(PathBuf::from("/packages/bar"), node("/packages/bar", "bar", &[]).1);
     let result = selected(&graph, &[selector(Some("bar"))]);
     assert_eq!(result, ["/packages/bar"]);
@@ -296,10 +294,8 @@ fn scoped_package_with_same_name_picks_exact_match() {
 #[test]
 fn two_scoped_packages_matching_name_select_none() {
     let mut graph: ProjectGraph<TestPkg> = IndexMap::new();
-    graph.insert(
-        PathBuf::from("/packages/@foo/bar"),
-        node("/packages/@foo/bar", "@foo/bar", &[]).1,
-    );
+    graph
+        .insert(PathBuf::from("/packages/@foo/bar"), node("/packages/@foo/bar", "@foo/bar", &[]).1);
     graph.insert(
         PathBuf::from("/packages/@types/bar"),
         node("/packages/@types/bar", "@types/bar", &[]).1,
@@ -544,8 +540,11 @@ mod changed_packages {
     }
 
     fn touch(path: &Path) {
-        fs::create_dir_all(path.parent().expect("file path has a parent"))
-            .expect("create parent dirs");
+        fs::create_dir_all(
+            path.parent()
+                .expect("file path has a parent"),
+        )
+        .expect("create parent dirs");
         fs::write(path, "").expect("write file");
     }
 
@@ -680,9 +679,21 @@ mod changed_packages {
         let main_repo = TempDir::new().expect("create tempdir");
         let main_repo_dir = main_repo.path();
         init_repo(main_repo_dir);
-        touch(&main_repo_dir.join("package-a").join("file.js"));
-        touch(&main_repo_dir.join("package-b").join("file.js"));
-        touch(&main_repo_dir.join("package-c").join("file.js"));
+        touch(
+            &main_repo_dir
+                .join("package-a")
+                .join("file.js"),
+        );
+        touch(
+            &main_repo_dir
+                .join("package-b")
+                .join("file.js"),
+        );
+        touch(
+            &main_repo_dir
+                .join("package-c")
+                .join("file.js"),
+        );
         commit_all(main_repo_dir);
 
         let worktree_parent = TempDir::new().expect("create tempdir");
@@ -770,7 +781,9 @@ mod changed_packages {
         dbg!(&error);
         assert!(matches!(error, FilterError::FilterChanged { .. }));
         assert!(
-            error.to_string().contains("bad revision"),
+            error
+                .to_string()
+                .contains("bad revision"),
             "git must treat the option-like ref as a revision, got: {error}",
         );
         assert!(!evil_output.exists(), "the ref must not be honored as a git option");
@@ -785,11 +798,21 @@ mod changed_packages {
         let main_repo = TempDir::new().expect("create tempdir");
         let main_repo_dir = main_repo.path();
         init_repo(main_repo_dir);
-        touch(&main_repo_dir.join("package-a").join("file.js"));
-        touch(&main_repo_dir.join("package-b").join("file.js"));
+        touch(
+            &main_repo_dir
+                .join("package-a")
+                .join("file.js"),
+        );
+        touch(
+            &main_repo_dir
+                .join("package-b")
+                .join("file.js"),
+        );
         commit_all(main_repo_dir);
 
-        let worktree_dir = main_repo_dir.join("worktrees").join("feature");
+        let worktree_dir = main_repo_dir
+            .join("worktrees")
+            .join("feature");
         git(
             main_repo_dir,
             &["worktree", "add", "-b", "feature", &worktree_dir.to_string_lossy(), "main"],
@@ -829,7 +852,8 @@ fn graph_project(root: &str, name: &str, deps: &[(&str, &str)]) -> TestPkg {
 }
 
 fn project_dirs(result: &crate::filter::FilteredProjects) -> Vec<String> {
-    result.selected_projects
+    result
+        .selected_projects
         .iter()
         .map(|path| path.to_string_lossy().into_owned())
         .collect()

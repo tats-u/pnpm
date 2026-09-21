@@ -109,7 +109,10 @@ impl Walker<'_> {
     /// final depPath construction even though it remains a distinct tree
     /// occurrence for traversal and edge labels.
     fn cache_owner_node_id<'a>(&'a self, node_id: &'a NodeId) -> &'a NodeId {
-        self.nodes.cache_owners.get(node_id).unwrap_or(node_id)
+        self.nodes
+            .cache_owners
+            .get(node_id)
+            .unwrap_or(node_id)
     }
 
     /// Record one walked node: its entry in the provisional
@@ -166,7 +169,8 @@ impl Walker<'_> {
         optional_child_aliases: HashSet<String>,
         transitive_peer_dependencies: HashSet<String>,
     ) {
-        self.output.graph
+        self.output
+            .graph
             .entry(node.dep_path.clone())
             .and_modify(|entry| {
                 if entry.depth > node.ancestry.depth {
@@ -186,7 +190,9 @@ impl Walker<'_> {
                     optional_children: optional_child_aliases,
                     peer_dependencies: node.pkg.peer_dependencies.clone(),
                     transitive_peer_dependencies,
-                    resolved_peer_names: node.peers.resolved
+                    resolved_peer_names: node
+                        .peers
+                        .resolved
                         .keys()
                         .cloned()
                         .collect(),
@@ -262,10 +268,16 @@ impl Walker<'_> {
         let canonical_scc = self.canonical_scc();
         let mut remapped = Vec::new();
         for (alias, child_node_id) in children {
-            if self.caches.node_dep_paths.contains_key(child_node_id) {
+            if self
+                .caches
+                .node_dep_paths
+                .contains_key(child_node_id)
+            {
                 continue;
             }
-            let Some(child_pkg_id) = self.tree.dependencies_tree
+            let Some(child_pkg_id) = self
+                .tree
+                .dependencies_tree
                 .get(child_node_id)
                 .map(|child| Arc::clone(&child.resolved_package_id))
             else {
@@ -293,18 +305,31 @@ impl Walker<'_> {
     pub(super) fn patch_pending_peer_edges(&mut self) {
         // Cleared with the buffer: a triple pushed after this drain must be
         // applied again, since the graph it patches has moved on.
-        self.output.pending_peer_edge_keys.clear();
+        self.output
+            .pending_peer_edge_keys
+            .clear();
         for edge in std::mem::take(&mut self.output.pending_peer_edges) {
-            let Some(child_dep_path) = self.caches.node_dep_paths.get(&edge.child_node_id).cloned()
+            let Some(child_dep_path) = self
+                .caches
+                .node_dep_paths
+                .get(&edge.child_node_id)
+                .cloned()
             else {
                 continue;
             };
-            if let Some(node) = self.output.graph.get_mut(&edge.parent_dep_path) {
+            if let Some(node) = self
+                .output
+                .graph
+                .get_mut(&edge.parent_dep_path)
+            {
                 // `entry().or_insert` rather than unconditional insert:
                 // if a later walk of the same `dep_path` already
                 // populated the edge (e.g. via the cycle path), we
                 // don't want to overwrite a more specific entry.
-                node.edges.children.entry(edge.child_alias).or_insert(child_dep_path);
+                node.edges
+                    .children
+                    .entry(edge.child_alias)
+                    .or_insert(child_dep_path);
             }
         }
     }
@@ -387,7 +412,12 @@ impl Walker<'_> {
             transitive_by_dep_path
                 .entry(dep_path.clone())
                 .or_default()
-                .extend(record.transitive_peer_dependencies.iter().cloned());
+                .extend(
+                    record
+                        .transitive_peer_dependencies
+                        .iter()
+                        .cloned(),
+                );
             record_dep_paths.insert(node_id.clone(), dep_path);
         }
         (record_dep_paths, transitive_by_dep_path)
@@ -407,7 +437,9 @@ impl Walker<'_> {
         for (alias, edge_node_id) in &record.edges {
             children.insert(alias.clone(), self.final_dep_path_of(edge_node_id, final_dep_paths));
         }
-        let resolved_peer_names: HashSet<String> = self.nodes.external_peers
+        let resolved_peer_names: HashSet<String> = self
+            .nodes
+            .external_peers
             .get(node_id)
             .map(|peers| peers.keys().cloned().collect())
             .unwrap_or_default();
@@ -452,16 +484,18 @@ impl Walker<'_> {
             // then `or_insert`s the same `(parent, alias)` slot. A parent
             // reached through many occurrences pushes the same triple over
             // and over, so drop repeats instead of buffering millions.
-            if self.output.pending_peer_edge_keys.insert((
-                parent_dep_path.clone(),
-                alias.clone(),
-                node_id.clone(),
-            )) {
-                self.output.pending_peer_edges.push(PendingPeerEdge {
-                    parent_dep_path: parent_dep_path.clone(),
-                    child_alias: alias,
-                    child_node_id: node_id,
-                });
+            if self
+                .output
+                .pending_peer_edge_keys
+                .insert((parent_dep_path.clone(), alias.clone(), node_id.clone()))
+            {
+                self.output
+                    .pending_peer_edges
+                    .push(PendingPeerEdge {
+                        parent_dep_path: parent_dep_path.clone(),
+                        child_alias: alias,
+                        child_node_id: node_id,
+                    });
             }
         }
     }

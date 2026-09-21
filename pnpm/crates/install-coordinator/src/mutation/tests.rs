@@ -5,7 +5,9 @@ async fn capture(
     directory: &tempfile::TempDir,
     paths: impl IntoIterator<Item = std::path::PathBuf>,
 ) -> MetadataMutation {
-    MetadataMutation::capture(directory.path().to_path_buf(), paths).await.unwrap()
+    MetadataMutation::capture(directory.path().to_path_buf(), paths)
+        .await
+        .unwrap()
 }
 
 #[tokio::test]
@@ -56,7 +58,11 @@ async fn attempts_every_restoration_after_one_fails() {
         .unwrap_err();
 
     eprintln!("restoration failure: {error:?}");
-    assert!(error.to_string().contains("operation failed"));
+    assert!(
+        error
+            .to_string()
+            .contains("operation failed")
+    );
     assert_eq!(fs::read_to_string(existing).unwrap(), "before");
 }
 
@@ -78,7 +84,8 @@ async fn serializes_metadata_transactions_for_the_same_workspace_without_a_store
     assert!(!second.is_finished());
 
     drop(first);
-    tokio::time::timeout(std::time::Duration::from_secs(1), second).await
+    tokio::time::timeout(std::time::Duration::from_secs(1), second)
+        .await
         .expect("second transaction should acquire the released lock")
         .unwrap()
         .unwrap();
@@ -113,7 +120,9 @@ async fn restoration_stays_in_the_parent_pinned_during_capture() {
 
     let directory = tempfile::tempdir().unwrap();
     let project = directory.path().join("project");
-    let original = directory.path().join("original-project");
+    let original = directory
+        .path()
+        .join("original-project");
     let attacker = directory.path().join("attacker");
     fs::create_dir(&project).unwrap();
     fs::create_dir(&attacker).unwrap();
@@ -176,7 +185,9 @@ async fn restoration_rejects_a_new_symlink_in_a_missing_parent_path() {
         .unwrap_err();
 
     assert!(
-        error.to_string().contains("operation failed"),
+        error
+            .to_string()
+            .contains("operation failed"),
         "rollback should retain the operation error: {error:?}",
     );
     assert_eq!(fs::read_to_string(attacker.join("config.toml")).unwrap(), "attacker");

@@ -44,9 +44,8 @@ impl<'de> Deserialize<'de> for LedgerEntry {
             type Value = LedgerEntry;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str(
-                    r#"a list of intent ids, or a mapping with "dir" and "intents""#,
-                )
+                formatter
+                    .write_str(r#"a list of intent ids, or a mapping with "dir" and "intents""#)
             }
 
             fn visit_unit<DeError>(self) -> Result<Self::Value, DeError> {
@@ -102,7 +101,9 @@ impl LedgerEntry {
 pub type Ledger = BTreeMap<String, LedgerEntry>;
 
 pub fn read_ledger(workspace_dir: &Path) -> Result<Ledger, VersioningError> {
-    let ledger_path = workspace_dir.join(CHANGES_DIR).join(LEDGER_FILENAME);
+    let ledger_path = workspace_dir
+        .join(CHANGES_DIR)
+        .join(LEDGER_FILENAME);
     let content = match fs::read_to_string(&ledger_path) {
         Ok(content) => content,
         Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Ledger::new()),
@@ -297,8 +298,12 @@ pub fn build_consumption_index(
     Ok(names
         .into_iter()
         .map(|dir| {
-            let stable = stable_ids_by_dir.remove(&dir).unwrap_or_default();
-            let prerelease = prerelease_ids_by_dir.remove(&dir).unwrap_or_default();
+            let stable = stable_ids_by_dir
+                .remove(&dir)
+                .unwrap_or_default();
+            let prerelease = prerelease_ids_by_dir
+                .remove(&dir)
+                .unwrap_or_default();
             let consumption = package_consumption(stable, prerelease);
             (dir, consumption)
         })
@@ -375,7 +380,9 @@ pub fn normalize_project_dir(dir: &str) -> String {
     while let Some(rest) = normalized.strip_prefix("./") {
         normalized = rest.to_string();
     }
-    normalized.trim_end_matches('/').to_string()
+    normalized
+        .trim_end_matches('/')
+        .to_string()
 }
 
 #[cfg(test)]

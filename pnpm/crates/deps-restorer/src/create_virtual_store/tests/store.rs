@@ -53,7 +53,9 @@ async fn cold_batch_links_slots_in_parallel() {
     let mem_cache = Arc::new(MemCache::default());
     for package_name in ["cold-a", "cold-b", "cold-c", "cold-d"] {
         let package_key = key(package_name, "1.0.0");
-        let source_dir = workspace_root.join("prefetched").join(package_name);
+        let source_dir = workspace_root
+            .join("prefetched")
+            .join(package_name);
         fs::create_dir_all(&source_dir).expect("create prefetched package dir");
         let manifest_path = source_dir.join("package.json");
         let manifest = if package_name == "cold-a" {
@@ -74,7 +76,11 @@ async fn cold_batch_links_slots_in_parallel() {
         mem_cache.insert(
             package_mem_cache_key(
                 &format!("https://registry.test/{package_name}/-/{package_name}-1.0.0.tgz"),
-                Some(&DUMMY_SHA512.parse().expect("parse integrity")),
+                Some(
+                    &DUMMY_SHA512
+                        .parse()
+                        .expect("parse integrity"),
+                ),
                 false,
             ),
             Arc::new(tokio::sync::RwLock::new(CacheValue::Available(CachedTarball::from_files(
@@ -99,7 +105,9 @@ async fn cold_batch_links_slots_in_parallel() {
     let logged_methods = AtomicU8::new(0);
     let progress_reported = SharedReportedProgressKeys::default();
     let (store_index_writer, writer_task) = StoreIndexWriter::spawn(&config.store_dir);
-    let requester = workspace_root.to_string_lossy().into_owned();
+    let requester = workspace_root
+        .to_string_lossy()
+        .into_owned();
     let probe =
         crate::create_virtual_dir_by_snapshot::tests::LinkConcurrencyProbe::waiting_for_overlap();
 
@@ -148,7 +156,10 @@ async fn cold_batch_links_slots_in_parallel() {
     .expect("all-cold virtual-store creation should succeed from the mem cache");
 
     drop(store_index_writer);
-    writer_task.await.expect("join store-index writer").expect("flush store-index writer");
+    writer_task
+        .await
+        .expect("join store-index writer")
+        .expect("flush store-index writer");
 
     assert!(
         probe.max_concurrent() >= 2,
@@ -158,10 +169,23 @@ async fn cold_batch_links_slots_in_parallel() {
     );
     let cold_a = key("cold-a", "1.0.0");
     let cold_b = key("cold-b", "1.0.0");
-    assert_eq!(output.requires_build_by_snapshot.get(&cold_a), Some(&true));
-    assert_eq!(output.requires_build_by_snapshot.get(&cold_b), Some(&false));
     assert_eq!(
-        output.materialized_snapshots.into_iter().collect::<HashSet<_>>(),
+        output
+            .requires_build_by_snapshot
+            .get(&cold_a),
+        Some(&true)
+    );
+    assert_eq!(
+        output
+            .requires_build_by_snapshot
+            .get(&cold_b),
+        Some(&false)
+    );
+    assert_eq!(
+        output
+            .materialized_snapshots
+            .into_iter()
+            .collect::<HashSet<_>>(),
         HashSet::from([cold_a, cold_b, key("cold-c", "1.0.0"), key("cold-d", "1.0.0"),]),
     );
 }
@@ -171,18 +195,29 @@ async fn cold_batch_links_slots_in_parallel() {
 #[tokio::test]
 async fn skipped_warm_slot_keeps_its_store_row_without_checking_cas_blobs() {
     let install = SeededStoreInstall::new(None);
-    let first = install.run().await.expect("seeded store satisfies the offline install");
+    let first = install
+        .run()
+        .await
+        .expect("seeded store satisfies the offline install");
     assert_eq!(first.materialized_snapshots.as_slice(), std::slice::from_ref(&install.package_key));
 
     fs::remove_file(&install.body_blob).expect("remove the CAS blob behind index.js");
 
-    let second = install.run().await.expect("an existing slot needs no CAS blob");
+    let second = install
+        .run()
+        .await
+        .expect("an existing slot needs no CAS blob");
     assert!(
         second.materialized_snapshots.is_empty(),
         "the slot is current: {:?}",
         second.materialized_snapshots,
     );
-    assert_eq!(second.requires_build_by_snapshot.get(&install.package_key), Some(&false));
+    assert_eq!(
+        second
+            .requires_build_by_snapshot
+            .get(&install.package_key),
+        Some(&false)
+    );
 }
 /// A skipped slot's row is still checked when it carries a side-effects
 /// overlay: the build phase's cache hit imports the overlay's base files
@@ -190,27 +225,44 @@ async fn skipped_warm_slot_keeps_its_store_row_without_checking_cas_blobs() {
 #[tokio::test]
 async fn skipped_warm_slot_with_a_side_effects_row_is_still_checked() {
     let install = SeededStoreInstall::new(Some(b"module.exports = 'built'\n"));
-    let first = install.run().await.expect("seeded store satisfies the offline install");
-    assert_eq!(first.requires_build_by_snapshot.get(&install.package_key), Some(&false));
+    let first = install
+        .run()
+        .await
+        .expect("seeded store satisfies the offline install");
+    assert_eq!(
+        first
+            .requires_build_by_snapshot
+            .get(&install.package_key),
+        Some(&false)
+    );
     assert!(
-        first.side_effects_maps_by_snapshot.contains_key(&install.package_key),
+        first
+            .side_effects_maps_by_snapshot
+            .contains_key(&install.package_key),
         "the seeded side-effects row must reach the build phase while its files verify",
     );
 
     fs::remove_file(&install.body_blob).expect("remove the CAS blob behind index.js");
 
-    let second = install.run().await.expect("an existing slot needs no CAS blob");
+    let second = install
+        .run()
+        .await
+        .expect("an existing slot needs no CAS blob");
     assert!(
         second.materialized_snapshots.is_empty(),
         "the slot is current: {:?}",
         second.materialized_snapshots,
     );
     assert!(
-        !second.side_effects_maps_by_snapshot.contains_key(&install.package_key),
+        !second
+            .side_effects_maps_by_snapshot
+            .contains_key(&install.package_key),
         "a row that failed its files check must not feed the build phase",
     );
     assert_eq!(
-        second.requires_build_by_snapshot.get(&install.package_key),
+        second
+            .requires_build_by_snapshot
+            .get(&install.package_key),
         None,
         "a row that failed its files check must be dropped entirely",
     );
@@ -250,7 +302,9 @@ async fn gvs_link_pass_materializes_shared_slot_once() {
     let mut packages = HashMap::new();
     let mem_cache = Arc::new(MemCache::default());
     for package_name in ["shared", "solo"] {
-        let source_dir = workspace_root.join("prefetched").join(package_name);
+        let source_dir = workspace_root
+            .join("prefetched")
+            .join(package_name);
         fs::create_dir_all(&source_dir).expect("create prefetched package dir");
         let manifest_path = source_dir.join("package.json");
         fs::write(&manifest_path, format!(r#"{{"name":"{package_name}","version":"1.0.0"}}"#))
@@ -259,7 +313,11 @@ async fn gvs_link_pass_materializes_shared_slot_once() {
         mem_cache.insert(
             package_mem_cache_key(
                 &format!("https://registry.test/{package_name}/-/{package_name}-1.0.0.tgz"),
-                Some(&DUMMY_SHA512.parse().expect("parse integrity")),
+                Some(
+                    &DUMMY_SHA512
+                        .parse()
+                        .expect("parse integrity"),
+                ),
                 false,
             ),
             Arc::new(tokio::sync::RwLock::new(CacheValue::Available(CachedTarball::from_files(
@@ -301,7 +359,9 @@ async fn gvs_link_pass_materializes_shared_slot_once() {
     let logged_methods = AtomicU8::new(0);
     let progress_reported = SharedReportedProgressKeys::default();
     let (store_index_writer, writer_task) = StoreIndexWriter::spawn(&config.store_dir);
-    let requester = workspace_root.to_string_lossy().into_owned();
+    let requester = workspace_root
+        .to_string_lossy()
+        .into_owned();
     let probe = crate::create_virtual_dir_by_snapshot::tests::LinkConcurrencyProbe::default();
 
     CreateVirtualStore {
@@ -349,7 +409,10 @@ async fn gvs_link_pass_materializes_shared_slot_once() {
     .expect("global-virtual-store creation should succeed from the mem cache");
 
     drop(store_index_writer);
-    writer_task.await.expect("join store-index writer").expect("flush store-index writer");
+    writer_task
+        .await
+        .expect("join store-index writer")
+        .expect("flush store-index writer");
 
     assert_eq!(
         probe.total_entered(),
@@ -417,9 +480,12 @@ fn snapshot_cache_key_for_a_refused_tarball_is_absent() {
 /// recorded removals.
 #[test]
 fn group_slots_by_dir_collapses_hash_equal_peer_variants() {
-    let plain: PackageKey = "comp@file:packages/comp".parse().expect("parse plain key");
-    let peered: PackageKey =
-        "comp@file:packages/comp(peer@1.0.0)".parse().expect("parse peered key");
+    let plain: PackageKey = "comp@file:packages/comp"
+        .parse()
+        .expect("parse plain key");
+    let peered: PackageKey = "comp@file:packages/comp(peer@1.0.0)"
+        .parse()
+        .expect("parse peered key");
 
     let mut snapshots = HashMap::new();
     snapshots.insert(plain.clone(), SnapshotEntry::default());
@@ -463,9 +529,12 @@ fn group_slots_by_dir_collapses_hash_equal_peer_variants() {
 /// keep their own link tasks.
 #[test]
 fn group_slots_by_dir_keeps_diverging_peer_variants_apart() {
-    let plain: PackageKey = "comp@file:packages/comp".parse().expect("parse plain key");
-    let peered: PackageKey =
-        "comp@file:packages/comp(peer@1.0.0)".parse().expect("parse peered key");
+    let plain: PackageKey = "comp@file:packages/comp"
+        .parse()
+        .expect("parse plain key");
+    let peered: PackageKey = "comp@file:packages/comp(peer@1.0.0)"
+        .parse()
+        .expect("parse peered key");
     let child: PackageKey = key("leaf", "1.0.0");
 
     let mut snapshots = HashMap::new();
@@ -495,17 +564,28 @@ fn group_slots_by_dir_keeps_diverging_peer_variants_apart() {
     let groups = crate::create_virtual_store::slot_linking::group_slots_by_dir(&slots, &layout);
 
     assert_eq!(groups.len(), 2, "distinct slots must keep distinct link tasks");
-    assert!(groups.iter().all(|group| group.duplicates.is_empty()));
-    assert!(groups.iter().all(|group| group.merged_removed_aliases.is_none()));
+    assert!(
+        groups
+            .iter()
+            .all(|group| group.duplicates.is_empty())
+    );
+    assert!(
+        groups
+            .iter()
+            .all(|group| group.merged_removed_aliases.is_none())
+    );
 }
 /// Without the global virtual store, `slot_dir` embeds the full
 /// peer-suffixed key, so grouping never merges anything and the link
 /// pass matches the ungrouped behavior exactly.
 #[test]
 fn group_slots_by_dir_is_identity_without_gvs() {
-    let plain: PackageKey = "comp@file:packages/comp".parse().expect("parse plain key");
-    let peered: PackageKey =
-        "comp@file:packages/comp(peer@1.0.0)".parse().expect("parse peered key");
+    let plain: PackageKey = "comp@file:packages/comp"
+        .parse()
+        .expect("parse plain key");
+    let peered: PackageKey = "comp@file:packages/comp(peer@1.0.0)"
+        .parse()
+        .expect("parse peered key");
 
     let mut config = pnpm_config::Config::new();
     config.enable_global_virtual_store = false;
@@ -523,5 +603,9 @@ fn group_slots_by_dir_is_identity_without_gvs() {
     let groups = crate::create_virtual_store::slot_linking::group_slots_by_dir(&slots, &layout);
 
     assert_eq!(groups.len(), 2, "non-GVS slots are unique per key; nothing may merge");
-    assert!(groups.iter().all(|group| group.duplicates.is_empty()));
+    assert!(
+        groups
+            .iter()
+            .all(|group| group.duplicates.is_empty())
+    );
 }

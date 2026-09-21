@@ -11,14 +11,20 @@ pub(super) fn is_signed_by_trusted_node_release_key(
     content: &[u8],
     signature_bytes: &[u8],
 ) -> Result<bool, FetchVerifiedNodeShasumsError> {
-    let signature =
-        DetachedSignature::from_bytes(Cursor::new(signature_bytes)).map_err(signature_unreadable)?;
+    let signature = DetachedSignature::from_bytes(Cursor::new(signature_bytes))
+        .map_err(signature_unreadable)?;
     for key in trusted_node_release_keys()? {
-        if signature.verify(&key.primary_key, content).is_ok() {
+        if signature
+            .verify(&key.primary_key, content)
+            .is_ok()
+        {
             return Ok(true);
         }
         for subkey in &key.public_subkeys {
-            if signature.verify(subkey, content).is_ok() {
+            if signature
+                .verify(subkey, content)
+                .is_ok()
+            {
                 return Ok(true);
             }
         }

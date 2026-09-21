@@ -22,12 +22,21 @@ pub(crate) fn current_pkg_from_lockfile(
     registry_context: &RegistryContext,
 ) -> Option<CurrentPkg> {
     let metadata_key = key.without_peer();
-    let metadata = lockfile.packages.as_ref()?.get(&metadata_key)?;
+    let metadata = lockfile
+        .packages
+        .as_ref()?
+        .get(&metadata_key)?;
     let name = metadata_key.name.to_string();
     let registry_qualified = metadata_key.suffix.registry_qualified();
-    let version = metadata.version
+    let version = metadata
+        .version
         .clone()
-        .or_else(|| metadata_key.suffix.version_semver().map(ToString::to_string))
+        .or_else(|| {
+            metadata_key
+                .suffix
+                .version_semver()
+                .map(ToString::to_string)
+        })
         .or_else(|| registry_qualified.map(|(_, version)| version.to_string()));
     let resolution = current_resolution(metadata, &metadata_key, registry_context)?;
     Some(CurrentPkg {
@@ -48,11 +57,13 @@ pub(crate) fn prior_child_key(
     bare_specifier: &str,
 ) -> Option<PkgNameVerPeer> {
     let name: PkgName = alias.parse().ok()?;
-    let dep_ref = snapshot.dependencies
+    let dep_ref = snapshot
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(&name))
         .or_else(|| {
-            snapshot.optional_dependencies
+            snapshot
+                .optional_dependencies
                 .as_ref()
                 .and_then(|deps| deps.get(&name))
         })?;
@@ -86,7 +97,9 @@ fn reduce_named_registry_spec<'a>(
     key_name: &PkgName,
     bare_specifier: &'a str,
 ) -> Option<&'a str> {
-    let body = bare_specifier.strip_prefix(registry_name)?.strip_prefix(':')?;
+    let body = bare_specifier
+        .strip_prefix(registry_name)?
+        .strip_prefix(':')?;
     // `@scope/name@range` splits at the last `@`; a bare `range` has none
     // (or only the leading one of a scope, which never delimits a version).
     let Some(index) = body
@@ -116,7 +129,8 @@ pub(crate) fn reusable_importer_dep(
     let name: PkgName = alias.parse().ok()?;
     let spec = importer_dep(lockfile.importers.get(importer_id)?, &name)?;
     let key = spec.version.resolved_key(&name)?;
-    let metadata = lockfile.packages
+    let metadata = lockfile
+        .packages
         .as_ref()?
         .get(&key.without_peer())?;
     let is_git = matches!(metadata.resolution, LockfileResolution::Git(_))
@@ -152,16 +166,19 @@ fn importer_dep<'a>(
     importer: &'a ProjectSnapshot,
     name: &PkgName,
 ) -> Option<&'a ResolvedDependencySpec> {
-    importer.dependencies
+    importer
+        .dependencies
         .as_ref()
         .and_then(|deps| deps.get(name))
         .or_else(|| {
-            importer.optional_dependencies
+            importer
+                .optional_dependencies
                 .as_ref()
                 .and_then(|deps| deps.get(name))
         })
         .or_else(|| {
-            importer.dev_dependencies
+            importer
+                .dev_dependencies
                 .as_ref()
                 .and_then(|deps| deps.get(name))
         })
@@ -218,8 +235,14 @@ pub(crate) fn synthesize_reused_result(
     alias: &str,
 ) -> Option<ResolveResult> {
     let metadata_key = key.without_peer();
-    let metadata = lockfile.packages.as_ref()?.get(&metadata_key)?;
-    let registry_version = metadata_key.suffix.version_semver().cloned();
+    let metadata = lockfile
+        .packages
+        .as_ref()?
+        .get(&metadata_key)?;
+    let registry_version = metadata_key
+        .suffix
+        .version_semver()
+        .cloned();
     let git_resolution = reusable_resolution_is_git(&metadata.resolution)?;
     let (id, name_ver, resolved_via) = if git_resolution {
         (metadata_key.to_string(), None, "git-repository")
@@ -232,9 +255,11 @@ pub(crate) fn synthesize_reused_result(
         let name_ver = PkgNameVer::new(metadata_key.name.clone(), registry_version?);
         (name_ver.to_string(), Some(name_ver), "npm-registry")
     };
-    let manifest_version = metadata.version
-        .clone()
-        .or_else(|| name_ver.as_ref().map(|nv| nv.suffix.to_string()));
+    let manifest_version = metadata.version.clone().or_else(|| {
+        name_ver
+            .as_ref()
+            .map(|nv| nv.suffix.to_string())
+    });
     let manifest = synthesize_manifest(&metadata_key.name, manifest_version.as_deref(), metadata);
     Some(ResolveResult {
         id: PkgResolutionId::from(id),
@@ -430,12 +455,19 @@ fn current_registry_version(
     let name = metadata_key.name.to_string();
     let registry_qualified = metadata_key.suffix.registry_qualified();
     let (registry, tarball_version) = match registry_qualified {
-        Some((registry_name, version)) => {
-            (registry_context.registries_by_prefix.get(registry_name)?.clone(), version.to_string())
-        }
+        Some((registry_name, version)) => (
+            registry_context
+                .registries_by_prefix
+                .get(registry_name)?
+                .clone(),
+            version.to_string(),
+        ),
         None => (
             pick_registry_for_package(&registry_context.registries, &name, None),
-            metadata_key.suffix.version().to_string(),
+            metadata_key
+                .suffix
+                .version()
+                .to_string(),
         ),
     };
     if registry.is_empty() {

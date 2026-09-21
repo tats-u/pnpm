@@ -57,7 +57,11 @@ impl OsvIndex {
         if !config.osv.enabled {
             return Ok(None);
         }
-        let path = config.osv.path.clone().unwrap_or_else(|| default_osv_path(config));
+        let path = config
+            .osv
+            .path
+            .clone()
+            .unwrap_or_else(|| default_osv_path(config));
         if !path.exists() {
             return Err(invalid_config(format!(
                 "OSV is enabled but database {} does not exist; download the npm OSV dump to this path or set osv.path",
@@ -105,7 +109,9 @@ impl OsvIndex {
 
     #[must_use]
     pub fn can_trust_policy(&self, policy: &serde_json::Map<String, serde_json::Value>) -> bool {
-        policy.get(OSV_POLICY_KEY).and_then(serde_json::Value::as_str)
+        policy
+            .get(OSV_POLICY_KEY)
+            .and_then(serde_json::Value::as_str)
             == Some(self.fingerprint.as_str())
     }
 
@@ -247,21 +253,21 @@ pub fn load_osv_index(config: &Config) -> Result<Option<Arc<OsvIndex>>, Registry
 }
 
 fn default_osv_path(config: &Config) -> PathBuf {
-    config.storage.cache_dir
+    config
+        .storage
+        .cache_dir
         .join("osv")
         .join("npm")
         .join("all.zip")
 }
 
 fn load_from_zip(path: &Path) -> Result<OsvIndex, RegistryError> {
-    let file = File::open(path)
-        .map_err(|err| {
-            invalid_config(format!("failed to open OSV database {}: {err}", path.display()))
-        })?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|err| {
-            invalid_config(format!("failed to read OSV zip {}: {err}", path.display()))
-        })?;
+    let file = File::open(path).map_err(|err| {
+        invalid_config(format!("failed to open OSV database {}: {err}", path.display()))
+    })?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|err| {
+        invalid_config(format!("failed to read OSV zip {}: {err}", path.display()))
+    })?;
     let mut packages = HashMap::new();
     // Fingerprint the decompressed record contents while parsing (one
     // pass over the same handle), not the raw archive bytes: that avoids
@@ -269,11 +275,9 @@ fn load_from_zip(path: &Path) -> Result<OsvIndex, RegistryError> {
     // recompression/repackaging of identical advisory data.
     let mut digests = Vec::new();
     for index in 0..archive.len() {
-        let mut entry = archive
-            .by_index(index)
-            .map_err(|err| {
-                invalid_config(format!("failed to read OSV zip entry in {}: {err}", path.display()))
-            })?;
+        let mut entry = archive.by_index(index).map_err(|err| {
+            invalid_config(format!("failed to read OSV zip entry in {}: {err}", path.display()))
+        })?;
         if !entry.is_file() || !entry.name().ends_with(".json") {
             continue;
         }
@@ -416,11 +420,12 @@ fn read_zip_record(
 /// Open without blocking on a concurrently substituted FIFO, then verify the
 /// opened handle is a regular file before reading a bounded record.
 fn read_directory_record(entry_path: &Path) -> Result<Vec<u8>, RegistryError> {
-    let file = open_osv_record(entry_path)
-        .map_err(|err| {
-            invalid_config(format!("failed to read OSV record {}: {err}", entry_path.display()))
-        })?;
-    let is_regular_file = file.metadata().is_ok_and(|metadata| metadata.is_file());
+    let file = open_osv_record(entry_path).map_err(|err| {
+        invalid_config(format!("failed to read OSV record {}: {err}", entry_path.display()))
+    })?;
+    let is_regular_file = file
+        .metadata()
+        .is_ok_and(|metadata| metadata.is_file());
     if !is_regular_file {
         return Err(invalid_config(format!(
             "OSV record {} is not a regular file",

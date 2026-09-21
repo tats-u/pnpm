@@ -18,16 +18,20 @@ impl RootArgs {
             // dir for every `--global` command. `root` only prints a path, so
             // it skips the writability check (`globalDirShouldAllowWrite` is
             // false for `root` and `prefix`; see pnpm issue 2700).
-            let bin = config.global_bin.clone().ok_or(GlobalError::NoGlobalBinDir)?;
-            std::fs::create_dir_all(&bin)
-                .map_err(|error| {
-                    let bin_dir = bin.display();
-                    miette::miette!("failed to create the global bin directory {bin_dir}: {error}")
-                })?;
+            let bin = config
+                .global_bin
+                .clone()
+                .ok_or(GlobalError::NoGlobalBinDir)?;
+            std::fs::create_dir_all(&bin).map_err(|error| {
+                let bin_dir = bin.display();
+                miette::miette!("failed to create the global bin directory {bin_dir}: {error}")
+            })?;
             check_global_bin_dir(&bin, std::env::var("PATH").ok().as_deref(), false)
                 .map_err(miette::Report::new)?;
-            let pkg_dir =
-                config.global_pkg_dir.clone().ok_or(GlobalError::MissingGlobalPackageDir)?;
+            let pkg_dir = config
+                .global_pkg_dir
+                .clone()
+                .ok_or(GlobalError::MissingGlobalPackageDir)?;
             println!("{}", pkg_dir.display());
         } else {
             println!("{}", dir.join("node_modules").display());

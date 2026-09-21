@@ -93,7 +93,10 @@ impl TarballResolver {
         &self,
         wanted_dependency: &WantedDependency,
     ) -> Result<Option<ResolveResult>, ResolveError> {
-        let Some(bare) = wanted_dependency.bare_specifier.as_deref() else {
+        let Some(bare) = wanted_dependency
+            .bare_specifier
+            .as_deref()
+        else {
             return Ok(None);
         };
         if !is_http_url(bare) {
@@ -117,13 +120,16 @@ impl TarballResolver {
         // is what lets a re-resolve succeed under `--offline`). Any miss
         // (cold store, key drift, a row without a bundled manifest) falls
         // through to the HEAD + download below.
-        if let Some(reused) =
-            self.reuse_from_warm_store(wanted_dependency, &normalized_bare_specifier).await
+        if let Some(reused) = self
+            .reuse_from_warm_store(wanted_dependency, &normalized_bare_specifier)
+            .await
         {
             return Ok(Some(reused));
         }
 
-        let resolved_url = self.preflight_url(&normalized_bare_specifier).await?;
+        let resolved_url = self
+            .preflight_url(&normalized_bare_specifier)
+            .await?;
 
         // No store context (unit tests): keep the HEAD-only shape. The
         // download below is what fills `manifest` + `integrity`; without
@@ -191,11 +197,18 @@ impl TarballResolver {
     /// Authenticate the HEAD preflight like the GET. Only immutable responses
     /// pin the post-redirect URL; mutable URLs must be revalidated on the next run.
     async fn preflight_url(&self, normalized_bare_specifier: &str) -> Result<String, ResolveError> {
-        let client = self.http_client.acquire_for_url(normalized_bare_specifier).await;
+        let client = self
+            .http_client
+            .acquire_for_url(normalized_bare_specifier)
+            .await;
         let mut request = client.head(normalized_bare_specifier);
-        if let Some(value) = self.fetch_context
+        if let Some(value) = self
+            .fetch_context
             .as_ref()
-            .and_then(|ctx| ctx.auth_headers.for_url(normalized_bare_specifier))
+            .and_then(|ctx| {
+                ctx.auth_headers
+                    .for_url(normalized_bare_specifier)
+            })
         {
             request = request.header("authorization", value);
         }
@@ -231,7 +244,9 @@ impl TarballResolver {
         normalized_bare_specifier: &str,
     ) -> Option<ResolveResult> {
         let ctx = self.fetch_context.as_ref()?;
-        let prior = ctx.prior_tarball_entries.get(normalized_bare_specifier)?;
+        let prior = ctx
+            .prior_tarball_entries
+            .get(normalized_bare_specifier)?;
         let cache_key = &prior.store_index_key;
         let PrefetchResult { cas_paths, manifests, .. } = ctx.prefetch(cache_key).await;
         // The bundled manifest is required to resolve the tarball's
@@ -291,7 +306,10 @@ impl TarballResolver {
 /// stops; the caller still surfaces a ref-mismatch report if the
 /// lockfile points at a different URL than before.
 fn resolve_latest(query: &LatestQuery) -> Option<LatestInfo> {
-    let bare = query.wanted_dependency.bare_specifier.as_deref()?;
+    let bare = query
+        .wanted_dependency
+        .bare_specifier
+        .as_deref()?;
     if !is_http_url(bare) {
         return None;
     }

@@ -33,9 +33,8 @@ fn json_value(value: yaml_serde::Value) -> Result<Value, Box<Error>> {
                 .collect::<Result<_, _>>()?,
         ),
         yaml_serde::Value::Tagged(tagged) => json_value(tagged.value)?,
-        value => {
-            serde_json::to_value(value).map_err(|error| Error::InvalidOperation(error.to_string()))?
-        }
+        value => serde_json::to_value(value)
+            .map_err(|error| Error::InvalidOperation(error.to_string()))?,
     })
 }
 

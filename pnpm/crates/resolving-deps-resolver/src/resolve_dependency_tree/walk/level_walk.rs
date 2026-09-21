@@ -31,7 +31,9 @@ pub(super) fn assign_level_owners<'seed>(
     let winners: Vec<usize> = {
         let mut best: HashMap<&str, usize> = HashMap::default();
         for (index, pending) in level.iter().enumerate() {
-            let best_so_far = *best.entry(pending.identity.id.as_str()).or_insert(index);
+            let best_so_far = *best
+                .entry(pending.identity.id.as_str())
+                .or_insert(index);
             let standing = &level[best_so_far];
             // Depth joins the comparison even though one level shares
             // it, so this cannot drift from [`ChildrenOwner::wins_over`]
@@ -88,7 +90,8 @@ pub(super) fn install_owner_peer_dependencies(
     existing.peer_dependencies = peer_dependencies.clone();
     drop(packages);
     register_peer_dep_names(ctx, &peer_dependencies);
-    ctx.workspace.record_package_write(&pending.identity.id);
+    ctx.workspace
+        .record_package_write(&pending.identity.id);
     Ok(())
 }
 
@@ -153,7 +156,12 @@ pub(super) fn settle_level(
     ctx: &TreeCtx,
     mut seeded: Vec<SeededNode>,
 ) -> Result<Vec<FrontierNode>, ResolveDependencyTreeError> {
-    assign_level_owners(ctx, seeded.iter_mut().flat_map(|node| node.seeds.iter_mut()))?;
+    assign_level_owners(
+        ctx,
+        seeded
+            .iter_mut()
+            .flat_map(|node| node.seeds.iter_mut()),
+    )?;
     let mut frontier = Vec::new();
     for node in seeded {
         let SeededNode {
@@ -310,7 +318,9 @@ pub(in super::super) fn level_versions(
             NodeSeed::Done(None) => None,
         };
         let Some(name_ver) = name_ver else { continue };
-        let versions = level.entry(name_ver.name.to_string()).or_default();
+        let versions = level
+            .entry(name_ver.name.to_string())
+            .or_default();
         let version = name_ver.suffix.to_string();
         if !versions.contains(&version) {
             versions.push(version);
@@ -336,8 +346,12 @@ pub(super) fn pkgs_info_from_ids(
                 .and_then(|pkg| pkg.result.package.name_ver.as_ref());
             SkippedOptionalDependencyParent {
                 id: id.clone(),
-                name: name_ver.map(|name_ver| name_ver.name.to_string()).unwrap_or_default(),
-                version: name_ver.map(|name_ver| name_ver.suffix.to_string()).unwrap_or_default(),
+                name: name_ver
+                    .map(|name_ver| name_ver.name.to_string())
+                    .unwrap_or_default(),
+                version: name_ver
+                    .map(|name_ver| name_ver.suffix.to_string())
+                    .unwrap_or_default(),
             }
         })
         .collect()

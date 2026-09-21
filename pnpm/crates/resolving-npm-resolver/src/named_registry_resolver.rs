@@ -89,7 +89,10 @@ impl<Cache: PackageMetaCache + 'static> NamedRegistryResolver<Cache> {
         wanted_dependency: &WantedDependency,
         opts: &ResolveOptions,
     ) -> Result<Option<ResolveResult>, ResolveError> {
-        let Some(bare_specifier) = wanted_dependency.bare_specifier.as_deref() else {
+        let Some(bare_specifier) = wanted_dependency
+            .bare_specifier
+            .as_deref()
+        else {
             return Ok(None);
         };
         let Some(NamedRegistryPackageSpec { spec, registry_name }) =
@@ -101,12 +104,20 @@ impl<Cache: PackageMetaCache + 'static> NamedRegistryResolver<Cache> {
 
         // Defensive: should never trigger because the parser checks
         // the alias set first, but kept as a belt-and-braces guard.
-        let Some(registry) = self.registries_by_prefix.get(&registry_name) else {
+        let Some(registry) = self
+            .registries_by_prefix
+            .get(&registry_name)
+        else {
             return Ok(None);
         };
 
-        let optional = wanted_dependency.optional.unwrap_or(false);
-        let picked = match self.pick_from_registry(registry, &spec, opts, optional).await? {
+        let optional = wanted_dependency
+            .optional
+            .unwrap_or(false);
+        let picked = match self
+            .pick_from_registry(registry, &spec, opts, optional)
+            .await?
+        {
             RegistryPick::Picked(picked) => picked,
             RegistryPick::NoMatchingVersion(meta) => {
                 return Err(no_matching_version(wanted_dependency, registry, &meta));
@@ -140,7 +151,11 @@ impl<Cache: PackageMetaCache + 'static> NamedRegistryResolver<Cache> {
         opts: &ResolveOptions,
         bare_specifier: &str,
     ) -> Result<Option<NamedRegistryPackageSpec>, ResolveError> {
-        let default_tag = opts.version.default_tag.as_deref().unwrap_or("latest");
+        let default_tag = opts
+            .version
+            .default_tag
+            .as_deref()
+            .unwrap_or("latest");
 
         let parsed = parse_named_registry_specifier_to_registry_package_spec(
             bare_specifier,
@@ -165,7 +180,10 @@ impl<Cache: PackageMetaCache + 'static> NamedRegistryResolver<Cache> {
         if !query.compatible {
             resolve_opts.refresh.update = UpdateBehavior::Latest;
         }
-        let result = match self.resolve_impl(&wanted, &resolve_opts).await {
+        let result = match self
+            .resolve_impl(&wanted, &resolve_opts)
+            .await
+        {
             Ok(result) => result,
             Err(err) if swallowed_as_no_latest(&err, opts) => {
                 return Ok(Some(LatestInfo { latest_manifest: None }));
@@ -175,7 +193,8 @@ impl<Cache: PackageMetaCache + 'static> NamedRegistryResolver<Cache> {
         let Some(result) = result else {
             return Ok(None);
         };
-        if result.policy_violation
+        if result
+            .policy_violation
             .as_ref()
             .is_some_and(|violation| violation.code == MINIMUM_RELEASE_AGE_VIOLATION_CODE)
         {
@@ -193,10 +212,14 @@ impl<Cache: PackageMetaCache + 'static> NamedRegistryResolver<Cache> {
     ) -> Result<RegistryPick, ResolveError> {
         let overlay_selectors =
             crate::preferred_overlay::overlay_merged_selectors(opts, &spec.name);
-        let base_selectors = overlay_selectors
-            .as_ref()
-            .or_else(|| opts.version.preferred_versions.get(&spec.name));
-        let ctx = self.metadata.pick_context(&self.format, self.cache_policy);
+        let base_selectors = overlay_selectors.as_ref().or_else(|| {
+            opts.version
+                .preferred_versions
+                .get(&spec.name)
+        });
+        let ctx = self
+            .metadata
+            .pick_context(&self.format, self.cache_policy);
 
         let picked = pick_from_registry_with_guard(
             &ctx,
@@ -206,10 +229,16 @@ impl<Cache: PackageMetaCache + 'static> NamedRegistryResolver<Cache> {
                 preferred_version_selectors: base_selectors,
                 pick_lowest_version: opts.version.pick_lowest_version,
                 include_latest_tag: opts.refresh.update == UpdateBehavior::Latest,
-                package_version_guard: opts.policy.package_version_guard.as_ref(),
+                package_version_guard: opts
+                    .policy
+                    .package_version_guard
+                    .as_ref(),
                 policy: crate::PackagePickPolicy {
                     published_by: opts.policy.published_by,
-                    published_by_exclude: opts.policy.published_by_exclude.as_ref(),
+                    published_by_exclude: opts
+                        .policy
+                        .published_by_exclude
+                        .as_ref(),
                     trust_policy: opts.policy.trust_policy,
                 },
                 request: crate::MetadataPickRequest {

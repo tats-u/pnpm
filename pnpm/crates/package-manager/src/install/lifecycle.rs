@@ -132,7 +132,8 @@ fn link_dependencies_from_lockfile(
         .map(|((project_dir, _), normalized_project_dir)| {
             let importer_id =
                 pnpm_workspace::importer_id_from_root_dir(workspace_root, project_dir);
-            let dependencies = lockfile.importers
+            let dependencies = lockfile
+                .importers
                 .get(&importer_id)
                 .into_iter()
                 .flat_map(|snapshot| {
@@ -198,7 +199,10 @@ fn retain_known_projects(
 }
 
 pub(super) fn modules_dir_basename(config: &Config) -> &std::ffi::OsStr {
-    config.modules_dir.file_name().unwrap_or_else(|| std::ffi::OsStr::new("node_modules"))
+    config
+        .modules_dir
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new("node_modules"))
 }
 
 /// [`Config::extra_env_with_node_options`] plus the `NODE_OPTIONS` entry for
@@ -212,7 +216,9 @@ pub(super) fn project_lifecycle_extra_env(
 ) -> HashMap<String, String> {
     let mut extra_env = config.extra_env_with_node_options();
     if matches!(node_linker, NodeLinker::Pnp) {
-        let node_options = extra_env.get("NODE_OPTIONS").map(String::as_str);
+        let node_options = extra_env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
         extra_env.insert(
             "NODE_OPTIONS".to_string(),
             crate::make_node_require_option(
@@ -222,8 +228,12 @@ pub(super) fn project_lifecycle_extra_env(
         );
     }
     if config.node_experimental_package_map && !matches!(node_linker, NodeLinker::Pnp) {
-        let package_map_path = config.modules_dir.join(crate::package_map::PACKAGE_MAP_FILENAME);
-        let node_options = extra_env.get("NODE_OPTIONS").map(String::as_str);
+        let package_map_path = config
+            .modules_dir
+            .join(crate::package_map::PACKAGE_MAP_FILENAME);
+        let node_options = extra_env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
         extra_env.insert(
             "NODE_OPTIONS".to_string(),
             crate::make_node_package_map_option(&package_map_path, node_options),
@@ -273,7 +283,10 @@ pub(super) fn run_dev_preinstall<Reporter: self::Reporter>(
             extra_bin_paths: &config.extra_bin_paths,
             node_gyp_bin: pnpm_executor::bundled_node_gyp_bin(),
             prepend_node_path: exec_scripts_prepend_node_path(config),
-            shell: config.script_shell.as_deref().map(Path::new),
+            shell: config
+                .script_shell
+                .as_deref()
+                .map(Path::new),
             shell_emulator: config.shell_emulator,
         },
         dep_path: &dep_path,
@@ -323,7 +336,11 @@ impl ProjectScriptRunner<'_> {
                 extra_bin_paths: &self.config.extra_bin_paths,
                 node_gyp_bin: pnpm_executor::bundled_node_gyp_bin(),
                 prepend_node_path: self.scripts_prepend_node_path,
-                shell: self.config.script_shell.as_deref().map(Path::new),
+                shell: self
+                    .config
+                    .script_shell
+                    .as_deref()
+                    .map(Path::new),
                 shell_emulator: self.config.shell_emulator,
             },
             dep_path: &dep_path,

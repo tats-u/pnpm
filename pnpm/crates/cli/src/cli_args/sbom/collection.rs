@@ -48,7 +48,8 @@ fn importer_roots<'a>(
         &'a pnpm_lockfile::ProjectSnapshot,
     ) -> &'a [Option<pnpm_lockfile::ResolvedDependencyMap>],
 ) -> Vec<PackageKey> {
-    lockfile.importers
+    lockfile
+        .importers
         .values()
         .flat_map(|importer| maps(importer).iter().flatten())
         .flatten()
@@ -77,10 +78,16 @@ fn detect_dep_types_walk(
         };
 
         let optional_iter = include_optional_transitive
-            .then(|| snapshot.optional_dependencies.iter().flatten())
+            .then(|| {
+                snapshot
+                    .optional_dependencies
+                    .iter()
+                    .flatten()
+            })
             .into_iter()
             .flatten();
-        for (alias, dep_ref) in snapshot.dependencies
+        for (alias, dep_ref) in snapshot
+            .dependencies
             .iter()
             .flatten()
             .chain(optional_iter)
@@ -96,14 +103,18 @@ fn detect_dep_types_walk(
 /// recorded and the prod walk reaches too is production, not dev-only.
 fn record_dep_type(dep_types: &mut HashMap<PackageKey, DepType>, key: &PackageKey, is_dev: bool) {
     if is_dev {
-        dep_types.entry(key.clone()).or_insert(DepType::DevOnly);
+        dep_types
+            .entry(key.clone())
+            .or_insert(DepType::DevOnly);
         return;
     }
     if dep_types.get(key) == Some(&DepType::DevOnly) {
         dep_types.insert(key.clone(), DepType::ProdOnly);
         return;
     }
-    dep_types.entry(key.clone()).or_insert(DepType::ProdOnly);
+    dep_types
+        .entry(key.clone())
+        .or_insert(DepType::ProdOnly);
 }
 
 pub(super) fn collect_components(
@@ -121,7 +132,10 @@ pub(super) fn collect_components(
     let root = RootMetadata::of(&read_root_manifest(state, &lockfile_dir, filter_importer_ids));
     let dep_types = detect_dep_types(lockfile, include.optional_dependencies);
 
-    let default_virtual_store_dirs = [state.config.effective_virtual_store_dir().to_path_buf()];
+    let default_virtual_store_dirs = [state
+        .config
+        .effective_virtual_store_dir()
+        .to_path_buf()];
     let virtual_store_dirs = if lockfile_only {
         &[][..]
     } else {
@@ -199,7 +213,8 @@ impl RootMetadata {
 }
 
 fn initial_importer_ids(lockfile: &Lockfile, filter_importer_ids: Option<&[&str]>) -> Vec<String> {
-    lockfile.importers
+    lockfile
+        .importers
         .keys()
         .filter(|id| filter_importer_ids.is_none_or(|ids| ids.contains(&id.as_str())))
         .cloned()
@@ -232,7 +247,11 @@ fn read_root_manifest(
             .unwrap_or_else(|| fallback("."));
     };
     confined_importer_dir(lockfile_dir, single_id)
-        .and_then(|dir| safe_read_package_json_from_dir(&dir).ok().flatten())
+        .and_then(|dir| {
+            safe_read_package_json_from_dir(&dir)
+                .ok()
+                .flatten()
+        })
         .unwrap_or_else(|| fallback(single_id))
 }
 
@@ -242,7 +261,10 @@ fn assemble_sbom_result(
     stores: WalkStores,
 ) -> SbomResult {
     SbomResult {
-        components: stores.components_map.into_values().collect(),
+        components: stores
+            .components_map
+            .into_values()
+            .collect(),
         relationships: stores.relationships,
         root_name: root.name,
         root_version: root.version,

@@ -41,7 +41,9 @@ impl RunAnchors {
         let cli_dir = if args.paths.dir_from_command_line {
             dir.clone()
         } else {
-            std::env::current_dir().and_then(dunce::canonicalize).unwrap_or_else(|_| dir.clone())
+            std::env::current_dir()
+                .and_then(dunce::canonicalize)
+                .unwrap_or_else(|_| dir.clone())
         };
         let manifest_path = pnpm_workspace::project_manifest_path(&dir);
         let global_config = default_pnpm_home_dir::<Host>().unwrap_or_else(|| dir.clone());
@@ -95,8 +97,12 @@ impl RunSetup {
             ),
             print_json_errors: prints_json_errors(&args.command),
             recursive_by_default: args.command.recursive_by_default(),
-            summary_scope: args.command.default_reporter_summary_scope(),
-            reports_scope: args.command.reports_scope(args.workspace.recursive),
+            summary_scope: args
+                .command
+                .default_reporter_summary_scope(),
+            reports_scope: args
+                .command
+                .reports_scope(args.workspace.recursive),
             uses_stderr_reporter: args.command.uses_stderr_reporter(),
         }
     }
@@ -206,7 +212,10 @@ pub(super) fn apply_output_overrides(cfg: &mut Config, overrides: &OutputOverrid
     if !overrides.test_pattern.is_empty() {
         cfg.test_pattern = overrides.test_pattern.to_vec();
     }
-    if !overrides.changed_files_ignore_pattern.is_empty() {
+    if !overrides
+        .changed_files_ignore_pattern
+        .is_empty()
+    {
         cfg.changed_files_ignore_pattern = overrides
             .changed_files_ignore_pattern
             .to_vec();

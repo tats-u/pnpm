@@ -95,15 +95,16 @@ impl InstallPackageFromRegistry<'_> {
     pub async fn run<Reporter: self::Reporter>(
         self,
     ) -> Result<(), InstallPackageFromRegistryError> {
-        let (real_name, version) = real_name_version(self.resolution)
-            .ok_or_else(|| InstallPackageFromRegistryError::UnsupportedResolution {
+        let (real_name, version) = real_name_version(self.resolution).ok_or_else(|| {
+            InstallPackageFromRegistryError::UnsupportedResolution {
                 detail: format!(
                     "resolver {resolved_via} produced a resolution without a structured \
                      name@version and no manifest name/version to fall back to (alias={alias})",
                     resolved_via = self.resolution.resolved_via,
                     alias = self.alias,
                 ),
-            })?;
+            }
+        })?;
         let package_id = format!("{real_name}@{version}");
 
         // The exposed symlink under `node_modules/` uses the manifest
@@ -117,7 +118,8 @@ impl InstallPackageFromRegistry<'_> {
             .map_err(InstallPackageFromRegistryError::InvalidAlias)?;
 
         if self.first_visit {
-            self.ingest_and_import::<Reporter>(&package_id, &save_path).await?;
+            self.ingest_and_import::<Reporter>(&package_id, &save_path)
+                .await?;
         }
 
         symlink_package(&save_path, &self.node_modules_dir.join(self.alias))
@@ -143,15 +145,28 @@ impl InstallPackageFromRegistry<'_> {
             },
             package: pnpm_tarball::TarballPackage {
                 integrity: Some(integrity),
-                unpacked_size: manifest_unpacked_size(self.resolution.package.manifest.as_deref()),
-                file_count: manifest_file_count(self.resolution.package.manifest.as_deref()),
+                unpacked_size: manifest_unpacked_size(
+                    self.resolution
+                        .package
+                        .manifest
+                        .as_deref(),
+                ),
+                file_count: manifest_file_count(
+                    self.resolution
+                        .package
+                        .manifest
+                        .as_deref(),
+                ),
                 url: tarball_url,
                 id: package_id,
             },
             store: pnpm_tarball::ArchiveStoreContext {
                 dir: &config.store_dir,
                 index: self.fetching.store_index.cloned(),
-                index_writer: self.fetching.store_index_writer.cloned(),
+                index_writer: self
+                    .fetching
+                    .store_index_writer
+                    .cloned(),
                 verify_integrity: config.verify_store_integrity,
                 strict_pkg_content_check: config.strict_store_pkg_content_check,
                 verified_files_cache: SharedVerifiedFilesCache::clone(
@@ -200,12 +215,13 @@ impl InstallPackageFromRegistry<'_> {
 
         let download = self.tarball_download(package_id, tarball_url, &integrity);
         let cas_paths = if revision_addressed {
-            download.run_revision_addressed_with_mem_cache::<Reporter>(
-                self.fetching.tarball_mem_cache,
-            )
-            .await
+            download
+                .run_revision_addressed_with_mem_cache::<Reporter>(self.fetching.tarball_mem_cache)
+                .await
         } else {
-            download.run_with_mem_cache::<Reporter>(self.fetching.tarball_mem_cache).await
+            download
+                .run_with_mem_cache::<Reporter>(self.fetching.tarball_mem_cache)
+                .await
         }
         .map_err(InstallPackageFromRegistryError::IngestTarballToStore)?;
 
@@ -265,11 +281,11 @@ pub fn extract_tarball(
 ) -> Result<(&str, Integrity), InstallPackageFromRegistryError> {
     match resolution {
         LockfileResolution::Tarball(t) => {
-            let integrity = t.integrity
-                .clone()
-                .ok_or_else(|| InstallPackageFromRegistryError::UnsupportedResolution {
+            let integrity = t.integrity.clone().ok_or_else(|| {
+                InstallPackageFromRegistryError::UnsupportedResolution {
                     detail: "tarball resolution missing integrity hash".to_string(),
-                })?;
+                }
+            })?;
             Ok((t.tarball.as_str(), integrity))
         }
         LockfileResolution::Registry(_)

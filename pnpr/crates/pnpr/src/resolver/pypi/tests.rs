@@ -7,7 +7,9 @@ fn wheel_with(entries: &[(&str, &str)]) -> Vec<u8> {
         archive
             .start_file::<_, ()>(*name, zip::write::SimpleFileOptions::default())
             .expect("start a wheel entry");
-        archive.write_all(body.as_bytes()).expect("write a wheel entry");
+        archive
+            .write_all(body.as_bytes())
+            .expect("write a wheel entry");
     }
     archive
         .finish()

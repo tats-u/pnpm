@@ -39,15 +39,22 @@ pub(super) async fn claim_for_approval(
     stage_id: &str,
     stored: StoredStagedRecord,
 ) -> Result<ApprovalClaim, RegistryError> {
-    if stored.record.approving_since.as_deref().is_some_and(approval_claim_is_live) {
+    if stored
+        .record
+        .approving_since
+        .as_deref()
+        .is_some_and(approval_claim_is_live)
+    {
         return Err(RegistryError::StagedApprovalInFlight { stage_id: stage_id.to_string() });
     }
     let mut record = stored.record;
     record.approving_since = Some(now_iso());
     let claimed_bytes = serde_json::to_vec(&record).expect("a staged record serializes");
-    let written =
-        state.inner.storage.replace_staged_meta_if_current(stage_id, &stored.bytes, &claimed_bytes)
-            .await?;
+    let written = state
+        .inner
+        .storage
+        .replace_staged_meta_if_current(stage_id, &stored.bytes, &claimed_bytes)
+        .await?;
     match written {
         DocumentWrite::Written => {
             Ok(ApprovalClaim { record, unclaimed_bytes: stored.bytes, claimed_bytes })
@@ -55,7 +62,12 @@ pub(super) async fn claim_for_approval(
         // Something got between the read and the claim. Another approval
         // leaves its claim behind; one that finished, or a rejection, leaves
         // no record at all.
-        DocumentWrite::Conflict => match state.inner.storage.read_staged_meta(stage_id).await? {
+        DocumentWrite::Conflict => match state
+            .inner
+            .storage
+            .read_staged_meta(stage_id)
+            .await?
+        {
             Some(_) => {
                 Err(RegistryError::StagedApprovalInFlight { stage_id: stage_id.to_string() })
             }
@@ -74,7 +86,10 @@ pub(super) fn approval_claim_is_live(since: &str) -> bool {
     let Ok(started) = chrono::DateTime::parse_from_rfc3339(since) else {
         return false;
     };
-    let Ok(held) = chrono::Utc::now().signed_duration_since(started).to_std() else {
+    let Ok(held) = chrono::Utc::now()
+        .signed_duration_since(started)
+        .to_std()
+    else {
         return true;
     };
     held < APPROVAL_CLAIM_LEASE
@@ -88,7 +103,12 @@ pub(super) async fn still_claimed(
     stage_id: &str,
     claim: &ApprovalClaim,
 ) -> Result<(), RegistryError> {
-    match state.inner.storage.read_staged_meta(stage_id).await? {
+    match state
+        .inner
+        .storage
+        .read_staged_meta(stage_id)
+        .await?
+    {
         Some(stored) if stored == claim.claimed_bytes => Ok(()),
         Some(_) => Err(RegistryError::StagedApprovalInFlight { stage_id: stage_id.to_string() }),
         None => Err(RegistryError::NotFound),
@@ -104,12 +124,11 @@ pub(super) async fn release_approval_claim(
     stage_id: &str,
     claim: &ApprovalClaim,
 ) {
-    let restored = state.inner.storage.replace_staged_meta_if_current(
-        stage_id,
-        &claim.claimed_bytes,
-        &claim.unclaimed_bytes,
-    )
-    .await;
+    let restored = state
+        .inner
+        .storage
+        .replace_staged_meta_if_current(stage_id, &claim.claimed_bytes, &claim.unclaimed_bytes)
+        .await;
     if let Err(err) = restored {
         tracing::warn!(error = %err, stage_id, "failed to release the claim on a staged publish");
     }
@@ -123,7 +142,12 @@ pub(super) async fn approve_claimed(
     claim: &ApprovalClaim,
 ) -> Result<Response, RegistryError> {
     let record = &claim.record;
-    let Some(body) = state.inner.storage.read_staged_body(stage_id).await? else {
+    let Some(body) = state
+        .inner
+        .storage
+        .read_staged_body(stage_id)
+        .await?
+    else {
         return Err(RegistryError::Io(std::io::Error::other(format!(
             "staged publish {stage_id} has no stored body",
         ))));
@@ -137,7 +161,12 @@ pub(super) async fn approve_claimed(
     let (validated, target) =
         validate_publish_doc(state, identity, record.registry.as_deref(), name, incoming).await?;
 
-    let _packument_guard = state.inner.locks.packages.lock(validated.name.as_str()).await;
+    let _packument_guard = state
+        .inner
+        .locks
+        .packages
+        .lock(validated.name.as_str())
+        .await;
     let staged = stage_publish(state, validated, &now_iso(), Some(&target.org)).await?;
     // Nothing is visible yet, which is the last moment a rejection can still
     // take the stage back. Past the commit it cannot: the publish is served.
@@ -149,7 +178,12 @@ pub(super) async fn approve_claimed(
     // Past the commit the stage is spent, whatever the transaction could not
     // record: leaving the record listed would offer an approval that cannot
     // happen again.
-    if let Err(err) = state.inner.storage.remove_staged(stage_id).await {
+    if let Err(err) = state
+        .inner
+        .storage
+        .remove_staged(stage_id)
+        .await
+    {
         // The publish is already committed and visible; a failed record
         // cleanup must not report the approval as failed.
         tracing::warn!(error = %err, stage_id, "approved staged publish but its record cleanup failed");

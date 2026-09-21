@@ -237,9 +237,18 @@ fn run_with_mem_cache_does_not_deadlock_on_dashmap_shard_contention() {
                 let task_c =
                     tokio::spawn(make_dts(url2).run_with_mem_cache::<SilentReporter>(mem_cache));
 
-                task_a.await.expect("task A panicked").expect("task A failed");
-                task_b.await.expect("task B panicked").expect("task B failed");
-                task_c.await.expect("task C panicked").expect("task C failed");
+                task_a
+                    .await
+                    .expect("task A panicked")
+                    .expect("task A failed");
+                task_b
+                    .await
+                    .expect("task B panicked")
+                    .expect("task B failed");
+                task_c
+                    .await
+                    .expect("task C panicked")
+                    .expect("task C failed");
 
                 // Confirm each tarball endpoint was actually hit; without
                 // these the test would pass vacuously if `run_with_mem_cache`
@@ -254,11 +263,10 @@ fn run_with_mem_cache_does_not_deadlock_on_dashmap_shard_contention() {
         })
         .expect("spawn regression-test thread");
 
-    rx.recv_timeout(TEST_TIMEOUT)
-        .expect(
-            "run_with_mem_cache deadlocked on DashMap shard contention; \
+    rx.recv_timeout(TEST_TIMEOUT).expect(
+        "run_with_mem_cache deadlocked on DashMap shard contention; \
          single-worker runtime did not finish within the timeout",
-        );
+    );
 }
 
 /// `retries: 0` (the value the existing fall-through tests use)
@@ -381,14 +389,16 @@ async fn run_with_mem_cache_recovers_from_owning_fetch_error() {
     // owner notifies after setting `Failed`, so the waiter wakes up,
     // observes `Failed`, and surfaces `SiblingFetchFailed` (or its
     // own attempt's error).
-    let task_a =
-        tokio::spawn(
-            async move { make_dts().run_with_mem_cache::<SilentReporter>(mem_cache).await },
-        );
-    let task_b =
-        tokio::spawn(
-            async move { make_dts().run_with_mem_cache::<SilentReporter>(mem_cache).await },
-        );
+    let task_a = tokio::spawn(async move {
+        make_dts()
+            .run_with_mem_cache::<SilentReporter>(mem_cache)
+            .await
+    });
+    let task_b = tokio::spawn(async move {
+        make_dts()
+            .run_with_mem_cache::<SilentReporter>(mem_cache)
+            .await
+    });
 
     // 30s is a paranoid cap; the actual runtime should be a few
     // hundred ms (one mockito 404 + the retry-loop's no-retry
@@ -578,7 +588,10 @@ async fn found_in_store_event_fires_on_cache_hit() {
     // Drain the writer so the index row is durably persisted before
     // the second call attempts to read it back.
     drop(writer);
-    writer_task.await.expect("writer task").expect("writer flushed");
+    writer_task
+        .await
+        .expect("writer task")
+        .expect("writer flushed");
 
     // Second pass — same (integrity, package_id) pair. Recording
     // reporter sees the `found_in_store` emit; the mockito mock must
@@ -628,26 +641,22 @@ async fn found_in_store_event_fires_on_cache_hit() {
 
     let captured = EVENTS.lock().unwrap();
     assert!(
-        captured
-            .iter()
-            .any(|e| matches!(
-                e,
-                LogEvent::Progress(log)
-                    if matches!(
-                        &log.message,
-                        ProgressMessage::FoundInStore { package_id, requester }
-                            if package_id == "@fastify/error@3.3.0" && requester == "/proj",
-                    )
-            )),
+        captured.iter().any(|e| matches!(
+            e,
+            LogEvent::Progress(log)
+                if matches!(
+                    &log.message,
+                    ProgressMessage::FoundInStore { package_id, requester }
+                        if package_id == "@fastify/error@3.3.0" && requester == "/proj",
+                )
+        )),
         "found_in_store must fire on cache hit; got {captured:?}",
     );
     assert!(
-        !captured
-            .iter()
-            .any(|e| matches!(
-                e,
-                LogEvent::Progress(log) if matches!(&log.message, ProgressMessage::Fetched { .. })
-            )),
+        !captured.iter().any(|e| matches!(
+            e,
+            LogEvent::Progress(log) if matches!(&log.message, ProgressMessage::Fetched { .. })
+        )),
         "fetched must NOT fire on cache hit; got {captured:?}",
     );
 

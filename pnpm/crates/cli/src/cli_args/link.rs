@@ -58,15 +58,13 @@ fn link_spec(base: &Path, target: &Path) -> String {
 }
 
 fn already_declared(manifest: &PackageManifest, name: &str) -> bool {
-    DEPENDENCY_FIELDS
-        .iter()
-        .any(|field| {
-            manifest
-                .value()
-                .get(field)
-                .and_then(serde_json::Value::as_object)
-                .is_some_and(|deps| deps.contains_key(name))
-        })
+    DEPENDENCY_FIELDS.iter().any(|field| {
+        manifest
+            .value()
+            .get(field)
+            .and_then(serde_json::Value::as_object)
+            .is_some_and(|deps| deps.contains_key(name))
+    })
 }
 
 impl LinkArgs {
@@ -85,7 +83,10 @@ impl LinkArgs {
         let mut manifest = PackageManifest::create_if_needed(manifest_path.clone())
             .wrap_err("reading the project package.json")?;
 
-        let root_dir = config.workspace_dir.clone().unwrap_or_else(|| manifest_dir.clone());
+        let root_dir = config
+            .workspace_dir
+            .clone()
+            .unwrap_or_else(|| manifest_dir.clone());
 
         let mut new_overrides = IndexMap::<String, String>::new();
         for path_str in &self.package_paths {
@@ -103,7 +104,9 @@ impl LinkArgs {
             new_overrides.insert(package_name, link_spec(&root_dir, &target_dir));
         }
 
-        manifest.save().wrap_err("saving package.json with linked dependencies")?;
+        manifest
+            .save()
+            .wrap_err("saving package.json with linked dependencies")?;
 
         set_overrides(
             &root_dir,
@@ -113,7 +116,8 @@ impl LinkArgs {
         )
         .wrap_err("recording linked dependencies in pnpm-workspace.yaml")?;
 
-        config.overrides
+        config
+            .overrides
             .get_or_insert_with(IndexMap::new)
             .extend(
                 new_overrides
@@ -130,7 +134,8 @@ impl LinkArgs {
             return Err(LinkError::NoParams.into());
         }
 
-        if let Some(name) = self.package_paths
+        if let Some(name) = self
+            .package_paths
             .iter()
             .find(|path| !is_filespec(path))
         {
@@ -154,7 +159,9 @@ async fn install_linked<Reporter: self::Reporter + 'static>(state: &State) -> mi
             pnpm_lockfile::MaybeLazyLockfile::Lazy(&state.lockfile),
             [DependencyGroup::Prod, DependencyGroup::Dev, DependencyGroup::Optional].into_iter(),
         );
-        base_install.lockfile_policy.prefer_frozen = Some(false);
+        base_install
+            .lockfile_policy
+            .prefer_frozen = Some(false);
         base_install.execution.mutation = ProjectMutation::NoInstall;
         base_install.execution.installs_only = false;
         base_install.context.lockfile_path = Some(&lockfile_path);
@@ -172,8 +179,8 @@ fn link_target(manifest_dir: &Path, path_str: &str) -> miette::Result<(PathBuf, 
         if target_path.is_absolute() { target_path } else { manifest_dir.join(&target_path) };
     let target_manifest_path = pnpm_workspace::project_manifest_path(&target_dir);
     let dir_display = target_dir.display();
-    let target_manifest = PackageManifest::from_path(target_manifest_path)
-        .map_err(|error| match error {
+    let target_manifest =
+        PackageManifest::from_path(target_manifest_path).map_err(|error| match error {
             pnpm_package_manifest::PackageManifestError::NoImporterManifestFound(_) => {
                 miette::miette!("No package.json found in {}", dir_display)
             }

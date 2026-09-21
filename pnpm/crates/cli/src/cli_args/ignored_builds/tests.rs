@@ -27,7 +27,9 @@ fn config_with(dir: &Path, ignored_builds: Option<&[&str]>, disallowed: &[&str])
     let mut config = Config::new();
     config.modules_dir = modules_dir;
     for name in disallowed {
-        config.allow_builds.insert((*name).to_string(), false);
+        config
+            .allow_builds
+            .insert((*name).to_string(), false);
     }
     config
 }

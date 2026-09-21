@@ -164,12 +164,11 @@ fn bump_major(next: &mut Version) {
 }
 
 pub(super) fn parse_current_version(pkg_dir: &Path, current: &str) -> miette::Result<Version> {
-    Version::parse(current)
-        .map_err(|_| {
-            VersionError::InvalidVersion {
-                dir: pkg_dir.display().to_string(),
-                version: current.to_owned(),
-            }
-            .into()
-        })
+    Version::parse(current).map_err(|_| {
+        VersionError::InvalidVersion {
+            dir: pkg_dir.display().to_string(),
+            version: current.to_owned(),
+        }
+        .into()
+    })
 }

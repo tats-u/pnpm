@@ -76,8 +76,11 @@ pub enum PatchRemoveError {
 
 impl PatchRemoveArgs {
     pub async fn run(self, dir: &Path, state: State) -> Result<bool, PatchRemoveError> {
-        let mut patched_dependencies =
-            state.config.patched_dependencies.clone().unwrap_or_default();
+        let mut patched_dependencies = state
+            .config
+            .patched_dependencies
+            .clone()
+            .unwrap_or_default();
         let patches_to_remove =
             patches_to_remove(self.patches, &patched_dependencies, &DialoguerPatchRemovePrompt)?;
         for patch in &patches_to_remove {
@@ -86,10 +89,18 @@ impl PatchRemoveArgs {
             }
         }
 
-        let lockfile_dir = state.config.workspace_dir.clone().unwrap_or_else(|| dir.to_path_buf());
+        let lockfile_dir = state
+            .config
+            .workspace_dir
+            .clone()
+            .unwrap_or_else(|| dir.to_path_buf());
         let ctx = PatchRemovalContext::new(
             &lockfile_dir,
-            state.config.patches_dir.as_deref().unwrap_or("patches"),
+            state
+                .config
+                .patches_dir
+                .as_deref()
+                .unwrap_or("patches"),
         )?;
         let targets = patches_to_remove
             .iter()
@@ -234,11 +245,15 @@ impl PatchRemovalTarget {
             });
         }
 
-        let parent_dir = target_path.parent().map_or_else(PathBuf::new, Path::to_path_buf);
+        let parent_dir = target_path
+            .parent()
+            .map_or_else(PathBuf::new, Path::to_path_buf);
         let target_stats = lstat_if_exists(&target_path)?;
         let real_parent_dir = realpath_if_exists(&parent_dir);
-        let real_patches_dir =
-            ctx.real_patches_dir.clone().or_else(|| realpath_if_exists(&ctx.patches_dir));
+        let real_patches_dir = ctx
+            .real_patches_dir
+            .clone()
+            .or_else(|| realpath_if_exists(&ctx.patches_dir));
         if let (Some(real_parent_dir), Some(real_patches_dir)) = (real_parent_dir, real_patches_dir)
             && !is_subdir(&real_patches_dir, &real_parent_dir)
         {
@@ -246,7 +261,10 @@ impl PatchRemovalTarget {
                 patch_file: patch_file.to_string(),
             });
         }
-        if target_stats.as_ref().is_some_and(fs::Metadata::is_dir) {
+        if target_stats
+            .as_ref()
+            .is_some_and(fs::Metadata::is_dir)
+        {
             return Err(PatchRemoveError::PatchFileIsDirectory {
                 patch_file: patch_file.to_string(),
             });
@@ -283,7 +301,9 @@ fn lstat_if_exists(path: &Path) -> Result<Option<fs::Metadata>, PatchRemoveError
         Ok(meta) => Ok(Some(meta)),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(source) => Err(PatchRemoveError::ReadPatchDir {
-            path: path.parent().map_or_else(PathBuf::new, Path::to_path_buf),
+            path: path
+                .parent()
+                .map_or_else(PathBuf::new, Path::to_path_buf),
             source,
         }),
     }

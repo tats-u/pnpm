@@ -148,16 +148,29 @@ impl MaxUsers {
 /// sibling of the htpasswd file — keeping credentials co-located in
 /// one directory the operator can lock down (`chmod 600`).
 pub(super) fn build_auth_config(file: &AuthFile, base_dir: &Path) -> AuthConfig {
-    let htpasswd_file = file.htpasswd.file.as_deref().map(|raw| resolve_relative(raw, base_dir));
-    let tokens_file = file.tokens.file
+    let htpasswd_file = file
+        .htpasswd
+        .file
+        .as_deref()
+        .map(|raw| resolve_relative(raw, base_dir));
+    let tokens_file = file
+        .tokens
+        .file
         .as_deref()
         .map(|raw| resolve_relative(raw, base_dir))
-        .or_else(|| htpasswd_file.as_deref().map(default_tokens_path_sibling_of));
+        .or_else(|| {
+            htpasswd_file
+                .as_deref()
+                .map(default_tokens_path_sibling_of)
+        });
     AuthConfig {
         oidc: file.oidc.clone(),
         htpasswd: HtpasswdConfig {
             file: htpasswd_file,
-            max_users: file.htpasswd.max_users.map_or(MaxUsers::Disabled, MaxUsers::from_yaml),
+            max_users: file
+                .htpasswd
+                .max_users
+                .map_or(MaxUsers::Disabled, MaxUsers::from_yaml),
         },
         tokens: TokensConfig { file: tokens_file },
     }
@@ -188,10 +201,8 @@ pub(super) fn build_backend_config(
         ));
     }
     if let Some(settings) = file.mysql {
-        selected.push((
-            "mysql",
-            BackendConfig::Mysql(build_sql_backend_settings("mysql", settings)?),
-        ));
+        selected
+            .push(("mysql", BackendConfig::Mysql(build_sql_backend_settings("mysql", settings)?)));
     }
     select_backend(selected)
 }
@@ -250,10 +261,9 @@ pub(super) fn parse_backend_interval(
     raw: Option<&Interval>,
 ) -> Result<Option<Duration>, RegistryError> {
     raw.map(|Interval(value)| {
-        parse_interval(value)
-            .ok_or_else(|| RegistryError::InvalidConfig {
-                reason: format!("backend.{backend}.{field} has an invalid interval {value:?}"),
-            })
+        parse_interval(value).ok_or_else(|| RegistryError::InvalidConfig {
+            reason: format!("backend.{backend}.{field} has an invalid interval {value:?}"),
+        })
     })
     .transpose()
 }

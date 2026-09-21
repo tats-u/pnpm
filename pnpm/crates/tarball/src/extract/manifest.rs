@@ -153,11 +153,15 @@ pub(crate) fn write_synthesized_package_json(
     cas_paths: &mut HashMap<String, PathBuf>,
     pkg_files_idx: &mut PackageFilesIndex,
 ) -> Result<bool, TarballError> {
-    if pkg_files_idx.files.contains_key("package.json") {
+    if pkg_files_idx
+        .files
+        .contains_key("package.json")
+    {
         return Ok(false);
     }
-    let (cas_path, file_hash) =
-        store_dir.write_cas_file(bytes, false).map_err(TarballError::WriteCasFile)?;
+    let (cas_path, file_hash) = store_dir
+        .write_cas_file(bytes, false)
+        .map_err(TarballError::WriteCasFile)?;
     let checked_at = UNIX_EPOCH
         .elapsed()
         .ok()
@@ -172,7 +176,9 @@ pub(crate) fn write_synthesized_package_json(
         checked_at,
     };
     cas_paths.insert("package.json".to_string(), cas_path);
-    pkg_files_idx.files.insert("package.json".to_string(), info);
+    pkg_files_idx
+        .files
+        .insert("package.json".to_string(), info);
     Ok(true)
 }
 

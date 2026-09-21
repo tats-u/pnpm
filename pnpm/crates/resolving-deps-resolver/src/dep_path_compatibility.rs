@@ -60,7 +60,8 @@ impl<'a> PairQueue<'a> {
 
     fn push(&mut self, larger: &'a DepPath, smaller: &'a DepPath) {
         if larger != smaller && self.queued.insert((larger, smaller)) {
-            self.pending.push_back((larger, smaller));
+            self.pending
+                .push_back((larger, smaller));
         }
     }
 
@@ -88,7 +89,9 @@ fn pair_is_compatible<'a>(
         return false;
     }
 
-    smaller_node.edges.children
+    smaller_node
+        .edges
+        .children
         .iter()
         .all(|(alias, smaller_child)| {
             queue_child_pair(graph, larger_node, alias, smaller_child, queue)
@@ -99,9 +102,16 @@ fn has_all_resolved_peers(
     larger_node: &DependenciesGraphNode,
     smaller_node: &DependenciesGraphNode,
 ) -> bool {
-    smaller_node.edges.resolved_peer_names
+    smaller_node
+        .edges
+        .resolved_peer_names
         .iter()
-        .all(|peer| larger_node.edges.resolved_peer_names.contains(peer))
+        .all(|peer| {
+            larger_node
+                .edges
+                .resolved_peer_names
+                .contains(peer)
+        })
 }
 
 fn queue_child_pair<'a>(

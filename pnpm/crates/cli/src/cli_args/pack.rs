@@ -123,7 +123,8 @@ impl PackArgs {
         before_packing_hooks: Vec<Arc<dyn PnpmfileHooks>>,
     ) -> miette::Result<String> {
         if recursive {
-            self.run_recursive::<Reporter>(dir, config, before_packing_hooks).await
+            self.run_recursive::<Reporter>(dir, config, before_packing_hooks)
+                .await
         } else {
             let mut options = self.pack_options(
                 dir.to_path_buf(),
@@ -134,7 +135,8 @@ impl PackArgs {
                 before_packing_hooks,
             );
             set_injected_changelog(&mut options, config, dir).await?;
-            let result = api::<Reporter, Host>(&options).await
+            let result = api::<Reporter, Host>(&options)
+                .await
                 .map_err(miette::Report::new)
                 .wrap_err(PACK_ERROR_CONTEXT)?;
             Ok(format_pack_output(&[to_pack_result_json(&result)], self.json, false))
@@ -148,7 +150,8 @@ impl PackArgs {
         mut options: PackOptions,
     ) -> miette::Result<pnpm_pack::PackResult> {
         set_injected_changelog(&mut options, config, &project.root_dir).await?;
-        api::<Reporter, Host>(&options).await
+        api::<Reporter, Host>(&options)
+            .await
             .map_err(miette::Report::new)
             .wrap_err_with(|| {
                 if self.json {
@@ -250,7 +253,9 @@ impl RecursivePack<'_, '_> {
         schedule_graph_async(
             project_dependencies,
             &ScheduleGraphAsyncOptions::new(
-                usize::try_from(self.config.workspace_concurrency).unwrap_or(usize::MAX).max(1),
+                usize::try_from(self.config.workspace_concurrency)
+                    .unwrap_or(usize::MAX)
+                    .max(1),
                 true,
                 &run_node,
                 &|_: &PathBuf| {},
@@ -276,16 +281,21 @@ impl RecursivePack<'_, '_> {
             return TaskCompletion::Passed;
         };
         options.output.locks = Some(Arc::clone(&self.output.locks));
-        match args.pack_one::<Reporter>(self.config, project, options).await {
+        match args
+            .pack_one::<Reporter>(self.config, project, options)
+            .await
+        {
             Ok(result) => {
-                self.results.packed
+                self.results
+                    .packed
                     .lock()
                     .expect("packed results lock is not poisoned")
                     .push((self.results.order_index[&root], to_pack_result_json(&result)));
                 TaskCompletion::Passed
             }
             Err(error) => {
-                self.results.first_error
+                self.results
+                    .first_error
                     .lock()
                     .expect("pack error lock is not poisoned")
                     .get_or_insert(error);
@@ -296,13 +306,19 @@ impl RecursivePack<'_, '_> {
 
     /// The results in dependency order, or the first pack error.
     fn finish(self) -> miette::Result<Vec<PackResultJson>> {
-        if let Some(error) =
-            self.results.first_error.into_inner().expect("pack error lock is not poisoned")
+        if let Some(error) = self
+            .results
+            .first_error
+            .into_inner()
+            .expect("pack error lock is not poisoned")
         {
             return Err(error);
         }
-        let mut packed =
-            self.results.packed.into_inner().expect("packed results lock is not poisoned");
+        let mut packed = self
+            .results
+            .packed
+            .into_inner()
+            .expect("packed results lock is not poisoned");
         packed.sort_unstable_by_key(|(index, _)| *index);
         Ok(packed
             .into_iter()
@@ -331,7 +347,9 @@ pub(crate) async fn set_injected_changelog(
 /// `path.resolve(base, path)`.
 fn absolute_against(base: &Path, path: &str) -> String {
     let path = if Path::new(path).is_absolute() { PathBuf::from(path) } else { base.join(path) };
-    pnpm_fs::lexical_normalize(&path).to_string_lossy().into_owned()
+    pnpm_fs::lexical_normalize(&path)
+        .to_string_lossy()
+        .into_owned()
 }
 
 mod recursive;

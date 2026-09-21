@@ -18,7 +18,10 @@ use pnpm_package_manifest::{InitAuthor, InitOptions, PackageManifest};
 pub(super) fn init<'a>(ctx: &RunCtx<'a>, args: &InitArgs) -> miette::Result<CommandFuture<'a>> {
     let config: &Config = (ctx.loaders.config)()?;
     let es_module = args.effective_init_type(config) == InitType::Module;
-    let manifest_path = ctx.locations.cli_dir.join("package.json");
+    let manifest_path = ctx
+        .locations
+        .cli_dir
+        .join("package.json");
     // `config_self_update`, so a repo-controlled `pnpm-workspace.yaml` cannot
     // relax the release-age and trust policies governing the version pnpm
     // ends up downloading. A manifest that is already there skips the lookup
@@ -145,7 +148,8 @@ pub(super) fn exec<'a>(ctx: &RunCtx<'a>, args: ExecArgs) -> miette::Result<Comma
         let config: &'static Config = config;
         let args = with_recursive_exec_options(cli_options, args, config);
         if recursive {
-            args.run_recursive(config, dir, reporter).await
+            args.run_recursive(config, dir, reporter)
+                .await
         } else {
             args.run(ExecDirs { run: cli_dir, project: dir }, config, reporter)
         }

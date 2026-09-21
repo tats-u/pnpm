@@ -168,8 +168,14 @@ pub enum GlobalError {
 /// Resolve the global packages and global bin directories, erroring with
 /// `NO_GLOBAL_BIN_DIR` when the pnpm home can't be determined.
 fn global_dirs(config: &Config) -> Result<(PathBuf, PathBuf), GlobalError> {
-    let bin = config.global_bin.clone().ok_or(GlobalError::NoGlobalBinDir)?;
-    let pkg_dir = config.global_pkg_dir.clone().ok_or(GlobalError::NoGlobalBinDir)?;
+    let bin = config
+        .global_bin
+        .clone()
+        .ok_or(GlobalError::NoGlobalBinDir)?;
+    let pkg_dir = config
+        .global_pkg_dir
+        .clone()
+        .ok_or(GlobalError::NoGlobalBinDir)?;
     Ok((pkg_dir, bin))
 }
 
@@ -178,11 +184,10 @@ fn global_dirs(config: &Config) -> Result<(PathBuf, PathBuf), GlobalError> {
 /// created first, so a fresh `PNPM_HOME` whose `bin` is already on `PATH`
 /// but not yet on disk works on the first global command.
 fn check_bin_dir(global_bin_dir: &Path) -> miette::Result<()> {
-    fs::create_dir_all(global_bin_dir)
-        .map_err(|error| {
-            let bin_dir = global_bin_dir.display();
-            miette::miette!("failed to create the global bin directory {bin_dir}: {error}")
-        })?;
+    fs::create_dir_all(global_bin_dir).map_err(|error| {
+        let bin_dir = global_bin_dir.display();
+        miette::miette!("failed to create the global bin directory {bin_dir}: {error}")
+    })?;
     check_global_bin_dir(global_bin_dir, std::env::var("PATH").ok().as_deref(), true)
         .map_err(miette::Report::new)
 }
@@ -203,7 +208,11 @@ pub async fn handle_global_add<Reporter: self::Reporter + 'static>(
     let groups = split_into_groups(params, cwd);
     // Each selector is read as its package name, so versioned forms like
     // `pnpm@9` or `@pnpm/exe@1` can't bypass the self-install guard.
-    if selects_pnpm_cli(groups.iter().flat_map(SelectorGroup::tokens)) {
+    if selects_pnpm_cli(
+        groups
+            .iter()
+            .flat_map(SelectorGroup::tokens),
+    ) {
         return Err(GlobalError::GlobalPnpmInstall.into());
     }
     let groups = tool_install_selectors(groups);
@@ -221,13 +230,14 @@ pub async fn handle_global_add<Reporter: self::Reporter + 'static>(
         global_bin_dir: &global_bin_dir,
     };
     for group in groups {
-        target.add_group::<Reporter>(
-            &group,
-            range_spec_style,
-            supported_architectures.clone(),
-            allow_build,
-        )
-        .await?;
+        target
+            .add_group::<Reporter>(
+                &group,
+                range_spec_style,
+                supported_architectures.clone(),
+                allow_build,
+            )
+            .await?;
     }
     Ok(())
 }
@@ -246,8 +256,9 @@ pub async fn handle_global_update<Reporter: self::Reporter + 'static>(
     check_bin_dir(&global_bin_dir)?;
     clean_orphaned_install_dirs(&global_pkg_dir);
 
-    let scanned =
-        scan_global_packages(&global_pkg_dir).into_diagnostic().wrap_err("scan global packages")?;
+    let scanned = scan_global_packages(&global_pkg_dir)
+        .into_diagnostic()
+        .wrap_err("scan global packages")?;
     if scanned.is_empty() {
         println!("No global packages found");
         return Ok(());
@@ -278,13 +289,14 @@ pub async fn handle_global_update<Reporter: self::Reporter + 'static>(
     };
     let mut changed = false;
     for pkg in &to_update {
-        changed |= target.update_group::<Reporter>(
-            pkg,
-            latest,
-            range_spec_style,
-            supported_architectures.clone(),
-        )
-        .await?;
+        changed |= target
+            .update_group::<Reporter>(
+                pkg,
+                latest,
+                range_spec_style,
+                supported_architectures.clone(),
+            )
+            .await?;
     }
     emit_global_update_result::<Reporter>(&global_pkg_dir, changed);
     Ok(())
@@ -298,7 +310,9 @@ fn emit_global_update_result<Reporter: self::Reporter>(global_pkg_dir: &Path, ch
             prefix: String::new(),
         }));
     }
-    let prefix = global_pkg_dir.to_string_lossy().into_owned();
+    let prefix = global_pkg_dir
+        .to_string_lossy()
+        .into_owned();
     Reporter::emit(&LogEvent::Summary(SummaryLog { level: LogLevel::Debug, prefix }));
 }
 
@@ -316,7 +330,8 @@ fn warn_global<Reporter: self::Reporter>(message: &str) {
 fn registries_with_default(config: &Config) -> Vec<(String, String)> {
     let mut registries = vec![("default".to_string(), config.registry.clone())];
     registries.extend(
-        config.registries_by_scope
+        config
+            .registries_by_scope
             .iter()
             .map(|(key, value)| (key.clone(), value.clone())),
     );

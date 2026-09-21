@@ -57,7 +57,9 @@ fn is_real_dir(workspace: &Path, relative: &str) -> bool {
 /// `pnpm-workspace.yaml`, so a command that merely runs in `workspace`
 /// inherits it without extra env.
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 /// `rm -rf` that tolerates an already-absent path.
@@ -98,8 +100,12 @@ fn retouch_recorded_integrity(workspace: &Path, dep_path: &str) {
 /// `workspace/relative`. Used by the workspace tests to tell which
 /// version of a conflicting dependency landed at each location.
 fn read_pkg_version(workspace: &Path, relative: &str) -> String {
-    let manifest = fs::read_to_string(workspace.join(relative).join("package.json"))
-        .unwrap_or_else(|error| panic!("read {relative}/package.json: {error}"));
+    let manifest = fs::read_to_string(
+        workspace
+            .join(relative)
+            .join("package.json"),
+    )
+    .unwrap_or_else(|error| panic!("read {relative}/package.json: {error}"));
     let parsed: serde_json::Value =
         serde_json::from_str(&manifest).expect("parse package.json as JSON");
     parsed["version"]
@@ -119,13 +125,8 @@ fn read_pkg_version(workspace: &Path, relative: &str) -> String {
 /// (pnpm/pacquet#433) and is omitted here.
 #[test]
 fn installing_with_hoisted_node_linker() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -148,7 +149,9 @@ fn installing_with_hoisted_node_linker() {
     // Version conflict: send needs ms@2.x, the root pins ms@1.0.0, so
     // send keeps its own copy nested.
     assert!(
-        workspace.join("node_modules/send/node_modules/ms").exists(),
+        workspace
+            .join("node_modules/send/node_modules/ms")
+            .exists(),
         "send's conflicting ms should nest under send/node_modules/ms",
     );
 
@@ -196,13 +199,8 @@ fn the_progress_line_counts_the_packages_the_hoisted_linker_added() {
 /// real directory and writes no `pnpm-lock.yaml`.
 #[test]
 fn installing_with_hoisted_node_linker_and_no_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, serde_json::json!({ "ms": "1.0.0" }));
@@ -215,7 +213,9 @@ fn installing_with_hoisted_node_linker_and_no_lockfile() {
 
     assert!(is_real_dir(&workspace, "node_modules/ms"), "ms should be a real directory");
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "no lockfile should be written when lockfile: false",
     );
 
@@ -227,13 +227,8 @@ fn installing_with_hoisted_node_linker_and_no_lockfile() {
 /// real-dir + version-conflict-nesting shape as a fresh install.
 #[test]
 fn installing_with_hoisted_node_linker_frozen() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -247,7 +242,12 @@ fn installing_with_hoisted_node_linker_frozen() {
         .with_args(["install"])
         .assert()
         .success();
-    assert!(workspace.join("pnpm-lock.yaml").exists(), "first install writes the lockfile");
+    assert!(
+        workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "first install writes the lockfile"
+    );
 
     // Tear down node_modules so the frozen install is a pure replay.
     fs_remove_dir_all(&workspace.join("node_modules"));
@@ -261,7 +261,9 @@ fn installing_with_hoisted_node_linker_frozen() {
     assert!(is_real_dir(&workspace, "node_modules/send"), "send is a real dir after frozen replay");
     assert!(is_real_dir(&workspace, "node_modules/ms"), "ms is a real dir after frozen replay");
     assert!(
-        workspace.join("node_modules/send/node_modules/ms").exists(),
+        workspace
+            .join("node_modules/send/node_modules/ms")
+            .exists(),
         "send's conflicting ms nests under send after frozen replay",
     );
 
@@ -282,13 +284,8 @@ fn installing_with_hoisted_node_linker_frozen() {
 /// version nests under its own `node_modules`.
 #[test]
 fn installing_in_a_workspace_with_hoisted_node_linker_frozen() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -355,13 +352,8 @@ fn installing_in_a_workspace_with_hoisted_node_linker_frozen() {
 /// hoisting to the root.
 #[test]
 fn hoisting_limits_prevents_hoisting() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, serde_json::json!({ "send": "0.17.2" }));
@@ -373,11 +365,15 @@ fn hoisting_limits_prevents_hoisting() {
         .success();
 
     assert!(
-        !workspace.join("node_modules/ms").exists(),
+        !workspace
+            .join("node_modules/ms")
+            .exists(),
         "ms should not be hoisted to the root when send's deps are bordered",
     );
     assert!(
-        workspace.join("node_modules/send/node_modules/ms").exists(),
+        workspace
+            .join("node_modules/send/node_modules/ms")
+            .exists(),
         "ms should stay nested under send",
     );
 
@@ -389,13 +385,8 @@ fn hoisting_limits_prevents_hoisting() {
 /// nested under `send`.
 #[test]
 fn external_dependencies_prevents_hoisting_to_root() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, serde_json::json!({ "send": "0.17.2" }));
@@ -407,11 +398,15 @@ fn external_dependencies_prevents_hoisting_to_root() {
         .success();
 
     assert!(
-        !workspace.join("node_modules/ms").exists(),
+        !workspace
+            .join("node_modules/ms")
+            .exists(),
         "ms should not be hoisted to the root when declared external",
     );
     assert!(
-        workspace.join("node_modules/send/node_modules/ms").exists(),
+        workspace
+            .join("node_modules/send/node_modules/ms")
+            .exists(),
         "ms should stay nested under send",
     );
 
@@ -422,13 +417,8 @@ fn external_dependencies_prevents_hoisting_to_root() {
 /// resolved and lands as a real directory at the hoisted root.
 #[test]
 fn peer_dependencies_installed_with_auto_install_peers() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, serde_json::json!({ "react-dom": "18.2.0" }));
@@ -440,7 +430,9 @@ fn peer_dependencies_installed_with_auto_install_peers() {
         .success();
 
     assert!(
-        workspace.join("node_modules/react").exists(),
+        workspace
+            .join("node_modules/react")
+            .exists(),
         "react peer should be installed under the hoisted root",
     );
 
@@ -453,13 +445,8 @@ fn peer_dependencies_installed_with_auto_install_peers() {
 /// and the following frozen install cannot replay it.
 #[test]
 fn frozen_install_replays_a_cached_cyclic_alias_peer_snapshot() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -512,7 +499,9 @@ fn run_node_with_package_map(workspace: &Path, script: &Path) -> std::process::O
     Command::new("node")
         .arg(format!(
             "--experimental-package-map={}",
-            workspace.join("node_modules/.package-map.json").display(),
+            workspace
+                .join("node_modules/.package-map.json")
+                .display(),
         ))
         .arg(script)
         .current_dir(workspace)
@@ -528,9 +517,12 @@ fn package_map_contents(workspace: &Path) -> String {
 fn root_dependency_dir(workspace: &Path, name: &str) -> std::path::PathBuf {
     let package_map: serde_json::Value =
         serde_json::from_str(&package_map_contents(workspace)).expect("parse package map");
-    let dependency_id =
-        package_map["packages"]["."]["dependencies"][name].as_str().expect("root dependency id");
-    let url = package_map["packages"][dependency_id]["url"].as_str().expect("dependency url");
+    let dependency_id = package_map["packages"]["."]["dependencies"][name]
+        .as_str()
+        .expect("root dependency id");
+    let url = package_map["packages"][dependency_id]["url"]
+        .as_str()
+        .expect("dependency url");
     workspace.join("node_modules").join(url)
 }
 
@@ -632,12 +624,22 @@ fn a_nested_copy_is_removed_once_its_version_wins_the_root_slot() {
     // materialize the root-slot winner inside the project.
     let stale = loser.join("node_modules").join(SCRIPTS);
     fs::create_dir_all(stale.parent().expect("scope dir")).expect("create the scope dir");
-    symlink_dir(&fixture.workspace.join("node_modules").join(SCRIPTS), &stale)
-        .expect("plant a stale link");
+    symlink_dir(
+        &fixture
+            .workspace
+            .join("node_modules")
+            .join(SCRIPTS),
+        &stale,
+    )
+    .expect("plant a stale link");
     // The repeat-install short-circuit would report the unchanged
     // workspace up to date without ever reaching the linker.
-    fs::remove_file(fixture.workspace.join("node_modules/.pnpm-workspace-state-v1.json"))
-        .expect("remove the workspace state");
+    fs::remove_file(
+        fixture
+            .workspace
+            .join("node_modules/.pnpm-workspace-state-v1.json"),
+    )
+    .expect("remove the workspace state");
     fixture.run(["install"]);
 
     assert!(!stale.exists(), "a stale project-local link must not survive a reinstall");
@@ -649,13 +651,8 @@ fn a_nested_copy_is_removed_once_its_version_wins_the_root_slot() {
 /// the newly resolved version.
 #[test]
 fn overwriting_is_positive_with_latest() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(&workspace, "nodeLinker: hoisted\n");
 
@@ -690,13 +687,8 @@ fn overwriting_is_positive_with_latest() {
 /// package.
 #[test]
 fn overwriting_existing_files_in_node_modules() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(&workspace, "nodeLinker: hoisted\n");
 
@@ -722,13 +714,8 @@ fn overwriting_existing_files_in_node_modules() {
 /// nested conflict copy.
 #[test]
 fn preserve_subdeps_on_update() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(&workspace, "nodeLinker: hoisted\n");
 
@@ -763,13 +750,8 @@ fn preserve_subdeps_on_update() {
 /// changes.
 #[test]
 fn adding_a_new_dependency_to_a_workspace_project() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(
         &workspace,
@@ -783,7 +765,9 @@ fn adding_a_new_dependency_to_a_workspace_project() {
     ] {
         fs::create_dir_all(workspace.join(name)).expect("create member dir");
         fs::write(
-            workspace.join(name).join("package.json"),
+            workspace
+                .join(name)
+                .join("package.json"),
             serde_json::json!({ "name": name, "version": "1.0.0", "dependencies": deps })
                 .to_string(),
         )
@@ -816,13 +800,8 @@ fn adding_a_new_dependency_to_a_workspace_project() {
 /// underlying version.
 #[test]
 fn installing_same_package_with_alias_and_no_alias() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(&workspace, "nodeLinker: hoisted\n");
 
@@ -853,13 +832,8 @@ fn installing_same_package_with_alias_and_no_alias() {
 /// `peerDependencies` entry in the lockfile.
 #[test]
 fn package_that_is_peer_dependency_of_itself() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(&workspace, "nodeLinker: hoisted\n");
 
@@ -867,12 +841,18 @@ fn package_that_is_peer_dependency_of_itself() {
         .with_args(["add", "@pnpm.e2e/peer-of-itself@1.0.0"])
         .assert()
         .success();
-    assert!(workspace.join("node_modules/@pnpm.e2e/peer-of-itself").exists());
+    assert!(
+        workspace
+            .join("node_modules/@pnpm.e2e/peer-of-itself")
+            .exists()
+    );
 
     let lockfile = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
     let lockfile: pnpm_lockfile::Lockfile =
         serde_saphyr::from_str(&lockfile).expect("parse pnpm-lock.yaml");
-    let packages = lockfile.packages.expect("lockfile has a packages section");
+    let packages = lockfile
+        .packages
+        .expect("lockfile has a packages section");
     let (_, metadata) = packages
         .iter()
         .find(|(key, _)| key.to_string() == "@pnpm.e2e/peer-of-itself@1.0.0")
@@ -897,13 +877,8 @@ fn package_that_is_peer_dependency_of_itself() {
 /// outcome so the two cannot drift apart.
 #[test]
 fn hoist_patterns_are_inert_under_the_hoisted_linker() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, serde_json::json!({ "send": "0.17.2" }));
@@ -918,7 +893,9 @@ fn hoist_patterns_are_inert_under_the_hoisted_linker() {
             "{stage}: the hoisted linker still lands real directories",
         );
         assert!(
-            !workspace.join("node_modules/.pnpm/node_modules").exists(),
+            !workspace
+                .join("node_modules/.pnpm/node_modules")
+                .exists(),
             "{stage}: no private-hoist dir, because there is no virtual store to hoist into",
         );
         let modules_yaml = fs::read_to_string(workspace.join("node_modules/.modules.yaml"))
@@ -991,7 +968,9 @@ fn peer_variants_of_one_version_share_the_root_slot() {
     );
     for project in [&on_peer_a_1_0_0, &on_peer_a_1_0_1] {
         assert!(
-            !project.join("node_modules/@pnpm.e2e/abc").exists(),
+            !project
+                .join("node_modules/@pnpm.e2e/abc")
+                .exists(),
             "a peer variant of the root version must not nest its own copy: {project:?}",
         );
     }

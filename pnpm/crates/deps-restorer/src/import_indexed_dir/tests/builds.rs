@@ -40,7 +40,11 @@ fn needs_build_marker_is_not_used_as_the_completion_marker() {
     .expect("completed import should stay warm");
 
     assert_eq!(fs::read(target.join("index.js")).unwrap(), b"built");
-    assert!(!target.join(crate::NEEDS_BUILD_MARKER).exists());
+    assert!(
+        !target
+            .join(crate::NEEDS_BUILD_MARKER)
+            .exists()
+    );
 }
 #[test]
 fn safe_to_skip_keeps_a_slot_whose_build_removed_the_needs_build_marker() {
@@ -76,7 +80,9 @@ fn safe_to_skip_keeps_a_slot_whose_build_removed_the_needs_build_marker() {
         "the build output must survive; the slot was rebuilt from the staging copy",
     );
     assert!(
-        !target.join(crate::NEEDS_BUILD_MARKER).exists(),
+        !target
+            .join(crate::NEEDS_BUILD_MARKER)
+            .exists(),
         "the consumed needs-build marker must not be put back",
     );
 }

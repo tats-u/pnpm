@@ -76,7 +76,9 @@ fn recursive_publish_filter_no_match_is_a_noop() {
         .success();
 
     assert!(
-        !workspace.join("pnpm-publish-summary.json").exists(),
+        !workspace
+            .join("pnpm-publish-summary.json")
+            .exists(),
         "an empty selection must not write a publish summary",
     );
 
@@ -142,7 +144,10 @@ fn recursive_publish_json_prints_empty_array_when_nothing_published() {
     // (matching pnpm's `logger.info`), so assert on the JSON array line itself
     // rather than the whole stream: it is present only because `--json` prints
     // `publishedPackages`, and disappears if that print is dropped.
-    let stdout = assert.get_output().stdout.pipe_as_ref(String::from_utf8_lossy);
+    let stdout = assert
+        .get_output()
+        .stdout
+        .pipe_as_ref(String::from_utf8_lossy);
     assert!(
         stdout
             .lines()
@@ -257,8 +262,16 @@ fn recursive_batch_publish_runs_completed_group_postpublish_scripts_before_a_lat
     assert!(first_batch.matched(), "the first registry was not published: {stderr}");
     first_batch.assert();
     second_batch.assert();
-    assert!(workspace.join("project-1/post-published").exists());
-    assert!(!workspace.join("project-2/post-published").exists());
+    assert!(
+        workspace
+            .join("project-1/post-published")
+            .exists()
+    );
+    assert!(
+        !workspace
+            .join("project-2/post-published")
+            .exists()
+    );
 
     drop(root);
 }
@@ -272,7 +285,9 @@ fn recursive_batch_publish_rejects_mixed_credentials_for_one_registry() {
         &[("project-1", public_pkg("@scope/project-1")), ("project-2", public_pkg("project-2"))],
     );
     let registry = format!("{}/", server.url());
-    let host = registry.strip_prefix("http://").unwrap_or(&registry);
+    let host = registry
+        .strip_prefix("http://")
+        .unwrap_or(&registry);
     fs::write(
         workspace.join(".npmrc"),
         format!(
@@ -308,7 +323,9 @@ fn recursive_batch_publish_accepts_one_scope_credential_for_every_package() {
         ],
     );
     let registry = format!("{}/", server.url());
-    let host = registry.strip_prefix("http://").unwrap_or(&registry);
+    let host = registry
+        .strip_prefix("http://")
+        .unwrap_or(&registry);
     fs::write(
         workspace.join(".npmrc"),
         format!("registry={registry}\n//{host}:@scope:_authToken=scoped-token\n"),
@@ -376,7 +393,9 @@ fn filter_without_recursive_flag_enters_recursive_publish() {
         .success();
 
     assert!(
-        !workspace.join("pnpm-publish-summary.json").exists(),
+        !workspace
+            .join("pnpm-publish-summary.json")
+            .exists(),
         "an empty selection must not write a publish summary",
     );
 
@@ -461,7 +480,9 @@ fn recursive_publish_empty_workspace_writes_no_summary() {
         .success();
 
     assert!(
-        !workspace.join("pnpm-publish-summary.json").exists(),
+        !workspace
+            .join("pnpm-publish-summary.json")
+            .exists(),
         "an empty workspace must not write a publish summary",
     );
 
@@ -705,7 +726,9 @@ fn recursive_publish_report_summary_lists_the_published_packages() {
         .pipe(fs::read_to_string)
         .expect("read pnpm-publish-summary.json");
     let value: Value = serde_json::from_str(&summary).expect("parse publish summary");
-    let published = value["publishedPackages"].as_array().expect("publishedPackages is an array");
+    let published = value["publishedPackages"]
+        .as_array()
+        .expect("publishedPackages is an array");
     assert_eq!(published.len(), 2, "both packages should be recorded");
     let mut names: Vec<&str> = published
         .iter()
@@ -747,7 +770,10 @@ fn recursive_publish_json_prints_the_published_array() {
         .assert()
         .success();
 
-    let stdout = assert.get_output().stdout.pipe_as_ref(String::from_utf8_lossy);
+    let stdout = assert
+        .get_output()
+        .stdout
+        .pipe_as_ref(String::from_utf8_lossy);
     assert!(
         stdout.contains(r#""id": "project-1@1.0.0""#)
             && stdout.contains(r#""id": "project-2@1.0.0""#),

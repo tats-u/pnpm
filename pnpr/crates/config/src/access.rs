@@ -50,15 +50,13 @@ impl AccessSpec {
             validate_access_token(entry)?;
             tokens.push(match entry.strip_prefix("team:") {
                 Some(team) => {
-                    let members = teams
-                        .get(team)
-                        .ok_or_else(|| {
-                            format!(
-                                "access token {entry:?} references a team this registry does not \
+                    let members = teams.get(team).ok_or_else(|| {
+                        format!(
+                            "access token {entry:?} references a team this registry does not \
                              declare{}",
-                                declared_teams(teams),
-                            )
-                        })?;
+                            declared_teams(teams),
+                        )
+                    })?;
                     AccessToken::Team { name: team.to_string(), members: members.clone() }
                 }
                 None => AccessToken::from(entry.as_str()),
@@ -108,10 +106,9 @@ pub(super) fn build_teams(
 ) -> Result<Teams, RegistryError> {
     let mut teams = Teams::default();
     for (team, members) in file {
-        validate_team_name(team)
-            .map_err(|reason| RegistryError::InvalidConfig {
-                reason: format!("registry {registry:?} has an invalid team name: {reason}"),
-            })?;
+        validate_team_name(team).map_err(|reason| RegistryError::InvalidConfig {
+            reason: format!("registry {registry:?} has an invalid team name: {reason}"),
+        })?;
         let members = members
             .member_names()
             .map_err(|reason| RegistryError::InvalidConfig {
@@ -145,7 +142,9 @@ pub(super) fn validate_team_name(team: &str) -> Result<(), String> {
 /// trap [`validate_access_token`] closes for access lists.
 pub(super) fn validate_member_name(member: &str) -> Result<(), String> {
     validate_single_token(member)?;
-    let bare = member.strip_prefix('@').unwrap_or(member);
+    let bare = member
+        .strip_prefix('@')
+        .unwrap_or(member);
     if member.starts_with('$') || matches!(bare, "all" | "authenticated" | "anonymous") {
         return Err(format!(
             "team member {member:?} is not a username; the built-in groups belong in the \

@@ -506,11 +506,10 @@ where
     }
     let serialized =
         serde_json::to_string_pretty(&manifest).map_err(WriteModulesError::SerializeJson)?;
-    Sys::create_dir_all(modules_dir)
-        .map_err(|source| WriteModulesError::CreateDir {
-            path: modules_dir.to_path_buf(),
-            source,
-        })?;
+    Sys::create_dir_all(modules_dir).map_err(|source| WriteModulesError::CreateDir {
+        path: modules_dir.to_path_buf(),
+        source,
+    })?;
     let manifest_path = modules_dir.join(MODULES_FILENAME);
     Sys::write(&manifest_path, serialized.as_bytes())
         .map_err(|source| WriteModulesError::WriteFile { path: manifest_path, source })

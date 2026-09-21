@@ -113,7 +113,8 @@ fn catalog_entry_is_sole_reference(
     catalog_name: &str,
     name: &PkgName,
 ) -> bool {
-    let importers_agree = lockfile.importers
+    let importers_agree = lockfile
+        .importers
         .values()
         .all(|importer| {
             [
@@ -132,17 +133,16 @@ fn catalog_entry_is_sole_reference(
                     })
             })
         });
-    let no_package_depends_on_it = lockfile.snapshots
+    let no_package_depends_on_it = lockfile
+        .snapshots
         .as_ref()
         .is_none_or(|snapshots| {
-            snapshots
-                .values()
-                .all(|snapshot| {
-                    [snapshot.dependencies.as_ref(), snapshot.optional_dependencies.as_ref()]
-                        .into_iter()
-                        .flatten()
-                        .all(|dependencies| !dependencies.contains_key(name))
-                })
+            snapshots.values().all(|snapshot| {
+                [snapshot.dependencies.as_ref(), snapshot.optional_dependencies.as_ref()]
+                    .into_iter()
+                    .flatten()
+                    .all(|dependencies| !dependencies.contains_key(name))
+            })
         });
     importers_agree && no_package_depends_on_it
 }

@@ -75,7 +75,8 @@ impl Workspace {
                     root.display(),
                 );
             }
-            self.shared.insert(member.clone(), root.to_path_buf());
+            self.shared
+                .insert(member.clone(), root.to_path_buf());
         }
         Ok(())
     }
@@ -96,7 +97,9 @@ impl Workspace {
     /// installs into: its workspace root when that workspace shares one,
     /// and its own otherwise.
     pub(crate) fn lock_root<'a>(&'a self, root: &'a Path) -> &'a Path {
-        self.shared.get(root).map_or(root, PathBuf::as_path)
+        self.shared
+            .get(root)
+            .map_or(root, PathBuf::as_path)
     }
 
     /// The selected projects, grouped by what they install into.
@@ -116,7 +119,8 @@ impl Workspace {
     }
 
     fn membership(&self, lock_root: &Path) -> Membership {
-        let members = self.shared
+        let members = self
+            .shared
             .iter()
             .filter(|(_, root)| root.as_path() == lock_root)
             .map(|(member, _)| member.clone())
@@ -169,18 +173,17 @@ pub(crate) struct DeclaredWorkspaces {
 impl DeclaredWorkspaces {
     pub(crate) fn add(&mut self, root: &Path, manifest: &Manifest) {
         let Some(declaration) = manifest.tool.uv.workspace.as_ref() else { return };
-        self.declarations.insert(root.to_path_buf(), Patterns::of(declaration));
+        self.declarations
+            .insert(root.to_path_buf(), Patterns::of(declaration));
     }
 
     /// Whether the nearest workspace declaration contains `candidate`.
     pub(crate) fn contains(&self, candidate: &Path) -> Option<bool> {
-        candidate
-            .ancestors()
-            .find_map(|root| {
-                self.declarations
-                    .get(root)
-                    .map(|patterns| patterns.contain(root, candidate))
-            })
+        candidate.ancestors().find_map(|root| {
+            self.declarations
+                .get(root)
+                .map(|patterns| patterns.contain(root, candidate))
+        })
     }
 }
 
@@ -199,10 +202,12 @@ impl Patterns {
         let Ok(relative) = candidate.strip_prefix(root) else { return false };
         let relative = if relative.as_os_str().is_empty() { Path::new(".") } else { relative };
         candidate == root
-            || (self.included
+            || (self
+                .included
                 .iter()
                 .any(|glob| glob.is_match(relative))
-                && !self.excluded
+                && !self
+                    .excluded
                     .iter()
                     .any(|glob| glob.is_match(relative)))
     }
@@ -225,7 +230,11 @@ pub(crate) fn environment_root_of(workspace: Option<&Path>, dir: &Path) -> PathB
     let project = dir
         .ancestors()
         .take_while(|ancestor| ancestor.starts_with(&stop))
-        .find(|ancestor| ancestor.join("pyproject.toml").is_file())
+        .find(|ancestor| {
+            ancestor
+                .join("pyproject.toml")
+                .is_file()
+        })
         .unwrap_or(&dir);
     let declared = project
         .ancestors()
@@ -271,6 +280,10 @@ fn workspace_declaration(root: &Path) -> Option<(bool, Patterns)> {
 fn compile(patterns: &[String]) -> Vec<wax::Glob<'static>> {
     patterns
         .iter()
-        .filter_map(|pattern| wax::Glob::new(pattern).ok().map(wax::Glob::into_owned))
+        .filter_map(|pattern| {
+            wax::Glob::new(pattern)
+                .ok()
+                .map(wax::Glob::into_owned)
+        })
         .collect()
 }

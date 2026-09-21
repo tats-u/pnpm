@@ -47,7 +47,9 @@ pub(super) fn run_state_settings(
     config: &Config,
     extra_env: &HashMap<String, String>,
 ) -> Vec<String> {
-    let mut sync_injected = config.sync_injected_deps_after_scripts.clone();
+    let mut sync_injected = config
+        .sync_injected_deps_after_scripts
+        .clone();
     sync_injected.sort();
     let scripts_prepend_node_path = match config.scripts_prepend_node_path {
         pnpm_config::ScriptsPrependNodePath::Always => "true",
@@ -64,7 +66,13 @@ pub(super) fn run_state_settings(
     });
     settings.extend([
         format!("enable-pre-post-scripts={}", config.enable_pre_post_scripts),
-        format!("script-shell={}", config.script_shell.as_deref().unwrap_or_default()),
+        format!(
+            "script-shell={}",
+            config
+                .script_shell
+                .as_deref()
+                .unwrap_or_default()
+        ),
         format!("scripts-prepend-node-path={scripts_prepend_node_path}"),
         format!("shell-emulator={}", config.shell_emulator),
         format!(
@@ -154,7 +162,10 @@ pub(super) fn filter_hidden_requested_scripts(
     if env::var_os("npm_lifecycle_event").is_some() {
         return Ok(());
     }
-    for node in task_graph.values_mut().filter(|node| node.requested) {
+    for node in task_graph
+        .values_mut()
+        .filter(|node| node.requested)
+    {
         node.scripts =
             throw_or_filter_hidden_scripts(std::mem::take(&mut node.scripts), script_name)?;
     }
@@ -171,7 +182,9 @@ pub(super) fn run_concurrency(args: &RunArgs, config: &Config, task_count: usize
     if args.sequential {
         return 1;
     }
-    usize::try_from(config.workspace_concurrency).unwrap_or(usize::MAX).max(1)
+    usize::try_from(config.workspace_concurrency)
+        .unwrap_or(usize::MAX)
+        .max(1)
 }
 
 /// What the run reports once every task has settled.
@@ -189,13 +202,7 @@ pub(super) fn report_run_outcome(
     result: &IndexMap<String, ExecutionStatus>,
     bail_prefix: Option<String>,
 ) -> miette::Result<()> {
-    let RunReporting {
-        args,
-        script_name,
-        workspace_root,
-        task_run_state,
-        ..
-    } = *reporting;
+    let RunReporting { args, script_name, workspace_root, task_run_state, .. } = *reporting;
     if let Some(prefix) = bail_prefix {
         if args.workspace.report_summary {
             write_recursive_summary(workspace_root, result)?;
@@ -249,24 +256,27 @@ pub(super) fn build_run_task_graph(
     selection: &crate::cli_args::recursive::RecursiveSelection<'_>,
     emit: fn(&LogEvent),
 ) -> miette::Result<TaskGraph> {
-    let project_dependencies: IndexMap<PathBuf, Vec<PathBuf>> =
-        if args.workspace.sort {
-            filtered_projects_dependencies(
-                graph,
-                selection.full_graph(),
-                selection.prod_all.as_ref(),
-                &selection.prod_only_selected,
-            )
-        } else {
-            warn_ignored_task_declarations(config, emit);
-            graph
-                .keys()
-                .cloned()
-                .map(|root| (root, Vec::new()))
-                .collect()
-        };
+    let project_dependencies: IndexMap<PathBuf, Vec<PathBuf>> = if args.workspace.sort {
+        filtered_projects_dependencies(
+            graph,
+            selection.full_graph(),
+            selection.prod_all.as_ref(),
+            &selection.prod_only_selected,
+        )
+    } else {
+        warn_ignored_task_declarations(config, emit);
+        graph
+            .keys()
+            .cloned()
+            .map(|root| (root, Vec::new()))
+            .collect()
+    };
     let select_scripts = |project: &Path, task_name: &str| -> Vec<String> {
-        let manifest = graph[project].package.project.manifest.value();
+        let manifest = graph[project]
+            .package
+            .project
+            .manifest
+            .value();
         if task_name == script_name {
             return selector.select(manifest);
         }

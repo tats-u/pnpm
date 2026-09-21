@@ -34,9 +34,13 @@ fn why_fails_without_package_name() {
     let (_root, workspace, _anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["why"]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why"])
+        .output()
+        .expect("run pacquet why");
     assert!(!output.status.success(), "why without args should fail");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -64,9 +68,13 @@ fn recursive_why_uses_the_active_dedicated_lockfile() {
         ),
     )
     .expect("write app manifest");
-    pacquet(&app, ["install"]).assert().success();
+    pacquet(&app, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&app, ["-r", "why", PKG]).output().expect("run recursive pacquet why");
+    let output = pacquet(&app, ["-r", "why", PKG])
+        .output()
+        .expect("run recursive pacquet why");
 
     assert!(output.status.success(), "recursive why should succeed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -81,9 +89,13 @@ fn why_shows_reverse_tree_for_direct_dep() {
     let (_root, workspace, _anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["why", PKG]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", PKG])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why should succeed");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(PKG), "should mention the package: {stdout}");
@@ -100,9 +112,13 @@ fn why_shows_reverse_tree_for_transitive_dep() {
     let (_root, workspace, _anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["why", DEP]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", DEP])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why should succeed");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(DEP), "should mention the package: {stdout}");
@@ -123,9 +139,13 @@ fn why_with_glob_pattern() {
     let (_root, workspace, _anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0", "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["why", "@pnpm.e2e/*"]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", "@pnpm.e2e/*"])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why with glob should succeed");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(PKG), "should mention pkg-with-1-dep: {stdout}");
@@ -138,7 +158,9 @@ fn why_without_lockfile_returns_empty() {
 
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
 
-    let output = pacquet(&workspace, ["why", PKG]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", PKG])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why without lockfile should succeed like pnpm: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.is_empty(), "should produce no output without lockfile: {stdout}");
@@ -149,10 +171,13 @@ fn why_depth_limits_output() {
     let (_root, workspace, _anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output_full =
-        pacquet(&workspace, ["why", DEP]).output().expect("run pacquet why --depth unset");
+    let output_full = pacquet(&workspace, ["why", DEP])
+        .output()
+        .expect("run pacquet why --depth unset");
     let output_depth1 = pacquet(&workspace, ["why", DEP, "--depth", "1"])
         .output()
         .expect("run pacquet why --depth 1");
@@ -201,9 +226,13 @@ fn why_from_a_workspace_member_covers_the_workspace_until_recursive_install_is_o
         ),
     )
     .expect("write sibling package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let sibling_output = pacquet(&app, ["why", HELLO]).output().expect("query sibling dependency");
+    let sibling_output = pacquet(&app, ["why", HELLO])
+        .output()
+        .expect("query sibling dependency");
     assert!(sibling_output.status.success(), "why should succeed: {sibling_output:?}");
     let sibling_stdout = String::from_utf8_lossy(&sibling_output.stdout);
     assert!(
@@ -211,7 +240,9 @@ fn why_from_a_workspace_member_covers_the_workspace_until_recursive_install_is_o
         "a recursive why reports the sibling's own dependency: {sibling_stdout}",
     );
 
-    let linked_output = pacquet(&app, ["why", PKG]).output().expect("query linked dependency");
+    let linked_output = pacquet(&app, ["why", PKG])
+        .output()
+        .expect("query linked dependency");
     assert!(linked_output.status.success(), "why should succeed: {linked_output:?}");
     let linked_stdout = String::from_utf8_lossy(&linked_output.stdout);
     assert!(linked_stdout.contains(PKG), "linked dependency should be reported: {linked_stdout}");
@@ -226,8 +257,9 @@ fn why_from_a_workspace_member_covers_the_workspace_until_recursive_install_is_o
     )
     .expect("rewrite workspace manifest");
 
-    let scoped_sibling =
-        pacquet(&app, ["why", HELLO]).output().expect("query sibling dependency when scoped");
+    let scoped_sibling = pacquet(&app, ["why", HELLO])
+        .output()
+        .expect("query sibling dependency when scoped");
     assert!(scoped_sibling.status.success(), "why should succeed: {scoped_sibling:?}");
     let scoped_sibling_stdout = String::from_utf8_lossy(&scoped_sibling.stdout);
     assert!(
@@ -235,8 +267,9 @@ fn why_from_a_workspace_member_covers_the_workspace_until_recursive_install_is_o
         "a scoped why leaves the sibling out: {scoped_sibling_stdout}",
     );
 
-    let scoped_linked =
-        pacquet(&app, ["why", PKG]).output().expect("query linked dependency when scoped");
+    let scoped_linked = pacquet(&app, ["why", PKG])
+        .output()
+        .expect("query linked dependency when scoped");
     assert!(scoped_linked.status.success(), "why should succeed: {scoped_linked:?}");
     let scoped_linked_stdout = String::from_utf8_lossy(&scoped_linked.stdout);
     assert!(
@@ -270,7 +303,9 @@ fn filtered_why_excludes_unselected_workspace_siblings() {
         ),
     )
     .expect("write sibling package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let excluded = pacquet(&workspace, ["--filter", "app", "why", HELLO])
         .output()
@@ -308,7 +343,9 @@ fn why_is_recursive_by_default_inside_a_workspace() {
         ),
     )
     .expect("write sibling package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["why", HELLO])
         .output()
@@ -339,9 +376,13 @@ fn why_shows_reverse_dependency_tree_for_a_non_direct_dependency() {
         ),
     )
     .expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["why", "--prod", DEP]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", "--prod", DEP])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why should succeed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines: Vec<&str> = stdout.lines().collect();
@@ -372,9 +413,13 @@ fn why_finds_packages_by_alias_name_when_using_npm_protocol() {
         ),
     )
     .expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["why", "--prod", "foo"]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", "--prod", "foo"])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why should succeed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines: Vec<&str> = stdout.lines().collect();
@@ -399,9 +444,13 @@ fn why_finds_packages_by_actual_name_when_using_npm_protocol() {
         ),
     )
     .expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["why", "--prod", PKG]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", "--prod", PKG])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why should succeed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines: Vec<&str> = stdout.lines().collect();
@@ -425,7 +474,9 @@ fn why_displays_parseable_output() {
         ),
     )
     .expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["why", "--parseable", "--prod", DEP])
         .output()
@@ -450,10 +501,13 @@ fn why_displays_finder_message_in_tree_output() {
     let (_root, workspace, _anchor) = setup();
     write_finder_pnpmfile(&workspace, "'Found: has 1 dep'");
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output =
-        pacquet(&workspace, ["why", "--find-by=test-finder"]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", "--find-by=test-finder"])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why should succeed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines: Vec<&str> = stdout.lines().collect();
@@ -468,7 +522,9 @@ fn why_displays_finder_message_in_json_output() {
     let (_root, workspace, _anchor) = setup();
     write_finder_pnpmfile(&workspace, "'custom message'");
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["why", "--json", "--find-by=test-finder"])
         .output()
@@ -494,10 +550,13 @@ fn why_json_output_includes_requires() {
         ),
     )
     .expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output =
-        pacquet(&workspace, ["why", "--json", "--prod", DEP]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", "--json", "--prod", DEP])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why should succeed: {output:?}");
     let parsed: serde_json::Value = serde_json::from_slice(&output.stdout).expect("parse why JSON");
     let matched = parsed
@@ -506,12 +565,23 @@ fn why_json_output_includes_requires() {
         .iter()
         .find(|result| result["name"] == DEP)
         .expect("the queried package is present");
-    let dependents = matched["dependents"].as_array().expect("dependents array");
-    let pkg_node =
-        dependents.iter().find(|node| node["name"] == PKG).expect("package dependent is present");
+    let dependents = matched["dependents"]
+        .as_array()
+        .expect("dependents array");
+    let pkg_node = dependents
+        .iter()
+        .find(|node| node["name"] == PKG)
+        .expect("package dependent is present");
     assert_eq!(pkg_node["requires"], "^100.0.0");
-    let importer_node = pkg_node["dependents"][0].as_object().expect("importer dependent object");
-    assert_eq!(importer_node.get("requires").and_then(serde_json::Value::as_str), Some("100.0.0"),);
+    let importer_node = pkg_node["dependents"][0]
+        .as_object()
+        .expect("importer dependent object");
+    assert_eq!(
+        importer_node
+            .get("requires")
+            .and_then(serde_json::Value::as_str),
+        Some("100.0.0"),
+    );
 }
 
 /// Port of upstream's `"why" finder can read manifest from store`.
@@ -534,7 +604,9 @@ module.exports = {{ finders: {{ 'manifest-reader': (ctx) => {{
     )
     .expect("write .pnpmfile.cjs");
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["why", "--json", "--find-by=manifest-reader"])
         .output()
@@ -547,7 +619,9 @@ module.exports = {{ finders: {{ 'manifest-reader': (ctx) => {{
         .iter()
         .find(|result| result["name"] == PKG)
         .expect("the finder-matched package is present");
-    let message = matched["searchMessage"].as_str().expect("searchMessage string");
+    let message = matched["searchMessage"]
+        .as_str()
+        .expect("searchMessage string");
     assert!(message.starts_with("description: "), "searchMessage: {message}");
 }
 
@@ -564,10 +638,13 @@ fn why_finds_file_protocol_local_packages() {
         r#"{ "name": "project", "version": "0.0.0", "dependencies": { "my-alias": "file:./local-pkg" } }"#,
     )
     .expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output =
-        pacquet(&workspace, ["why", "--prod", "my-local-pkg"]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", "--prod", "my-local-pkg"])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why should succeed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines: Vec<&str> = stdout.lines().collect();
@@ -593,9 +670,13 @@ fn why_marks_importer_dep_field_and_prints_summary() {
         ),
     )
     .expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["why", PKG]).output().expect("run pacquet why");
+    let output = pacquet(&workspace, ["why", PKG])
+        .output()
+        .expect("run pacquet why");
     assert!(output.status.success(), "why should succeed: {output:?}");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert_eq!(
@@ -610,10 +691,13 @@ fn why_marks_importer_dep_field_and_prints_summary() {
 fn why_styles_the_tree_without_corrupting_it() {
     let (_root, workspace, _anchor) = setup();
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let plain =
-        without_colors(pacquet(&workspace, ["why", PKG])).output().expect("run pacquet why");
+    let plain = without_colors(pacquet(&workspace, ["why", PKG]))
+        .output()
+        .expect("run pacquet why");
     assert!(plain.status.success(), "why should succeed: {plain:?}");
     let colored = with_colors(pacquet(&workspace, ["why", PKG]))
         .output()
@@ -631,7 +715,9 @@ fn why_styles_the_tree_without_corrupting_it() {
 fn color_modes_override_terminal_environment_hints() {
     let (_root, workspace, _anchor) = setup();
     write_manifest(&workspace, &format!(r#"{{ "{PKG}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let always = without_colors(pacquet(&workspace, ["--color=always", "why", PKG]))
         .output()

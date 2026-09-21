@@ -110,7 +110,9 @@ fn init_rejects_non_directory_files_path() {
     // (`NotADirectory` on Linux, `AlreadyExists` / `Uncategorized`
     // elsewhere). `expect_err` asserting that *an* error surfaced
     // is enough; the caller has already wired it through `warn!`.
-    store.init().expect_err("init must fail when files/ isn't a directory");
+    store
+        .init()
+        .expect_err("init must fail when files/ isn't a directory");
     for shard in 0u8..=255 {
         assert!(
             !store.shard_already_ensured(shard),

@@ -47,7 +47,8 @@ impl UnlinkArgs {
             .filter(|(selector, specifier)| {
                 specifier.starts_with("link:")
                     && (self.package_names.is_empty()
-                        || self.package_names
+                        || self
+                            .package_names
                             .iter()
                             .any(|name| name == *selector))
             })
@@ -59,9 +60,14 @@ impl UnlinkArgs {
         }
 
         if !removed.is_empty() {
-            let root_dir = config.workspace_dir
+            let root_dir = config
+                .workspace_dir
                 .clone()
-                .or_else(|| manifest_path.parent().map(Path::to_path_buf))
+                .or_else(|| {
+                    manifest_path
+                        .parent()
+                        .map(Path::to_path_buf)
+                })
                 .ok_or_else(|| miette::miette!("manifest path has no parent directory"))?;
 
             remove_overrides(&root_dir, &removed)

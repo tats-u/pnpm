@@ -84,7 +84,9 @@ fn read_lockfile_text(file_path: &Path) -> Result<Option<String>, LoadLockfileEr
     match fs::read_to_string(file_path) {
         Ok(content) => Ok(Some(content)),
         Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
-        Err(error) => error.pipe(LoadLockfileError::ReadFile).pipe(Err),
+        Err(error) => error
+            .pipe(LoadLockfileError::ReadFile)
+            .pipe(Err),
     }
 }
 
@@ -111,8 +113,9 @@ fn env_document_merges(content: &str, file_path: &Path) -> bool {
 impl Lockfile {
     /// Load lockfile from the current directory.
     pub fn load_from_current_dir() -> Result<Option<Self>, LoadLockfileError> {
-        let file_path =
-            env::current_dir().map_err(LoadLockfileError::CurrentDir)?.join(Lockfile::FILE_NAME);
+        let file_path = env::current_dir()
+            .map_err(LoadLockfileError::CurrentDir)?
+            .join(Lockfile::FILE_NAME);
         Self::load_from_path(&file_path)
     }
 
@@ -155,7 +158,8 @@ impl Lockfile {
         dir: &Path,
         selection: &WantedLockfileSelection,
     ) -> Result<Option<Self>, LoadLockfileError> {
-        Ok(Self::load_wanted_detailed(dir, selection)?.lockfile
+        Ok(Self::load_wanted_detailed(dir, selection)?
+            .lockfile
             .map(|lockfile| Arc::try_unwrap(lockfile).unwrap_or_else(|shared| (*shared).clone())))
     }
 
@@ -244,7 +248,9 @@ impl Lockfile {
     #[must_use]
     pub fn wanted_exists(dir: &Path, file_name: &str) -> bool {
         match fs::read_to_string(dir.join(file_name)) {
-            Ok(content) => !extract_main_document(&content).trim().is_empty(),
+            Ok(content) => !extract_main_document(&content)
+                .trim()
+                .is_empty(),
             Err(error) => error.kind() != ErrorKind::NotFound,
         }
     }
@@ -396,11 +402,15 @@ impl LoadedRepairLockfile {
     }
 
     pub(crate) fn seed(&self) -> Option<&Lockfile> {
-        self.views.as_ref().map(|views| &views.seed)
+        self.views
+            .as_ref()
+            .map(|views| &views.seed)
     }
 
     pub(crate) fn merge(&self) -> Option<&Lockfile> {
-        self.views.as_ref().map(|views| &views.merge)
+        self.views
+            .as_ref()
+            .map(|views| &views.merge)
     }
 
     pub(crate) fn pre_merge_importers(&self) -> Option<&HashMap<String, ProjectSnapshot>> {

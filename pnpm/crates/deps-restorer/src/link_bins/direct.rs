@@ -25,7 +25,8 @@ use std::{
 /// disabled hoist pass — gets no `NODE_PATH` at all.
 #[must_use]
 pub fn shim_link_options(config: &Config, node_linker: NodeLinker) -> LinkBinsOptions {
-    let has_hoist_pattern = config.hoist_pattern
+    let has_hoist_pattern = config
+        .hoist_pattern
         .as_ref()
         .is_some_and(|patterns| !patterns.is_empty());
     let extra_node_paths = if config.extend_node_path
@@ -33,7 +34,8 @@ pub fn shim_link_options(config: &Config, node_linker: NodeLinker) -> LinkBinsOp
         && has_hoist_pattern
     {
         vec![
-            config.virtual_store_dir
+            config
+                .virtual_store_dir
                 .join("node_modules")
                 .to_string_lossy()
                 .into_owned(),
@@ -43,8 +45,13 @@ pub fn shim_link_options(config: &Config, node_linker: NodeLinker) -> LinkBinsOp
     };
     LinkBinsOptions {
         extra_node_paths,
-        prefer_symlinked_executables: config.prefer_symlinked_executables.unwrap_or(false),
-        relocatable_root: config.modules_dir.parent().map(Path::to_path_buf),
+        prefer_symlinked_executables: config
+            .prefer_symlinked_executables
+            .unwrap_or(false),
+        relocatable_root: config
+            .modules_dir
+            .parent()
+            .map(Path::to_path_buf),
     }
 }
 /// Read the `package.json` of every direct dependency under `modules_dir`
@@ -80,7 +87,15 @@ pub fn resolve_hoisted_bin_deps(
     aliases
         .iter()
         .map(|(alias, key)| {
-            (alias.clone(), pkg_dir_under(&layout.slot_dir(key).join("node_modules"), &key.name))
+            (
+                alias.clone(),
+                pkg_dir_under(
+                    &layout
+                        .slot_dir(key)
+                        .join("node_modules"),
+                    &key.name,
+                ),
+            )
         })
         .collect()
 }
@@ -200,7 +215,11 @@ pub(super) fn prefetched_bin_source(
     let Some(snapshot_key) = snapshot_key else {
         return PrefetchedBin::ReadFromDisk;
     };
-    if lookup.requires_build.and_then(|flags| flags.get(snapshot_key)) != Some(&false) {
+    if lookup
+        .requires_build
+        .and_then(|flags| flags.get(snapshot_key))
+        != Some(&false)
+    {
         return PrefetchedBin::ReadFromDisk;
     }
     let metadata_key = snapshot_key.without_peer();
@@ -209,8 +228,9 @@ pub(super) fn prefetched_bin_source(
     {
         return PrefetchedBin::NoBins;
     }
-    let Some(manifest) =
-        lookup.package_manifests.and_then(|manifests| manifests.get(&metadata_key))
+    let Some(manifest) = lookup
+        .package_manifests
+        .and_then(|manifests| manifests.get(&metadata_key))
     else {
         return PrefetchedBin::ReadFromDisk;
     };

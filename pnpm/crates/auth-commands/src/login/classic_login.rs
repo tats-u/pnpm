@@ -65,7 +65,8 @@ where
         // it borrows nothing from the closure — see `with_otp_handling`'s
         // `Operation` bound.
         move |otp: Option<String>| async move {
-            add_user(http_client, registry, credentials, otp.as_deref()).await
+            add_user(http_client, registry, credentials, otp.as_deref())
+                .await
                 .map_err(add_user_error_to_op::<Reporter>)
         },
     )
@@ -131,7 +132,10 @@ async fn add_user(
     let ok = response.status().is_success();
     let status = response.status().as_u16();
     let www_authenticate = joined_www_authenticate(&response);
-    let text = response.text().await.unwrap_or_default();
+    let text = response
+        .text()
+        .await
+        .unwrap_or_default();
 
     if !ok {
         return Err(AddUserError::Http { status, text, www_authenticate });
@@ -168,7 +172,10 @@ fn joined_www_authenticate(response: &reqwest::Response) -> Option<String> {
 
 fn token_from_response(text: &str) -> Result<String, AddUserError> {
     match serde_json::from_str::<Value>(text) {
-        Ok(parsed) => match parsed.get("token").and_then(Value::as_str) {
+        Ok(parsed) => match parsed
+            .get("token")
+            .and_then(Value::as_str)
+        {
             Some(token) if !token.is_empty() => Ok(token.to_owned()),
             _ => Err(AddUserError::NoToken),
         },

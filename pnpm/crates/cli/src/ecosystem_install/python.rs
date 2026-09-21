@@ -41,8 +41,14 @@ pub(crate) async fn discover_around(
 }
 
 async fn workspace_manifests(inventory: &EcosystemWorkspaceInventory) -> Result<Vec<PathBuf>> {
-    let mut manifests = inventory.manifests(EcosystemManifest::Python).await?.to_vec();
-    for path in inventory.manifests(EcosystemManifest::Requirements).await? {
+    let mut manifests = inventory
+        .manifests(EcosystemManifest::Python)
+        .await?
+        .to_vec();
+    for path in inventory
+        .manifests(EcosystemManifest::Requirements)
+        .await?
+    {
         // A `requirements.txt` beside a `pyproject.toml` is that project's
         // own file, so only a directory without one is a project of its own.
         if !manifests.contains(&path.with_file_name("pyproject.toml")) {

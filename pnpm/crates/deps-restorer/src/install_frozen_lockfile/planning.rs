@@ -55,11 +55,18 @@ impl<'a> FrozenInputs<'a> {
     /// skip set and the sidecars record.
     pub(super) fn included(&self) -> IncludedDependencies {
         IncludedDependencies {
-            dependencies: self.projects.dependency_groups.contains(&DependencyGroup::Prod),
-            dev_dependencies: self.projects.dependency_groups.contains(&DependencyGroup::Dev),
-            optional_dependencies: self.projects.dependency_groups.contains(
-                &DependencyGroup::Optional,
-            ),
+            dependencies: self
+                .projects
+                .dependency_groups
+                .contains(&DependencyGroup::Prod),
+            dev_dependencies: self
+                .projects
+                .dependency_groups
+                .contains(&DependencyGroup::Dev),
+            optional_dependencies: self
+                .projects
+                .dependency_groups
+                .contains(&DependencyGroup::Optional),
         }
     }
 
@@ -120,7 +127,9 @@ impl<'a> FrozenInputs<'a> {
                 progress_reported,
                 tarball_mem_cache: install.drivers.tarball_mem_cache,
                 custom_fetcher_session,
-                planned_canonical_fetches: install.lockfiles.planned_canonical_fetches,
+                planned_canonical_fetches: install
+                    .lockfiles
+                    .planned_canonical_fetches,
             },
             selection: crate::SnapshotSelection {
                 skipped,
@@ -448,7 +457,9 @@ pub(super) async fn plan_engine_name(
         }
         crate::materialization_plan::HostDetection::Resolved(host) => host,
     };
-    let host_node = host.as_ref().map(crate::materialization_plan::HostNode::from);
+    let host_node = host
+        .as_ref()
+        .map(crate::materialization_plan::HostNode::from);
     let (name, deferred) = crate::materialization_plan::resolve_engine_name(
         config.enable_global_virtual_store,
         snapshots,

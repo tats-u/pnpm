@@ -5,7 +5,9 @@ use super::{
 
 #[tokio::test]
 async fn discovery_body_read_failure_opens_the_circuit() {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move {
         let (mut socket, _) = listener.accept().await.unwrap();
@@ -102,10 +104,14 @@ async fn open_circuit_short_circuits_without_hitting_the_upstream() {
     let upstream = breaking_upstream(server.url(), 1);
     let name = CanonicalPackageName::parse("foo", pnpr_package_name::Ecosystem::Npm).unwrap();
 
-    let first = upstream.fetch_packument(&name, &CacheValidators::default()).await;
+    let first = upstream
+        .fetch_packument(&name, &CacheValidators::default())
+        .await;
     assert!(matches!(first, Err(RegistryError::UpstreamStatus { status: 500, .. })));
 
-    let second = upstream.fetch_packument(&name, &CacheValidators::default()).await;
+    let second = upstream
+        .fetch_packument(&name, &CacheValidators::default())
+        .await;
     assert!(
         matches!(second, Err(RegistryError::UpstreamUnavailable { .. })),
         "the open breaker must short-circuit the second request",
@@ -130,7 +136,9 @@ async fn client_error_status_does_not_open_the_circuit() {
     let name = CanonicalPackageName::parse("foo", pnpr_package_name::Ecosystem::Npm).unwrap();
 
     for _ in 0..2 {
-        let result = upstream.fetch_packument(&name, &CacheValidators::default()).await;
+        let result = upstream
+            .fetch_packument(&name, &CacheValidators::default())
+            .await;
         assert!(
             matches!(result, Err(RegistryError::UpstreamStatus { status: 401, .. })),
             "a 4xx must surface verbatim, not as a circuit-open 503",

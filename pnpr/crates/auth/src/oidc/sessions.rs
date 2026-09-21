@@ -10,7 +10,10 @@ impl OidcState {
             return Ok(None);
         }
         let now = Utc::now().timestamp();
-        let mut sessions = self.sessions.lock().expect("OIDC session mutex poisoned");
+        let mut sessions = self
+            .sessions
+            .lock()
+            .expect("OIDC session mutex poisoned");
         let hash = super::super::sha256_hex(raw.as_bytes());
         if let Some(session) = sessions.get(&hash)
             && session.expires > now
@@ -36,7 +39,10 @@ impl OidcState {
             return Err(rejected());
         }
         let token = format!("{SESSION_PREFIX}{}", random_secret()?);
-        let mut sessions = self.sessions.lock().expect("OIDC session mutex poisoned");
+        let mut sessions = self
+            .sessions
+            .lock()
+            .expect("OIDC session mutex poisoned");
         sessions.retain(|_, session| session.expires > now);
         if sessions.len() >= MAX_ENTRIES {
             return Err(unavailable());

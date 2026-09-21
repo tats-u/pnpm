@@ -87,7 +87,9 @@ async fn write_path_cache_key_includes_patch_hash() {
             pnpm_lockfile::PackageMetadata {
                 resolution: pnpm_lockfile::LockfileResolution::Registry(
                     pnpm_lockfile::RegistryResolution {
-                        integrity: integrity_str.parse().expect("parse integrity"),
+                        integrity: integrity_str
+                            .parse()
+                            .expect("parse integrity"),
                         revision: None,
                     },
                 ),
@@ -246,14 +248,19 @@ new file mode 100644
     .expect("build modules must complete cleanly");
 
     drop(writer);
-    writer_task.await.expect("await writer").expect("writer succeeds");
+    writer_task
+        .await
+        .expect("await writer")
+        .expect("writer succeeds");
 
     let index = StoreIndex::open_readonly_in(&store_dir).expect("open index for read");
     let row = index
         .get(&files_index_file)
         .expect("get row")
         .expect("row present");
-    let side_effects = row.side_effects.expect("side_effects populated");
+    let side_effects = row
+        .side_effects
+        .expect("side_effects populated");
     assert!(
         side_effects.contains_key(&expected_cache_key_with_patch),
         "patched cache key must appear in side_effects map: \
@@ -291,7 +298,9 @@ async fn patch_only_snapshot_gets_patched_via_build_modules() {
     // virtual store so the applier has a real target. No scripts,
     // so `requires_build_map` for this snapshot stays false — the
     // build trigger fires solely because of the patch entry.
-    let pkg_dir = virtual_store_dir.path().join("is-positive@1.0.0/node_modules/is-positive");
+    let pkg_dir = virtual_store_dir
+        .path()
+        .join("is-positive@1.0.0/node_modules/is-positive");
     fs::create_dir_all(&pkg_dir).expect("create pkg dir");
     fs::write(pkg_dir.join("package.json"), r#"{"name":"is-positive","version":"1.0.0"}"#)
         .expect("write manifest");
@@ -299,7 +308,9 @@ async fn patch_only_snapshot_gets_patched_via_build_modules() {
     // Patch that creates a brand-new file. Pure Create operation;
     // diffy parses and applies it cleanly.
     let patch_dir = tempdir().expect("create patch dir");
-    let patch_file = patch_dir.path().join("is-positive.patch");
+    let patch_file = patch_dir
+        .path()
+        .join("is-positive.patch");
     fs::write(
         &patch_file,
         "\
@@ -376,7 +387,10 @@ new file mode 100644
     .expect("build modules must complete cleanly");
 
     drop(writer);
-    writer_task.await.expect("await writer").expect("writer succeeds");
+    writer_task
+        .await
+        .expect("await writer")
+        .expect("writer succeeds");
 
     let patched = pkg_dir.join("patched.txt");
     assert!(patched.exists(), "patch must have created {}", patched.display());
@@ -404,7 +418,9 @@ async fn missing_patch_file_path_errors_with_diagnostic() {
     let modules_dir = tempdir().expect("create modules dir");
     let lockfile_dir = tempdir().expect("create lockfile dir");
 
-    let pkg_dir = virtual_store_dir.path().join("is-positive@1.0.0/node_modules/is-positive");
+    let pkg_dir = virtual_store_dir
+        .path()
+        .join("is-positive@1.0.0/node_modules/is-positive");
     fs::create_dir_all(&pkg_dir).expect("create pkg dir");
     fs::write(pkg_dir.join("package.json"), r#"{"name":"is-positive","version":"1.0.0"}"#)
         .expect("write manifest");

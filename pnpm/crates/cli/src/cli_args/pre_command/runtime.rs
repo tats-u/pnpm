@@ -18,7 +18,10 @@ pub(super) fn check_runtimes(
     let mut checked = HashSet::new();
     for engines_field in ["devEngines", "engines"] {
         for runtime in declared_runtimes(&manifest, engines_field) {
-            let Some(name) = runtime.get("name").and_then(Value::as_str) else {
+            let Some(name) = runtime
+                .get("name")
+                .and_then(Value::as_str)
+            else {
                 continue;
             };
             if !is_runtime_alias(name) || !checked.insert(name.to_string()) {
@@ -47,7 +50,9 @@ fn declared_runtimes<'a>(manifest: &'a Value, engines_field: &str) -> &'a [Value
 }
 
 fn check_runtime(runtime: &Value, name: &str, emit: fn(&LogEvent)) -> miette::Result<()> {
-    let on_fail = runtime.get("onFail").and_then(Value::as_str);
+    let on_fail = runtime
+        .get("onFail")
+        .and_then(Value::as_str);
     if matches!(on_fail, None | Some("ignore" | "download")) {
         return Ok(());
     }

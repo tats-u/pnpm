@@ -81,7 +81,8 @@ impl HostedDocument for CrateDocument {
             self.versions.push(entry);
             // The crates API reports one description per crate, so the
             // newest publish that landed owns it.
-            self.description.clone_from(&addition.description);
+            self.description
+                .clone_from(&addition.description);
         }
         self.versions.len() != before
     }
@@ -159,7 +160,9 @@ fn merge_into_stored<Document: HostedDocument>(
         Some(bytes) => Document::parse(bytes).map_err(RegistryError::Json)?,
         None => Document::empty(merge.name.as_str()),
     };
-    Ok(stored.merge(journaled, merge.lost_blobs).then(|| stored.to_bytes()))
+    Ok(stored
+        .merge(journaled, merge.lost_blobs)
+        .then(|| stored.to_bytes()))
 }
 
 /// The hosted document of `key` through `source`'s read gate: `None` when the
@@ -171,7 +174,9 @@ pub(super) async fn read_hosted_document<Document: HostedDocument>(
     key: &CanonicalPackageName,
 ) -> Result<Option<Document>, RegistryError> {
     let org = hosted_read_namespace(state, identity, source, key.as_str())?;
-    state.inner.storage
+    state
+        .inner
+        .storage
         .for_hosted(&org)
         .read_hosted_document(key)
         .await?
@@ -198,10 +203,16 @@ pub(super) async fn store_hosted_artifact<Document: HostedDocument + Send>(
     refuse: impl Fn(&Document) -> Result<(), RegistryError> + Send + Sync,
     addition: Document,
 ) -> Result<(), RegistryError> {
-    let _guard = state.inner.locks.packages.lock(key.as_str()).await;
+    let _guard = state
+        .inner
+        .locks
+        .packages
+        .lock(key.as_str())
+        .await;
     let staged = stage_hosted_artifact(state, org, key, filename, bytes, &refuse, addition).await?;
     let outcome = commit_publishes(state, vec![staged]).await?;
-    if outcome.lost_blobs
+    if outcome
+        .lost_blobs
         .iter()
         .any(|lost| lost.filename == filename)
     {
@@ -211,7 +222,12 @@ pub(super) async fn store_hosted_artifact<Document: HostedDocument + Send>(
     // commit, so what the store serves under it is theirs. Answer with the
     // duplicate error `refuse` would have given had it seen their document.
     if !outcome.unrecorded.is_empty()
-        && let Some(stored) = state.inner.storage.for_hosted(org).read_hosted_document(key).await?
+        && let Some(stored) = state
+            .inner
+            .storage
+            .for_hosted(org)
+            .read_hosted_document(key)
+            .await?
     {
         refuse(&Document::parse(&stored).map_err(RegistryError::Json)?)?;
     }
@@ -233,7 +249,9 @@ pub(super) async fn stage_hosted_artifact<Document: HostedDocument + Send>(
     addition: Document,
 ) -> Result<StagedPublish, RegistryError> {
     let storage = state.inner.storage.for_hosted(org);
-    let stored = storage.read_hosted_document_for_update(key).await?;
+    let stored = storage
+        .read_hosted_document_for_update(key)
+        .await?;
     let mut document = match &stored {
         Some(stored) => Document::parse(&stored.bytes).map_err(RegistryError::Json)?,
         None => Document::empty(key.as_str()),
@@ -241,7 +259,9 @@ pub(super) async fn stage_hosted_artifact<Document: HostedDocument + Send>(
     refuse(&document)?;
     document.merge(addition, &HashSet::new());
 
-    let slot = storage.reserve_hosted_blob(key, filename).await?;
+    let slot = storage
+        .reserve_hosted_blob(key, filename)
+        .await?;
     if let Err(err) = tokio::fs::write(&slot.tmp_path, bytes).await {
         // Nothing owns this slot yet: not the journal, and not a `StagedPublish`
         // the caller could clean up.

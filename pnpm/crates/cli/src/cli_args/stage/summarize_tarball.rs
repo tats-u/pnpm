@@ -23,12 +23,8 @@ struct TarballContents {
 /// [`PublishSummary`]. The tarball must contain a parseable
 /// `package/package.json` with a name and version.
 pub(super) fn summarize_tarball(tarball_data: &[u8]) -> miette::Result<PublishSummary> {
-    let TarballContents {
-        mut files,
-        bundled,
-        manifest,
-        unpacked_size,
-    } = read_tarball_contents(tarball_data, true)?;
+    let TarballContents { mut files, bundled, manifest, unpacked_size } =
+        read_tarball_contents(tarball_data, true)?;
 
     sort_paths_en_locale(&mut files);
     let name = manifest_string(&manifest, "name");
@@ -45,7 +41,10 @@ pub(super) fn summarize_tarball(tarball_data: &[u8]) -> miette::Result<PublishSu
     );
     // A registry-packed tarball's manifest carries an `_id`; prefer it over
     // the derived `name@version`, matching pnpm's `summarizeTarball`.
-    if let Some(id) = manifest.get("_id").and_then(Value::as_str) {
+    if let Some(id) = manifest
+        .get("_id")
+        .and_then(Value::as_str)
+    {
         id.clone_into(&mut summary.id);
     }
     if !bundled.is_empty() {
@@ -73,7 +72,9 @@ fn read_tarball_contents(
         .into_diagnostic()
         .wrap_err("read the staged tarball's entries")?;
     for entry in entries {
-        let mut entry = entry.into_diagnostic().wrap_err("read a staged tarball entry")?;
+        let mut entry = entry
+            .into_diagnostic()
+            .wrap_err("read a staged tarball entry")?;
         let path = String::from_utf8_lossy(&entry.path_bytes()).into_owned();
         if include_summary && entry.header().entry_type().is_file() {
             contents.push_file(&path, entry.header().size().unwrap_or(0));
@@ -155,7 +156,10 @@ fn validate_package_identity(name: &str, version: &str) -> Result<(), StageError
     if !is_valid_old_npm_package_name(name) {
         return Err(StageError::InvalidPackageName { name: name.to_owned() });
     }
-    if version.parse::<node_semver::Version>().is_err() {
+    if version
+        .parse::<node_semver::Version>()
+        .is_err()
+    {
         return Err(StageError::InvalidPackageVersion { version: version.to_owned() });
     }
     Ok(())
@@ -164,7 +168,8 @@ fn validate_package_identity(name: &str, version: &str) -> Result<(), StageError
 /// `@scope/name` → `scope-name`: drop the first `@`, turn the first `/` into
 /// a `-`, exactly like pnpm's `normalizePackageName`.
 fn normalize_package_name(name: &str) -> String {
-    name.replacen('@', "", 1).replacen('/', "-", 1)
+    name.replacen('@', "", 1)
+        .replacen('/', "-", 1)
 }
 
 /// The bundled-dependency name of a `package/node_modules/...` tarball entry:

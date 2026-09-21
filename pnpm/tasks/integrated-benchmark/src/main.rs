@@ -21,7 +21,9 @@ async fn main() {
 
     let repository =
         std::fs::canonicalize(&args.build.repository).expect("get absolute path to repository");
-    let pnpm_repository = args.build.pnpm_repository
+    let pnpm_repository = args
+        .build
+        .pnpm_repository
         .as_ref()
         .map(|path| std::fs::canonicalize(path).expect("get absolute path to pnpm repository"));
     let work_env = prepared_work_env(&args.work_env);
@@ -66,7 +68,9 @@ async fn benchmark_registry(
             registry: &registry.url,
             work_env,
             spawned_registry_port: registry.spawned_port,
-            public_url: registry.proxied.then_some(registry.public_url.as_str()),
+            public_url: registry
+                .proxied
+                .then_some(registry.public_url.as_str()),
         })
         .await
     }
@@ -158,11 +162,13 @@ async fn spawn_registry(opts: SpawnRegistry<'_>) -> Option<pnpm_registry_mock::M
                 client: &reqwest::Client::default(),
                 port: opts.spawned_registry_port,
                 public_url: opts.public_url,
-                stdout: opts.work_env
+                stdout: opts
+                    .work_env
                     .join("verdaccio.stdout.log")
                     .pipe(Some)
                     .as_deref(),
-                stderr: opts.work_env
+                stderr: opts
+                    .work_env
                     .join("verdaccio.stderr.log")
                     .pipe(Some)
                     .as_deref(),
@@ -230,7 +236,11 @@ fn verify_prerequisites(
     if has_pnpm_target {
         verify::ensure_pnpm_git_repo(pnpm_repository.unwrap_or(repository));
     }
-    verify::validate_revision_list(targets.iter().map(|target| target.rev.as_str()));
+    verify::validate_revision_list(
+        targets
+            .iter()
+            .map(|target| target.rev.as_str()),
+    );
     verify::ensure_program("bash");
     verify::ensure_program("git");
     verify::ensure_program("hyperfine");

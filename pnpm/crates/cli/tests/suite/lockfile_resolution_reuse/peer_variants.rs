@@ -30,11 +30,16 @@ fn promoting_a_peer_suffixed_transitive_dependency_resolves_its_importer_edge() 
         .assert()
         .success();
 
-    let abc: pnpm_lockfile::PkgName = "@pnpm.e2e/abc".parse().expect("package name");
+    let abc: pnpm_lockfile::PkgName = "@pnpm.e2e/abc"
+        .parse()
+        .expect("package name");
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load wanted lockfile")
         .expect("wanted lockfile");
-    let snapshots = wanted.snapshots.as_ref().expect("snapshots");
+    let snapshots = wanted
+        .snapshots
+        .as_ref()
+        .expect("snapshots");
     let locked_abc: Vec<_> = snapshots
         .keys()
         .filter(|key| key.name == abc)
@@ -58,16 +63,21 @@ fn promoting_a_peer_suffixed_transitive_dependency_resolves_its_importer_edge() 
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let edge = &wanted.importers["."].dependencies.as_ref().expect("dependencies")[&abc];
-    let linked: pnpm_lockfile::PackageKey =
-        format!("@pnpm.e2e/abc@{}", edge.version).parse().expect("snapshot key");
+    let edge = &wanted.importers["."]
+        .dependencies
+        .as_ref()
+        .expect("dependencies")[&abc];
+    let linked: pnpm_lockfile::PackageKey = format!("@pnpm.e2e/abc@{}", edge.version)
+        .parse()
+        .expect("snapshot key");
     assert!(
         !linked.suffix.peer().is_empty(),
         "the importer edge carries the peers abc resolved: {}",
         edge.version,
     );
     assert!(
-        wanted.snapshots
+        wanted
+            .snapshots
             .as_ref()
             .expect("snapshots")
             .contains_key(&linked),
@@ -115,7 +125,9 @@ fn a_new_workspace_member_links_a_dependency_locked_only_as_a_peer_variant() {
         "@pnpm.e2e/peer-b": "1.0.0",
         "@pnpm.e2e/peer-c": "1.0.0",
     });
-    let existing = workspace.join("packages").join("existing");
+    let existing = workspace
+        .join("packages")
+        .join("existing");
     fs::create_dir_all(&existing).expect("create the member directory");
     fs::write(
         existing.join("package.json"),
@@ -130,7 +142,9 @@ fn a_new_workspace_member_links_a_dependency_locked_only_as_a_peer_variant() {
 
     let mut added_dependencies = dependencies;
     added_dependencies["@pnpm.e2e/abc"] = "1.0.0".into();
-    let added = workspace.join("packages").join("web-ui");
+    let added = workspace
+        .join("packages")
+        .join("web-ui");
     fs::create_dir_all(&added).expect("create the new member directory");
     fs::write(
         added.join("package.json"),
@@ -147,16 +161,22 @@ fn a_new_workspace_member_links_a_dependency_locked_only_as_a_peer_variant() {
         .assert()
         .success();
 
-    let abc: pnpm_lockfile::PkgName = "@pnpm.e2e/abc".parse().expect("package name");
+    let abc: pnpm_lockfile::PkgName = "@pnpm.e2e/abc"
+        .parse()
+        .expect("package name");
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let edge =
-        &wanted.importers["packages/web-ui"].dependencies.as_ref().expect("dependencies")[&abc];
-    let linked: pnpm_lockfile::PackageKey =
-        format!("@pnpm.e2e/abc@{}", edge.version).parse().expect("snapshot key");
+    let edge = &wanted.importers["packages/web-ui"]
+        .dependencies
+        .as_ref()
+        .expect("dependencies")[&abc];
+    let linked: pnpm_lockfile::PackageKey = format!("@pnpm.e2e/abc@{}", edge.version)
+        .parse()
+        .expect("snapshot key");
     assert!(
-        wanted.snapshots
+        wanted
+            .snapshots
             .as_ref()
             .expect("snapshots")
             .contains_key(&linked),

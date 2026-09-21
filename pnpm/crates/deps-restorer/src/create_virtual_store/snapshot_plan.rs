@@ -97,7 +97,12 @@ fn survivors<'a, Reporter: self::Reporter>(
     let entries = snapshots
         .iter()
         // Reason 1: installability skip. Drop entirely.
-        .filter(|(snapshot_key, _)| !probe.policy.skipped.contains(snapshot_key))
+        .filter(|(snapshot_key, _)| {
+            !probe
+                .policy
+                .skipped
+                .contains(snapshot_key)
+        })
         // Reason 2: warm-slot skip. Drop survivors that already match
         // the previous install, or whose content-addressed global-
         // virtual-store slot already exists. This is a fallible fold
@@ -225,8 +230,10 @@ fn warm_slot_is_current<Reporter: self::Reporter>(
     // it, and without this probe such a restore re-links every slot the
     // store already holds (pnpm/pnpm#14510). Mirrors the GVS fast path
     // in pnpm's `lockfileToDepGraph`.
-    let gvs_slot_is_authoritative =
-        probe.layout.enable_global_virtual_store() && !probe.policy.force;
+    let gvs_slot_is_authoritative = probe
+        .layout
+        .enable_global_virtual_store()
+        && !probe.policy.force;
     if !current_entry_unchanged && !gvs_slot_is_authoritative {
         return Ok(false);
     }
@@ -241,9 +248,13 @@ fn warm_slot_is_current<Reporter: self::Reporter>(
     }
     let needs_rebuild =
         gvs_slot_needs_rebuild(probe.layout, probe.allow_build_policy, snapshot_key);
-    markers.keys.insert(snapshot_key.clone());
+    markers
+        .keys
+        .insert(snapshot_key.clone());
     if needs_rebuild {
-        markers.rebuilds.insert(snapshot_key.clone());
+        markers
+            .rebuilds
+            .insert(snapshot_key.clone());
     }
     Ok(!needs_rebuild)
 }
@@ -255,7 +266,8 @@ fn warm_slot_is_current<Reporter: self::Reporter>(
 fn slot_probe_applies(probe: &WarmSlotProbe<'_, '_>, snapshot_key: &PackageKey) -> bool {
     !probe.policy.is_hoisted
         && !matches!(
-            probe.packages
+            probe
+                .packages
                 .get(&snapshot_key.without_peer())
                 .map(|meta| &meta.resolution),
             Some(LockfileResolution::Directory(_)),
@@ -270,15 +282,20 @@ fn current_entry_unchanged(
     snapshot: &SnapshotEntry,
 ) -> bool {
     !probe.policy.force
-        && probe.current_entries.snapshots
+        && probe
+            .current_entries
+            .snapshots
             .and_then(|current_snapshots| current_snapshots.get(snapshot_key))
             .is_some_and(|current_snapshot| {
                 snapshot_deps_equal(current_snapshot, snapshot)
                     && integrity_equal(
-                        probe.current_entries.packages.and_then(|packages| {
-                            packages.get(&snapshot_key.without_peer())
-                        }),
-                        probe.packages.get(&snapshot_key.without_peer()),
+                        probe
+                            .current_entries
+                            .packages
+                            .and_then(|packages| packages.get(&snapshot_key.without_peer())),
+                        probe
+                            .packages
+                            .get(&snapshot_key.without_peer()),
                     )
             })
 }
@@ -298,7 +315,8 @@ fn slot_contents_complete<Reporter: self::Reporter>(
     current_entry_unchanged: bool,
     markers: &mut MarkerProbes,
 ) -> Result<bool, CreateVirtualStoreError> {
-    let dir = probe.layout
+    let dir = probe
+        .layout
         .slot_dir(snapshot_key)
         .join("node_modules")
         .join(snapshot_key.name.to_string());
@@ -312,7 +330,9 @@ fn slot_contents_complete<Reporter: self::Reporter>(
             }));
         }
         // A missing slot has no build marker either.
-        markers.keys.insert(snapshot_key.clone());
+        markers
+            .keys
+            .insert(snapshot_key.clone());
         return Ok(false);
     }
     // The importer populates shared GVS slots in place, so an existing

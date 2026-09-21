@@ -106,8 +106,12 @@ impl TestRegistryInstance {
     fn start(storage: PathBuf, mode: RegistryMode) -> Self {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
             .expect("bind test registry to an unused localhost port");
-        listener.set_nonblocking(true).expect("set test registry listener to nonblocking");
-        let listen = listener.local_addr().expect("read test registry listener address");
+        listener
+            .set_nonblocking(true)
+            .expect("set test registry listener to nonblocking");
+        let listen = listener
+            .local_addr()
+            .expect("read test registry listener address");
 
         let url = format!("http://{listen}/");
         // Proxy mode: `@pnpm.e2e` fixtures are served from local storage, while
@@ -141,6 +145,8 @@ fn run_registry(config: Config, listener: TcpListener) {
 
     runtime.block_on(async move {
         let listener = tokio::net::TcpListener::from_std(listener).expect("create tokio listener");
-        pnpr::serve_listener(config, listener).await.expect("serve test registry");
+        pnpr::serve_listener(config, listener)
+            .await
+            .expect("serve test registry");
     });
 }

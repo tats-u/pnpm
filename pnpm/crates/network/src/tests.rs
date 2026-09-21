@@ -46,8 +46,10 @@ impl Resolve for RecordingResolver {
         Box::pin(async move {
             let active_count = active.fetch_add(1, Ordering::SeqCst) + 1;
             maximum_active.fetch_max(active_count, Ordering::SeqCst);
-            let _gate_permit =
-                gate.acquire_owned().await.expect("test gate semaphore is never closed");
+            let _gate_permit = gate
+                .acquire_owned()
+                .await
+                .expect("test gate semaphore is never closed");
             active.fetch_sub(1, Ordering::SeqCst);
             Ok(Box::new(std::iter::empty()) as Addrs)
         })
@@ -121,7 +123,10 @@ async fn drain_until_timed_out(
     use futures_util::StreamExt as _;
 
     loop {
-        let chunk = stream.next().await.expect("deadline must surface as a body error");
+        let chunk = stream
+            .next()
+            .await
+            .expect("deadline must surface as a body error");
         if let Err(error) = chunk {
             assert_eq!(error.kind(), std::io::ErrorKind::TimedOut);
             return;

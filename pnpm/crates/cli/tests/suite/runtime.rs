@@ -13,7 +13,9 @@ fn runtime_unknown_subcommand_runs_with_default_ndjson_and_silent_reporters() {
             command.arg(reporter);
         }
         command.arg("runtime").arg("unknown");
-        let output = command.output().expect("spawn pacquet runtime");
+        let output = command
+            .output()
+            .expect("spawn pacquet runtime");
         let stderr = String::from_utf8_lossy(&output.stderr);
 
         assert!(!output.status.success(), "unknown runtime subcommand must fail");

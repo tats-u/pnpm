@@ -20,30 +20,29 @@ pub(super) fn build_access_context<'a>(
     args: &AccessArgs,
     config: &'a Config,
 ) -> miette::Result<AccessContext<'a>> {
-    let registry =
-        args.registry.as_deref().map_or_else(|| config.registry.clone(), normalize_registry_url);
+    let registry = args
+        .registry
+        .as_deref()
+        .map_or_else(|| config.registry.clone(), normalize_registry_url);
 
-    let redirect_guard = args.otp
-        .as_ref()
-        .map(|_| {
-            let registry_origin: Option<(String, String, Option<u16>)> =
-                reqwest::Url::parse(&registry)
-                    .ok()
-                    .and_then(|url| {
-                        url.host_str()
-                            .map(|host| (url.scheme().to_string(), host.to_string(), url.port()))
-                    });
-            let guard: RedirectGuard = Arc::new(move |target: &reqwest::Url| -> bool {
-                registry_origin
-                    .as_ref()
-                    .is_some_and(|(scheme, host, port)| {
-                        target.scheme() == scheme
-                            && target.host_str() == Some(host.as_str())
-                            && target.port() == *port
-                    })
+    let redirect_guard = args.otp.as_ref().map(|_| {
+        let registry_origin: Option<(String, String, Option<u16>)> = reqwest::Url::parse(&registry)
+            .ok()
+            .and_then(|url| {
+                url.host_str()
+                    .map(|host| (url.scheme().to_string(), host.to_string(), url.port()))
             });
-            guard
+        let guard: RedirectGuard = Arc::new(move |target: &reqwest::Url| -> bool {
+            registry_origin
+                .as_ref()
+                .is_some_and(|(scheme, host, port)| {
+                    target.scheme() == scheme
+                        && target.host_str() == Some(host.as_str())
+                        && target.port() == *port
+                })
         });
+        guard
+    });
 
     Ok(AccessContext {
         config,

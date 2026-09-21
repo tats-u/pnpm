@@ -58,7 +58,10 @@ impl RealGitProbe {
     async fn head_status(&self, url: &str) -> Option<StatusCode> {
         // Scoped so the throttle permit is released before any backoff sleep
         // the caller does.
-        let guard = self.http_client.acquire_for_url(url).await;
+        let guard = self
+            .http_client
+            .acquire_for_url(url)
+            .await;
         guard
             .head(url)
             .timeout(self.head_timeout)
@@ -112,7 +115,10 @@ impl GitCommandRunner for RealGitRunner {
         repo: &'a str,
         ref_: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = Result<String, GitRunError>> + Send + 'a>> {
-        let bin = self.git_bin.as_deref().map(std::path::Path::to_path_buf);
+        let bin = self
+            .git_bin
+            .as_deref()
+            .map(std::path::Path::to_path_buf);
         let repo_owned = repo.to_string();
         let ref_owned = ref_.map(str::to_string);
         Box::pin(async move {

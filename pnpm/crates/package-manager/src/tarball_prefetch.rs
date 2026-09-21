@@ -62,7 +62,9 @@ async fn without_store_hits(
         let Ok(guard) = index.lock() else {
             return HashSet::new();
         };
-        guard.contains_many(&keys).unwrap_or_default()
+        guard
+            .contains_many(&keys)
+            .unwrap_or_default()
     })
     .await
     .unwrap_or_default();
@@ -140,9 +142,13 @@ async fn run_tarball_download(
         store_projection: pnpm_tarball::ArchiveStoreProjection::Package { append_manifest: None },
     };
     if download.package.revision_addressed {
-        ingest.run_revision_addressed_with_mem_cache::<SilentReporter>(&download.mem_cache).await
+        ingest
+            .run_revision_addressed_with_mem_cache::<SilentReporter>(&download.mem_cache)
+            .await
     } else {
-        ingest.run_with_mem_cache::<SilentReporter>(&download.mem_cache).await
+        ingest
+            .run_with_mem_cache::<SilentReporter>(&download.mem_cache)
+            .await
     }
 }
 
@@ -249,11 +255,14 @@ impl TarballPrefetcher {
                 return;
             }
         };
-        if !self.spawned_downloads.insert(pnpm_tarball::package_mem_cache_key(
-            &package_url,
-            Some(&integrity),
-            revision_addressed,
-        )) {
+        if !self
+            .spawned_downloads
+            .insert(pnpm_tarball::package_mem_cache_key(
+                &package_url,
+                Some(&integrity),
+                revision_addressed,
+            ))
+        {
             return;
         }
         spawn_tarball_download(TarballDownload {
@@ -300,8 +309,9 @@ impl TarballPrefetcher {
                 tarball_url_and_integrity(&metadata.resolution, package_key, config)
                     .expect("registry resolutions are always fetchable");
             let package_id = package_key.pkg_id();
-            let integrity =
-                integrity.expect("registry resolutions always carry an integrity").to_string();
+            let integrity = integrity
+                .expect("registry resolutions always carry an integrity")
+                .to_string();
             let revision_addressed = matches!(
                 &metadata.resolution,
                 LockfileResolution::Registry(registry) if registry.revision.is_some(),
@@ -315,13 +325,8 @@ impl TarballPrefetcher {
             });
         }
         for entry in without_store_hits(self.store.index.clone(), pending).await {
-            let PendingPrefetch {
-                package_id,
-                package_url,
-                integrity,
-                revision_addressed,
-                ..
-            } = entry;
+            let PendingPrefetch { package_id, package_url, integrity, revision_addressed, .. } =
+                entry;
             // The lockfile records no dist size hints, so the downloads
             // queue without a work estimate.
             self.prefetch(package_id, package_url, &integrity, None, None, revision_addressed);
@@ -352,10 +357,8 @@ impl PrefetchHttpClient {
     ) -> Self {
         Self {
             http_client: Arc::clone(http_client),
-            auth_headers: auth_override.map_or_else(
-                || Arc::clone(&config.auth_headers),
-                Arc::clone,
-            ),
+            auth_headers: auth_override
+                .map_or_else(|| Arc::clone(&config.auth_headers), Arc::clone),
             retry_opts: retry_opts_from_config(config),
             offline: config.offline,
         }

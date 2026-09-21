@@ -45,7 +45,9 @@ use pnpm_testing_utils::{
 use std::{fs, path::Path, process::Command};
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 /// The `integrity:` recorded for a `packages:` entry keyed by
@@ -112,7 +114,9 @@ fn remote_tarball_integrity_survives_unrelated_install() {
     // still downloadable from that server.
     let tarball = format!(
         "{}is-positive/-/is-positive-1.0.0.tgz",
-        mock_instance.url().replace("127.0.0.1", "localhost"),
+        mock_instance
+            .url()
+            .replace("127.0.0.1", "localhost"),
     );
     // A non-registry tarball is keyed by `name@<url>` (the version lives
     // in `resolution.tarball` + the `version:` field), not `name@1.0.0`.
@@ -133,10 +137,9 @@ fn remote_tarball_integrity_survives_unrelated_install() {
         .success();
 
     let lockfile = fs::read_to_string(&lockfile_path).expect("read pnpm-lock.yaml");
-    let integrity = package_integrity(&lockfile, &package_key)
-        .unwrap_or_else(|| {
-            panic!("the fresh install must record an integrity for the tarball dep:\n{lockfile}")
-        });
+    let integrity = package_integrity(&lockfile, &package_key).unwrap_or_else(|| {
+        panic!("the fresh install must record an integrity for the tarball dep:\n{lockfile}")
+    });
 
     // Install an unrelated package. This rewrites the lockfile while the
     // tarball dependency is re-resolved — the exact
@@ -232,10 +235,9 @@ fn remote_tarball_reresolves_from_warm_store_without_refetch() {
         .success();
 
     let lockfile = fs::read_to_string(&lockfile_path).expect("read pnpm-lock.yaml");
-    package_integrity(&lockfile, &package_key)
-        .unwrap_or_else(|| {
-            panic!("the fresh install must record an integrity for the tarball dep:\n{lockfile}")
-        });
+    package_integrity(&lockfile, &package_key).unwrap_or_else(|| {
+        panic!("the fresh install must record an integrity for the tarball dep:\n{lockfile}")
+    });
 
     // Tear the tarball server down. Any re-fetch attempt now fails.
     drop((head_mock, get_mock, tarball_server));
@@ -304,10 +306,9 @@ fn frozen_install_refuses_a_remote_tarball_without_integrity() {
         .success();
 
     let lockfile = fs::read_to_string(&lockfile_path).expect("read pnpm-lock.yaml");
-    let integrity = package_integrity(&lockfile, &package_key)
-        .unwrap_or_else(|| {
-            panic!("the fresh install must record an integrity for the tarball dep:\n{lockfile}")
-        });
+    let integrity = package_integrity(&lockfile, &package_key).unwrap_or_else(|| {
+        panic!("the fresh install must record an integrity for the tarball dep:\n{lockfile}")
+    });
     let stripped = lockfile.replace(&format!("integrity: {integrity}, "), "");
     assert!(
         package_integrity(&stripped, &package_key).is_none(),
@@ -469,12 +470,9 @@ fn remote_tarball_behind_an_immutable_redirect_reuses_the_warm_store() {
         "the lockfile must record the post-redirect URL:\n{lockfile}",
     );
     let package_key = format!("pkg-from-tarball@{requested_url}");
-    package_integrity(&lockfile, &package_key)
-        .unwrap_or_else(|| {
-            panic!(
-                "the entry must be keyed by the requested URL and carry an integrity:\n{lockfile}",
-            )
-        });
+    package_integrity(&lockfile, &package_key).unwrap_or_else(|| {
+        panic!("the entry must be keyed by the requested URL and carry an integrity:\n{lockfile}",)
+    });
 
     drop((redirect_mock, head_mock, get_mock, tarball_server));
 

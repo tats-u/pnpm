@@ -98,7 +98,8 @@ impl EnvArgs {
                 if !self.global {
                     return Err(EnvError::LocalUseUnsupported);
                 }
-                let version = self.params
+                let version = self
+                    .params
                     .get(1)
                     .map(|version| version.trim())
                     .filter(|version| !version.is_empty())
@@ -106,7 +107,8 @@ impl EnvArgs {
                 Ok(EnvSubcommand::Use { package_name: format!("node@runtime:{version}") })
             }
             "list" | "ls" => Ok(EnvSubcommand::List {
-                version_spec: self.params
+                version_spec: self
+                    .params
                     .get(1)
                     .map(|spec| spec.trim())
                     .filter(|spec| !spec.is_empty())
@@ -144,12 +146,18 @@ impl EnvArgs {
     /// newest version alone, not the whole index. Verified against the
     /// TypeScript CLI, which passes `''` rather than `undefined`.
     pub async fn run_list(version_spec: Option<String>, config: &Config) -> miette::Result<String> {
-        let specifier = parse_node_specifier(version_spec.as_deref().unwrap_or_default())
-            .map_err(miette::Report::new)?;
+        let specifier = parse_node_specifier(
+            version_spec
+                .as_deref()
+                .unwrap_or_default(),
+        )
+        .map_err(miette::Report::new)?;
         let channels = config.tool_channel_mirrors(Tool::Node);
         let mirror = get_node_mirror(
             config.tool_mirror(Tool::Node),
-            channels.get(&specifier.release_channel).map(String::as_str),
+            channels
+                .get(&specifier.release_channel)
+                .map(String::as_str),
             Some(&config.node_download_mirrors),
             &specifier.release_channel,
         );

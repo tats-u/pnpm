@@ -137,8 +137,14 @@ fn manifest_pin(manifest: &Value) -> Option<WantedPm> {
 }
 
 fn package_manager_pin(manifest: &Value) -> Option<(String, Option<String>)> {
-    let (name, reference) = split_spec(manifest.get("packageManager")?.as_str()?);
-    let version = reference.map(version_without_build).and_then(pinned_version);
+    let (name, reference) = split_spec(
+        manifest
+            .get("packageManager")?
+            .as_str()?,
+    );
+    let version = reference
+        .map(version_without_build)
+        .and_then(pinned_version);
     Some((name.to_string(), version))
 }
 
@@ -154,7 +160,9 @@ fn dev_engines_pins(manifest: &Value) -> impl Iterator<Item = (String, Option<St
 /// dist-tag, or anything else that is not a range leaves the version open
 /// for pnpm to resolve rather than being passed through.
 fn pinned_version(version: &str) -> Option<String> {
-    node_semver::Range::parse(version).is_ok().then(|| version.to_string())
+    node_semver::Range::parse(version)
+        .is_ok()
+        .then(|| version.to_string())
 }
 
 /// The Yarn line that can read the `yarn.lock` in `dir`, or `None` when
@@ -177,7 +185,10 @@ fn yarn_line_of_lockfile(dir: &Path) -> Option<String> {
         .ok()?;
     let berry = header
         .split(|byte| *byte == b'\n')
-        .any(|line| line.trim_ascii_start().starts_with(b"__metadata:"));
+        .any(|line| {
+            line.trim_ascii_start()
+                .starts_with(b"__metadata:")
+        });
     Some(if berry { YARN_BERRY_SPEC } else { YARN_CLASSIC_SPEC }.to_string())
 }
 

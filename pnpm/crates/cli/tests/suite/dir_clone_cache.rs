@@ -20,22 +20,34 @@ use std::{
 /// `<store_dir>/v11/links` — where the canonical slots live, shared
 /// with `enableGlobalVirtualStore` installs.
 fn links_root(store_dir: &Path) -> PathBuf {
-    store_dir.join(STORE_VERSION).join("links")
+    store_dir
+        .join(STORE_VERSION)
+        .join("links")
 }
 
 /// The package's materialized directory inside its sole canonical slot.
 fn canonical_pkg_dir(store_dir: &Path, name: &str, version: &str) -> PathBuf {
-    let version_dir = links_root(store_dir).join(name).join(version);
+    let version_dir = links_root(store_dir)
+        .join(name)
+        .join(version);
     let hashes: Vec<PathBuf> = fs::read_dir(&version_dir)
         .unwrap_or_else(|err| panic!("read hash dirs under {version_dir:?}: {err}"))
-        .map(|entry| entry.expect("read hash dir entry").path())
+        .map(|entry| {
+            entry
+                .expect("read hash dir entry")
+                .path()
+        })
         .collect();
     assert_eq!(hashes.len(), 1, "expected one hash dir under {version_dir:?}, got {hashes:?}");
-    hashes[0].join("node_modules").join(name)
+    hashes[0]
+        .join("node_modules")
+        .join(name)
 }
 
 fn pacquet(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn write_manifest(workspace: &Path) {
@@ -56,9 +68,8 @@ fn project_pkg_manifest(workspace: &Path) -> PathBuf {
 /// the project copy.
 #[test]
 fn warm_reinstall_is_served_from_the_canonical_slot() {
-    let CommandTempCwd {
-        root: _root, workspace, npmrc_info, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { root: _root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
     write_manifest(&workspace);
 
@@ -97,9 +108,8 @@ fn warm_reinstall_is_served_from_the_canonical_slot() {
 /// a clone of the canonical copy could not deliver.
 #[test]
 fn explicit_copy_method_bypasses_the_cache() {
-    let CommandTempCwd {
-        root: _root, workspace, npmrc_info, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { root: _root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
     write_manifest(&workspace);
     let mut yaml = fs::read_to_string(workspace.join("pnpm-workspace.yaml"))

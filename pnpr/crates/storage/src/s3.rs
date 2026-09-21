@@ -104,7 +104,9 @@ async fn stream_parts(tmp_path: &Path, upload: &mut dyn MultipartUpload) -> Resu
         if filled == 0 {
             break;
         }
-        upload.put_part(PutPayload::from(part[..filled].to_vec())).await?;
+        upload
+            .put_part(PutPayload::from(part[..filled].to_vec()))
+            .await?;
     }
     upload.complete().await?;
     Ok(())
@@ -154,7 +156,11 @@ impl S3Store {
     }
 
     pub async fn read_document(&self, name: &CanonicalPackageName) -> Result<Option<Vec<u8>>> {
-        match self.store.get(&self.document_key(name)).await {
+        match self
+            .store
+            .get(&self.document_key(name))
+            .await
+        {
             Ok(result) => Ok(Some(result.bytes().await?.to_vec())),
             Err(object_store::Error::NotFound { .. }) => Ok(None),
             Err(err) => Err(err.into()),
@@ -165,7 +171,11 @@ impl S3Store {
         &self,
         name: &CanonicalPackageName,
     ) -> Result<Option<S3DocumentForUpdate>> {
-        match self.store.get(&self.document_key(name)).await {
+        match self
+            .store
+            .get(&self.document_key(name))
+            .await
+        {
             Ok(result) => {
                 let version = UpdateVersion {
                     e_tag: result.meta.e_tag.clone(),
@@ -188,12 +198,14 @@ impl S3Store {
             Some(version) => PutMode::Update(version.clone()),
             None => PutMode::Create,
         };
-        match self.store.put_opts(
-            &self.document_key(name),
-            PutPayload::from(bytes.to_vec()),
-            PutOptions { mode, ..PutOptions::default() },
-        )
-        .await
+        match self
+            .store
+            .put_opts(
+                &self.document_key(name),
+                PutPayload::from(bytes.to_vec()),
+                PutOptions { mode, ..PutOptions::default() },
+            )
+            .await
         {
             Ok(_) => Ok(true),
             Err(
@@ -213,7 +225,11 @@ impl S3Store {
         name: &CanonicalPackageName,
         filename: &str,
     ) -> Result<Option<(Body, Option<u64>)>> {
-        match self.store.get(&self.blob_key(name, filename)).await {
+        match self
+            .store
+            .get(&self.blob_key(name, filename))
+            .await
+        {
             Ok(result) => {
                 let len = result.meta.size;
                 let stream = result
@@ -246,7 +262,9 @@ impl S3Store {
     ) -> Result<BlobFinalize> {
         let key = self.blob_key(name, filename);
         if fs::metadata(tmp_path).await?.len() > MAX_SINGLE_PUT_BYTES {
-            return self.upload_blob_in_parts(tmp_path, &key).await;
+            return self
+                .upload_blob_in_parts(tmp_path, &key)
+                .await;
         }
         let bytes = fs::read(tmp_path).await?;
         // Create-only. A published version's blob is immutable, so an object
@@ -254,12 +272,14 @@ impl S3Store {
         // version. Overwriting it would corrupt that artifact against the
         // integrity its document records, so tolerate only byte-identical
         // content and otherwise report a conflict.
-        match self.store.put_opts(
-            &key,
-            PutPayload::from(bytes),
-            PutOptions { mode: PutMode::Create, ..PutOptions::default() },
-        )
-        .await
+        match self
+            .store
+            .put_opts(
+                &key,
+                PutPayload::from(bytes),
+                PutOptions { mode: PutMode::Create, ..PutOptions::default() },
+            )
+            .await
         {
             Ok(_) => Ok(BlobFinalize::Written),
             Err(
@@ -267,7 +287,12 @@ impl S3Store {
                 | object_store::Error::Precondition { .. },
             ) => {
                 let ours = fs::read(tmp_path).await?;
-                let existing = self.store.get(&key).await?.bytes().await?;
+                let existing = self
+                    .store
+                    .get(&key)
+                    .await?
+                    .bytes()
+                    .await?;
                 if existing.as_ref() == ours.as_slice() {
                     Ok(BlobFinalize::AlreadyIdentical)
                 } else {
@@ -297,7 +322,11 @@ impl S3Store {
     }
 
     pub async fn remove_blob(&self, name: &CanonicalPackageName, filename: &str) -> Result<bool> {
-        match self.store.delete(&self.blob_key(name, filename)).await {
+        match self
+            .store
+            .delete(&self.blob_key(name, filename))
+            .await
+        {
             Ok(()) => Ok(true),
             Err(object_store::Error::NotFound { .. }) => Ok(false),
             Err(err) => Err(err.into()),
@@ -310,7 +339,9 @@ impl S3Store {
         let mut removed = false;
         while let Some(meta) = listing.next().await {
             let meta = meta?;
-            self.store.delete(&meta.location).await?;
+            self.store
+                .delete(&meta.location)
+                .await?;
             removed = true;
         }
         Ok(removed)
@@ -321,7 +352,11 @@ impl S3Store {
     /// endpoint when the hosted store lives in a bucket.
     pub async fn list_package_names(&self) -> Result<Vec<String>> {
         let scope = (!self.prefix.is_empty()).then(|| {
-            ObjectPath::from(self.prefix.trim_end_matches('/').to_string())
+            ObjectPath::from(
+                self.prefix
+                    .trim_end_matches('/')
+                    .to_string(),
+            )
         });
         let mut listing = self.store.list(scope.as_ref());
         let mut names = Vec::new();
@@ -353,7 +388,11 @@ impl S3Store {
     // contract shared with the fs backend).
 
     pub async fn read_record(&self, namespace: &str, key: &str) -> Result<Option<Vec<u8>>> {
-        match self.store.get(&self.record_key(namespace, key)).await {
+        match self
+            .store
+            .get(&self.record_key(namespace, key))
+            .await
+        {
             Ok(result) => Ok(Some(result.bytes().await?.to_vec())),
             Err(object_store::Error::NotFound { .. }) => Ok(None),
             Err(err) => Err(err.into()),
@@ -361,12 +400,14 @@ impl S3Store {
     }
 
     pub async fn create_record(&self, namespace: &str, key: &str, bytes: &[u8]) -> Result<bool> {
-        match self.store.put_opts(
-            &self.record_key(namespace, key),
-            PutPayload::from(bytes.to_vec()),
-            PutOptions { mode: PutMode::Create, ..PutOptions::default() },
-        )
-        .await
+        match self
+            .store
+            .put_opts(
+                &self.record_key(namespace, key),
+                PutPayload::from(bytes.to_vec()),
+                PutOptions { mode: PutMode::Create, ..PutOptions::default() },
+            )
+            .await
         {
             Ok(_) => Ok(true),
             Err(
@@ -404,12 +445,14 @@ impl S3Store {
         if result.bytes().await?.as_ref() != expected {
             return Ok(DocumentWrite::Conflict);
         }
-        match self.store.put_opts(
-            &key,
-            PutPayload::from(bytes.to_vec()),
-            PutOptions { mode: PutMode::Update(version), ..PutOptions::default() },
-        )
-        .await
+        match self
+            .store
+            .put_opts(
+                &key,
+                PutPayload::from(bytes.to_vec()),
+                PutOptions { mode: PutMode::Update(version), ..PutOptions::default() },
+            )
+            .await
         {
             Ok(_) => Ok(DocumentWrite::Written),
             Err(
@@ -422,7 +465,11 @@ impl S3Store {
     }
 
     pub async fn remove_record(&self, namespace: &str, key: &str) -> Result<bool> {
-        match self.store.delete(&self.record_key(namespace, key)).await {
+        match self
+            .store
+            .delete(&self.record_key(namespace, key))
+            .await
+        {
             Ok(()) => Ok(true),
             Err(object_store::Error::NotFound { .. }) => Ok(false),
             Err(err) => Err(err.into()),
@@ -431,13 +478,16 @@ impl S3Store {
 
     pub async fn list_record_keys(&self, namespace: &str) -> Result<Vec<String>> {
         let scope = format!("{}{namespace}/", self.prefix);
-        let mut listing = self.store.list(Some(&ObjectPath::from(scope.as_str())));
+        let mut listing = self
+            .store
+            .list(Some(&ObjectPath::from(scope.as_str())));
         let mut keys = Vec::new();
         while let Some(meta) = listing.next().await {
             let meta = meta?;
             // `ObjectPath` normalizes what it is built from, so compare
             // against the same normalization rather than the raw prefix.
-            let Some(key) = meta.location
+            let Some(key) = meta
+                .location
                 .as_ref()
                 .strip_prefix(ObjectPath::from(scope.as_str()).as_ref())
             else {

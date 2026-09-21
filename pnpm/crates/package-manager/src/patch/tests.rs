@@ -126,7 +126,8 @@ fn patch_candidate_missing_package_without_installed_versions_reports_install_hi
     let err = patch_candidates_from_lockfile("is-positive", &empty_lockfile()).unwrap_err();
 
     assert!(
-        err.to_string().contains("did you forget to install is-positive?"),
+        err.to_string()
+            .contains("did you forget to install is-positive?"),
         "error should mention install hint: {err}",
     );
 }
@@ -262,9 +263,16 @@ async fn patch_extract_records_download_in_store_index() {
         "1.0.0",
     )
     .await;
-    let name_ver = resolved.package.name_ver.as_ref().expect("npm resolver fills name/version");
+    let name_ver = resolved
+        .package
+        .name_ver
+        .as_ref()
+        .expect("npm resolver fills name/version");
     let package_id = name_ver.to_string();
-    let integrity = resolved.resolution.integrity().expect("registry fixture has integrity");
+    let integrity = resolved
+        .resolution
+        .integrity()
+        .expect("registry fixture has integrity");
     let store_index_key = store_index_key(&integrity.to_string(), &package_id);
     let lockfile = lockfile_with_package_metadata(
         &package_id,
@@ -428,7 +436,9 @@ async fn patch_extract_rejects_missing_package_metadata() {
         bare_specifier: "1.0.0".to_string(),
         apply_to_all: false,
         git_tarball_url: None,
-        package_key: "missing@1.0.0".parse().expect("package key"),
+        package_key: "missing@1.0.0"
+            .parse()
+            .expect("package key"),
     };
 
     let err = WritePackageForPatch {
@@ -455,7 +465,9 @@ fn compare_candidates_orders_semver_before_non_semver() {
         name: "foo".to_string(),
         version: version.to_string(),
         git_tarball_url: None,
-        package_key: "foo@1.0.0".parse().expect("package key"),
+        package_key: "foo@1.0.0"
+            .parse()
+            .expect("package key"),
     };
 
     assert_eq!(
@@ -476,7 +488,11 @@ fn compare_candidates_orders_semver_before_non_semver() {
 fn resolution_kind_names_non_patchable_resolution_shapes() {
     let tarball = LockfileResolution::Tarball(TarballResolution {
         tarball: "https://registry.test/foo/-/foo-1.0.0.tgz".to_string(),
-        integrity: Some("sha512-aGVsbG8=".parse().expect("integrity")),
+        integrity: Some(
+            "sha512-aGVsbG8="
+                .parse()
+                .expect("integrity"),
+        ),
         revision: None,
         git_hosted: None,
         path: None,
@@ -484,7 +500,9 @@ fn resolution_kind_names_non_patchable_resolution_shapes() {
     assert_eq!(resolution_kind(&tarball), "tarball");
 
     let registry = LockfileResolution::Registry(RegistryResolution {
-        integrity: "sha512-aGVsbG8=".parse().expect("integrity"),
+        integrity: "sha512-aGVsbG8="
+            .parse()
+            .expect("integrity"),
         revision: None,
     });
     assert_eq!(resolution_kind(&registry), "registry");
@@ -499,7 +517,9 @@ fn resolution_kind_names_non_patchable_resolution_shapes() {
 
     let binary = LockfileResolution::Binary(BinaryResolution {
         url: "https://nodejs.org/dist/v1.0.0/node.tar.gz".to_string(),
-        integrity: "sha512-aGVsbG8=".parse().expect("integrity"),
+        integrity: "sha512-aGVsbG8="
+            .parse()
+            .expect("integrity"),
         bin: BinarySpec::Single("bin/node".to_string()),
         archive: BinaryArchive::Tarball,
         prefix: None,
@@ -588,7 +608,11 @@ impl PatchExtractFixture {
         mem_cache.insert(
             pnpm_tarball::package_mem_cache_key(
                 &tarball_url,
-                Some(&"sha512-aGVsbG8=".parse().expect("parse integrity")),
+                Some(
+                    &"sha512-aGVsbG8="
+                        .parse()
+                        .expect("parse integrity"),
+                ),
                 false,
             ),
             Arc::new(tokio::sync::RwLock::new(CacheValue::Available(CachedTarball::from_files(

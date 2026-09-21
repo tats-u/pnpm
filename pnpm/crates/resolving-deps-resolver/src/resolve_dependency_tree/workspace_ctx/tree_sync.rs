@@ -10,7 +10,9 @@ impl WorkspaceTreeCtx {
     /// the sync visits recorded keys only, so an unrecorded write stays
     /// invisible to the discovery engine's view.
     pub(in super::super) fn record_package_write(&self, pkg_id: &str) {
-        lock_recoverable(&self.tree.sync_log).packages.push(pkg_id.to_string());
+        lock_recoverable(&self.tree.sync_log)
+            .packages
+            .push(pkg_id.to_string());
         self.note_finalization_candidate(pkg_id);
     }
 
@@ -59,15 +61,21 @@ impl WorkspaceTreeCtx {
         if !self.sync_children_by_id(tree, cursor.children_by_id, next.children_by_id) {
             return false;
         }
-        if !self.tree.sync_packages(tree, cursor.packages, next.packages) {
+        if !self
+            .tree
+            .sync_packages(tree, cursor.packages, next.packages)
+        {
             return false;
         }
-        self.tree.sync_dependencies_tree(tree, cursor.dependencies_tree, next.dependencies_tree);
+        self.tree
+            .sync_dependencies_tree(tree, cursor.dependencies_tree, next.dependencies_tree);
         let peer_dep_names =
-            self.tree.written_since(cursor.peer_dep_names, next.peer_dep_names, |log| {
-                &log.peer_dep_names
-            });
-        tree.all_peer_dep_names.extend(peer_dep_names);
+            self.tree
+                .written_since(cursor.peer_dep_names, next.peer_dep_names, |log| {
+                    &log.peer_dep_names
+                });
+        tree.all_peer_dep_names
+            .extend(peer_dep_names);
         *cursor = next;
         true
     }
@@ -80,10 +88,14 @@ impl WorkspaceTreeCtx {
         from: usize,
         to: usize,
     ) -> bool {
-        let written = self.tree.written_since(from, to, |log| &log.children_by_id);
+        let written = self
+            .tree
+            .written_since(from, to, |log| &log.children_by_id);
         let children_by_id = lock_recoverable(&self.children.by_id);
         for pkg_id in &written {
-            let Some(spec) = children_by_id.get(pkg_id.as_str()).map(|recorded| &recorded.edges)
+            let Some(spec) = children_by_id
+                .get(pkg_id.as_str())
+                .map(|recorded| &recorded.edges)
             else {
                 continue;
             };
@@ -123,10 +135,14 @@ impl WorkspaceTreeCtx {
                 .or_insert_with(|| pkg.clone());
         }
         for (node_id, node) in lock_recoverable(&self.tree.dependencies_tree).iter() {
-            tree.dependencies_tree.entry(node_id.clone()).or_insert_with(|| node.clone());
+            tree.dependencies_tree
+                .entry(node_id.clone())
+                .or_insert_with(|| node.clone());
         }
         tree.all_peer_dep_names.extend(
-            lock_recoverable(&self.tree.all_peer_dep_names).iter().cloned(),
+            lock_recoverable(&self.tree.all_peer_dep_names)
+                .iter()
+                .cloned(),
         );
     }
 }
@@ -134,35 +150,45 @@ impl WorkspaceTreeCtx {
 impl super::WorkspaceTreeStorage {
     /// See the `revision` field doc.
     pub(crate) fn revision(&self) -> u64 {
-        self.revision.load(std::sync::atomic::Ordering::Relaxed)
+        self.revision
+            .load(std::sync::atomic::Ordering::Relaxed)
     }
 
     pub(crate) fn bump_revision(&self) {
-        self.revision.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.revision
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// See the `children_rewrites` field doc.
     pub(crate) fn children_rewrites(&self) -> u64 {
-        self.children_rewrites.load(std::sync::atomic::Ordering::Relaxed)
+        self.children_rewrites
+            .load(std::sync::atomic::Ordering::Relaxed)
     }
 
     pub(crate) fn record_children_rewrite(&self) {
-        self.children_rewrites.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.children_rewrites
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// See [`WorkspaceTreeCtx::record_package_write`].
     pub(in super::super) fn record_children_by_id_write(&self, pkg_id: &str) {
-        lock_recoverable(&self.sync_log).children_by_id.push(pkg_id.to_string());
+        lock_recoverable(&self.sync_log)
+            .children_by_id
+            .push(pkg_id.to_string());
     }
 
     /// See [`WorkspaceTreeCtx::record_package_write`].
     pub(in super::super) fn record_tree_node_write(&self, node_id: &NodeId) {
-        lock_recoverable(&self.sync_log).dependencies_tree.push(node_id.clone());
+        lock_recoverable(&self.sync_log)
+            .dependencies_tree
+            .push(node_id.clone());
     }
 
     /// See [`WorkspaceTreeCtx::record_package_write`].
     pub(in super::super) fn record_peer_dep_name(&self, name: &str) {
-        lock_recoverable(&self.sync_log).peer_dep_names.push(name.to_string());
+        lock_recoverable(&self.sync_log)
+            .peer_dep_names
+            .push(name.to_string());
     }
 
     /// `false` when a package's peer dependencies were re-read differently
@@ -173,7 +199,10 @@ impl super::WorkspaceTreeStorage {
         let packages = lock_recoverable(&self.packages);
         for pkg_id in &written {
             let Some(pkg) = packages.get(pkg_id.as_str()) else { continue };
-            match tree.packages.entry(Arc::from(pkg_id.clone())) {
+            match tree
+                .packages
+                .entry(Arc::from(pkg_id.clone()))
+            {
                 Entry::Vacant(entry) => {
                     entry.insert(pkg.clone());
                 }
@@ -194,7 +223,10 @@ impl super::WorkspaceTreeStorage {
         let dependencies_tree = lock_recoverable(&self.dependencies_tree);
         for node_id in &written {
             let Some(node) = dependencies_tree.get(node_id) else { continue };
-            match tree.dependencies_tree.entry(node_id.clone()) {
+            match tree
+                .dependencies_tree
+                .entry(node_id.clone())
+            {
                 Entry::Vacant(entry) => {
                     entry.insert(node.clone());
                 }
@@ -237,7 +269,9 @@ impl super::WorkspaceTreeStorage {
         let packages = lock_recoverable(&self.packages);
         node_ids
             .filter_map(|node_id| {
-                let pkg_id = &dependencies_tree.get(node_id)?.resolved_package_id;
+                let pkg_id = &dependencies_tree
+                    .get(node_id)?
+                    .resolved_package_id;
                 packages
                     .contains_key(&**pkg_id)
                     .then(|| (node_id.clone(), pkg_id.to_string()))

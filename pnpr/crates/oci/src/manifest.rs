@@ -70,8 +70,9 @@ impl Manifest {
         if manifest.media_type.is_none() {
             manifest.media_type = content_type.map(ToString::to_string);
         }
-        let media_type =
-            manifest.media_type.get_or_insert_with(|| media_type::DEFAULT_MANIFEST.to_string());
+        let media_type = manifest
+            .media_type
+            .get_or_insert_with(|| media_type::DEFAULT_MANIFEST.to_string());
         if !crate::MANIFEST_MEDIA_TYPES.contains(&media_type.as_str()) {
             return Err(ManifestError::UnsupportedMediaType { media_type: media_type.clone() });
         }
@@ -91,12 +92,17 @@ impl Manifest {
     /// [`Self::parse`] has run.
     #[must_use]
     pub fn media_type(&self) -> &str {
-        self.media_type.as_deref().unwrap_or(media_type::DEFAULT_MANIFEST)
+        self.media_type
+            .as_deref()
+            .unwrap_or(media_type::DEFAULT_MANIFEST)
     }
 
     #[must_use]
     pub fn referrer_metadata(&self) -> crate::ReferrerMetadata {
-        let subject = self.subject.as_ref().map(|subject| subject.digest.clone());
+        let subject = self
+            .subject
+            .as_ref()
+            .map(|subject| subject.digest.clone());
         let artifact_type_digest = subject
             .as_ref()
             .and_then(|_| self.artifact_type())

@@ -57,13 +57,20 @@ async fn auto_install_peers_keeps_the_peer_and_drops_the_own_dep() {
         .await
         .unwrap();
 
-    let parser = tree.packages.get("parser@1.0.0").expect("parser resolved");
+    let parser = tree
+        .packages
+        .get("parser@1.0.0")
+        .expect("parser resolved");
     assert!(
-        parser.peer_dependencies.contains_key("types"),
+        parser
+            .peer_dependencies
+            .contains_key("types"),
         "the peer survives when it also appears in the package's own dependencies",
     );
     assert!(
-        !tree.packages.contains_key("types@1.0.0"),
+        !tree
+            .packages
+            .contains_key("types@1.0.0"),
         "the peer-shadowed own dependency is not walked as a child",
     );
 }
@@ -77,12 +84,21 @@ async fn without_auto_install_peers_the_own_dep_wins() {
         .await
         .unwrap();
 
-    let parser = tree.packages.get("parser@1.0.0").expect("parser resolved");
+    let parser = tree
+        .packages
+        .get("parser@1.0.0")
+        .expect("parser resolved");
     assert!(
-        !parser.peer_dependencies.contains_key("types"),
+        !parser
+            .peer_dependencies
+            .contains_key("types"),
         "the peer is dropped when the package supplies the name itself",
     );
-    assert!(tree.packages.contains_key("types@1.0.0"), "the own dependency is walked");
+    assert!(
+        tree.packages
+            .contains_key("types@1.0.0"),
+        "the own dependency is walked"
+    );
 }
 
 /// `types` is a direct dependency of the importer, so it is in
@@ -100,16 +116,27 @@ async fn a_peer_in_the_parent_scope_shadows_the_own_dep() {
         .await
         .unwrap();
 
-    let parser = tree.packages.get("parser@1.0.0").expect("parser resolved");
+    let parser = tree
+        .packages
+        .get("parser@1.0.0")
+        .expect("parser resolved");
     assert!(
-        parser.peer_dependencies.contains_key("types"),
+        parser
+            .peer_dependencies
+            .contains_key("types"),
         "the peer survives when the parent scope already supplies the name",
     );
     assert!(
-        !tree.packages.contains_key("types@1.0.0"),
+        !tree
+            .packages
+            .contains_key("types@1.0.0"),
         "the shadowed own dependency is not walked as a child",
     );
-    assert!(tree.packages.contains_key("types@2.0.0"), "the parent's copy is the one resolved");
+    assert!(
+        tree.packages
+            .contains_key("types@2.0.0"),
+        "the parent's copy is the one resolved"
+    );
 }
 
 /// The scope accumulates level by level: `types` is the importer's
@@ -137,10 +164,25 @@ async fn the_parent_scope_reaches_every_level_below_it() {
         .await
         .unwrap();
 
-    let parser = tree.packages.get("parser@1.0.0").expect("parser resolved");
-    assert!(parser.peer_dependencies.contains_key("types"));
-    assert!(!tree.packages.contains_key("types@1.0.0"));
-    assert!(tree.packages.contains_key("types@2.0.0"), "the importer's copy is the one resolved");
+    let parser = tree
+        .packages
+        .get("parser@1.0.0")
+        .expect("parser resolved");
+    assert!(
+        parser
+            .peer_dependencies
+            .contains_key("types")
+    );
+    assert!(
+        !tree
+            .packages
+            .contains_key("types@1.0.0")
+    );
+    assert!(
+        tree.packages
+            .contains_key("types@2.0.0"),
+        "the importer's copy is the one resolved"
+    );
 }
 
 #[tokio::test]
@@ -168,13 +210,19 @@ async fn non_optional_meta_only_entry_is_not_a_peer() {
         .await
         .unwrap();
 
-    let pkg = tree.packages.get("pkg@1.0.0").expect("pkg resolved");
+    let pkg = tree
+        .packages
+        .get("pkg@1.0.0")
+        .expect("pkg resolved");
     assert!(
-        !pkg.peer_dependencies.contains_key("ghost"),
+        !pkg.peer_dependencies
+            .contains_key("ghost"),
         "a peerDependenciesMeta entry without optional: true and without a peerDependencies entry is ignored",
     );
-    let optional_peer =
-        pkg.peer_dependencies.get("wanted-optional").expect("optional meta-only peer kept");
+    let optional_peer = pkg
+        .peer_dependencies
+        .get("wanted-optional")
+        .expect("optional meta-only peer kept");
     assert!(optional_peer.optional);
     assert_eq!(optional_peer.version, "*");
 }

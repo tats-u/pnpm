@@ -101,7 +101,10 @@ pub fn read_exact_project_manifest(
 ) -> Result<PackageManifest, ReadProjectManifestError> {
     let basename = manifest_path
         .file_name()
-        .map(|name| name.to_string_lossy().to_ascii_lowercase())
+        .map(|name| {
+            name.to_string_lossy()
+                .to_ascii_lowercase()
+        })
         .unwrap_or_default();
     match basename.as_str() {
         "package.json" | "package.yaml" => PackageManifest::from_path(manifest_path.to_path_buf())

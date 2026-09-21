@@ -24,7 +24,9 @@ fn dedupe_preserves_auto_installed_peer_with_a_newer_major_in_another_importer()
         ("app", serde_json::json!({ "@pnpm.e2e/wants-peer-c-1": "1.0.0" })),
         ("wpkg", serde_json::json!({ "@pnpm.e2e/peer-c": "^2.0.0" })),
     ] {
-        let project = workspace.join("packages").join(directory);
+        let project = workspace
+            .join("packages")
+            .join(directory);
         fs::create_dir_all(&project).expect("create project");
         fs::write(
             project.join("package.json"),
@@ -87,13 +89,8 @@ fn dedupe_preserves_auto_installed_peer_with_a_newer_major_in_another_importer()
 
 #[test]
 fn dedupe_writes_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -126,13 +123,8 @@ fn dedupe_writes_lockfile() {
 
 #[test]
 fn dedupe_materializes_node_modules_unless_lockfile_only() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -152,7 +144,9 @@ fn dedupe_materializes_node_modules_unless_lockfile_only() {
         .success();
 
     assert!(
-        workspace.join("pnpm-lock.yaml").exists(),
+        workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "dedupe --lockfile-only must write pnpm-lock.yaml",
     );
     assert!(
@@ -160,15 +154,18 @@ fn dedupe_materializes_node_modules_unless_lockfile_only() {
         "dedupe --lockfile-only must not create node_modules",
     );
 
-    let pacquet =
-        Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(&workspace);
+    let pacquet = Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(&workspace);
     pacquet
         .with_arg("dedupe")
         .assert()
         .success();
 
     assert!(
-        workspace.join("node_modules/@pnpm.e2e/pkg-with-1-dep").exists(),
+        workspace
+            .join("node_modules/@pnpm.e2e/pkg-with-1-dep")
+            .exists(),
         "dedupe must link the dependency into node_modules",
     );
 
@@ -177,13 +174,8 @@ fn dedupe_materializes_node_modules_unless_lockfile_only() {
 
 #[test]
 fn dedupe_check_does_not_materialize_nor_write_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -204,8 +196,9 @@ fn dedupe_check_does_not_materialize_nor_write_lockfile() {
         .success();
 
     // Recreate a pacquet command for the --check invocation
-    let pacquet_check =
-        Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(&workspace);
+    let pacquet_check = Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(&workspace);
 
     let lockfile_path = workspace.join("pnpm-lock.yaml");
     assert!(lockfile_path.exists(), "dedupe must create pnpm-lock.yaml");
@@ -228,13 +221,8 @@ fn dedupe_check_does_not_materialize_nor_write_lockfile() {
 
 #[test]
 fn dedupe_check_rejects_a_malformed_modules_manifest() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -281,13 +269,8 @@ fn dedupe_check_rejects_a_malformed_modules_manifest() {
 
 #[test]
 fn dedupe_check_keeps_valid_lockfile_pins() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -328,13 +311,8 @@ fn dedupe_check_keeps_valid_lockfile_pins() {
 /// leaves peer-dependency issues behind, so the two commands agree.
 #[test]
 fn dedupe_warns_about_peer_dependency_issues() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -378,13 +356,8 @@ fn dedupe_warns_about_peer_dependency_issues() {
 /// hard failure, matching the TypeScript CLI's `ERR_PNPM_PEER_DEP_ISSUES`.
 #[test]
 fn dedupe_fails_on_peer_dependency_issues_when_strict() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(workspace.join("pnpm-workspace.yaml"), "strictPeerDependencies: true\n")
@@ -427,13 +400,8 @@ fn dedupe_fails_on_peer_dependency_issues_when_strict() {
 /// which the bad-peer failure above leaves out.
 #[test]
 fn dedupe_strict_failure_hints_at_auto_install_peers_for_a_missing_peer() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -472,13 +440,8 @@ fn dedupe_strict_failure_hints_at_auto_install_peers_for_a_missing_peer() {
 /// change, under pnpm's `ERR_PNPM_DEDUPE_CHECK_ISSUES`.
 #[test]
 fn dedupe_check_reports_the_lockfile_diff() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -549,25 +512,21 @@ fn dedupe_check_reports_the_lockfile_diff() {
         .map(|line| serde_json::from_str::<serde_json::Value>(line).expect("valid NDJSON"))
         .collect::<Vec<_>>();
     assert!(
-        ndjson_records
-            .iter()
-            .any(|record| {
-                record["name"] == "pnpm:progress"
-                    && record["status"] == "resolved"
-                    && record["packageId"] == "@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0"
-            }),
+        ndjson_records.iter().any(|record| {
+            record["name"] == "pnpm:progress"
+                && record["status"] == "resolved"
+                && record["packageId"] == "@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0"
+        }),
         "ndjson stderr:\n{ndjson_stderr}",
     );
     assert!(
-        ndjson_records
-            .iter()
-            .any(|record| {
-                record["name"] == "pnpm"
-                    && record["level"] == "error"
-                    && record["err"]["code"] == "ERR_PNPM_DEDUPE_CHECK_ISSUES"
-                    && record["dedupeCheckIssues"]["packageIssuesByDepPath"]["added"]
-                        == serde_json::json!(["@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0"])
-            }),
+        ndjson_records.iter().any(|record| {
+            record["name"] == "pnpm"
+                && record["level"] == "error"
+                && record["err"]["code"] == "ERR_PNPM_DEDUPE_CHECK_ISSUES"
+                && record["dedupeCheckIssues"]["packageIssuesByDepPath"]["added"]
+                    == serde_json::json!(["@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0"])
+        }),
         "ndjson stderr:\n{ndjson_stderr}",
     );
 
@@ -592,13 +551,8 @@ fn dedupe_check_reports_the_lockfile_diff() {
 /// (see the lockfile guard in `DedupeArgs::run`).
 #[test]
 fn dedupe_check_does_not_persist_minimum_release_age_excludes() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -748,7 +702,12 @@ fn catalog_lockfile_version(workspace: &Path, project: &str, shared: bool) -> St
     let (path, importer) = if shared {
         (workspace.join("pnpm-lock.yaml"), project)
     } else {
-        (workspace.join(project).join("pnpm-lock.yaml"), ".")
+        (
+            workspace
+                .join(project)
+                .join("pnpm-lock.yaml"),
+            ".",
+        )
     };
     importer_version(&read_lockfile(&path), importer, "@pnpm.e2e/foo")
 }
@@ -793,7 +752,11 @@ fn dedupe_filters_workspace_projects_and_checks_without_writing() {
             vec![workspace.join("pnpm-lock.yaml")]
         } else {
             [".", "packages/a", "packages/b"]
-                .map(|dir| workspace.join(dir).join("pnpm-lock.yaml"))
+                .map(|dir| {
+                    workspace
+                        .join(dir)
+                        .join("pnpm-lock.yaml")
+                })
                 .to_vec()
         };
         let snapshots: Vec<_> = lockfiles
@@ -841,7 +804,9 @@ fn dedupe_honors_fail_if_no_match() {
             .assert()
             .success();
         for project in [".", "packages/a", "packages/b"] {
-            let path = workspace.join(project).join("pnpm-lock.yaml");
+            let path = workspace
+                .join(project)
+                .join("pnpm-lock.yaml");
             assert!(!path.exists(), "empty selection wrote {}", path.display());
         }
     }
@@ -858,8 +823,11 @@ fn dedupe_check_detects_config_dependency_changes_when_root_is_unselected() {
         .with_args(["install", "--lockfile-only"])
         .assert()
         .success();
-    let lockfiles =
-        [".", "packages/a", "packages/b"].map(|dir| workspace.join(dir).join("pnpm-lock.yaml"));
+    let lockfiles = [".", "packages/a", "packages/b"].map(|dir| {
+        workspace
+            .join(dir)
+            .join("pnpm-lock.yaml")
+    });
     let snapshots: Vec<_> = lockfiles
         .iter()
         .map(|path| fs::read(path).unwrap())

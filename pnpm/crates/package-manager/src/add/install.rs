@@ -62,7 +62,9 @@ pub(super) fn selected_add_seed(
         .path()
         .parent()
         .expect("manifest path always has a parent dir");
-    let importer_root = add.config.lockfile_dir_for(manifest_dir);
+    let importer_root = add
+        .config
+        .lockfile_dir_for(manifest_dir);
     let mut seed_policies = BTreeMap::new();
     let mut preferred_versions_override = PreferredVersions::new();
     for &index in selected_indices {
@@ -119,9 +121,9 @@ pub(super) fn add_install<'i>(
     seed: AddSeed,
 ) -> Install<'i, Vec<DependencyGroup>> {
     let named_a_version = !seed.seed_policies.is_empty();
-    let included_groups = owned.included_groups.unwrap_or_else(|| {
-        included_direct_groups(add.config.optional).collect()
-    });
+    let included_groups = owned
+        .included_groups
+        .unwrap_or_else(|| included_direct_groups(add.config.optional).collect());
     let mut install = Install::new(
         owned.tarball_mem_cache,
         add.resolved_packages,
@@ -144,7 +146,9 @@ pub(super) fn add_install<'i>(
     } else {
         UpdateSeedPolicy::KeepAll
     };
-    install.resolution.preferred_versions_override = Some(seed.preferred_versions_override);
+    install
+        .resolution
+        .preferred_versions_override = Some(seed.preferred_versions_override);
     install.context.emit_initial_manifest = false;
     install.context.lockfile_path = add.lockfile.path;
     install.projects.supported_architectures = owned.supported_architectures;

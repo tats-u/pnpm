@@ -16,18 +16,12 @@ pub fn realpath_missing(path: &Path) -> io::Result<PathBuf> {
             base.extend(tail.iter().rev());
             return Ok(base);
         }
-        tail.push(
-            current
-                .file_name()
-                .ok_or_else(|| {
-                    io::Error::new(io::ErrorKind::NotFound, "path has no existing ancestor")
-                })?,
-        );
-        current = current
-            .parent()
-            .ok_or_else(|| {
-                io::Error::new(io::ErrorKind::NotFound, "path has no existing ancestor")
-            })?;
+        tail.push(current.file_name().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotFound, "path has no existing ancestor")
+        })?);
+        current = current.parent().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotFound, "path has no existing ancestor")
+        })?;
     }
 }
 

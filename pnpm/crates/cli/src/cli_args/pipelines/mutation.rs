@@ -64,7 +64,9 @@ impl AddPipeline {
             InstallFamilyPlan::PerProject(projects) => {
                 // Dedicated per-project lockfiles: add the packages to each
                 // selected project independently.
-                let workspace_packages = self.args.workspace_link_targets(self.cfg)?;
+                let workspace_packages = self
+                    .args
+                    .workspace_link_targets(self.cfg)?;
                 DedicatedProjectRuns {
                     config: self.cfg,
                     projects,
@@ -91,7 +93,11 @@ impl AddPipeline {
                 let cfg: &'static Config = self.cfg;
                 let state =
                     State::init(self.manifest_path, cfg, false).wrap_err("initialize the state")?;
-                Box::pin(self.args.run_selected::<Reporter>(state, *selection)).await
+                Box::pin(
+                    self.args
+                        .run_selected::<Reporter>(state, *selection),
+                )
+                .await
             }
             InstallFamilyPlan::Single => self.run_single::<Reporter>().await,
         }
@@ -110,7 +116,11 @@ impl AddPipeline {
         }
         let cfg: &'static Config = self.cfg;
         let state = State::init(self.manifest_path, cfg, false).wrap_err("initialize the state")?;
-        Box::pin(self.args.run::<Reporter>(state, self.config_dependencies)).await
+        Box::pin(
+            self.args
+                .run::<Reporter>(state, self.config_dependencies),
+        )
+        .await
     }
 }
 
@@ -211,7 +221,11 @@ fn unmatched_after_ecosystems(
 ) -> Option<miette::Report> {
     unmatched
         .filter(|_| ecosystem.python.selected == 0)
-        .map(|unmatched| unmatched.counting(ecosystem.python.discovered).report())
+        .map(|unmatched| {
+            unmatched
+                .counting(ecosystem.python.discovered)
+                .report()
+        })
 }
 
 /// Anchor the dedicated-lockfile project the npm half of the add writes to,
@@ -229,12 +243,7 @@ async fn run_mixed_add<Reporter: self::Reporter + 'static>(
     plan: pnpm_install_coordinator::InstallPlan<'static>,
     node: NodeAdd,
 ) -> miette::Result<()> {
-    let NodeAdd {
-        args,
-        cfg,
-        manifest_path,
-        http_client,
-    } = node;
+    let NodeAdd { args, cfg, manifest_path, http_client } = node;
     let metadata = node_add_metadata_paths(cfg, &manifest_path);
     let node_install = async move {
         let state = init_shared_state(manifest_path, cfg, false, None, http_client)?;
@@ -246,13 +255,21 @@ async fn run_mixed_add<Reporter: self::Reporter + 'static>(
 }
 
 pub(super) fn node_add_metadata_paths(config: &Config, manifest_path: &Path) -> Vec<PathBuf> {
-    let project_dir = manifest_path.parent().expect("manifest path always has a parent dir");
+    let project_dir = manifest_path
+        .parent()
+        .expect("manifest path always has a parent dir");
     let mut paths = vec![
         manifest_path.to_path_buf(),
-        config.lockfile_dir_for(project_dir).join(config.wanted_lockfile_name()),
+        config
+            .lockfile_dir_for(project_dir)
+            .join(config.wanted_lockfile_name()),
         // The current lockfile remains project-local even with a global virtual store.
-        config.virtual_store_dir.join(pnpm_lockfile::Lockfile::CURRENT_FILE_NAME),
-        config.modules_dir.join(pnpm_modules_yaml::MODULES_FILENAME),
+        config
+            .virtual_store_dir
+            .join(pnpm_lockfile::Lockfile::CURRENT_FILE_NAME),
+        config
+            .modules_dir
+            .join(pnpm_modules_yaml::MODULES_FILENAME),
     ];
     if let Some(workspace_dir) = config.workspace_dir.as_deref() {
         paths.push(workspace_dir.join("pnpm-workspace.yaml"));
@@ -310,7 +327,10 @@ impl UpdatePipeline {
         } else if self.args.save.no_changeset {
             false
         } else {
-            self.cfg.update_config.changeset.unwrap_or(false)
+            self.cfg
+                .update_config
+                .changeset
+                .unwrap_or(false)
         };
         let changeset_context = generate_changeset
             .then(|| UpdateChangesetContext::capture(self.cfg, &self.manifest_path))
@@ -340,7 +360,11 @@ impl UpdatePipeline {
                 let cfg: &'static Config = self.cfg;
                 let state =
                     State::init(self.manifest_path, cfg, false).wrap_err("initialize the state")?;
-                Box::pin(self.args.run_selected::<Reporter>(state, *selection)).await?;
+                Box::pin(
+                    self.args
+                        .run_selected::<Reporter>(state, *selection),
+                )
+                .await?;
             }
             InstallFamilyPlan::Single => {
                 let cfg: &'static Config = self.cfg;
@@ -436,7 +460,14 @@ impl DeployPipeline {
         let root_config = (&*manifest_path, &mut *cfg, &*config_root);
         prepare_root_config::<Reporter>(
             root_config,
-            (false, RuntimePolicy::Config(args.install_args.materialization.no_runtime)),
+            (
+                false,
+                RuntimePolicy::Config(
+                    args.install_args
+                        .materialization
+                        .no_runtime,
+                ),
+            ),
         )
         .await?;
         let cfg: &'static Config = cfg;

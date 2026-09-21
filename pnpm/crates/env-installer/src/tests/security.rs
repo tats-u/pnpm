@@ -20,16 +20,22 @@ async fn rejects_optional_subdep_with_path_traversal_name() {
     .await
     .unwrap();
 
-    let mut env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
+    let mut env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
     let parent_key: PackageKey = "@pnpm.e2e/foo@100.0.0".parse().unwrap();
     let pkg = env.packages[&parent_key].clone();
     let malicious_name = "../../PWNED_SUBDEP".to_string();
-    let malicious_key: PackageKey = format!("{malicious_name}@100.0.0").parse().unwrap();
+    let malicious_key: PackageKey = format!("{malicious_name}@100.0.0")
+        .parse()
+        .unwrap();
     env.packages.insert(malicious_key, pkg);
     let subdep_name: pnpm_lockfile::PkgName = malicious_name.parse().unwrap();
     let subdep_ref: SnapshotDepRef = "100.0.0".parse().unwrap();
-    env.snapshots.entry(parent_key).or_default().optional_dependencies =
-        Some(std::iter::once((subdep_name, subdep_ref)).collect());
+    env.snapshots
+        .entry(parent_key)
+        .or_default()
+        .optional_dependencies = Some(std::iter::once((subdep_name, subdep_ref)).collect());
 
     let error = install_config_deps::<SilentReporter>(&env, &options(&harness, root.path(), false))
         .await
@@ -59,17 +65,23 @@ async fn rejects_optional_subdep_with_path_traversal_version() {
     .await
     .unwrap();
 
-    let mut env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
+    let mut env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
     let parent_key: PackageKey = "@pnpm.e2e/foo@100.0.0".parse().unwrap();
     let pkg = env.packages[&parent_key].clone();
     let malicious_version = "../../../PWNED";
     let subdep_name = "@pnpm.e2e/bar";
-    let malicious_key: PackageKey = format!("{subdep_name}@{malicious_version}").parse().unwrap();
+    let malicious_key: PackageKey = format!("{subdep_name}@{malicious_version}")
+        .parse()
+        .unwrap();
     env.packages.insert(malicious_key, pkg);
     let subdep_name_parsed: pnpm_lockfile::PkgName = subdep_name.parse().unwrap();
     let subdep_ref: SnapshotDepRef = malicious_version.parse().unwrap();
-    env.snapshots.entry(parent_key).or_default().optional_dependencies =
-        Some(std::iter::once((subdep_name_parsed, subdep_ref)).collect());
+    env.snapshots
+        .entry(parent_key)
+        .or_default()
+        .optional_dependencies = Some(std::iter::once((subdep_name_parsed, subdep_ref)).collect());
 
     let error = install_config_deps::<SilentReporter>(&env, &options(&harness, root.path(), false))
         .await

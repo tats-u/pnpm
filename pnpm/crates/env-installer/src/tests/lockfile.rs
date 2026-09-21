@@ -12,12 +12,11 @@ use super::{
 async fn force_resync_under_frozen_lockfile_resolves_without_writing() {
     let harness = harness();
     let root = TempDir::new().unwrap();
-    let recorded = FixtureResolver::new()
-        .package(serde_json::json!({
-            "name": "pnpm",
-            "version": "12.0.0",
-            "bin": "bin/pnpm.cjs",
-        }));
+    let recorded = FixtureResolver::new().package(serde_json::json!({
+        "name": "pnpm",
+        "version": "12.0.0",
+        "bin": "bin/pnpm.cjs",
+    }));
     resolve_package_manager_integrities(
         pnpm_engine_packages("12.0.0"),
         "^12.0.0",
@@ -54,7 +53,9 @@ async fn force_resync_under_frozen_lockfile_resolves_without_writing() {
     .await
     .expect("a forced resync is a repair, not a lockfile update");
 
-    let platform_key: PackageKey = "@pnpm/exe.linux-x64@12.0.0".parse().unwrap();
+    let platform_key: PackageKey = "@pnpm/exe.linux-x64@12.0.0"
+        .parse()
+        .unwrap();
     assert!(env.packages.contains_key(&platform_key), "the caller gets the repaired closure");
     for (key, metadata) in &env.packages {
         assert!(
@@ -159,7 +160,9 @@ async fn frozen_lockfile_rejects_an_engine_package_pinned_at_another_version() {
     )
     .await
     .unwrap();
-    let mut env_lockfile = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
+    let mut env_lockfile = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
     env_lockfile
         .root_importer_mut()
         .package_manager_dependencies
@@ -200,12 +203,11 @@ async fn frozen_lockfile_rejects_outdated_package_manager_entries() {
     let harness = harness();
     let root = TempDir::new().unwrap();
     let resolver = || {
-        FixtureResolver::new()
-            .package(serde_json::json!({
-                "name": "pnpm",
-                "version": "12.0.0",
-                "bin": "bin/pnpm.cjs",
-            }))
+        FixtureResolver::new().package(serde_json::json!({
+            "name": "pnpm",
+            "version": "12.0.0",
+            "bin": "bin/pnpm.cjs",
+        }))
     };
     let outdated = resolve_package_manager_integrities(
         pnpm_engine_packages("12.0.0"),
@@ -245,12 +247,11 @@ async fn frozen_lockfile_rejects_outdated_package_manager_entries() {
         pnpm_engine_packages("13.0.0"),
         "^13.0.0",
         "13.0.0",
-        &FixtureResolver::new()
-            .package(serde_json::json!({
-                "name": "pnpm",
-                "version": "13.0.0",
-                "bin": "bin/pnpm.cjs",
-            })),
+        &FixtureResolver::new().package(serde_json::json!({
+            "name": "pnpm",
+            "version": "13.0.0",
+            "bin": "bin/pnpm.cjs",
+        })),
         &options(&harness, root.path(), true),
         false,
     )

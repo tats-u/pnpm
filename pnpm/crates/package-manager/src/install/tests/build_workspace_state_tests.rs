@@ -149,12 +149,22 @@ fn records_every_workspace_project_keyed_by_root_dir() {
 
     assert_eq!(state.projects.len(), packages.len());
     for (project_dir, _) in &manifests {
-        let key = project_dir.to_string_lossy().into_owned();
-        let entry = state.projects
+        let key = project_dir
+            .to_string_lossy()
+            .into_owned();
+        let entry = state
+            .projects
             .get(&key)
             .unwrap_or_else(|| panic!("project entry for {key:?} should exist"));
         assert_eq!(entry.version.as_deref(), Some("1.0.0"));
-        assert!(packages.contains(&entry.name.as_deref().unwrap_or_default(),));
+        assert!(
+            packages.contains(
+                &entry
+                    .name
+                    .as_deref()
+                    .unwrap_or_default(),
+            )
+        );
     }
 }
 

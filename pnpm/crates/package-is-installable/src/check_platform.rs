@@ -159,11 +159,9 @@ pub fn platform_is_supported(
     current_libc: &str,
 ) -> bool {
     match supported {
-        Some(SupportedArchitectures::Platforms(platforms)) => platforms
-            .iter()
-            .any(|platform| {
-                platform_allows(platform, wanted, current_os, current_cpu, current_libc)
-            }),
+        Some(SupportedArchitectures::Platforms(platforms)) => platforms.iter().any(|platform| {
+            platform_allows(platform, wanted, current_os, current_cpu, current_libc)
+        }),
         Some(SupportedArchitectures::Axes(axes)) => {
             axes_allow(Some(axes), wanted, current_os, current_cpu, current_libc)
         }
@@ -193,12 +191,15 @@ fn platform_allows(
 /// suits it on its own. A platform that has no C library places no
 /// constraint on one.
 fn named_platform_allows(platform: &NamedPlatform, wanted: WantedPlatformRef<'_>) -> bool {
-    wanted.os.is_none_or(|wanted_os| axis_is_supported(platform.os.name(), None, wanted_os))
+    wanted
+        .os
+        .is_none_or(|wanted_os| axis_is_supported(platform.os.name(), None, wanted_os))
         && wanted.cpu.is_none_or(|wanted_cpu| {
             axis_is_supported(platform.architecture.cpu(), None, wanted_cpu)
         })
         && wanted.libc.is_none_or(|wanted_libc| {
-            platform.libc
+            platform
+                .libc
                 .as_ref()
                 .is_none_or(|libc| axis_is_supported(libc.name(), None, wanted_libc))
         })

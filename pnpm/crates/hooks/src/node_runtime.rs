@@ -33,7 +33,10 @@ impl NodeJsHooks {
     /// The worker process, spawned on first use and reused thereafter. A spawn
     /// failure is cached and surfaced to every hook call.
     async fn worker(&self) -> Result<Arc<NodeWorker>, HookError> {
-        self.worker.get_or_init(|| NodeWorker::spawn(&self.file)).await.clone()
+        self.worker
+            .get_or_init(|| NodeWorker::spawn(&self.file))
+            .await
+            .clone()
     }
 
     /// Runs a side-effecting hook (`preResolution`) in a one-shot `node`
@@ -107,8 +110,14 @@ async fn drive_hook(
     logger: &crate::PreResolutionHookLogger,
 ) -> Result<(Vec<u8>, std::io::Result<std::process::ExitStatus>), tokio::time::error::Elapsed> {
     let stdin = child.stdin.take();
-    let stdout = child.stdout.take().expect("stdout is piped");
-    let stderr = child.stderr.take().expect("stderr is piped");
+    let stdout = child
+        .stdout
+        .take()
+        .expect("stdout is piped");
+    let stderr = child
+        .stderr
+        .take()
+        .expect("stderr is piped");
 
     // Stream all three pipes concurrently instead of buffering:
     // stdout/stderr are hook-controlled, so buffering would let a noisy
@@ -121,7 +130,9 @@ async fn drive_hook(
     // non-zero exit.
     let write_context = async {
         if let Some(mut stdin) = stdin {
-            let _ = stdin.write_all(ctx_payload.as_bytes()).await;
+            let _ = stdin
+                .write_all(ctx_payload.as_bytes())
+                .await;
         }
         // Dropping stdin closes the pipe so `readFileSync(0)` sees EOF.
     };
@@ -143,7 +154,8 @@ impl crate::PnpmfileHooks for NodeJsHooks {
         pkg: Value,
         ctx: crate::HookContext,
     ) -> Result<crate::ReadPackageResult, HookError> {
-        self.worker().await?
+        self.worker()
+            .await?
             .call("readPackage", pkg, ctx.log)
             .await
             .map(Arc::new)
@@ -154,7 +166,10 @@ impl crate::PnpmfileHooks for NodeJsHooks {
         lockfile: Value,
         ctx: crate::HookContext,
     ) -> Result<Value, HookError> {
-        self.worker().await?.call("afterAllResolved", lockfile, ctx.log).await
+        self.worker()
+            .await?
+            .call("afterAllResolved", lockfile, ctx.log)
+            .await
     }
 
     async fn update_config(
@@ -165,7 +180,11 @@ impl crate::PnpmfileHooks for NodeJsHooks {
         // The worker returns `null` when the pnpmfile exports no
         // `updateConfig` hook (the generic `typeof fn === 'function'`
         // branch); in that case the config is left unchanged.
-        let result = self.worker().await?.call("updateConfig", config.clone(), ctx.log).await?;
+        let result = self
+            .worker()
+            .await?
+            .call("updateConfig", config.clone(), ctx.log)
+            .await?;
         Ok(if result.is_null() { config } else { result })
     }
 
@@ -175,7 +194,8 @@ impl crate::PnpmfileHooks for NodeJsHooks {
         dir: &std::path::Path,
         ctx: crate::HookContext,
     ) -> Result<Value, HookError> {
-        self.worker().await?
+        self.worker()
+            .await?
             .call_before_packing(manifest, &dir.to_string_lossy(), ctx.log)
             .await
     }
@@ -195,12 +215,16 @@ impl crate::PnpmfileHooks for NodeJsHooks {
             "registries": ctx.registries,
         });
 
-        self.call_node_void("preResolution", ctx_json, &logger).await;
+        self.call_node_void("preResolution", ctx_json, &logger)
+            .await;
     }
 
     async fn filter_log(&self, log: Value, ctx: crate::HookContext) -> bool {
         let Ok(worker) = self.worker().await else { return true };
-        match worker.call("filterLog", log, ctx.log).await {
+        match worker
+            .call("filterLog", log, ctx.log)
+            .await
+        {
             Ok(value) => value.as_bool().unwrap_or(true),
             Err(_) => true,
         }
@@ -231,7 +255,9 @@ impl crate::PnpmfileHooks for NodeJsHooks {
 
     async fn get_custom_resolvers(&self) -> Result<Vec<Arc<dyn crate::CustomResolver>>, HookError> {
         let worker = self.worker().await?;
-        let capabilities = worker.get_resolver_capabilities().await?;
+        let capabilities = worker
+            .get_resolver_capabilities()
+            .await?;
         Ok(capabilities
             .into_iter()
             .enumerate()
@@ -244,7 +270,9 @@ impl crate::PnpmfileHooks for NodeJsHooks {
 
     async fn get_custom_fetchers(&self) -> Result<Vec<Arc<dyn crate::CustomFetcher>>, HookError> {
         let worker = self.worker().await?;
-        let capabilities = worker.get_fetcher_capabilities().await?;
+        let capabilities = worker
+            .get_fetcher_capabilities()
+            .await?;
         Ok(capabilities
             .into_iter()
             .enumerate()
@@ -256,11 +284,17 @@ impl crate::PnpmfileHooks for NodeJsHooks {
     }
 
     async fn get_finder_names(&self) -> Result<Vec<String>, HookError> {
-        self.worker().await?.get_finder_names().await
+        self.worker()
+            .await?
+            .get_finder_names()
+            .await
     }
 
     async fn run_finder(&self, finder_name: &str, ctx: Value) -> Result<Value, HookError> {
-        self.worker().await?.call_finder(finder_name, ctx).await
+        self.worker()
+            .await?
+            .call_finder(finder_name, ctx)
+            .await
     }
 }
 
@@ -281,28 +315,32 @@ impl crate::CustomResolver for NodeJsCustomResolver {
     }
 
     fn has_should_refresh_resolution(&self) -> bool {
-        self.capabilities.should_refresh_resolution
+        self.capabilities
+            .should_refresh_resolution
     }
 
     async fn can_resolve(&self, wanted_dependency: Value) -> Result<bool, HookError> {
-        let res = self.worker.call_resolver(
-            self.index,
-            "canResolve",
-            serde_json::json!([wanted_dependency]),
-            Arc::new(|_| {}),
-        )
-        .await?;
+        let res = self
+            .worker
+            .call_resolver(
+                self.index,
+                "canResolve",
+                serde_json::json!([wanted_dependency]),
+                Arc::new(|_| {}),
+            )
+            .await?;
         Ok(res.as_bool().unwrap_or(false))
     }
 
     async fn resolve(&self, wanted_dependency: Value, opts: Value) -> Result<Value, HookError> {
-        self.worker.call_resolver(
-            self.index,
-            "resolve",
-            serde_json::json!([wanted_dependency, opts]),
-            Arc::new(|_| {}),
-        )
-        .await
+        self.worker
+            .call_resolver(
+                self.index,
+                "resolve",
+                serde_json::json!([wanted_dependency, opts]),
+                Arc::new(|_| {}),
+            )
+            .await
     }
 
     async fn should_refresh_resolution(
@@ -310,13 +348,15 @@ impl crate::CustomResolver for NodeJsCustomResolver {
         dep_path: &pnpm_lockfile::PackageKey,
         pkg_snapshot: Value,
     ) -> Result<bool, HookError> {
-        let res = self.worker.call_resolver(
-            self.index,
-            "shouldRefreshResolution",
-            serde_json::json!([dep_path.to_string(), pkg_snapshot]),
-            Arc::new(|_| {}),
-        )
-        .await?;
+        let res = self
+            .worker
+            .call_resolver(
+                self.index,
+                "shouldRefreshResolution",
+                serde_json::json!([dep_path.to_string(), pkg_snapshot]),
+                Arc::new(|_| {}),
+            )
+            .await?;
         Ok(res.as_bool().unwrap_or(false))
     }
 }
@@ -338,7 +378,9 @@ impl crate::CustomFetcher for NodeJsCustomFetcher {
     }
 
     async fn can_fetch(&self, pkg_id: &str, resolution: Value) -> Result<bool, HookError> {
-        let (can_fetch, _) = self.can_fetch_with_resolution(pkg_id, resolution).await?;
+        let (can_fetch, _) = self
+            .can_fetch_with_resolution(pkg_id, resolution)
+            .await?;
         Ok(can_fetch)
     }
 
@@ -347,15 +389,19 @@ impl crate::CustomFetcher for NodeJsCustomFetcher {
         pkg_id: &str,
         resolution: Value,
     ) -> Result<(bool, Value), HookError> {
-        let response = self.worker.call_fetcher(
-            self.index,
-            "canFetch",
-            serde_json::json!([pkg_id, &resolution]),
-            Arc::new(|_| {}),
-            None,
-        )
-        .await?;
-        let can_fetch = response.get("value").is_some_and(is_js_truthy);
+        let response = self
+            .worker
+            .call_fetcher(
+                self.index,
+                "canFetch",
+                serde_json::json!([pkg_id, &resolution]),
+                Arc::new(|_| {}),
+                None,
+            )
+            .await?;
+        let can_fetch = response
+            .get("value")
+            .is_some_and(is_js_truthy);
         // A worker that answers without a `resolution` — the reply shape for a
         // fetcher whose `canFetch` went missing between capability probe and
         // call — leaves the caller's resolution untouched rather than blanking
@@ -373,7 +419,8 @@ impl crate::CustomFetcher for NodeJsCustomFetcher {
         resolution: Value,
         opts: Value,
     ) -> Result<Value, HookError> {
-        self.call_fetch(resolution, opts, None).await
+        self.call_fetch(resolution, opts, None)
+            .await
     }
 
     async fn fetch_with_callbacks(
@@ -383,7 +430,8 @@ impl crate::CustomFetcher for NodeJsCustomFetcher {
         opts: Value,
         callbacks: crate::FetcherCallbackSender,
     ) -> Result<Value, HookError> {
-        self.call_fetch(resolution, opts, Some(callbacks)).await
+        self.call_fetch(resolution, opts, Some(callbacks))
+            .await
     }
 }
 
@@ -399,14 +447,15 @@ impl NodeJsCustomFetcher {
         opts: Value,
         callbacks: Option<crate::FetcherCallbackSender>,
     ) -> Result<Value, HookError> {
-        self.worker.call_fetcher(
-            self.index,
-            "fetch",
-            serde_json::json!([Value::Null, resolution, opts, Value::Null]),
-            Arc::new(|_| {}),
-            callbacks,
-        )
-        .await
+        self.worker
+            .call_fetcher(
+                self.index,
+                "fetch",
+                serde_json::json!([Value::Null, resolution, opts, Value::Null]),
+                Arc::new(|_| {}),
+                callbacks,
+            )
+            .await
     }
 }
 

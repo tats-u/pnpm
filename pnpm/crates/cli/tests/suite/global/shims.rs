@@ -311,8 +311,12 @@ fn global_shims_auto_writes_direct_shims_for_ordinary_packages() {
         .assert()
         .success();
 
-    let shim = fs::read_to_string(pnpm_home.join("bin").join("touch-file-one-bin"))
-        .expect("read the generated global shim");
+    let shim = fs::read_to_string(
+        pnpm_home
+            .join("bin")
+            .join("touch-file-one-bin"),
+    )
+    .expect("read the generated global shim");
     assert!(!shim.contains("--shim"), "shim should exec directly, was:\n{shim}");
     assert!(
         !pnpm_home
@@ -352,12 +356,18 @@ fn global_shims_auto_writes_native_dispatcher_for_node_runtime() {
     let node = global_bin.join("node");
     assert_eq!(
         fs::metadata(&node).unwrap().len(),
-        fs::metadata(assert_cmd::cargo::cargo_bin("pnpm")).unwrap().len(),
+        fs::metadata(assert_cmd::cargo::cargo_bin("pnpm"))
+            .unwrap()
+            .len(),
         "node should be a copy of the pnpm executable",
     );
     let target = fs::read(global_bin.join(".pnpm-shim-v1-node-target")).unwrap();
     assert!(target.ends_with(b"/bin/node"), "target was: {}", String::from_utf8_lossy(&target));
-    assert!(!global_bin.join(".pnpm-shim-v1").exists());
+    assert!(
+        !global_bin
+            .join(".pnpm-shim-v1")
+            .exists()
+    );
 
     drop(npmrc_info);
     drop(root);

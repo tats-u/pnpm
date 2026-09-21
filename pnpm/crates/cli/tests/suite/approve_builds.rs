@@ -33,7 +33,9 @@ fn disable_strict_dep_builds(workspace: &Path) {
 /// A fresh `pacquet` command rooted at `workspace` (each `assert_cmd`
 /// `Command` is single-use, so sequential steps build their own).
 fn pacquet(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 /// Set up a workspace that depends on `@pnpm.e2e/install-script-example`
@@ -76,7 +78,11 @@ fn stdout_of(command: assert_cmd::assert::Assert) -> String {
 fn ignored_builds_lists_the_blocked_dependency() {
     let (harness, workspace) = install_with_ignored_build();
 
-    let output = stdout_of(pacquet(&workspace).with_arg("ignored-builds").assert());
+    let output = stdout_of(
+        pacquet(&workspace)
+            .with_arg("ignored-builds")
+            .assert(),
+    );
     assert!(
         output.contains("Automatically ignored builds during installation:"),
         "output: {output}",
@@ -99,7 +105,9 @@ fn allow_builds_placeholder_does_not_block_commands() {
     // both inside the one `allowBuilds` block a YAML document may have.
     let yaml_path = workspace.join("pnpm-workspace.yaml");
     let yaml = fs::read_to_string(&yaml_path).expect("read yaml");
-    let (before, _) = yaml.split_once("allowBuilds:").expect("the install scaffolded the block");
+    let (before, _) = yaml
+        .split_once("allowBuilds:")
+        .expect("the install scaffolded the block");
     let mut yaml = before.to_string();
     writeln!(
         yaml,
@@ -109,7 +117,11 @@ fn allow_builds_placeholder_does_not_block_commands() {
     .expect("format allowBuilds");
     fs::write(&yaml_path, yaml).expect("write pnpm-workspace.yaml");
 
-    let output = stdout_of(pacquet(&workspace).with_arg("ignored-builds").assert());
+    let output = stdout_of(
+        pacquet(&workspace)
+            .with_arg("ignored-builds")
+            .assert(),
+    );
     assert!(
         output.contains("Automatically ignored builds during installation:"),
         "output: {output}",
@@ -214,7 +226,9 @@ fn install_scaffolds_allow_builds_in_discovered_workspace_with_project_lockfiles
         "workspace manifest receives the scaffold: {yaml}",
     );
     assert!(
-        !project.join("pnpm-workspace.yaml").exists(),
+        !project
+            .join("pnpm-workspace.yaml")
+            .exists(),
         "install must not create a nested workspace manifest",
     );
 
@@ -245,7 +259,11 @@ fn approve_builds_with_args_runs_the_build() {
     // records an `ignoredBuilds` field, so the package is no longer listed.
     // (pnpm prints "Cannot identify as no node_modules found" when the
     // field is absent — "None" is reserved for a present-but-empty list.)
-    let output = stdout_of(pacquet(&workspace).with_arg("ignored-builds").assert());
+    let output = stdout_of(
+        pacquet(&workspace)
+            .with_arg("ignored-builds")
+            .assert(),
+    );
     assert!(
         !output.contains("@pnpm.e2e/install-script-example"),
         "the approved build is no longer reported as ignored: {output}",
@@ -287,7 +305,11 @@ fn approve_builds_deny_keeps_the_build_ignored() {
         "denying the build must not run its install script",
     );
 
-    let output = stdout_of(pacquet(&workspace).with_arg("ignored-builds").assert());
+    let output = stdout_of(
+        pacquet(&workspace)
+            .with_arg("ignored-builds")
+            .assert(),
+    );
     assert!(
         output.contains("Explicitly ignored package builds (via allowBuilds):"),
         "denied build is reported as explicitly ignored: {output}",
@@ -306,7 +328,11 @@ fn approve_builds_with_nothing_pending_reports_so() {
         .assert()
         .success();
 
-    let output = stdout_of(pacquet(&workspace).with_arg("approve-builds").assert());
+    let output = stdout_of(
+        pacquet(&workspace)
+            .with_arg("approve-builds")
+            .assert(),
+    );
     assert!(output.contains("There are no packages awaiting approval"), "output: {output}");
 
     drop(harness);
@@ -354,7 +380,12 @@ fn approve_builds_rejects_an_argument_that_names_no_package() {
         .failure();
     let stderr = String::from_utf8_lossy(&assert.get_output().stderr).into_owned();
     assert!(stderr.contains("ERR_PNPM_APPROVE_BUILDS_MISSING_PACKAGE"), "stderr: {stderr}");
-    assert!(!workspace.join("pnpm-workspace.yaml").exists(), "a rejected run persists nothing");
+    assert!(
+        !workspace
+            .join("pnpm-workspace.yaml")
+            .exists(),
+        "a rejected run persists nothing"
+    );
 
     drop(root);
 }
@@ -443,7 +474,11 @@ fn approve_builds_works_after_removing_an_unrelated_dependency() {
         .assert()
         .success();
 
-    let output = stdout_of(pacquet(&workspace).with_arg("ignored-builds").assert());
+    let output = stdout_of(
+        pacquet(&workspace)
+            .with_arg("ignored-builds")
+            .assert(),
+    );
     assert!(output.contains(PREPOST), "the remaining package stays pending: {output}");
     assert!(!output.contains(INSTALL), "the removed package must not stay pending: {output}");
 
@@ -563,7 +598,11 @@ fn approve_builds_deny_only_keeps_other_pending() {
         std::collections::BTreeMap::from([(INSTALL.to_string(), false)]),
     );
 
-    let output = stdout_of(pacquet(&workspace).with_arg("ignored-builds").assert());
+    let output = stdout_of(
+        pacquet(&workspace)
+            .with_arg("ignored-builds")
+            .assert(),
+    );
     let (automatic, explicit) = output
         .split_once("Explicitly ignored package builds (via allowBuilds):")
         .expect("explicit section present");
@@ -669,7 +708,9 @@ fn ignore_workspace_skips_the_allow_builds_scaffold() {
         .success();
 
     assert!(
-        workspace.join("node_modules/@pnpm.e2e/install-script-example").exists(),
+        workspace
+            .join("node_modules/@pnpm.e2e/install-script-example")
+            .exists(),
         "the dependency must actually have been installed",
     );
     assert!(

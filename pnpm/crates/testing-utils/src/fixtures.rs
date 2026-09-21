@@ -34,17 +34,25 @@ pub fn tarball_entries(entries: &[(&str, &[u8])]) -> Vec<u8> {
     let mut builder = tar::Builder::new(Vec::new());
     for (path, contents) in entries {
         let mut header = tar::Header::new_gnu();
-        header.set_path(path).expect("set tar entry path");
+        header
+            .set_path(path)
+            .expect("set tar entry path");
         header.set_size(contents.len() as u64);
         header.set_mode(0o644);
         header.set_entry_type(tar::EntryType::Regular);
         header.set_cksum();
-        builder.append(&header, *contents).expect("append entry to tar");
+        builder
+            .append(&header, *contents)
+            .expect("append entry to tar");
     }
-    let tar_bytes = builder.into_inner().expect("finish tar");
+    let tar_bytes = builder
+        .into_inner()
+        .expect("finish tar");
 
     let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
-    encoder.write_all(&tar_bytes).expect("gzip tar");
+    encoder
+        .write_all(&tar_bytes)
+        .expect("gzip tar");
     encoder.finish().expect("finish gzip")
 }
 

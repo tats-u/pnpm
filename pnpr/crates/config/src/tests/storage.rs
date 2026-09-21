@@ -216,17 +216,41 @@ fn ecosystem_groups_scope_names_sources_defaults_and_hosted_storage() {
     }
     yaml.push_str("defaultRegistry:\n  npm: main\n  cargo: main\n  pypi: main\n  oci: main\n");
     let mut config = Config::from_yaml_str(&yaml, Path::new("/x"), listen(), None).unwrap();
-    config.routing.ensure_valid_registry_graph(config.features.registry.enabled).unwrap();
+    config
+        .routing
+        .ensure_valid_registry_graph(config.features.registry.enabled)
+        .unwrap();
     for ecosystem in Ecosystem::all() {
         let key = format!("{ecosystem}/internal");
         let router = format!("{ecosystem}/main");
-        assert_eq!(config.routing.registries.default_for(ecosystem), Some(router.as_str()));
-        assert_eq!(config.routing.registries.sources("main", ecosystem), [key.as_str()]);
+        assert_eq!(
+            config
+                .routing
+                .registries
+                .default_for(ecosystem),
+            Some(router.as_str())
+        );
+        assert_eq!(
+            config
+                .routing
+                .registries
+                .sources("main", ecosystem),
+            [key.as_str()]
+        );
         assert_eq!(config.routing.hosted[&key].org, format!("{ecosystem}~internal"));
         for resolution in [
-            config.routing.registries.resolve("internal", ecosystem, "demo"),
-            config.routing.registries.resolve("main", ecosystem, "demo"),
-            config.routing.registries.resolve_default(ecosystem, "demo"),
+            config
+                .routing
+                .registries
+                .resolve("internal", ecosystem, "demo"),
+            config
+                .routing
+                .registries
+                .resolve("main", ecosystem, "demo"),
+            config
+                .routing
+                .registries
+                .resolve_default(ecosystem, "demo"),
         ] {
             assert_eq!(
                 resolution,
@@ -237,5 +261,11 @@ fn ecosystem_groups_scope_names_sources_defaults_and_hosted_storage() {
             );
         }
     }
-    assert_eq!(config.routing.registries.addressed("cargo/internal", Ecosystem::Npm), None);
+    assert_eq!(
+        config
+            .routing
+            .registries
+            .addressed("cargo/internal", Ecosystem::Npm),
+        None
+    );
 }

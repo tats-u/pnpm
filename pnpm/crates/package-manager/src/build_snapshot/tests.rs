@@ -7,13 +7,16 @@ use ssri::Integrity;
 use std::collections::HashMap;
 
 fn integrity(text: &str) -> Integrity {
-    text.parse().expect("parse integrity string")
+    text.parse()
+        .expect("parse integrity string")
 }
 
 fn make_package(name: &str, version: &str) -> PackageVersion {
     PackageVersion {
         name: name.to_string(),
-        version: version.parse::<Version>().expect("parse semver"),
+        version: version
+            .parse::<Version>()
+            .expect("parse semver"),
         dist: PackageDistribution {
             integrity: Some(integrity(
                 "sha512-TIE61hcgbI/SlJh/0c1sT1SZbBlpg7WiZcs65WPJhoIZQPhH1SCpcGA7LgrVXT15lwN3HV4GQM/MJ9aKEn3Qfg==",
@@ -76,7 +79,10 @@ fn builds_snapshot_with_resolved_dependencies() {
 
     let built = build_package_snapshot(&pkg, &resolved).unwrap();
 
-    let deps = built.snapshot.dependencies.expect("dependencies should be populated");
+    let deps = built
+        .snapshot
+        .dependencies
+        .expect("dependencies should be populated");
     assert_eq!(deps.len(), 1);
     let react_key = PkgName::parse("react").unwrap();
     assert_eq!(
@@ -107,7 +113,9 @@ fn returns_error_when_revision_is_invalid() {
         .expect_err("should fail with an invalid revision");
     assert!(matches!(err, BuildSnapshotError::InvalidRevision(_)));
     assert_eq!(
-        miette::Diagnostic::code(&err).map(|code| code.to_string()).as_deref(),
+        miette::Diagnostic::code(&err)
+            .map(|code| code.to_string())
+            .as_deref(),
         Some("ERR_PNPM_MALFORMED_METADATA"),
     );
 }

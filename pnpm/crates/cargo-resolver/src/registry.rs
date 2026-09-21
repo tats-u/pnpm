@@ -93,10 +93,9 @@ impl Registry {
     }
 
     pub(crate) fn package(&self, name: &str) -> Result<&[RegistryVersion]> {
-        self.versions(name)
-            .ok_or_else(|| {
-                miette::miette!("sparse index metadata for crate {name} was not fetched")
-            })
+        self.versions(name).ok_or_else(|| {
+            miette::miette!("sparse index metadata for crate {name} was not fetched")
+        })
     }
 }
 
@@ -130,20 +129,31 @@ fn parse_index_file(name: &str, contents: &str) -> Result<Vec<RegistryVersion>> 
 }
 
 fn registry_version_from_index(package: IndexPackage<'_>) -> Result<Option<RegistryVersion>> {
-    if package.v.is_some_and(|version| version > 3) {
+    if package
+        .v
+        .is_some_and(|version| version > 3)
+    {
         return Ok(None);
     }
-    let dependencies = package.deps
+    let dependencies = package
+        .deps
         .into_iter()
         .map(registry_dependency_from_index)
         .collect::<Result<Vec<_>>>()?;
     let mut features: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for (name, values) in package.features.into_iter().chain(package.features2.unwrap_or_default())
+    for (name, values) in package
+        .features
+        .into_iter()
+        .chain(package.features2.unwrap_or_default())
     {
         features
             .entry(name.into_owned())
             .or_default()
-            .extend(values.into_iter().map(std::borrow::Cow::into_owned));
+            .extend(
+                values
+                    .into_iter()
+                    .map(std::borrow::Cow::into_owned),
+            );
     }
     Ok(Some(RegistryVersion {
         version: package.vers,
@@ -156,7 +166,9 @@ fn registry_version_from_index(package: IndexPackage<'_>) -> Result<Option<Regis
 
 fn registry_dependency_from_index(dependency: IndexDependency<'_>) -> Result<RegistryDependency> {
     let alias = dependency.name.into_owned();
-    let name = dependency.package.map_or_else(|| alias.clone(), std::borrow::Cow::into_owned);
+    let name = dependency
+        .package
+        .map_or_else(|| alias.clone(), std::borrow::Cow::into_owned);
     let requirement = VersionReq::parse(&dependency.req)
         .into_diagnostic()
         .wrap_err_with(|| format!("parse requirement for {name}"))?;
@@ -165,10 +177,13 @@ fn registry_dependency_from_index(dependency: IndexDependency<'_>) -> Result<Reg
         name,
         requirement,
         kind: DependencyKind::from_raw(dependency.kind.as_deref()),
-        registry: dependency.registry.map(std::borrow::Cow::into_owned),
+        registry: dependency
+            .registry
+            .map(std::borrow::Cow::into_owned),
         optional: dependency.optional,
         default_features: dependency.default_features,
-        features: dependency.features
+        features: dependency
+            .features
             .into_iter()
             .map(std::borrow::Cow::into_owned)
             .collect(),

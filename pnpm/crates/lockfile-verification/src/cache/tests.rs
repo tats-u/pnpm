@@ -375,8 +375,20 @@ fn record_verification_merges_policies() {
 
     let line = fs::read_to_string(dir.path().join(CACHE_FILE_NAME)).expect("read cache");
     let record: CacheRecord = serde_json::from_str(line.trim_end()).expect("parse cache record");
-    assert_eq!(record.policy.get("minimumReleaseAge").and_then(JsonValue::as_u64), Some(120));
-    assert_eq!(record.policy.get("trustPolicy").and_then(JsonValue::as_str), Some("no-downgrade"));
+    assert_eq!(
+        record
+            .policy
+            .get("minimumReleaseAge")
+            .and_then(JsonValue::as_u64),
+        Some(120)
+    );
+    assert_eq!(
+        record
+            .policy
+            .get("trustPolicy")
+            .and_then(JsonValue::as_str),
+        Some("no-downgrade")
+    );
 }
 
 #[test]

@@ -81,7 +81,11 @@ fn discovers_transitive_sparse_index_files() {
     assert_eq!(missing_index_names(METADATA, &files, CRATES_IO_SOURCE).unwrap(), ["bar"]);
 
     files.insert("bar".to_string(), BAR_INDEX.to_string());
-    assert!(missing_index_names(METADATA, &files, CRATES_IO_SOURCE).unwrap().is_empty());
+    assert!(
+        missing_index_names(METADATA, &files, CRATES_IO_SOURCE)
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[test]
@@ -109,8 +113,9 @@ fn validates_registry_metadata_before_deduplicating_dependencies() {
         1,
     );
 
-    let error =
-        missing_index_names(&metadata, &BTreeMap::new(), CRATES_IO_SOURCE).unwrap_err().to_string();
+    let error = missing_index_names(&metadata, &BTreeMap::new(), CRATES_IO_SOURCE)
+        .unwrap_err()
+        .to_string();
 
     assert!(error.contains("cannot be resolved from"), "{error}");
 }
@@ -135,22 +140,15 @@ fn resolves_newest_non_yanked_versions_into_a_cargo_lockfile() {
 
     assert_eq!(lockfile.version, cargo_lock::ResolveVersion::V4);
     assert_eq!(lockfile.packages.len(), 3);
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(1, 1, 0)
+    }),);
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "bar" && package.version == semver::Version::new(2, 0, 0)
+    }),);
     assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(1, 1, 0)
-            }),
-    );
-    assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "bar" && package.version == semver::Version::new(2, 0, 0)
-            }),
-    );
-    assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .iter()
             .any(|package| package.name.as_str() == "app" && package.source.is_none()),
     );
@@ -202,7 +200,11 @@ fn locks_a_dependency_naming_the_configured_registry_against_it() {
 #[test]
 fn resolves_the_feature_unified_lock_graph() {
     let files = BTreeMap::from([("foo".to_string(), OPTIONAL_FOO_INDEX.to_string())]);
-    assert!(missing_index_names(METADATA, &files, CRATES_IO_SOURCE).unwrap().is_empty());
+    assert!(
+        missing_index_names(METADATA, &files, CRATES_IO_SOURCE)
+            .unwrap()
+            .is_empty()
+    );
     assert_eq!(
         missing_index_names(WORKSPACE_OPTIONAL_METADATA, &BTreeMap::new(), CRATES_IO_SOURCE)
             .unwrap(),
@@ -273,7 +275,8 @@ fn propagates_features_from_the_selected_older_candidate() {
 
     assert_eq!(lockfile.packages.len(), 4);
     assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .iter()
             .any(|package| package.name.as_str() == "baz"),
     );
@@ -316,15 +319,12 @@ fn ignores_features_from_an_unselected_newer_candidate() {
     let lockfile =
         Lockfile::from_str(&resolve_lockfile(metadata, &files, CRATES_IO_SOURCE).unwrap()).unwrap();
 
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
+    }),);
     assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
-            }),
-    );
-    assert!(
-        !lockfile.packages
+        !lockfile
+            .packages
             .iter()
             .any(|package| package.name.as_str() == "baz"),
     );
@@ -350,7 +350,8 @@ fn propagates_dependency_features_without_default_features() {
             .unwrap();
 
     assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .iter()
             .any(|package| package.name.as_str() == "baz"),
     );
@@ -372,15 +373,12 @@ fn backtracks_when_a_candidate_feature_conflicts_with_that_candidate() {
     let lockfile =
         Lockfile::from_str(&resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap()).unwrap();
 
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
+    }),);
     assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
-            }),
-    );
-    assert!(
-        !lockfile.packages
+        !lockfile
+            .packages
             .iter()
             .any(|package| package.name.as_str() == "qux"),
     );
@@ -393,7 +391,11 @@ fn dep_activation_suppresses_the_implicit_optional_feature() {
     let foo_index = r#"{"name":"foo","vers":"1.0.0","deps":[{"name":"codec","req":"^1","features":[],"optional":true,"default_features":true,"target":null,"kind":"normal","registry":null}],"cksum":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","features":{"full":["dep:codec"]},"yanked":false}"#;
     let files = BTreeMap::from([("foo".to_string(), foo_index.to_string())]);
 
-    assert!(missing_index_names(&metadata, &files, CRATES_IO_SOURCE).unwrap().is_empty());
+    assert!(
+        missing_index_names(&metadata, &files, CRATES_IO_SOURCE)
+            .unwrap()
+            .is_empty()
+    );
     assert!(resolve_lockfile(&metadata, &files, CRATES_IO_SOURCE).is_err());
 }
 
@@ -409,13 +411,9 @@ fn selects_an_older_candidate_that_provides_a_requested_feature() {
         Lockfile::from_str(&resolve_lockfile(&metadata, &files, CRATES_IO_SOURCE).unwrap())
             .unwrap();
 
-    assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
-            }),
-    );
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
+    }),);
 }
 
 #[test]
@@ -480,7 +478,8 @@ fn resolve_inputs_keeps_the_features_a_dependency_requests() {
         Lockfile::from_str(&resolve_lockfile(&reduced, &index_files, CRATES_IO_SOURCE).unwrap())
             .unwrap();
     assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .iter()
             .any(|package| package.name.as_str() == "bar"),
         "the feature that activates bar survived the reduction: {lockfile:?}",
@@ -555,20 +554,12 @@ fn resolves_past_a_prerelease_candidate_whose_dependency_is_yanked() {
         Lockfile::from_str(&resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap()).unwrap();
 
     dbg!(&lockfile.packages);
-    assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(1, 1, 0)
-            }),
-    );
-    assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "bar" && package.version == semver::Version::new(2, 0, 0)
-            }),
-    );
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(1, 1, 0)
+    }),);
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "bar" && package.version == semver::Version::new(2, 0, 0)
+    }),);
 }
 
 #[test]
@@ -584,13 +575,9 @@ fn backtracks_to_a_candidate_whose_dependency_is_not_yanked() {
         Lockfile::from_str(&resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap()).unwrap();
 
     dbg!(&lockfile.packages);
-    assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
-            }),
-    );
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
+    }),);
 }
 
 #[test]
@@ -620,15 +607,12 @@ fn backtracks_when_a_unified_feature_activates_a_yanked_dependency() {
             .unwrap();
 
     dbg!(&lockfile.packages);
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
+    }),);
     assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
-            }),
-    );
-    assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .iter()
             .any(|package| package.name.as_str() == "baz"),
     );
@@ -639,7 +623,9 @@ fn reports_a_requirement_the_index_cannot_meet() {
     let foo_index = r#"{"name":"foo","vers":"1.0.0","deps":[],"cksum":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","features":{},"yanked":true}"#;
     let files = BTreeMap::from([("foo".to_string(), foo_index.to_string())]);
 
-    let error = resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap_err().to_string();
+    let error = resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE)
+        .unwrap_err()
+        .to_string();
 
     assert!(error.contains("foo ^1.0 (no version available)"), "{error}");
 }
@@ -652,7 +638,9 @@ fn reports_a_transitive_requirement_the_index_cannot_meet() {
         ("foo".to_string(), foo_index.to_string()),
     ]);
 
-    let error = resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap_err().to_string();
+    let error = resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE)
+        .unwrap_err()
+        .to_string();
 
     assert!(error.contains("foo@1 1.0.0 depends on bar ^3 (no version available)"), "{error}");
 }
@@ -720,7 +708,8 @@ fn discovers_a_crate_only_unified_features_activate() {
         Lockfile::from_str(&resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap()).unwrap();
     dbg!(&lockfile.packages);
     assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .iter()
             .any(|package| package.name.as_str() == "d"),
     );
@@ -752,20 +741,12 @@ fn backtracks_to_an_older_compatibility_line() {
             .unwrap();
 
     dbg!(&lockfile.packages);
-    assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
-            }),
-    );
-    assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "bar" && package.version == semver::Version::new(2, 0, 0)
-            }),
-    );
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(1, 0, 0)
+    }),);
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "bar" && package.version == semver::Version::new(2, 0, 0)
+    }),);
 }
 
 #[test]
@@ -781,13 +762,9 @@ fn prefers_the_newest_compatibility_line_that_resolves() {
             .unwrap();
 
     dbg!(&lockfile.packages);
-    assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(2, 0, 0)
-            }),
-    );
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(2, 0, 0)
+    }),);
 }
 
 /// Both lines of `foo` carry an `extra` feature, so only the selection each
@@ -835,11 +812,13 @@ fn keeps_requested_features_on_the_line_that_asked_for_them() {
 
     dbg!(&lockfile.packages);
     let dependencies = |version: semver::Version| {
-        lockfile.packages
+        lockfile
+            .packages
             .iter()
             .find(|package| package.name.as_str() == "foo" && package.version == version)
             .map(|package| {
-                package.dependencies
+                package
+                    .dependencies
                     .iter()
                     .map(|dependency| dependency.name.to_string())
                     .collect::<Vec<_>>()
@@ -889,7 +868,8 @@ fn keeps_two_compatibility_lines_of_one_crate_apart() {
         Lockfile::from_str(&resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap()).unwrap();
 
     dbg!(&lockfile.packages);
-    let selected = lockfile.packages
+    let selected = lockfile
+        .packages
         .iter()
         .filter(|package| package.name.as_str() == "rand")
         .map(|package| package.version.to_string())
@@ -926,15 +906,12 @@ fn selects_the_older_line_when_the_newer_lacks_a_requested_feature() {
         Lockfile::from_str(&resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap()).unwrap();
 
     dbg!(&lockfile.packages);
+    assert!(lockfile.packages.iter().any(|package| {
+        package.name.as_str() == "foo" && package.version == semver::Version::new(0, 9, 0)
+    }),);
     assert!(
-        lockfile.packages
-            .iter()
-            .any(|package| {
-                package.name.as_str() == "foo" && package.version == semver::Version::new(0, 9, 0)
-            }),
-    );
-    assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .iter()
             .any(|package| package.name.as_str() == "baz"),
     );
@@ -982,7 +959,8 @@ fn lets_requirements_asking_for_different_features_take_different_lines() {
         Lockfile::from_str(&resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap()).unwrap();
 
     dbg!(&lockfile.packages);
-    let selected = lockfile.packages
+    let selected = lockfile
+        .packages
         .iter()
         .filter(|package| package.name.as_str() == "foo")
         .map(|package| package.version.to_string())
