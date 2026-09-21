@@ -90,6 +90,42 @@ test.skip('legacy deploy creates only necessary directories when the root manife
   expect(loadJsonFileSync('services/foo/pnpm.out/package.json')).toStrictEqual(loadJsonFileSync('services/foo/package.json'))
 })
 
+// Covers https://github.com/pnpm/pnpm/issues/6437
+test('legacy deploy leaves out the dependencies of the workspace root project', async () => {
+  preparePackages([
+    {
+      location: '.',
+      package: {
+        name: 'root',
+        version: '0.0.0',
+        private: true,
+        dependencies: { '@pnpm.e2e/bar': '100.0.0' },
+      },
+    },
+    {
+      location: 'packages/app',
+      package: {
+        name: 'app',
+        version: '1.0.0',
+        dependencies: { '@pnpm.e2e/foo': '100.0.0' },
+      },
+    },
+  ])
+
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    packages: ['packages/*'],
+    forceLegacyDeploy: true,
+  })
+
+  await execPnpm(['install'])
+  await execPnpm(['--filter=app', 'deploy', '--prod', 'deploy-dir'])
+
+  expect(fs.existsSync('deploy-dir/node_modules/@pnpm.e2e/foo')).toBe(true)
+  expect(fs.existsSync('deploy-dir/node_modules/@pnpm.e2e/bar')).toBe(false)
+  expect(fs.readdirSync('deploy-dir/node_modules/.pnpm').filter(entry => entry.startsWith('@pnpm.e2e+bar@'))).toStrictEqual([])
+  expect(fs.existsSync('node_modules/@pnpm.e2e/bar')).toBe(true)
+})
+
 test('deploy with a shared lockfile honors --no-optional in the graph and virtual store', async () => {
   preparePackages([
     { location: '.', package: { name: 'root', version: '0.0.0', private: true } },
@@ -266,3 +302,46 @@ test('deploy with a shared lockfile succeeds when pacquet is declared in configD
 
   expect(fs.existsSync(path.join(deployDir, 'node_modules/is-positive/package.json'))).toBe(true)
 }, PUBLIC_REGISTRY_TIMEOUT)
+
+test('deployed peer dependencies can install with a fresh lockfile', async () => {
+  const dependencies = {
+    '@pnpm.e2e/abc': '1.0.0',
+    alias: 'npm:@pnpm.e2e/abc@1.0.0',
+    '@pnpm.e2e/peer-a': '1.0.0',
+    '@pnpm.e2e/peer-b': '1.0.0',
+    '@pnpm.e2e/peer-c': '1.0.0',
+  }
+  preparePackages([
+    { location: '.', package: { name: 'root', private: true } },
+    { location: 'app', package: { name: 'app', version: '1.0.0', dependencies } },
+  ])
+  writeYamlFileSync('pnpm-workspace.yaml', { packages: ['app'], injectWorkspacePackages: true })
+  await execPnpm(['install'])
+
+  const workspaceDir = process.cwd()
+  const deployDir = path.join(tempDir(false), 'deploy')
+  await execPnpm(['--filter=app', 'deploy', deployDir])
+  const manifestPath = path.join(deployDir, 'package.json')
+  const manifest = loadJsonFileSync<{ dependencies: typeof dependencies }>(manifestPath)
+  expect(manifest.dependencies).toStrictEqual(dependencies)
+  const lockfilePath = path.join(deployDir, 'pnpm-lock.yaml')
+  const deployedLockfile = readYamlFileSync<LockfileFile>(lockfilePath)
+  expect(deployedLockfile.importers!['.'].dependencies!['@pnpm.e2e/abc'].version).toContain('(')
+
+  fs.rmSync(lockfilePath)
+  fs.rmSync(path.join(deployDir, 'node_modules'), { recursive: true })
+  process.chdir(deployDir)
+  try {
+    await execPnpm(['install', '--no-frozen-lockfile'])
+  } finally {
+    process.chdir(workspaceDir)
+  }
+  expect(loadJsonFileSync(manifestPath)).toStrictEqual(manifest)
+  const freshLockfile = readYamlFileSync<LockfileFile>(lockfilePath)
+  expect(freshLockfile.importers!['.'].dependencies!['@pnpm.e2e/abc'].version).toContain('(')
+  for (const name of ['@pnpm.e2e/abc', 'alias']) {
+    expect(loadJsonFileSync(path.join(deployDir, 'node_modules', name, 'package.json'))).toMatchObject({
+      name: '@pnpm.e2e/abc', version: '1.0.0',
+    })
+  }
+})

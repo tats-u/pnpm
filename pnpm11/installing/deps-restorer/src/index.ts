@@ -52,7 +52,7 @@ import {
   writeCurrentLockfile,
   writeLockfiles,
 } from '@pnpm/lockfile.fs'
-import { PACKAGE_MAP_FILENAME, writePackageMap, writePackageMapFromDependenciesGraph, writePnpFile } from '@pnpm/lockfile.to-pnp'
+import { PACKAGE_MAP_FILENAME, removePackageMap, writePackageMap, writePackageMapFromDependenciesGraph, writePnpFile } from '@pnpm/lockfile.to-pnp'
 import {
   nameVerFromPkgSnapshot,
 } from '@pnpm/lockfile.utils'
@@ -94,6 +94,7 @@ import { realpathMissing } from 'realpath-missing'
 import { extendProjectsWithTargetDirs } from './extendProjectsWithTargetDirs.js'
 import { linkHoistedModules } from './linkHoistedModules.js'
 import { lockfileToHoistedDepGraph } from './lockfileToHoistedDepGraph.js'
+import { reportDirectDependencyChanges } from './reportDirectDependencyChanges.js'
 export { extendProjectsWithTargetDirs } from './extendProjectsWithTargetDirs.js'
 
 export type { HoistingLimits }
@@ -123,6 +124,15 @@ export interface HeadlessOptions extends RegistryContext {
   dedupeDirectDeps?: boolean
   enablePnp?: boolean
   engineStrict: boolean
+  /** See {@link LockfileToDepGraphOptions.omitResolvedProgress}. */
+  omitResolvedProgress?: boolean
+  /**
+   * Skip the `pnpm:summary` log this install would emit. The default reporter
+   * renders the first summary event it sees, so a caller that runs several
+   * installs and emits one consolidated summary of its own has to keep each
+   * of them quiet. `pnpm add -g` and `pnpm update -g` do exactly that.
+   */
+  omitSummaryLog?: boolean
   excludeLinksFromLockfile?: boolean
   extraBinPaths?: string[]
   extraEnv?: Record<string, string>
@@ -380,6 +390,7 @@ export async function headlessInstall (opts: HeadlessOptions): Promise<Installat
     nodeVersion: opts.currentEngine.nodeVersion,
     pnpmVersion: opts.currentEngine.pnpmVersion,
     supportedArchitectures: opts.supportedArchitectures,
+    omitResolvedProgress: opts.omitResolvedProgress,
     includeUnchangedDeps: (!equals(opts.currentHoistPattern ?? [], opts.hoistPattern ?? [])) ||
       (!equals(opts.currentPublicHoistPattern ?? [], opts.publicHoistPattern ?? [])) ||
       (opts.enableGlobalVirtualStore === true && !equals(opts.modulesFile?.allowBuilds ?? {}, opts.allowBuilds ?? {})) ||
@@ -474,6 +485,13 @@ export async function headlessInstall (opts: HeadlessOptions): Promise<Installat
         registriesByScope: opts.registriesByScope,
         symlink: opts.symlink,
       })
+      reportDirectDependencyChanges({
+        currentLockfile,
+        wantedLockfile: filteredLockfile,
+        projects: selectedProjects,
+        previouslySkipped: new Set(opts.modulesFile?.skipped as DepPath[] | undefined),
+        skipped,
+      })
     }
   } else if (opts.enableModulesDir !== false || opts.enableGlobalVirtualStore) {
     if (!skipGvsInternalLinking) {
@@ -484,7 +502,8 @@ export async function headlessInstall (opts: HeadlessOptions): Promise<Installat
         opts.symlink === false || opts.enableModulesDir === false
           ? Promise.resolve()
           : linkAllModules(depNodes, {
-            currentLockfile: opts.relinkChangedDependenciesOnly ? currentLockfile : undefined,
+            currentLockfile,
+            relinkChangedDependenciesOnly: opts.relinkChangedDependenciesOnly && !opts.force,
             optional: opts.include.optionalDependencies,
             wantedLockfile: filteredLockfile,
           }),
@@ -586,7 +605,8 @@ export async function headlessInstall (opts: HeadlessOptions): Promise<Installat
     }
   }
 
-  const shouldWritePackageMap = opts.enableModulesDir !== false && opts.nodeLinker !== 'pnp' && !opts.virtualStoreOnly
+  // See the matching gate in `deps-installer`.
+  const shouldWritePackageMap = opts.nodeExperimentalPackageMap === true && opts.enableModulesDir !== false && opts.nodeLinker !== 'pnp' && !opts.virtualStoreOnly
   if (shouldWritePackageMap) {
     // Omit the importer self-mapping when a project has no name: the map keys
     // dependencies by package name, so falling back to the importer id (`.` or
@@ -618,6 +638,8 @@ export async function headlessInstall (opts: HeadlessOptions): Promise<Installat
         virtualStoreDirMaxLength: opts.virtualStoreDirMaxLength,
       })
     }
+  } else if (opts.enableModulesDir !== false && !opts.virtualStoreOnly) {
+    await removePackageMap(rootModulesDir)
   }
 
   // Reconcile in every mode, not only when scripts are ignored: an entry
@@ -818,7 +840,9 @@ export async function headlessInstall (opts: HeadlessOptions): Promise<Installat
     } catch {}
   }))
 
-  summaryLogger.debug({ prefix: lockfileDir })
+  if (!opts.omitSummaryLog) {
+    summaryLogger.debug({ prefix: lockfileDir })
+  }
 
   if (!opts.ignoreScripts && !opts.ignorePackageManifest && !skipPostImportLinking) {
     if (opts.nodeExperimentalPackageMap && shouldWritePackageMap) {
@@ -1239,6 +1263,7 @@ async function linkAllModules (
   depNodes: ModulesLinkNode[],
   opts: {
     currentLockfile?: LockfileObject | null
+    relinkChangedDependenciesOnly?: boolean
     optional: boolean
     wantedLockfile: LockfileObject
   }
@@ -1264,6 +1289,7 @@ async function getChangedChildren (
   depNode: ModulesLinkNode,
   opts: {
     currentLockfile?: LockfileObject | null
+    relinkChangedDependenciesOnly?: boolean
     wantedLockfile: LockfileObject
   }
 ): Promise<{
@@ -1278,7 +1304,7 @@ async function getChangedChildren (
   }
   const currentDependencies = Object.assign(Object.create(null), currentSnapshot.dependencies, currentSnapshot.optionalDependencies) as Record<string, string>
   const wantedDependencies = Object.assign(Object.create(null), wantedSnapshot.dependencies, wantedSnapshot.optionalDependencies) as Record<string, string>
-  const changedChildren = Object.fromEntries(
+  const changedChildren = opts.relinkChangedDependenciesOnly ? Object.fromEntries(
     (await Promise.all(Object.entries(depNode.children).map(async ([alias, childDir]) => {
       if (
         currentDependencies[alias] !== wantedDependencies[alias] ||
@@ -1289,11 +1315,11 @@ async function getChangedChildren (
       }
       return null
     }))).filter((entry): entry is readonly [string, string] => entry != null)
-  )
+  ) : depNode.children
   return {
     children: changedChildren,
     depNode,
-    removedAliases: Object.keys(currentDependencies).filter((alias) => !Object.hasOwn(wantedDependencies, alias)),
+    removedAliases: Object.keys(currentDependencies).filter((alias) => alias !== depNode.name && !Object.hasOwn(wantedDependencies, alias)),
   }
 }
 

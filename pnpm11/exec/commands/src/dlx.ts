@@ -28,7 +28,7 @@ import { renderHelp } from 'render-help'
 import { symlinkDir } from 'symlink-dir'
 
 import { makeEnv } from './makeEnv.js'
-import { trackedExeca } from './trackedExeca.js'
+import { trackedExeca, waitForTracked } from './trackedExeca.js'
 
 export const skipPackageManagerCheck = true
 
@@ -167,8 +167,8 @@ export async function handler (
     allowBuild: opts.allowBuild,
     supportedArchitectures: opts.supportedArchitectures,
   })
+  const allowBuilds = Object.fromEntries([...resolvedPkgAliases, ...(opts.allowBuild ?? [])].map(pkg => [pkg, true]))
   if (!cacheExists) {
-    const allowBuilds = Object.fromEntries([...resolvedPkgAliases, ...(opts.allowBuild ?? [])].map(pkg => [pkg, true]))
     try {
       fs.mkdirSync(cachedDir, { recursive: true })
       await add.handler({
@@ -179,6 +179,7 @@ export async function handler (
         // Without this, `pnpm dlx <pkg>` cannot launch packages whose bin
         // depends on a postinstall step (e.g. native modules).
         strictDepBuilds: false,
+        useLockfile: true,
         enableGlobalVirtualStore,
         bin: path.join(cachedDir, 'node_modules/.bin'),
         dir: cachedDir,
@@ -234,6 +235,8 @@ export async function handler (
         throw err
       }
     }
+  } else {
+    await promptApproveDlxBuilds({ cachedDir, allowBuilds, inheritedOpts: opts }, commands)
   }
   const binsDir = path.join(cachedDir, 'node_modules/.bin')
   const env = makeEnv({
@@ -255,7 +258,7 @@ export async function handler (
       stdio: 'inherit',
       shell: opts.shellMode ?? false,
     })
-    await child
+    await waitForTracked(child)
   } catch (err: unknown) {
     if (util.types.isNativeError(err) && 'exitCode' in err && err.exitCode != null) {
       return {
@@ -454,7 +457,8 @@ function getValidCacheDir (cacheLink: string, dlxCacheMaxAge: number): string | 
     }
     throw err
   }
-  const isValid = stats.mtime.getTime() + dlxCacheMaxAge * 60_000 >= new Date().getTime()
+  const isValid = fs.existsSync(path.join(target, 'pnpm-lock.yaml')) &&
+    stats.mtime.getTime() + dlxCacheMaxAge * 60_000 >= new Date().getTime()
   return isValid ? target : undefined
 }
 

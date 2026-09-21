@@ -28,6 +28,7 @@ jobs:
       pull-requests: read
     outputs:
       ts: ${{ steps.force.outputs.ts || steps.filter.outputs.ts }}
+      changesets: ${{ steps.filter.outputs.changesets }}
     steps:
       # In the merge queue the full suite must run: `TS CI / Compile & Lint`
       # is itself a required check, and a skipped job never reports its
@@ -64,13 +65,20 @@ jobs:
               - '.github/workflows/test.yml'
               - '.github/workflows/build-pnpr.yml'
               - '.github/scripts/**'
+            # A pending change intent is validated by `pn lint`, which runs in
+            # Compile & Lint. Nothing under .changeset/ can affect a test, so
+            # it gates that job alone.
+            changesets:
+              - '.changeset/**'
 
   compile-and-lint:
     needs: changes
-    # Run only when TypeScript-relevant files changed. Every PR (same-repo or
-    # fork) is covered by its pull_request run, and push only fires on main, so
-    # there are no duplicate build jobs to guard against here.
-    if: ${{ !cancelled() && needs.changes.outputs.ts == 'true' }}
+    # Run when TypeScript-relevant files changed, or when the PR only touches
+    # .changeset/ — `pn lint` validates the pending change intents and their
+    # spelling, and a changeset-only PR skips every other job below. Every PR
+    # (same-repo or fork) is covered by its pull_request run, and push only
+    # fires on main, so there are no duplicate build jobs to guard against here.
+    if: ${{ !cancelled() && (needs.changes.outputs.ts == 'true' || needs.changes.outputs.changesets == 'true') }}
 
     name: TS CI / Compile & Lint
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -80,16 +88,20 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
+    - name: Initialize Rust before dependency installation
+      uses: $/.github/actions/rustup
+      with:
+        restore-cache: false
     - name: Install pnpm
-      uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+      uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      with:
+        install: false
     - name: Test release publication scripts
       run: |
         .github/scripts/npm-package-publication-state.test.sh
         .github/scripts/npm-staged-publication.test.sh
-    - name: Compile TypeScript
-      run: pn compile-only
-    - name: Lint
-      run: pn lint
+    - name: Compile and lint TypeScript
+      run: pn pipeline ts-check --include-workspace-root --full --no-cache
     - name: Package compiled artifacts
       shell: bash
       run: |
@@ -112,7 +124,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.ts == 'true' }}
     name: TS CI / Build pnpr
-    uses: ./.github/workflows/build-pnpr.yml
+    uses: $/.github/workflows/build-pnpr.yml
     with:
       os: blacksmith-8vcpu-ubuntu-2404
 
@@ -120,7 +132,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.ts == 'true' }}
     name: TS CI / Build pnpr
-    uses: ./.github/workflows/build-pnpr.yml
+    uses: $/.github/workflows/build-pnpr.yml
     with:
       os: blacksmith-8vcpu-windows-2025
 
@@ -144,13 +156,13 @@ jobs:
             test_chunk: '1'
             test_chunk_total: '1'
             garnet: true
-          - node: '26.8.1'
+          - node: '26.9.0'
             node_major: '26'
             platform: blacksmith-8vcpu-ubuntu-2404
             platform_label: ubuntu
             test_chunk: '1'
             test_chunk_total: '1'
-    uses: ./.github/workflows/test.yml
+    uses: $/.github/workflows/test.yml
     with:
       node: ${{ matrix.node }}
       node_major: ${{ matrix.node_major }}
@@ -186,7 +198,7 @@ jobs:
             platform_label: windows 3/3
             test_chunk: '3'
             test_chunk_total: '3'
-    uses: ./.github/workflows/test.yml
+    uses: $/.github/workflows/test.yml
     with:
       node: ${{ matrix.node }}
       node_major: ${{ matrix.node_major }}

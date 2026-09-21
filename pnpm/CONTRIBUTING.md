@@ -2,21 +2,15 @@
 
 See also [`CODE_STYLE_GUIDE.md`](./CODE_STYLE_GUIDE.md) for the code style guide.
 
-## Scope and Roadmap
+## Scope and Version Policy
 
-pacquet's scope is defined by the roadmap in [#299](https://github.com/pnpm/pacquet/issues/299). The current focus is **Stage 1 — Headless installer**: making `pacquet install --frozen-lockfile` feature-complete with `pnpm install --frozen-lockfile`.
+pacquet is pnpm v12 and the target for new feature development. New commands, settings, and other user-visible features are implemented here and are not backported to the TypeScript pnpm v11 CLI under `../pnpm11/`.
 
-Stage 1 focuses on `pacquet install` and the settings and behavior needed to match `pnpm install --frozen-lockfile`. Other top-level commands exist in the CLI today, but they are not part of Stage 1 and are not receiving feature work, and new top-level commands are out of scope. pacquet is intended to be executed by the pnpm CLI under the hood, so configuration arrives through pnpm settings (such as `.npmrc` and `pnpm-workspace.yaml`) rather than through new command-line flags.
+For bug fixes, determine which supported versions contain the bug. A bug present in both v11 and v12 must be fixed and tested in both implementations. A bug present in only one version is fixed only in that version. See [`AGENTS.md`](./AGENTS.md) for the full version policy.
 
-Before opening a pull request that adds a new setting or user-visible feature, **confirm the feature is listed under Stage 1 of the roadmap**. Work that does not appear under Stage 1 will not be reviewed or merged at this time, regardless of implementation quality. Stage 2 and later items are deferred until Stage 1 is complete.
+Opening an issue first is optional for a clearly scoped change. Open one when the intended user-visible behavior or design is not obvious, or when coordination is needed for work already in progress.
 
-Opening an issue first is optional when the change is in Stage 1 *and* the implementation exactly mirrors how the pnpm CLI works: same behavior, same defaults, same error codes, same file formats. See [`AGENTS.md`](./AGENTS.md) for the parity rule. Open an issue first when the right approach is not obvious from upstream code, or to coordinate on in-flight work.
-
-Deviating from pnpm's behavior is not an option in pacquet. If you believe pnpm itself should change, raise it in the [pnpm repository](https://github.com/pnpm/pnpm) first. Once the change has landed in pnpm and shipped, the corresponding port can be made here.
-
-Bug fixes, performance improvements, tests, and documentation for behavior that already exists do not need a roadmap entry and may be sent directly as pull requests.
-
-Pull requests for new top-level commands, or for features outside the current Stage 1 scope, will be closed with a pointer to the roadmap.
+Bug fixes, performance improvements, tests, and documentation may be sent directly as pull requests. New features must follow the repository's normal design, documentation, testing, and changeset requirements.
 
 ## Commit Message Convention
 
@@ -44,7 +38,7 @@ Write documentation, comments, and other prose for ease of understanding first. 
 
 ## Code Style
 
-See [`CODE_STYLE_GUIDE.md`](./CODE_STYLE_GUIDE.md). Formatting and lint-level rules are enforced by `cargo fmt`, `taplo format`, and `cargo clippy`; the style guide covers everything those tools cannot enforce.
+See [`CODE_STYLE_GUIDE.md`](./CODE_STYLE_GUIDE.md). Formatting and lint-level rules are enforced by the [pinned rustfmt fork](../CONTRIBUTING.md#rust-formatting), `taplo format`, and `cargo clippy`; the style guide covers everything those tools cannot enforce.
 
 ## Dylint / perfectionist
 
@@ -82,7 +76,7 @@ Install the project's task tools and the git pre-push hook:
 just init
 ```
 
-`just init` invokes `cargo-binstall` to install `cargo-nextest`, `cargo-watch`, `cargo-insta`, `typos-cli`, `taplo-cli`, `wasm-pack`, and `cargo-llvm-cov`, then installs `cargo-fixit@0.1.15` from source with `cargo install ... --locked` (it has no prebuilt binaries). `cargo-fixit` backs the `just fix` task. The repo-wide `pnpm install` wires up husky, whose `pre-push` hook runs `pnpm/scripts/pre-push-rust.sh` (format, doc, dylint, typos) alongside the TypeScript compile and lint checks.
+`just init` invokes `cargo-binstall` to install `cargo-nextest`, `cargo-watch`, `cargo-insta`, `typos-cli`, `taplo-cli`, `wasm-pack`, and `cargo-llvm-cov`, then installs `cargo-fixit@0.1.15` from source with `cargo install ... --locked` (it has no prebuilt binaries). `cargo-fixit` backs the `just fix` task. It also installs the [pinned formatter](../CONTRIBUTING.md#rust-formatting). The repo-wide `pnpm install` wires up husky, whose `pre-commit` hook formats the Rust files being committed and whose `pre-push` hook runs `pnpm/scripts/pre-push-rust.sh` (format, doc, dylint, typos) alongside the TypeScript compile and lint checks.
 
 `just init` does not install the dylint tools. To run the `Dylint` job's checks locally, install `cargo-dylint` and `dylint-link` as described under [Rust toolchain and git hooks](../CONTRIBUTING.md#rust-toolchain-and-git-hooks) in the root guide.
 
@@ -92,15 +86,48 @@ Install the test dependencies:
 just install
 ```
 
+The Python ecosystem end-to-end tests also require Python 3.10 or newer with
+`venv` and either `packaging` or pip's bundled copy of `packaging`. CI installs
+Python 3.13. These tests run the real pnpm CLI and Python interpreter.
+
+The pnpr compiler-cache tests require sccache 0.17.0 with WebDAV support,
+installed by `just init`. They run Cargo in isolated checkouts and use separate
+sccache daemons to verify remote reuse and local cache backfill.
+
 ## Automated Checks
 
-Before submitting, run:
+Run this before every commit:
+
+```sh
+typos pnpm pnpr
+just fmt
+just check
+just lint
+```
+
+Then run the tests that cover what you changed:
+
+```sh
+pnpm test:rust-affected
+```
+
+The root `package.json` scripts (`test:rust-affected`, `test:rust`, `test:rust-smoke`, `check:rust`, `lint:rust`, `ready:rust`, `build:pnpm`) wrap the `just` recipes and node scripts this section names, and they are the way to invoke them: a task concurrency group (`concurrencyGroup` on the task and a limit under `concurrencyGroups` in `pnpm-workspace.yaml`) holds the builds and test runs of every worktree on a machine to a limit it can carry, and only a run that starts as `pnpm <script>` is counted. Override a limit for your machine with `PNPM_CONFIG_CONCURRENCY_GROUPS='{"cargo":1}'` in your environment.
+
+This maps the working tree's changes to crates and runs those crates' tests, with the same sanitized environment `just test` uses. It does not include the CLI end-to-end suite unless you changed `pnpm-cli` itself, so for a user-visible change add the suite modules for the area: `pnpm test:rust-affected -- -p pnpm-cli -E 'test(catalog::)'`. The [`testing-changes`](../.agents/skills/testing-changes/SKILL.md) skill covers picking them.
+
+When crates depend on what changed without being selected themselves, it also runs the `smoke` profile in their place: one end-to-end test per area of CLI behavior, rather than the dependents' full test sets or nothing at all. `--no-smoke` skips that, and `just smoke` runs the same set on its own.
+
+Scope the tests, not the rest. `just check` and `just lint` stay workspace-wide: both cost far less than the test run, and they catch the cross-crate breakage a `-p` selection hides.
+
+CI runs the full suite on Linux, macOS, and Windows for every pull request, so there is no need to reproduce it locally first. Run everything yourself when the change reaches past the crates you can name — a workspace dependency, `Cargo.lock`, `rust-toolchain.toml`, a shared crate such as `pnpm-testing-utils`, or a rename that crosses crate boundaries:
 
 ```sh
 just ready
 ```
 
-This runs `typos`, `cargo fmt`, `just check` (which is `cargo check --locked --workspace --all-targets`), `just test` (which is `cargo nextest run`), and `just lint` (which is `cargo clippy --locked --workspace --all-targets -- --deny warnings`), then prints `git status`. CI runs the same commands on Linux, macOS, and Windows.
+`just ready` runs `typos`, the pinned formatter, `just check` (`cargo check --locked --workspace --all-targets`), `just test` (`cargo nextest run` over the whole workspace), and `just lint` (`cargo clippy --locked --workspace --all-targets -- --deny warnings`), then prints `git status`. These are the same commands CI runs.
+
+`just test-pacquet` and `just test-pnpr` split the suite along the product boundary when you want more than one crate but less than everything. Select every `pnpr-*` crate together rather than one alone: cargo's feature unification gives a lone crate a bare feature set, and its backend tests then silently skip.
 
 To let clippy rewrite the lints it can fix automatically, run `just fix` instead of hand-editing each warning:
 
@@ -111,7 +138,7 @@ just fix
 `just fix` runs `cargo fixit --clippy --workspace --all-targets --allow-dirty --allow-staged` (via the pinned `cargo-fixit`). It is faster than `cargo clippy --fix` on repeated runs because `cargo fixit` skips the full re-check compile between fix rounds, so iterating on a lint cleanup does not rebuild the workspace each pass. Run `just lint` afterward to confirm no warnings remain (clippy can't autofix everything).
 
 > [!IMPORTANT]
-> Run `just ready` before every commit. This rule applies to all changes, including documentation edits, comment changes, and config updates. Any change can break formatting, linting, building, or tests across the supported platforms.
+> A change that touches no Rust source — a documentation edit, a comment change, a config tweak — still needs `typos pnpm pnpr` and the formatter. It does not need the test suite.
 
 > [!NOTE]
 > Integration tests that need the local registry mock start `pnpr` automatically. After dependencies are installed, `cargo test`, `cargo nextest run`, and `just test` should not require a separate registry process.
@@ -128,7 +155,12 @@ TRACE=pnpm_tarball just cli add fastify
 
 ```sh
 just install              # install necessary dependencies
-just test                 # run tests
+just test-affected        # the crates the working tree changes
+just smoke                # one end-to-end test per area of CLI behavior
+just test                 # run every test in the workspace
+just test-pacquet         # pacquet crates only
+just test-pnpr            # pnpr crates only
+node pnpm/scripts/run-rust-tests.mjs -p pnpm-lockfile   # one crate
 ```
 
 When porting tests from the upstream `pnpm/pnpm` TypeScript repository, see

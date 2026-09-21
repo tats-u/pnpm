@@ -1,5 +1,6 @@
 use super::{
-    LinkVirtualStoreBins, LinkVirtualStoreBinsError, build_has_bin_set, link_direct_dep_bins,
+    LinkVirtualStoreBins, LinkVirtualStoreBinsError, PrefetchedBinLookup, build_has_bin_set,
+    link_direct_dep_bins, link_direct_dep_bins_prefetched,
 };
 use crate::{SkippedSnapshots, VirtualStoreLayout};
 use pnpm_cmd_shim::{LinkBinsOptions, is_shim_pointing_at};
@@ -395,7 +396,10 @@ fn lockfile_driven_linking_only_visits_selected_snapshots() {
         ),
     ]);
     for key in [&selected, &unchanged] {
-        let package_dir = layout.slot_dir(key).join("node_modules").join(key.name.to_string());
+        let package_dir = layout
+            .slot_dir(key)
+            .join("node_modules")
+            .join(key.name.to_string());
         create_dir_all(&package_dir).unwrap();
         write_file(
             package_dir.join("package.json"),
@@ -448,7 +452,7 @@ fn link_direct_dep_bins_writes_shims_for_each_dep() {
     let shim = modules.join(".bin/foo");
     assert!(shim.exists(), "shim should be created at {shim:?}");
     let body = read_to_string(&shim).unwrap();
-    assert!(is_shim_pointing_at(&body, &foo_dir.join("cli.js")));
+    assert!(is_shim_pointing_at(&body, &shim, &foo_dir.join("cli.js")));
 }
 
 /// [`link_direct_dep_bins`] with no deps is a no-op. It must not even
@@ -620,17 +624,12 @@ fn dummy_binary_resolution() -> BinaryResolution {
     }
 }
 
-/// `build_has_bin_set` must include runtime resolutions
-/// (`Binary` / `Variations`) unconditionally, *regardless of*
-/// `meta.has_bin`. Pnpm v11 doesn't emit `hasBin: true` for
-/// runtime entries in `pnpm-lock.yaml` (the bin info lives on
-/// `resolution.bin`, not at the metadata level), so the existing
-/// `has_bin == Some(true)` filter would drop runtime slots from
-/// the bin-link dispatch and the synthesized `package.json`
-/// (from `install_package_by_snapshot::synthesize_runtime_manifest_bytes`)
-/// would go unread.
+/// Runtime resolutions must be included without `has_bin` because pnpm v11
+/// records their bin in the resolution instead of emitting `hasBin: true`.
+/// Directory resolutions need the same fallback because deploy lockfiles can
+/// omit `hasBin` for workspace packages.
 #[test]
-fn build_has_bin_set_includes_runtime_resolutions_even_when_has_bin_is_absent() {
+fn build_has_bin_set_includes_resolutions_with_implicit_bin_metadata() {
     let registry_with_bin: PackageKey = "react@18.0.0".parse().expect("parse react key");
     let registry_no_bin: PackageKey = "lodash@4.17.0".parse().expect("parse lodash key");
     let runtime_binary: PackageKey = "node@22.0.0".parse().expect("parse node key");
@@ -660,8 +659,6 @@ fn build_has_bin_set_includes_runtime_resolutions_even_when_has_bin_is_absent() 
     );
     packages.insert(
         runtime_binary.clone(),
-        // Runtime entry without `has_bin: true` (pnpm v11 does
-        // not emit it for runtimes). Must still land in the set.
         metadata_with_resolution(LockfileResolution::Binary(dummy_binary_resolution()), None),
     );
     packages.insert(
@@ -698,5 +695,130 @@ fn build_has_bin_set_includes_runtime_resolutions_even_when_has_bin_is_absent() 
         set.contains(&runtime_variations),
         "Variations runtime must be in the set unconditionally",
     );
-    assert!(!set.contains(&directory), "directory without has_bin must be filtered out");
+    assert!(set.contains(&directory), "directory without has_bin must be probed for bins");
+}
+
+#[test]
+fn prefetched_bin_pass_trusts_the_has_bin_gate_over_the_disk_manifest() {
+    let tmp = tempdir().unwrap();
+    let modules = tmp.path().join("node_modules");
+    let foo_dir = modules.join("foo");
+    create_dir_all(&foo_dir).unwrap();
+    write_file(foo_dir.join("package.json"), json!({"name": "foo", "bin": "cli.js"}).to_string())
+        .unwrap();
+    write_file(foo_dir.join("cli.js"), "#!/usr/bin/env node\n").unwrap();
+
+    let key: PackageKey = "foo@1.0.0".parse().expect("parse key");
+    let packages = HashMap::from([(
+        key.clone(),
+        metadata_with_resolution(
+            LockfileResolution::Directory(DirectoryResolution { directory: "foo".into() }),
+            Some(false),
+        ),
+    )]);
+    let requires_build = HashMap::from([(key.clone(), false)]);
+    let lookup = PrefetchedBinLookup::new(Some(&packages), None, Some(&requires_build));
+    link_direct_dep_bins_prefetched(
+        &modules,
+        &[("foo".to_string(), foo_dir, Some(key))],
+        &lookup,
+        &LinkBinsOptions::default(),
+    )
+    .unwrap();
+    assert!(!modules.join(".bin").exists(), "hasBin: false must skip the dep without IO");
+}
+
+/// The lockfile `hasBin` gate cannot judge a snapshot that may run
+/// build scripts: a script can add a bin the lockfile knows nothing
+/// about, so such a dep must reach the on-disk manifest.
+#[test]
+fn prefetched_bin_pass_reads_a_may_build_dep_from_disk() {
+    let tmp = tempdir().unwrap();
+    let modules = tmp.path().join("node_modules");
+    let foo_dir = modules.join("foo");
+    create_dir_all(&foo_dir).unwrap();
+    write_file(foo_dir.join("package.json"), json!({"name": "foo", "bin": "cli.js"}).to_string())
+        .unwrap();
+    write_file(foo_dir.join("cli.js"), "#!/usr/bin/env node\n").unwrap();
+
+    let key: PackageKey = "foo@1.0.0".parse().expect("parse key");
+    let packages = HashMap::from([(
+        key.clone(),
+        metadata_with_resolution(
+            LockfileResolution::Directory(DirectoryResolution { directory: "foo".into() }),
+            Some(false),
+        ),
+    )]);
+    let requires_build = HashMap::from([(key.clone(), true)]);
+    let lookup = PrefetchedBinLookup::new(Some(&packages), None, Some(&requires_build));
+    link_direct_dep_bins_prefetched(
+        &modules,
+        &[("foo".to_string(), foo_dir.clone(), Some(key))],
+        &lookup,
+        &LinkBinsOptions::default(),
+    )
+    .unwrap();
+    let body = read_to_string(modules.join(".bin/foo")).expect("may-build dep read from disk");
+    assert!(is_shim_pointing_at(&body, &modules.join(".bin/foo"), &foo_dir.join("cli.js")));
+}
+
+#[test]
+fn prefetched_bin_pass_links_from_the_prefetched_manifest_without_a_disk_manifest() {
+    let tmp = tempdir().unwrap();
+    let modules = tmp.path().join("node_modules");
+    let foo_dir = modules.join("foo");
+    create_dir_all(&foo_dir).unwrap();
+    // Deliberately no package.json on disk.
+    write_file(foo_dir.join("cli.js"), "#!/usr/bin/env node\n").unwrap();
+
+    let key: PackageKey = "foo@1.0.0".parse().expect("parse key");
+    let packages = HashMap::from([(
+        key.clone(),
+        metadata_with_resolution(
+            LockfileResolution::Directory(DirectoryResolution { directory: "foo".into() }),
+            Some(true),
+        ),
+    )]);
+    let manifests = HashMap::from([(
+        key.clone(),
+        std::sync::Arc::new(json!({"name": "foo", "version": "1.0.0", "bin": "cli.js"})),
+    )]);
+    let requires_build = HashMap::from([(key.clone(), false)]);
+    let lookup = PrefetchedBinLookup::new(Some(&packages), Some(&manifests), Some(&requires_build));
+    link_direct_dep_bins_prefetched(
+        &modules,
+        &[("foo".to_string(), foo_dir.clone(), Some(key))],
+        &lookup,
+        &LinkBinsOptions::default(),
+    )
+    .unwrap();
+    let shim = modules.join(".bin/foo");
+    let body = read_to_string(&shim).expect("shim written from the prefetched manifest");
+    assert!(is_shim_pointing_at(&body, &shim, &foo_dir.join("cli.js")));
+}
+
+#[test]
+fn prefetched_bin_pass_reads_a_link_dep_from_disk() {
+    let tmp = tempdir().unwrap();
+    let modules = tmp.path().join("node_modules");
+    let sibling_dir = modules.join("sibling");
+    create_dir_all(&sibling_dir).unwrap();
+    write_file(
+        sibling_dir.join("package.json"),
+        json!({"name": "sibling", "bin": "cli.js"}).to_string(),
+    )
+    .unwrap();
+    write_file(sibling_dir.join("cli.js"), "#!/usr/bin/env node\n").unwrap();
+
+    let packages = HashMap::new();
+    let lookup = PrefetchedBinLookup::new(Some(&packages), None, None);
+    link_direct_dep_bins_prefetched(
+        &modules,
+        &[("sibling".to_string(), sibling_dir.clone(), None)],
+        &lookup,
+        &LinkBinsOptions::default(),
+    )
+    .unwrap();
+    let body = read_to_string(modules.join(".bin/sibling")).expect("link: dep read from disk");
+    assert!(is_shim_pointing_at(&body, &modules.join(".bin/sibling"), &sibling_dir.join("cli.js")));
 }

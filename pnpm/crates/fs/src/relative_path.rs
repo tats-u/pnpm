@@ -4,13 +4,14 @@ use std::path::{Path, PathBuf};
 /// `path.relative(base, path)`: the shortest relative path when the two
 /// share a filesystem root, otherwise the absolute `path` (Node likewise
 /// returns the absolute target when the inputs cannot be related).
+/// Both inputs are normalized lexically before computing the difference.
 ///
 /// On Windows the two `Prefix` components must match (drive letters
 /// case-folded) before diffing; without that guard [`pathdiff::diff_paths`]
 /// emits a re-anchored garbage path across drives or UNC shares.
 #[must_use]
 pub fn relative_path(base: &Path, path: &Path) -> PathBuf {
-    relative_path_inner(base, path)
+    relative_path_inner(&crate::lexical_normalize(base), &crate::lexical_normalize(path))
 }
 
 #[cfg(windows)]
@@ -56,4 +57,24 @@ fn same_path_root(a: &Path, b: &Path) -> bool {
         (None, None) => true,
         _ => false,
     }
+}
+
+/// [`push_slash_separated_path`] applied to a copy of `base`.
+#[must_use]
+pub fn join_slash_separated_path(base: &Path, rel: &str) -> PathBuf {
+    let mut path = base.to_path_buf();
+    push_slash_separated_path(&mut path, rel);
+    path
+}
+
+/// Extend `path` with `rel`, one component per `/`-separated segment.
+///
+/// [`PathBuf::push`] takes the whole of `rel` as a single component, so
+/// on Windows its `/` bytes survive into the path string. The directory
+/// symlink and junction syscalls that later consume such a path reject
+/// it with `ERROR_DIRECTORY` (`os error 267`). Splitting the segments
+/// yields the platform's own separator everywhere, and leaves the path
+/// unchanged on Unix, where `/` is already native.
+pub fn push_slash_separated_path(path: &mut PathBuf, rel: &str) {
+    path.extend(rel.split('/'));
 }

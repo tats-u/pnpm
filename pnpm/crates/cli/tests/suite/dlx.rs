@@ -89,7 +89,11 @@ fn dlx_resolves_caller_catalog_references_in_overrides() {
     )
     .expect("write caller project workspace yaml");
 
-    pacquet.with_arg("dlx").with_arg("@foo/touch-file-one-bin").assert().success();
+    pacquet
+        .with_arg("dlx")
+        .with_arg("@foo/touch-file-one-bin")
+        .assert()
+        .success();
 
     assert!(
         workspace.join("touch.txt").exists(),
@@ -111,7 +115,11 @@ fn dlx_resolves_a_package_spec_against_the_callers_default_catalog() {
 
     append_workspace_yaml_key(&workspace, "catalog", "{ '@foo/touch-file-one-bin': 1.0.0 }");
 
-    pacquet.with_arg("dlx").with_arg("@foo/touch-file-one-bin@catalog:").assert().success();
+    pacquet
+        .with_arg("dlx")
+        .with_arg("@foo/touch-file-one-bin@catalog:")
+        .assert()
+        .success();
 
     assert!(
         workspace.join("touch.txt").exists(),
@@ -171,7 +179,10 @@ fn dlx_fails_when_a_package_spec_is_missing_from_the_catalog() {
         std::fs::write(workspace.join("pnpm-workspace.yaml"), catalogs_yaml)
             .expect("write the caller's catalogs");
 
-        let output = pacquet.with_args(["dlx", spec]).output().expect("run pacquet dlx");
+        let output = pacquet
+            .with_args(["dlx", spec])
+            .output()
+            .expect("run pacquet dlx");
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!("STDERR:\n{stderr}\n");
         assert!(!output.status.success(), "dlx with a missing catalog entry must fail");
@@ -180,9 +191,10 @@ fn dlx_fails_when_a_package_spec_is_missing_from_the_catalog() {
             "the failure must carry the missing-entry error code: {stderr}",
         );
         assert!(
-            flatten_report(&stderr).contains(&format!(
-                "Nocatalogentry'@foo/touch-file-one-bin'wasfoundforcatalog'{catalog_name}'."
-            )),
+            flatten_report(&stderr)
+                .contains(&format!(
+                    "Nocatalogentry'@foo/touch-file-one-bin'wasfoundforcatalog'{catalog_name}'."
+                )),
             "the failure must name the missing entry and its catalog: {stderr}",
         );
 
@@ -222,7 +234,11 @@ fn dlx_ignores_the_caller_projects_patched_dependencies() {
     );
     std::fs::write(&workspace_yaml_path, workspace_yaml).expect("add the caller's patch entry");
 
-    pacquet.with_arg("dlx").with_arg("@foo/touch-file-one-bin").assert().success();
+    pacquet
+        .with_arg("dlx")
+        .with_arg("@foo/touch-file-one-bin")
+        .assert()
+        .success();
 
     assert!(
         workspace.join("touch.txt").exists(),
@@ -245,15 +261,24 @@ fn dlx_ignores_the_caller_projects_patched_dependencies() {
 #[cfg(unix)]
 #[test]
 fn dlx_ignores_an_ambient_workspace_manifest_above_the_cache_dir() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
 
     // `root` is the parent of both the caller's workspace and the
     // `pacquet-cache` dir the dlx prepare dir is created under.
     std::fs::write(root.path().join("pnpm-workspace.yaml"), "allowBuilds:\n  esbuild: true\n")
         .expect("write ambient workspace manifest above the cache dir");
 
-    pacquet.with_arg("dlx").with_arg("@foo/touch-file-one-bin").assert().success();
+    pacquet
+        .with_arg("dlx")
+        .with_arg("@foo/touch-file-one-bin")
+        .assert()
+        .success();
 
     assert!(
         workspace.join("touch.txt").exists(),
@@ -296,6 +321,7 @@ fn dlx_provisions_a_package_manager_by_name() {
 
     let registry_arg = format!("--config.registry={}", npmrc_info.mock_instance.url());
     let output = pacquet
+        .env("YARN_IGNORE_PATH", "1")
         .args([registry_arg.as_str(), "dlx", "yarn@4.9.2", "--version"])
         .output()
         .expect("run pacquet dlx yarn@4.9.2");
@@ -305,4 +331,52 @@ fn dlx_provisions_a_package_manager_by_name() {
     assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "4.9.2");
 
     drop((root, npmrc_info));
+}
+
+#[cfg(unix)]
+#[test]
+fn dlx_recovers_ignored_builds() {
+    for (approve, cached) in [(false, false), (true, false), (true, true)] {
+        let CommandTempCwd {
+            mut pacquet,
+            root,
+            workspace,
+            npmrc_info,
+            ..
+        } = CommandTempCwd::init().add_mocked_registry();
+        let caller_yaml = std::fs::read_to_string(workspace.join("pnpm-workspace.yaml"))
+            .expect("read caller settings");
+        pacquet.env_remove("PNPM_AUTO_APPROVE_BUILDS_FOR_TESTS");
+        pacquet.args(["dlx", "@pnpm.e2e/has-bin-and-needs-build"]);
+        if cached {
+            pacquet.assert().success();
+        }
+        if approve {
+            pacquet.env("PNPM_AUTO_APPROVE_BUILDS_FOR_TESTS", "1");
+        }
+        pacquet.assert().success();
+        let cache_entry = std::fs::read_dir(npmrc_info.cache_dir.join("dlx"))
+            .expect("read dlx cache")
+            .next()
+            .unwrap()
+            .unwrap()
+            .path()
+            .join("pkg");
+        let artifact = cache_entry.join("node_modules/.pacquet/@pnpm.e2e+install-script-example@1.0.0/node_modules/@pnpm.e2e/install-script-example/generated-by-install.js");
+        assert_eq!(artifact.exists(), approve);
+        let actual_yaml = std::fs::read_to_string(workspace.join("pnpm-workspace.yaml")).unwrap();
+        eprintln!("CALLER SETTINGS:\n{actual_yaml}\n");
+        assert_eq!(actual_yaml, caller_yaml);
+        if approve {
+            assert!(
+                std::fs::read_to_string(cache_entry.join("pnpm-workspace.yaml"))
+                    .expect("read cache approvals")
+                    .contains("allowBuilds:"),
+            );
+            pacquet.env_remove("PNPM_AUTO_APPROVE_BUILDS_FOR_TESTS");
+            pacquet.assert().success();
+            assert!(artifact.exists());
+        }
+        drop(root);
+    }
 }

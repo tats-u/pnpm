@@ -4,8 +4,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { beforeEach, describe, expect, jest, test } from '@jest/globals'
+import { cmdShim } from '@pnpm/bins.cmd-shim'
 import { fixtures } from '@pnpm/test-fixtures'
-import { cmdShim } from '@zkochan/cmd-shim'
 import { cmdExtension as CMD_EXTENSION } from 'cmd-extension'
 import isWindows from 'is-windows'
 import normalizePath from 'normalize-path'
@@ -23,12 +23,14 @@ jest.unstable_mockModule('@pnpm/logger', () => {
 
 const { logger, globalWarn } = await import('@pnpm/logger')
 const {
+  getBinsToLink,
   linkBins,
   linkBinsOfPackages,
   linkBinsOfPkgsByAliases,
 } = await import('@pnpm/bins.linker')
 
 const binsConflictLogger = logger('bins-conflict')
+const PRINTF_BASEDIR_LINE = String.raw`basedir=$(command -p printf '%s\n' "$link" | command -p sed -e 's,\\,/,g')`
 // The fixture directories are copied to before the tests run
 // This happens because the tests convert some of the files into executables
 const f = fixtures(import.meta.dirname)
@@ -91,6 +93,7 @@ test('linkBins() skips bins that already reference the correct target', async ()
   // The bin contains a cmd-shim-target marker with the correct target path
   const expectedTarget = normalizePath(path.join(simpleFixture, 'node_modules', 'simple', 'index.js'))
   expect(originalContent).toContain(`# cmd-shim-target=${expectedTarget}\n`)
+  expect(originalContent).toContain(PRINTF_BASEDIR_LINE)
   // Append a sentinel to the existing (correct) content to prove it is not rewritten
   const sentinel = originalContent + '\n# sentinel'
   fs.writeFileSync(binLocation, sentinel, 'utf8')
@@ -98,6 +101,132 @@ test('linkBins() skips bins that already reference the correct target', async ()
   await linkBins(path.join(simpleFixture, 'node_modules'), binTarget, { warn })
 
   expect(fs.readFileSync(binLocation, 'utf8')).toBe(sentinel)
+})
+
+// A shim an older pnpm wrote still points at the right target, so the warm
+// install path had nothing to notice and left it in place. It resolved
+// readlink and its other helpers on the caller's PATH, which starts with the
+// very directory the shim lives in, so upgrading pnpm has to replace it.
+test('linkBins() replaces a shim that looks its helpers up on PATH', async () => {
+  const binTarget = temporaryDirectory()
+  const warn = jest.fn()
+  const simpleFixture = f.prepare('simple-fixture')
+  const target = normalizePath(path.join(simpleFixture, 'node_modules', 'simple', 'index.js'))
+
+  fs.mkdirSync(binTarget, { recursive: true })
+  const binLocation = path.join(binTarget, 'simple')
+  const outdated = `#!/bin/sh
+link="$0"
+hops=0
+while [ -L "$link" ] && [ "$hops" -lt 40 ]; do
+  hops=$((hops+1))
+  target=$(readlink "$link")
+  case "$target" in
+    /*) link="$target" ;;
+    *)  link="$(dirname "$link")/$target" ;;
+  esac
+done
+basedir=$(dirname "$(echo "$link" | sed -e 's,\\\\,/,g')")
+exec node  "$basedir/../simple/index.js" "$@"
+# cmd-shim-target=${target}
+`
+  fs.writeFileSync(binLocation, outdated, 'utf8')
+
+  await linkBins(path.join(simpleFixture, 'node_modules'), binTarget, { warn })
+
+  const content = fs.readFileSync(binLocation, 'utf8')
+  expect(content).toContain(`# cmd-shim-target=${target}\n`)
+  expect(content).toContain('  target=$(command -p readlink "$link")\n')
+})
+
+test('linkBins() replaces a shim that still pipes the path through echo', async () => {
+  const binTarget = temporaryDirectory()
+  const warn = jest.fn()
+  const simpleFixture = f.prepare('simple-fixture')
+  const target = normalizePath(path.join(simpleFixture, 'node_modules', 'simple', 'index.js'))
+
+  fs.mkdirSync(binTarget, { recursive: true })
+  const binLocation = path.join(binTarget, 'simple')
+  const outdated = `#!/bin/sh
+link="$0"
+hops=0
+while [ -L "$link" ] && [ "$hops" -lt 40 ]; do
+  hops=$((hops+1))
+  target=$(command -p readlink "$link")
+  case "$target" in
+    /*) link="$target" ;;
+    *)  link="$(dirname "$link")/$target" ;;
+  esac
+done
+basedir=$(echo "$link" | command -p sed -e 's,\\\\,/,g')
+exec node  "$basedir/../simple/index.js" "$@"
+# cmd-shim-target=${target}
+# outdated-echo-basedir
+`
+  fs.writeFileSync(binLocation, outdated, 'utf8')
+
+  await linkBins(path.join(simpleFixture, 'node_modules'), binTarget, { warn })
+
+  const content = fs.readFileSync(binLocation, 'utf8')
+  expect(content).toContain(`# cmd-shim-target=${target}\n`)
+  expect(content).toContain('  target=$(command -p readlink "$link")\n')
+  expect(content).toContain(PRINTF_BASEDIR_LINE)
+  expect(content).not.toContain('# outdated-echo-basedir')
+})
+
+test('linkBins() replaces a shim that converts Windows paths with a helper from PATH', async () => {
+  const binTarget = temporaryDirectory()
+  const warn = jest.fn()
+  const simpleFixture = f.prepare('simple-fixture')
+  const target = normalizePath(path.join(simpleFixture, 'node_modules', 'simple', 'index.js'))
+
+  fs.mkdirSync(binTarget, { recursive: true })
+  const binLocation = path.join(binTarget, 'simple')
+  const outdated = `#!/bin/sh
+link="$0"
+hops=0
+while [ -L "$link" ] && [ "$hops" -lt 40 ]; do
+  hops=$((hops+1))
+  target=$(command -p readlink "$link")
+  case "$target" in
+    /*) link="$target" ;;
+    *)  link="\${link%/*}/$target" ;;
+  esac
+done
+${PRINTF_BASEDIR_LINE}
+basedir="\${basedir%/*}"
+basedir_win="$basedir"
+exe=""
+msys=""
+
+case \`command -p uname -a\` in
+  *CYGWIN*|*MINGW*|*MSYS*)
+    if command -v cygpath > /dev/null 2>&1; then
+      basedir_win=\`cygpath -w "$basedir"\`
+    fi
+    exe=".exe"
+    msys="true"
+  ;;
+  *WSL2*)
+    if command -v wslpath > /dev/null 2>&1; then
+      basedir_win="$(wslpath -w "$basedir" 2> /dev/null)"
+    fi
+  ;;
+esac
+
+exec node  "$basedir/../simple/index.js" "$@"
+# cmd-shim-target=${target}
+# outdated-path-converters
+`
+  fs.writeFileSync(binLocation, outdated, 'utf8')
+
+  await linkBins(path.join(simpleFixture, 'node_modules'), binTarget, { warn })
+
+  const content = fs.readFileSync(binLocation, 'utf8')
+  expect(content).toContain(`# cmd-shim-target=${target}\n`)
+  expect(content).toContain('    if converted=$(command -p cygpath -w "$basedir" 2>/dev/null) && [ -n "$converted" ]; then\n')
+  expect(content).toContain('    if converted=$(command -p wslpath -w "$basedir" 2>/dev/null) && [ -n "$converted" ]; then\n')
+  expect(content).not.toContain('# outdated-path-converters')
 })
 
 testOnPosix('linkBins() repairs a non-executable source when the existing bin references it', async () => {
@@ -391,19 +520,21 @@ test('linkBinsOfPackages() resolves conflicts. Prefer packages that use their na
 
   const modulesPath = path.join(binNameConflictsFixture, 'node_modules')
 
-  await linkBinsOfPackages(
-    [
-      {
-        location: path.join(modulesPath, 'bar'),
-        manifest: (await import(path.join(modulesPath, 'bar', 'package.json'))).default,
-      },
-      {
-        location: path.join(modulesPath, 'foo'),
-        manifest: (await import(path.join(modulesPath, 'foo', 'package.json'))).default,
-      },
-    ],
-    binTarget
-  )
+  const packages = [
+    {
+      location: path.join(modulesPath, 'bar'),
+      manifest: (await import(path.join(modulesPath, 'bar', 'package.json'))).default,
+    },
+    {
+      location: path.join(modulesPath, 'foo'),
+      manifest: (await import(path.join(modulesPath, 'foo', 'package.json'))).default,
+    },
+  ]
+  const binsToLink = await getBinsToLink(packages)
+
+  expect(binsToLink.find(({ name }) => name === 'bar')?.path).toBe(path.join(modulesPath, 'bar/index.js'))
+
+  await linkBinsOfPackages(packages, binTarget)
 
   expect(binsConflictLogger.debug).toHaveBeenCalledWith({
     binaryName: 'bar',
@@ -912,4 +1043,87 @@ testOnPosix('generated POSIX shim resolves symlink chains and executes its targe
   expect(stderr).toBe('')
   expect(status).toBe(0)
   expect(stdout.trim()).toBe('tsc-output')
+})
+
+// A shim runs with node_modules/.bin at the front of PATH, which is where a
+// dependency's own bins live, so a helper taken from there could report any
+// directory it liked and redirect what the shim finally execs
+// (https://github.com/pnpm/pnpm/issues/14837).
+describe('generated POSIX shim resolves its helpers off the caller\'s PATH', () => {
+  function writeExecutable (file: string, body: string): void {
+    fs.writeFileSync(file, body, 'utf8')
+    fs.chmodSync(file, 0o755)
+  }
+
+  // A shimmed tool plus a relative symlink to it in the same directory, so the
+  // walk composes a directory with the link target instead of taking one
+  // straight from readlink.
+  async function makeShimmedTool (projectDir: string): Promise<string> {
+    const binDir = path.join(projectDir, 'node_modules', '.bin')
+    const target = path.join(projectDir, 'node_modules', 'typescript', 'bin', 'tsc.js')
+    fs.mkdirSync(binDir, { recursive: true })
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.writeFileSync(target, 'console.log("tsc-output")\n', 'utf8')
+    // A dependency can declare a bin named node.exe, and the shim's basedir is
+    // the directory those bins land in. Only a lying uname reaches it.
+    writeExecutable(path.join(binDir, 'node.exe'), '#!/bin/sh\necho hijacked\n')
+
+    await cmdShim(target, path.join(binDir, 'tsc'), { createCmdFile: false })
+    fs.symlinkSync('tsc', path.join(binDir, 'tsc-link'))
+    return binDir
+  }
+
+  // Write the tree the decoys point at, and the decoys, returning the directory
+  // to put at the front of PATH. Each decoy answers with what its real
+  // counterpart would be asked for, so any one of them alone is enough to
+  // redirect the shim.
+  function plantHijackTreeAndDecoys (projectDir: string): string {
+    const hijack = path.join(projectDir, 'hijack', 'node_modules')
+    const hijackBin = path.join(hijack, '.bin')
+    const hijackTarget = path.join(hijack, 'typescript', 'bin', 'tsc.js')
+    fs.mkdirSync(hijackBin, { recursive: true })
+    fs.mkdirSync(path.dirname(hijackTarget), { recursive: true })
+    fs.writeFileSync(hijackTarget, 'console.log("hijacked")\n', 'utf8')
+
+    const decoyDir = path.join(projectDir, 'decoy')
+    fs.mkdirSync(decoyDir)
+    const answer = (p: string) => `#!/bin/sh\necho '${p}'\n`
+    for (const helper of ['readlink', 'sed']) {
+      writeExecutable(path.join(decoyDir, helper), answer(path.join(hijackBin, 'tsc')))
+    }
+    writeExecutable(path.join(decoyDir, 'dirname'), answer(hijackBin))
+    writeExecutable(path.join(decoyDir, 'uname'), '#!/bin/sh\necho MINGW64_NT-10.0\n')
+    return decoyDir
+  }
+
+  function expectShimToReachItsTarget (projectDir: string, command: string, args: string[], cwd?: string): void {
+    const decoyDir = plantHijackTreeAndDecoys(projectDir)
+    const { status, stdout, stderr } = spawnSync(command, args, {
+      cwd,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: [decoyDir, path.dirname(process.execPath), process.env.PATH].join(path.delimiter),
+      },
+    })
+    expect(stderr).toBe('')
+    expect(status).toBe(0)
+    expect(stdout.trim()).toBe('tsc-output')
+  }
+
+  testOnPosix('with decoy readlink, dirname, sed, and uname first on PATH', async () => {
+    const projectDir = temporaryDirectory()
+    const binDir = await makeShimmedTool(projectDir)
+
+    expectShimToReachItsTarget(projectDir, path.join(binDir, 'tsc-link'), [])
+  })
+
+  // The kernel and the C library's PATH search hand the interpreter the path
+  // they resolved, so $0 is bare only when a shell is given the name itself.
+  testOnPosix('when sh receives a bare name', async () => {
+    const projectDir = temporaryDirectory()
+    const binDir = await makeShimmedTool(projectDir)
+
+    expectShimToReachItsTarget(projectDir, 'sh', ['tsc-link'], binDir)
+  })
 })

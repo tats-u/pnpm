@@ -99,6 +99,7 @@ export type RecursiveOptions = CreateStoreControllerOptions & Pick<Config,
 | 'tryLoadDefaultPnpmfile'
 | 'catalogPrune'
 | 'minimumReleaseAgeExcludePrune'
+| 'trustPolicyExcludePrune'
 | 'packageConfigs'
 | 'updateConfig'
 > & Pick<ConfigContext,
@@ -114,6 +115,11 @@ export type RecursiveOptions = CreateStoreControllerOptions & Pick<Config,
   workspace?: boolean
   allowNew?: boolean
   ignoredPackages?: Set<string>
+  /**
+   * Skip the workspace root project, which a filtered install otherwise
+   * installs alongside the selection so that peers resolve from it.
+   */
+  excludeWorkspaceRootProject?: boolean
   update?: boolean
   updatePackageManifest?: boolean
   updateMatching?: UpdateMatchingFunction
@@ -345,7 +351,11 @@ export async function recursive (
           } as MutatedProject)
       }
     }))
-    if (!opts.selectedProjectsGraph[opts.workspaceDir as ProjectRootDir] && manifestsByPath[opts.workspaceDir as ProjectRootDir] != null) {
+    if (
+      !opts.excludeWorkspaceRootProject &&
+      !opts.selectedProjectsGraph[opts.workspaceDir as ProjectRootDir] &&
+      manifestsByPath[opts.workspaceDir as ProjectRootDir] != null
+    ) {
       mutatedImporters.push({
         mutation: 'install',
         rootDir: opts.workspaceDir as ProjectRootDir,
@@ -381,6 +391,7 @@ export async function recursive (
         catalogPrune: opts.catalogPrune,
         resolvedPackageVersions: resolvedPackageVersionsForPrune(opts, newLockfile),
         minimumReleaseAgeExcludePrune: opts.minimumReleaseAgeExcludePrune,
+        trustPolicyExcludePrune: opts.trustPolicyExcludePrune,
         allProjects,
         ...policyUpdates,
       }))

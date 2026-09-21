@@ -29,16 +29,19 @@ fn write_manifest(dir: &Path, manifest: &serde_json::Value) {
 fn opts<'a>(allow: bool, ignore_scripts: bool) -> PreparePackageOptions<'a> {
     static EMPTY_BIN_PATHS: &[std::path::PathBuf] = &[];
     PreparePackageOptions {
-        allow_build: Box::new(move |_dep_path| allow),
+        scripts: crate::PrepareScriptOptions {
+            ignore: ignore_scripts,
+            unsafe_perm: true,
+            user_agent: None,
+            prepend_node_path: ScriptsPrependNodePath::Never,
+            shell: None,
+            node_execpath: None,
+            npm_execpath: None,
+            pnpm_execpath: None,
+        },
+        allow_build: Box::new(move |_dep_path| allow.then_some(true)),
         pkg_resolution_id: "https://example.com/x.tgz",
-        ignore_scripts,
-        unsafe_perm: true,
-        user_agent: None,
-        scripts_prepend_node_path: ScriptsPrependNodePath::Never,
-        script_shell: None,
-        node_execpath: None,
-        npm_execpath: None,
-        pnpm_execpath: None,
+
         extra_bin_paths: EMPTY_BIN_PATHS,
         extra_env: empty_env(),
     }
@@ -47,16 +50,19 @@ fn opts<'a>(allow: bool, ignore_scripts: bool) -> PreparePackageOptions<'a> {
 fn opts_allow_registry_artifacts_only<'a>() -> PreparePackageOptions<'a> {
     static EMPTY_BIN_PATHS: &[std::path::PathBuf] = &[];
     PreparePackageOptions {
-        allow_build: Box::new(move |dep_path| !dep_path.contains("://")),
+        scripts: crate::PrepareScriptOptions {
+            ignore: false,
+            unsafe_perm: true,
+            user_agent: None,
+            prepend_node_path: ScriptsPrependNodePath::Never,
+            shell: None,
+            node_execpath: None,
+            npm_execpath: None,
+            pnpm_execpath: None,
+        },
+        allow_build: Box::new(move |dep_path| (!dep_path.contains("://")).then_some(true)),
         pkg_resolution_id: "https://example.com/x.tgz",
-        ignore_scripts: false,
-        unsafe_perm: true,
-        user_agent: None,
-        scripts_prepend_node_path: ScriptsPrependNodePath::Never,
-        script_shell: None,
-        node_execpath: None,
-        npm_execpath: None,
-        pnpm_execpath: None,
+
         extra_bin_paths: EMPTY_BIN_PATHS,
         extra_env: empty_env(),
     }
@@ -68,16 +74,19 @@ fn opts_allow_dep_path<'a>(
 ) -> PreparePackageOptions<'a> {
     static EMPTY_BIN_PATHS: &[std::path::PathBuf] = &[];
     PreparePackageOptions {
-        allow_build: Box::new(move |actual_dep_path| actual_dep_path == dep_path),
+        scripts: crate::PrepareScriptOptions {
+            ignore: false,
+            unsafe_perm: true,
+            user_agent: None,
+            prepend_node_path: ScriptsPrependNodePath::Never,
+            shell: None,
+            node_execpath: None,
+            npm_execpath: None,
+            pnpm_execpath: None,
+        },
+        allow_build: Box::new(move |actual_dep_path| (actual_dep_path == dep_path).then_some(true)),
         pkg_resolution_id,
-        ignore_scripts: false,
-        unsafe_perm: true,
-        user_agent: None,
-        scripts_prepend_node_path: ScriptsPrependNodePath::Never,
-        script_shell: None,
-        node_execpath: None,
-        npm_execpath: None,
-        pnpm_execpath: None,
+
         extra_bin_paths: EMPTY_BIN_PATHS,
         extra_env: empty_env(),
     }
@@ -136,7 +145,7 @@ fn prepare_returns_should_be_built_false_when_manifest_has_no_scripts() {
     let dir = tempdir().unwrap();
     write_manifest(dir.path(), &json!({ "name": "x", "version": "0.0.0" }));
 
-    let PreparedPackage { pkg_dir, should_be_built } =
+    let PreparedPackage { pkg_dir, should_be_built, .. } =
         prepare_package::<SilentReporter>(&opts(false, false), dir.path(), None).unwrap();
     assert!(!should_be_built);
     assert_eq!(pkg_dir, dir.path());
@@ -161,7 +170,7 @@ fn prepare_ignore_scripts_short_circuits_without_spawn() {
 }
 
 #[test]
-fn prepare_rejects_when_allow_build_returns_false() {
+fn prepare_rejects_when_build_is_undecided() {
     let dir = tempdir().unwrap();
     write_manifest(
         dir.path(),
@@ -198,12 +207,18 @@ fn prepare_rejection_suggests_the_allow_builds_key_the_gate_checked() {
     let recorder = Arc::clone(&checked);
     let mut opts = opts(false, false);
     opts.allow_build = Box::new(move |dep_path| {
-        recorder.lock().unwrap().push(dep_path.to_string());
-        false
+        recorder
+            .lock()
+            .unwrap()
+            .push(dep_path.to_string());
+        None
     });
 
     let err = prepare_package::<SilentReporter>(&opts, dir.path(), None).unwrap_err();
-    let help = err.help().expect("NotAllowed carries a help message").to_string();
+    let help = err
+        .help()
+        .expect("NotAllowed carries a help message")
+        .to_string();
     let checked = checked.lock().unwrap();
     let [gated_key] = checked.as_slice() else {
         panic!("expected exactly one allowBuild check, got {checked:?}");
@@ -339,4 +354,24 @@ fn safe_join_path_accepts_empty_sub_dir() {
     let canonical_root = dir.path().canonicalize().unwrap();
     let canonical_received = received.canonicalize().unwrap();
     assert_eq!(canonical_received, canonical_root);
+}
+
+#[test]
+fn explicitly_denied_preparation_keeps_source_without_running_scripts() {
+    let dir = tempdir().unwrap();
+    write_manifest(
+        dir.path(),
+        &json!({
+            "name": "denied-build", "version": "1.0.0",
+            "scripts": { "prepare": "exit 1", "preinstall": "exit 1", "postinstall": "exit 1" },
+        }),
+    );
+    fs::write(dir.path().join("index.js"), "module.exports = 42").unwrap();
+    let mut options = opts(false, false);
+    options.allow_build = Box::new(|_| Some(false));
+    let result = prepare_package::<SilentReporter>(&options, dir.path(), None).unwrap();
+    dbg!(&result);
+    assert!(result.should_be_built);
+    assert!(result.ignored_build);
+    assert_eq!(fs::read_to_string(result.pkg_dir.join("index.js")).unwrap(), "module.exports = 42");
 }

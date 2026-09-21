@@ -1,3 +1,4 @@
+import path from 'node:path'
 import util from 'node:util'
 
 import { afterEach, expect, test } from '@jest/globals'
@@ -18,6 +19,35 @@ test('getOptionsFromPnpmSettings() replaces env variables in settings', () => {
     '${PNPM_TEST_KEY}': '${PNPM_TEST_VALUE}',
   } as any) as any // eslint-disable-line
   expect(options.foo).toBe('bar')
+})
+
+test.each([
+  ['./scripts/shell.sh', path.join('/workspace/root', 'scripts/shell.sh')],
+  ['../scripts/shell.sh', path.join('/workspace/root', '../scripts/shell.sh')],
+  ['scripts/shell.sh', path.join('/workspace/root', 'scripts/shell.sh')],
+  ['scripts\\shell.cmd', path.join('/workspace/root', 'scripts\\shell.cmd')],
+  ['bash', 'bash'],
+  ['/usr/bin/bash', '/usr/bin/bash'],
+])('getOptionsFromPnpmSettings() resolves path-like scriptShell %s against the workspace root', (scriptShell, expected) => {
+  const options = getOptionsFromPnpmSettings('/workspace/root', { scriptShell } as unknown as PnpmSettings)
+  expect(options.scriptShell).toBe(expected)
+})
+
+test('getOptionsFromPnpmSettings() leaves relative scriptShell unresolved without a workspace root', () => {
+  const options = getOptionsFromPnpmSettings(undefined, { scriptShell: './scripts/shell.sh' } as unknown as PnpmSettings)
+  expect(options.scriptShell).toBe('./scripts/shell.sh')
+})
+
+const testOnWindows = process.platform === 'win32' ? test : test.skip
+
+testOnWindows.each([
+  ['C:\\tools\\bash.exe'],
+  ['\\\\server\\share\\bash.exe'],
+  ['\\tools\\bash.exe'],
+  ['/tools/bash.exe'],
+])('getOptionsFromPnpmSettings() preserves Windows absolute scriptShell %s', (scriptShell) => {
+  const options = getOptionsFromPnpmSettings('C:\\workspace\\root', { scriptShell } as unknown as PnpmSettings)
+  expect(options.scriptShell).toBe(scriptShell)
 })
 
 test('getOptionsFromPnpmSettings() ignores env variables inside registries values', () => {
@@ -236,6 +266,34 @@ test('getOptionsFromPnpmSettings() rejects non-object overrides values', () => {
   })).toThrow(expect.objectContaining({
     code: 'ERR_PNPM_INVALID_OVERRIDES',
     message: 'The overrides field should be an object, but got array',
+  }))
+})
+
+test('getOptionsFromPnpmSettings() accepts nodeDownloadMirrors with string values', () => {
+  expect(() => getOptionsFromPnpmSettings(process.cwd(), {
+    nodeDownloadMirrors: {
+      release: 'https://mirror.example.com/release/',
+    },
+  })).not.toThrow()
+})
+
+test('getOptionsFromPnpmSettings() rejects non-string nodeDownloadMirrors values', () => {
+  expect(() => getOptionsFromPnpmSettings(process.cwd(), {
+    nodeDownloadMirrors: {
+      release: 42,
+    } as unknown as Record<string, string>,
+  })).toThrow(expect.objectContaining({
+    code: 'ERR_PNPM_INVALID_SETTING',
+    message: 'The "nodeDownloadMirrors.release" setting should be a string, but got number',
+  }))
+})
+
+test('getOptionsFromPnpmSettings() rejects non-object nodeDownloadMirrors', () => {
+  expect(() => getOptionsFromPnpmSettings(process.cwd(), {
+    nodeDownloadMirrors: [] as unknown as Record<string, string>,
+  })).toThrow(expect.objectContaining({
+    code: 'ERR_PNPM_INVALID_SETTING',
+    message: 'The "nodeDownloadMirrors" setting should be an object, but got array',
   }))
 })
 
@@ -719,10 +777,25 @@ test('getOptionsFromPnpmSettings() rejects a tasks entry that is not an object',
   })).toThrow(/The "tasks\['build'\]" setting should be an object, but got array/)
 })
 
-test('getOptionsFromPnpmSettings() rejects an unknown task setting field', () => {
+test('getOptionsFromPnpmSettings() rejects a task setting field that misspells one of its own', () => {
   expect(() => getOptionsFromPnpmSettings(process.cwd(), {
     tasks: { build: { dependson: ['^build'] } } as never,
   })).toThrow(/The "tasks\['build'\].dependson" setting is not a known task setting/)
+})
+
+test('getOptionsFromPnpmSettings() keeps task settings that only pnpm 12 reads', () => {
+  const tasks = {
+    build: {
+      cache: false,
+      cargoTargetDir: 'target',
+      concurrencyGroup: 'cargo',
+      dependsOn: ['^build'],
+      env: ['CARGO_PROFILE'],
+      inputs: ['src/**'],
+      outputs: ['dist/**'],
+    },
+  }
+  expect(getOptionsFromPnpmSettings(process.cwd(), { tasks } as never).tasks).toStrictEqual(tasks)
 })
 
 test('getOptionsFromPnpmSettings() rejects a dependsOn that is not an array of strings', () => {

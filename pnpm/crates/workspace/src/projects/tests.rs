@@ -6,6 +6,9 @@ use pretty_assertions::assert_eq;
 use std::{fs, io::ErrorKind, path::Path};
 use tempfile::TempDir;
 
+mod membership;
+mod normalization;
+
 fn make_project(root: &std::path::Path, rel: &str, name: &str) {
     let dir = root.join(rel);
     fs::create_dir_all(&dir).unwrap();
@@ -23,12 +26,25 @@ fn find_project_names(root: &Path, patterns: &[&str]) -> Vec<String> {
     find_workspace_projects(
         root,
         &FindWorkspaceProjectsOpts {
-            patterns: Some(patterns.iter().map(|pattern| (*pattern).to_string()).collect()),
+            patterns: Some(
+                patterns
+                    .iter()
+                    .map(|pattern| (*pattern).to_string())
+                    .collect(),
+            ),
         },
     )
     .unwrap()
     .iter()
-    .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+    .map(|project| {
+        project.manifest
+            .value()
+            .get("name")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string()
+    })
     .collect()
 }
 
@@ -90,7 +106,15 @@ fn expands_packages_glob() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(names, vec!["root".to_string(), "alpha".to_string(), "beta".to_string()]);
 }
@@ -236,7 +260,15 @@ fn expands_packages_glob_to_package_yaml() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(names, vec!["root".to_string(), "alpha".to_string()]);
 }
@@ -301,7 +333,15 @@ fn package_json_wins_when_both_manifest_files_exist() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(names, vec!["root".to_string(), "json-alpha".to_string()]);
 }
@@ -322,7 +362,15 @@ fn always_includes_workspace_root() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(names, vec!["root".to_string(), "web".to_string()]);
 }
@@ -342,7 +390,15 @@ fn filters_node_modules() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert!(
         !names.contains(&"foo".to_string()),
@@ -370,7 +426,15 @@ fn dedupes_overlapping_patterns() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(names, vec!["root".to_string(), "alpha".to_string()]);
 }
@@ -386,7 +450,15 @@ fn default_patterns_when_packages_omitted() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(names, vec!["root".to_string(), "web".to_string()]);
 }
@@ -409,7 +481,15 @@ fn negation_pattern_excludes_matching_projects() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert!(
         !names.contains(&"foo".to_string()),
@@ -439,7 +519,15 @@ fn negation_pattern_with_leading_slash_is_noop() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert!(
         names.contains(&"foo".to_string()),
@@ -467,7 +555,15 @@ fn empty_patterns_array_enumerates_root_only() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(names, vec!["root".to_string()]);
 }
@@ -491,7 +587,15 @@ fn missing_pattern_directory_matches_nothing() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(names, vec!["root".to_string()]);
 }
@@ -571,7 +675,15 @@ fn discovers_projects_declared_above_the_workspace_root() {
 
     let mut names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     names.sort();
     assert_eq!(
@@ -604,7 +716,15 @@ fn negation_pattern_excludes_a_project_above_the_workspace_root() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert!(
         !names.contains(&"drop".to_string()),
@@ -643,7 +763,15 @@ fn pattern_climbing_past_the_filesystem_root_matches_nothing() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(
         names,
@@ -672,7 +800,15 @@ fn discovers_a_project_whose_manifest_starts_with_a_utf8_bom() {
 
     let names: Vec<String> = projects
         .iter()
-        .map(|project| project.manifest.value().get("name").unwrap().as_str().unwrap().to_string())
+        .map(|project| {
+            project.manifest
+                .value()
+                .get("name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
         .collect();
     assert_eq!(names, vec!["root".to_string(), "bom".to_string()]);
 }
@@ -722,7 +858,10 @@ fn a_malformed_manifest_fails_discovery_deterministically() {
     make_project(tmp.path(), "packages/alpha", "alpha");
     // Component-wise joins, so the expected path below carries native
     // separators like the discovery walk's error message does.
-    let broken = tmp.path().join("packages").join("broken");
+    let broken = tmp
+        .path()
+        .join("packages")
+        .join("broken");
     fs::create_dir_all(&broken).unwrap();
     fs::write(broken.join("package.json"), "{ not json").unwrap();
     let broken_late = tmp.path().join("packages").join("zeta");
@@ -741,7 +880,12 @@ fn a_malformed_manifest_fails_discovery_deterministically() {
     let message = source.to_string();
     dbg!(&message);
     assert!(
-        message.contains(&broken.join("package.json").display().to_string()),
+        message.contains(
+            &broken
+                .join("package.json")
+                .display()
+                .to_string()
+        ),
         "the reported manifest must be the first broken project in root order",
     );
 }

@@ -2,6 +2,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 
+import { cmdShim, getExeExtension, isShimPointingAt } from '@pnpm/bins.cmd-shim'
 import { type Command, getBinsFromPackageManifest, pkgOwnsBin } from '@pnpm/bins.resolver'
 import { PnpmError } from '@pnpm/error'
 import { readModulesDir } from '@pnpm/fs.read-modules-dir'
@@ -10,7 +11,6 @@ import { readPackageJsonFromDir } from '@pnpm/pkg-manifest.reader'
 import { getAllDependenciesFromManifest } from '@pnpm/pkg-manifest.utils'
 import type { DependencyManifest, EngineDependency, ProjectManifest } from '@pnpm/types'
 import { safeReadProjectManifestOnly } from '@pnpm/workspace.project-manifest-reader'
-import { cmdShim, isShimPointingAt } from '@zkochan/cmd-shim'
 import { rimraf } from '@zkochan/rimraf'
 import fixBin from 'bin-links/lib/fix-bin.js'
 import { isSubdir } from 'is-subdir'
@@ -107,20 +107,33 @@ export async function linkBinsOfPackages (
   opts: LinkBinOptions & { excludeBins?: Set<string> } = {}
 ): Promise<string[]> {
   if (pkgs.length === 0) return []
+  return _linkBins(await getCommandsToLink(pkgs, opts.excludeBins), binsTarget, opts)
+}
 
-  let allCmds = unnest(
+export async function getBinsToLink (
+  pkgs: Array<{
+    manifest: DependencyManifest
+    location: string
+  }>,
+  excludeBins: Set<string> = new Set()
+): Promise<Command[]> {
+  return deduplicateCommands(await getCommandsToLink(pkgs, excludeBins))
+    .map(({ name, path }) => ({ name, path }))
+}
+
+async function getCommandsToLink (
+  pkgs: Array<{
+    manifest: DependencyManifest
+    location: string
+  }>,
+  excludeBins: Set<string> = new Set()
+): Promise<CommandInfo[]> {
+  return unnest(
     (await Promise.all(
-      pkgs
-        .map(async (pkg) => getPackageBinsFromManifest(pkg.manifest, pkg.location))
+      pkgs.map(async (pkg) => getPackageBinsFromManifest(pkg.manifest, pkg.location))
     ))
       .filter((cmds: Command[]) => cmds.length)
-  )
-  const excludeBins = opts.excludeBins
-  if (excludeBins?.size) {
-    allCmds = allCmds.filter((cmd) => !excludeBins.has(cmd.name))
-  }
-
-  return _linkBins(allCmds, binsTarget, opts)
+  ).filter((cmd) => !excludeBins.has(cmd.name))
 }
 
 interface CommandInfo extends Command {
@@ -161,17 +174,17 @@ async function _linkBins (
   return allCmds.map(cmd => cmd.pkgName)
 }
 
-function deduplicateCommands (commands: CommandInfo[], binsDir: string): CommandInfo[] {
+function deduplicateCommands (commands: CommandInfo[], binsDir?: string): CommandInfo[] {
   const cmdGroups = groupBy(cmd => cmd.name, commands)
   return Object.values(cmdGroups)
     .filter((group): group is CommandInfo[] => group !== undefined && group.length !== 0)
     .map(group => resolveCommandConflicts(group, binsDir))
 }
 
-function resolveCommandConflicts (group: CommandInfo[], binsDir: string): CommandInfo {
+function resolveCommandConflicts (group: CommandInfo[], binsDir?: string): CommandInfo {
   return group.reduce((a, b) => {
     const [chosen, skipped] = compareCommandsInConflict(a, b) >= 0 ? [a, b] : [b, a]
-    logCommandConflict(chosen, skipped, binsDir)
+    if (binsDir != null) logCommandConflict(chosen, skipped, binsDir)
     return chosen
   })
 }
@@ -286,7 +299,7 @@ async function linkBin (cmd: CommandInfo, binsDir: string, opts?: LinkBinOptions
       isCorrectlyLinked = target === cmd.path || path.resolve(binsDir, target) === path.resolve(cmd.path)
     } else if (stat.isFile() && stat.size < CMD_SHIM_MAX_SIZE) {
       const content = await fs.readFile(externalBinPath, 'utf8')
-      isCorrectlyLinked = isShimPointingAt(content, cmd.path)
+      isCorrectlyLinked = isShimPointingAt(content, cmd.path) && isShimHardened(content)
     }
   } catch {}
   if (isCorrectlyLinked) {
@@ -387,6 +400,20 @@ async function linkBin (cmd: CommandInfo, binsDir: string, opts?: LinkBinOptions
   if (EXECUTABLE_SHEBANG_SUPPORTED) {
     await ensureExecutable(cmd.path, 0o755)
   }
+}
+
+// The target marker does not describe the header, so a shim whose target has
+// not moved can still need replacing. Keep these in step with pacquet's
+// `is_sh_shim_hardened`.
+const SH_SHIM_HARDENED_LINES = [
+  '  target=$(command -p readlink "$link")\n',
+  String.raw`basedir=$(command -p printf '%s\n' "$link" | command -p sed -e 's,\\,/,g')` + '\n',
+  '    if converted=$(command -p cygpath -w "$basedir" 2>/dev/null) && [ -n "$converted" ]; then\n',
+  '    if converted=$(command -p wslpath -w "$basedir" 2>/dev/null) && [ -n "$converted" ]; then\n',
+]
+
+function isShimHardened (content: string): boolean {
+  return SH_SHIM_HARDENED_LINES.every((line) => content.includes(line))
 }
 
 // Reports whether two paths refer to the same file. A matching inode/device
@@ -500,18 +527,6 @@ async function hasWindowsShebang (file: string): Promise<boolean> {
   } finally {
     await fh.close().catch(() => {})
   }
-}
-
-function getExeExtension (): string {
-  let cmdExtension
-
-  if (process.env.PATHEXT) {
-    cmdExtension = process.env.PATHEXT
-      .split(path.delimiter)
-      .find(ext => ext.toUpperCase() === '.EXE')
-  }
-
-  return cmdExtension ?? '.exe'
 }
 
 async function safeReadPkgJson (pkgDir: string): Promise<DependencyManifest | null> {

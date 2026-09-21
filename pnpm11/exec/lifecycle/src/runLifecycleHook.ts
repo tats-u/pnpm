@@ -3,8 +3,8 @@ import path from 'node:path'
 
 import { lifecycleLogger } from '@pnpm/core-loggers'
 import { PnpmError } from '@pnpm/error'
+import { lifecycle } from '@pnpm/exec.npm-lifecycle'
 import { globalWarn } from '@pnpm/logger'
-import { lifecycle } from '@pnpm/npm-lifecycle'
 import type { DependencyManifest, PackageScripts, ProjectManifest } from '@pnpm/types'
 import chalk from 'chalk'
 import isWindows from 'is-windows'
@@ -22,12 +22,13 @@ export interface RunLifecycleHookOptions {
   initCwd?: string
   optional?: boolean
   pkgRoot: string
+  raiseOnInterrupt?: boolean
   rootModulesDir: string
   scriptShell?: string
   silent?: boolean
   scriptsPrependNodePath?: boolean | 'warn-only'
   shellEmulator?: boolean
-  stdio?: string
+  stdio?: 'inherit' | 'pipe'
   unsafePerm: boolean
   userAgent?: string
 }
@@ -92,7 +93,7 @@ Please unset the scriptShell option, or configure it to a .exe instead.
   }
   if (opts.args?.length && m.scripts?.[stage]) {
     // It is impossible to quote a command line argument that contains newline for Windows cmd.
-    const escapedArgs = isWindows()
+    const escapedArgs = isWindows() && !opts.shellEmulator
       ? opts.args.map((arg) => JSON.stringify(arg)).join(' ')
       : shellQuote(opts.args)
     m.scripts[stage] = `${m.scripts[stage]} ${escapedArgs}`
@@ -115,7 +116,6 @@ Please unset the scriptShell option, or configure it to a .exe instead.
     ? 'silent'
     : undefined
   await lifecycle(m, stage, opts.pkgRoot, {
-    config: {},
     dir: opts.rootModulesDir,
     extraBinPaths: opts.extraBinPaths,
     extraEnv: {
@@ -138,6 +138,7 @@ Please unset the scriptShell option, or configure it to a .exe instead.
       },
     },
     onSpawn: trackChildProcess,
+    raiseOnInterrupt: opts.raiseOnInterrupt,
     runConcurrently: true,
     scriptsPrependNodePath: opts.scriptsPrependNodePath,
     scriptShell: opts.scriptShell,

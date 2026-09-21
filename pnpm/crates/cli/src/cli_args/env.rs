@@ -1,11 +1,11 @@
 //! `pacquet env` — the deprecated Node.js-only front end to
 //! [`super::runtime`], kept because pnpm still ships it.
 
-use super::{global::handle_global_add, registry_client::build_registry_client};
+use super::{add::AddRequest, global::handle_global_add, registry_client::build_registry_client};
 use clap::Args;
 use derive_more::{Display, Error};
 use miette::Diagnostic;
-use pnpm_config::Config;
+use pnpm_config::{Config, Tool};
 use pnpm_engine_runtime_node_resolver::{
     get_node_mirror, parse_node_specifier, resolve_node_versions_with_auth,
 };
@@ -98,8 +98,7 @@ impl EnvArgs {
                 if !self.global {
                     return Err(EnvError::LocalUseUnsupported);
                 }
-                let version = self
-                    .params
+                let version = self.params
                     .get(1)
                     .map(|version| version.trim())
                     .filter(|version| !version.is_empty())
@@ -107,8 +106,7 @@ impl EnvArgs {
                 Ok(EnvSubcommand::Use { package_name: format!("node@runtime:{version}") })
             }
             "list" | "ls" => Ok(EnvSubcommand::List {
-                version_spec: self
-                    .params
+                version_spec: self.params
                     .get(1)
                     .map(|spec| spec.trim())
                     .filter(|spec| !spec.is_empty())
@@ -126,9 +124,10 @@ impl EnvArgs {
         config: &'static Config,
         dir: &Path,
     ) -> miette::Result<()> {
+        let request = AddRequest::from(package_name.as_str());
         Box::pin(handle_global_add::<Reporter>(
             config,
-            std::slice::from_ref(&package_name),
+            std::slice::from_ref(&request),
             RangeSpecStyle::Major,
             config.supported_architectures.clone(),
             // A runtime install has no user packages, so no `--allow-build`.
@@ -147,8 +146,13 @@ impl EnvArgs {
     pub async fn run_list(version_spec: Option<String>, config: &Config) -> miette::Result<String> {
         let specifier = parse_node_specifier(version_spec.as_deref().unwrap_or_default())
             .map_err(miette::Report::new)?;
-        let mirror =
-            get_node_mirror(Some(&config.node_download_mirrors), &specifier.release_channel);
+        let channels = config.tool_channel_mirrors(Tool::Node);
+        let mirror = get_node_mirror(
+            config.tool_mirror(Tool::Node),
+            channels.get(&specifier.release_channel).map(String::as_str),
+            Some(&config.node_download_mirrors),
+            &specifier.release_channel,
+        );
         let http_client = build_registry_client(config)?;
         let mut versions = resolve_node_versions_with_auth(
             &http_client,

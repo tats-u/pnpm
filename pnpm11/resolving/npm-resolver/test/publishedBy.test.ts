@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import { afterEach, beforeEach, expect, test } from '@jest/globals'
 import { ABBREVIATED_META_DIR, FULL_FILTERED_META_DIR } from '@pnpm/constants'
+import { type LogBase, streamParser } from '@pnpm/logger'
 import { createFetchFromRegistry } from '@pnpm/network.fetch'
 import { createNpmResolver } from '@pnpm/resolving.npm-resolver'
 import type { PackageMeta } from '@pnpm/resolving.registry.types'
@@ -66,9 +67,9 @@ test('request metadata when the one in cache does not have a version satisfying 
     versions: {},
     time: {},
   }
-  fs.mkdirSync(path.join(cacheDir, `${FULL_FILTERED_META_DIR}/registry.npmjs.org`), { recursive: true })
+  fs.mkdirSync(path.join(cacheDir, `${FULL_FILTERED_META_DIR}/https%3A+registry.npmjs.org`), { recursive: true })
   fs.writeFileSync(
-    path.join(cacheDir, `${FULL_FILTERED_META_DIR}/registry.npmjs.org/bad-dates.jsonl`),
+    path.join(cacheDir, `${FULL_FILTERED_META_DIR}/https%3A+registry.npmjs.org/bad-dates.jsonl`),
     `${JSON.stringify({})}\n${JSON.stringify(cachedMeta)}`,
     'utf8'
   )
@@ -111,9 +112,9 @@ test('reports an immature pick via policyViolation even when loaded from cache a
       '1.0.0': '2016-08-17T19:26:00.508Z',
     },
   }
-  fs.mkdirSync(path.join(cacheDir, `${FULL_FILTERED_META_DIR}/registry.npmjs.org`), { recursive: true })
+  fs.mkdirSync(path.join(cacheDir, `${FULL_FILTERED_META_DIR}/https%3A+registry.npmjs.org`), { recursive: true })
   fs.writeFileSync(
-    path.join(cacheDir, `${FULL_FILTERED_META_DIR}/registry.npmjs.org/foo.jsonl`),
+    path.join(cacheDir, `${FULL_FILTERED_META_DIR}/https%3A+registry.npmjs.org/foo.jsonl`),
     `${JSON.stringify({})}\n${JSON.stringify(fooMeta)}`,
     'utf8'
   )
@@ -147,8 +148,8 @@ test('should skip time field validation for excluded packages', async () => {
   const cacheDir = temporaryDirectory()
   const { time: _time, ...metaWithoutTime } = isPositiveMeta
 
-  fs.mkdirSync(path.join(cacheDir, `${FULL_FILTERED_META_DIR}/registry.npmjs.org`), { recursive: true })
-  fs.writeFileSync(path.join(cacheDir, `${FULL_FILTERED_META_DIR}/registry.npmjs.org/is-positive.jsonl`), JSON.stringify(metaWithoutTime), 'utf8')
+  fs.mkdirSync(path.join(cacheDir, `${FULL_FILTERED_META_DIR}/https%3A+registry.npmjs.org`), { recursive: true })
+  fs.writeFileSync(path.join(cacheDir, `${FULL_FILTERED_META_DIR}/https%3A+registry.npmjs.org/is-positive.jsonl`), JSON.stringify(metaWithoutTime), 'utf8')
 
   getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
     .intercept({ path: '/is-positive', method: 'GET' })
@@ -269,20 +270,14 @@ test('re-fetch full metadata when per-version publish times are incomplete', asy
   expect(resolveResult!.id).toBe('is-positive@2.0.0')
 })
 
-test('scopes a 304 full-metadata upgrade marker to one resolver', async () => {
+test('scopes the full-metadata upgrade marker to one resolver', async () => {
   const agent = getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
   agent.intercept({ path: '/is-positive', method: 'GET' })
     .reply(200, partialTimeMeta(), { headers: { etag: '"partial-time"' } })
-  agent.intercept({
-    path: '/is-positive',
-    method: 'GET',
-    headers: { 'if-none-match': '"partial-time"' },
-  }).reply(304, '')
-  agent.intercept({
-    path: '/is-positive',
-    method: 'GET',
-    headers: { 'if-none-match': '"partial-time"' },
-  }).reply(304, '')
+  agent.intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, partialTimeMeta())
+  agent.intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, partialTimeMeta())
 
   const metaCache = new Map<string, PackageMeta>()
   const cacheDir = temporaryDirectory()
@@ -296,22 +291,23 @@ test('scopes a 304 full-metadata upgrade marker to one resolver', async () => {
   const wantedDependency = { alias: 'is-positive', bareSpecifier: '^3.0.0' }
 
   // Seed the install-scoped cache with an incomplete time map, then make two
-  // release-age picks. The first gets a 304 while trying to upgrade it; the
-  // second must reuse that outcome instead of repeating the registry request.
+  // release-age picks. The first upgrades it to a document that is still
+  // incomplete; the second must reuse that outcome instead of repeating the
+  // registry request.
   await resolveFromNpm(wantedDependency, {})
   const first = await resolveFromNpm(wantedDependency, {
     publishedBy: new Date('2015-07-01T00:00:00.000Z'),
   })
   // Drop the resolver's fetch memo while keeping the caller-owned packument
   // cache, so the second pick reaches the release-age upgrade again with the
-  // very packument the first pick got a 304 for.
+  // very packument the first pick already upgraded.
   clearCache()
   const second = await resolveFromNpm(wantedDependency, {
     publishedBy: new Date('2015-07-01T00:00:00.000Z'),
   })
 
   // A new resolver represents a new install. Reusing the caller-owned
-  // metadata cache must not carry the first install's 304 marker forward.
+  // metadata cache must not carry the first install's upgrade marker forward.
   const nextInstall = createResolveFromNpm({
     storeDir: temporaryDirectory(),
     cacheDir,
@@ -474,7 +470,7 @@ test('ignoreMissingTimeField=true skips maturity check from disk-cached metadata
   const { time: _time, ...metaWithoutTime } = isPositiveMeta
 
   const cacheDir = temporaryDirectory()
-  const cacheDir2 = path.join(cacheDir, `${FULL_FILTERED_META_DIR}/registry.npmjs.org`)
+  const cacheDir2 = path.join(cacheDir, `${FULL_FILTERED_META_DIR}/https%3A+registry.npmjs.org`)
   fs.mkdirSync(cacheDir2, { recursive: true })
   const cachePath = path.join(cacheDir2, 'is-positive.jsonl')
   fs.writeFileSync(cachePath, `${JSON.stringify({})}\n${JSON.stringify(metaWithoutTime)}`, 'utf8')
@@ -513,7 +509,7 @@ test('falls through to the registry fetch when cached abbreviated meta lacks tim
   // form lacks `time`. The catch falls through to the registry fetch, which
   // returns full metadata with time, and resolution succeeds.
   const cacheDir = temporaryDirectory()
-  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/registry.npmjs.org`)
+  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/https%3A+registry.npmjs.org`)
   fs.mkdirSync(abbrevCacheDir, { recursive: true })
   const cachePath = path.join(abbrevCacheDir, 'is-positive.jsonl')
   // Strip `time` from the cached abbreviated metadata to simulate the
@@ -560,7 +556,7 @@ test('falls through to the registry fetch even with default ignoreMissingTimeFie
   // meta should never escape the catch — resolution falls through to the
   // registry fetch and succeeds with full (time-bearing) metadata.
   const cacheDir = temporaryDirectory()
-  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/registry.npmjs.org`)
+  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/https%3A+registry.npmjs.org`)
   fs.mkdirSync(abbrevCacheDir, { recursive: true })
   const cachePath = path.join(abbrevCacheDir, 'is-positive.jsonl')
   const { time: _time, ...abbreviatedWithoutTime } = isPositiveAbbreviatedMeta
@@ -606,7 +602,7 @@ test('upgrades cached abbreviated metadata to full when 304 Not Modified and pub
   // package was recently modified, re-fetch with `fullMetadata: true` to
   // get per-version times and run the check properly.
   const cacheDir = temporaryDirectory()
-  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/registry.npmjs.org`)
+  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/https%3A+registry.npmjs.org`)
   fs.mkdirSync(abbrevCacheDir, { recursive: true })
   const cachePath = path.join(abbrevCacheDir, 'is-positive.jsonl')
 
@@ -657,7 +653,7 @@ test('upgrades cached abbreviated metadata to full when 304 Not Modified and pub
 test('use cached metadata based on file mtime when publishedBy is set', async () => {
   const cacheDir = temporaryDirectory()
   // Write abbreviated metadata to the abbreviated cache dir
-  const cacheDir2 = path.join(cacheDir, `${ABBREVIATED_META_DIR}/registry.npmjs.org`)
+  const cacheDir2 = path.join(cacheDir, `${ABBREVIATED_META_DIR}/https%3A+registry.npmjs.org`)
   fs.mkdirSync(cacheDir2, { recursive: true })
   const cachePath = path.join(cacheDir2, 'is-positive.jsonl')
   const headers = JSON.stringify({ etag: '"mtime-shortcut-test"', modified: isPositiveAbbreviatedMeta.modified })
@@ -682,7 +678,7 @@ test('use cached metadata based on file mtime when publishedBy is set', async ()
 
 test('excluded packages bypass the mtime cache shortcut and refresh stale metadata', async () => {
   const cacheDir = temporaryDirectory()
-  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/registry.npmjs.org`)
+  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/https%3A+registry.npmjs.org`)
   fs.mkdirSync(abbrevCacheDir, { recursive: true })
   const cachePath = path.join(abbrevCacheDir, 'is-positive.jsonl')
 
@@ -864,6 +860,194 @@ test('latest is suppressed when all versions are immature (fallback case)', asyn
 
   expect(resolveResult!.id).toBe('is-positive@1.0.0')
   expect(resolveResult!.latest).toBeUndefined()
+})
+
+test('the release-age upgrade sends no validator from the abbreviated cache', async () => {
+  const cacheDir = temporaryDirectory()
+  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/https%3A+registry.npmjs.org`)
+  fs.mkdirSync(abbrevCacheDir, { recursive: true })
+  const cachePath = path.join(abbrevCacheDir, 'is-positive.jsonl')
+
+  // An abbreviated mirror without `time`, modified after the cutoff below, so
+  // the maturity check has to upgrade it to the full document.
+  const { time: _time, ...abbreviatedWithoutTime } = isPositiveAbbreviatedMeta
+  const cachedMeta = {
+    ...abbreviatedWithoutTime,
+    modified: '2015-06-10T00:00:00.000Z',
+  }
+  const cacheHeaders = JSON.stringify({ etag: '"abbreviated-etag"', modified: cachedMeta.modified })
+  fs.writeFileSync(cachePath, `${cacheHeaders}\n${JSON.stringify(cachedMeta)}`, 'utf8')
+
+  let upgradeHeaders: Record<string, string> | undefined
+  const agent = getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+  // The abbreviated fetch validates the mirror and gets a 304, so the upgrade
+  // starts from the cached document that has no `time`.
+  agent.intercept({
+    path: '/is-positive',
+    method: 'GET',
+    headers: { 'if-none-match': '"abbreviated-etag"' },
+  }).reply(304, '')
+  agent.intercept({
+    path: '/is-positive',
+    method: 'GET',
+  }).reply(200, (options) => {
+    upgradeHeaders = options.headers as Record<string, string>
+    return isPositiveMeta
+  })
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir,
+    registriesByScope,
+  })
+
+  const resolveResult = await resolveFromNpm({ alias: 'is-positive', bareSpecifier: '^1.0.0' }, {
+    publishedBy: new Date('2015-06-05T00:00:00.000Z'),
+  })
+
+  expect(resolveResult!.id).toBe('is-positive@1.0.0')
+  // The two assertions below also hold when the upgrade never fired.
+  expect(upgradeHeaders).toBeDefined()
+  expect(upgradeHeaders!['if-none-match']).toBeUndefined()
+  expect(upgradeHeaders!['if-modified-since']).toBeUndefined()
+})
+
+test('a repeated 304 to the release-age upgrade is handled without reporting an error', async () => {
+  const cacheDir = temporaryDirectory()
+  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/https%3A+registry.npmjs.org`)
+  fs.mkdirSync(abbrevCacheDir, { recursive: true })
+  const cachePath = path.join(abbrevCacheDir, 'is-positive.jsonl')
+
+  const { time: _time, ...abbreviatedWithoutTime } = isPositiveAbbreviatedMeta
+  const cachedMeta = { ...abbreviatedWithoutTime, modified: '2015-06-10T00:00:00.000Z' }
+  const cacheHeaders = JSON.stringify({ etag: '"abbreviated-etag"', modified: cachedMeta.modified })
+  fs.writeFileSync(cachePath, `${cacheHeaders}\n${JSON.stringify(cachedMeta)}`, 'utf8')
+
+  const agent = getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+  agent.intercept({
+    path: '/is-positive',
+    method: 'GET',
+    headers: { 'if-none-match': '"abbreviated-etag"' },
+  }).reply(304, '')
+  // The upgrade carries no validator, so these 304s are unsolicited: the
+  // fetcher retries once as a cold cache would, then gives up.
+  agent.intercept({ path: '/is-positive', method: 'GET' }).reply(304, '')
+  agent.intercept({ path: '/is-positive', method: 'GET' }).reply(304, '')
+
+  const errors: LogBase[] = []
+  const collectErrors = (msg: LogBase): void => {
+    if (msg.level === 'error') errors.push(msg)
+  }
+  streamParser.on('data', collectErrors)
+  try {
+    const { resolveFromNpm } = createResolveFromNpm({
+      storeDir: temporaryDirectory(),
+      cacheDir,
+      registriesByScope,
+      ignoreMissingTimeField: true,
+    })
+    const resolveResult = await resolveFromNpm({ alias: 'is-positive', bareSpecifier: '^1.0.0' }, {
+      publishedBy: new Date('2015-06-05T00:00:00.000Z'),
+    })
+    expect(resolveResult!.id).toBe('is-positive@1.0.0')
+  } finally {
+    streamParser.removeListener('data', collectErrors)
+  }
+
+  // Without the upgrade handling this condition, it reaches the generic
+  // cached-meta fallback, which reports the fetch error to the user.
+  expect(errors).toStrictEqual([])
+})
+
+// An ETag identifies one representation, so the full document's validator
+// cannot describe the abbreviated slot the upgrade writes it into. A registry
+// that keys ETags per representation, such as npmjs.org, can never match it,
+// so the next abbreviated request is answered with a body that has no `time`
+// and the upgrade runs all over again.
+//
+// The upgrade reaches the mirror from two directions, and both are covered
+// here: a 304 on the cached mirror, and a fresh abbreviated 200 with no
+// mirror to validate against.
+test('the release-age upgrade of a validated mirror writes no etag', async () => {
+  const cacheDir = temporaryDirectory()
+  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/https%3A+registry.npmjs.org`)
+  fs.mkdirSync(abbrevCacheDir, { recursive: true })
+  const cachePath = path.join(abbrevCacheDir, 'is-positive.jsonl')
+
+  const { time: _time, ...abbreviatedWithoutTime } = isPositiveAbbreviatedMeta
+  const cachedMeta = {
+    ...abbreviatedWithoutTime,
+    modified: '2015-06-10T00:00:00.000Z',
+  }
+  const cacheHeaders = JSON.stringify({ etag: '"abbreviated-etag"', modified: cachedMeta.modified })
+  fs.writeFileSync(cachePath, `${cacheHeaders}\n${JSON.stringify(cachedMeta)}`, 'utf8')
+
+  const agent = getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+  agent.intercept({
+    path: '/is-positive',
+    method: 'GET',
+    headers: { 'if-none-match': '"abbreviated-etag"' },
+  }).reply(304, '')
+  agent.intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, isPositiveMeta, { headers: { etag: '"full-etag"' } })
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir,
+    registriesByScope,
+  })
+
+  await resolveFromNpm({ alias: 'is-positive', bareSpecifier: '^1.0.0' }, {
+    publishedBy: new Date('2015-06-05T00:00:00.000Z'),
+  })
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const persistedMeta = await retryLoadJsonFile<any>(cachePath, (meta) => meta.time != null)
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  expect(persistedMeta.etag).toBeUndefined()
+  // `modified` is the packument's own `time.modified`, identical in both
+  // representations, so it stays and keeps the next request conditional.
+  expect(persistedMeta.modified).toBe(isPositiveMeta.time.modified)
+})
+
+test('the release-age upgrade of a freshly fetched packument writes no etag', async () => {
+  const cacheDir = temporaryDirectory()
+  const abbrevCacheDir = path.join(cacheDir, `${ABBREVIATED_META_DIR}/https%3A+registry.npmjs.org`)
+  const cachePath = path.join(abbrevCacheDir, 'is-positive.jsonl')
+
+  const agent = getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+  // The cold cache sends no validators, so the abbreviated request is told
+  // apart from the upgrade request by what it accepts.
+  agent.intercept({
+    path: '/is-positive',
+    method: 'GET',
+    headers: { accept: /application\/vnd\.npm\.install-v1\+json/ },
+  }).reply(200, { ...isPositiveAbbreviatedMeta, modified: '2015-06-10T00:00:00.000Z' }, {
+    headers: {
+      etag: '"abbreviated-etag"',
+      'content-type': 'application/vnd.npm.install-v1+json',
+    },
+  })
+  agent.intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, isPositiveMeta, { headers: { etag: '"full-etag"' } })
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir,
+    registriesByScope,
+  })
+
+  const resolveResult = await resolveFromNpm({ alias: 'is-positive', bareSpecifier: '^1.0.0' }, {
+    publishedBy: new Date('2015-06-05T00:00:00.000Z'),
+  })
+
+  expect(resolveResult!.id).toBe('is-positive@1.0.0')
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const persistedMeta = await retryLoadJsonFile<any>(cachePath, (meta) => meta.time != null)
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  expect(persistedMeta.etag).toBeUndefined()
+  expect(persistedMeta.modified).toBe(isPositiveMeta.time.modified)
 })
 
 /**

@@ -180,6 +180,7 @@ fn published_dependencies_keep_declaration_order() {
         &manifest,
         &CreateExportableManifestOptions {
             catalogs: &catalogs,
+            workspace_dir: None,
             modules_dir: None,
             skip_manifest_obfuscation: false,
             embed_readme: false,
@@ -187,8 +188,10 @@ fn published_dependencies_keep_declaration_order() {
     )
     .expect("manifest is exportable");
 
-    let dependencies =
-        published.get("dependencies").and_then(Value::as_object).expect("dependencies survive");
+    let dependencies = published
+        .get("dependencies")
+        .and_then(Value::as_object)
+        .expect("dependencies survive");
     assert_eq!(
         dependencies.iter().collect::<Vec<_>>(),
         vec![

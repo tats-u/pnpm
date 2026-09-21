@@ -3,7 +3,7 @@ import path from 'node:path'
 import util from 'node:util'
 
 import { getBinsFromPackageManifest } from '@pnpm/bins.resolver'
-import { readPackageJsonFromDirRawSync, safeReadPackageJsonFromDir } from '@pnpm/pkg-manifest.reader'
+import { readPackageJsonFromDir, readPackageJsonFromDirRawSync, safeReadPackageJsonFromDir } from '@pnpm/pkg-manifest.reader'
 import type { PackageManifest } from '@pnpm/types'
 
 const RESERVED_ALIASES = new Set(['node_modules', 'favicon.ico'])
@@ -46,6 +46,11 @@ export interface GlobalPackageInfo {
   hash: string
   installDir: string
   dependencies: Record<string, string>
+}
+
+export interface GlobalPackageBinSnapshot {
+  info: GlobalPackageInfo
+  binNames: string[]
 }
 
 export interface InstalledGlobalPackage {
@@ -147,15 +152,30 @@ export function cleanOrphanedInstallDirs (globalDir: string): void {
   }
 }
 
+/**
+ * The bin names installed by a group (deduplicated).
+ *
+ * A group whose `node_modules` is wholly absent owns no bins. When
+ * `node_modules` exists, every declared dependency manifest must be readable
+ * and valid: returning a partial set would make destructive callers mistake
+ * unknown ownership for an unowned bin.
+ */
 export async function getInstalledBinNames (info: GlobalPackageInfo): Promise<string[]> {
   const bins = new Set<string>()
   const aliases = Object.keys(info.dependencies)
   const modulesDir = path.join(info.installDir, 'node_modules')
+  try {
+    await fs.promises.stat(modulesDir)
+  } catch (err) {
+    if (util.types.isNativeError(err) && 'code' in err && err.code === 'ENOENT') {
+      return []
+    }
+    throw err
+  }
   await Promise.all(
     aliases.map(async (alias) => {
       const depDir = path.join(modulesDir, alias)
-      const manifest = await safeReadPackageJsonFromDir(depDir)
-      if (!manifest) return
+      const manifest = await readPackageJsonFromDir(depDir)
       const binsOfPkg = await getBinsFromPackageManifest(manifest, depDir)
       for (const bin of binsOfPkg) {
         bins.add(bin.name)

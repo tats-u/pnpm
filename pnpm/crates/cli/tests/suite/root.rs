@@ -20,7 +20,10 @@ fn canonicalize(path: &Path) -> PathBuf {
 fn root_prints_the_local_node_modules_dir() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
 
-    let output = pacquet.with_args(["root"]).output().expect("run pacquet root");
+    let output = pacquet
+        .with_args(["root"])
+        .output()
+        .expect("run pacquet root");
     dbg!(&output);
     assert!(output.status.success(), "pacquet root should succeed");
 
@@ -41,7 +44,10 @@ fn root_ignores_a_custom_modules_dir() {
     fs::write(workspace.join("pnpm-workspace.yaml"), "modulesDir: custom_nm\n")
         .expect("write pnpm-workspace.yaml");
 
-    let output = pacquet.with_args(["root"]).output().expect("run pacquet root");
+    let output = pacquet
+        .with_args(["root"])
+        .output()
+        .expect("run pacquet root");
     dbg!(&output);
     assert!(output.status.success(), "pacquet root should succeed");
 
@@ -83,7 +89,10 @@ fn root_global_prints_the_global_packages_dir() {
 
     let expected = format!(
         "{}\n",
-        pnpm_home.join("global").join(pnpm_config::GLOBAL_LAYOUT_VERSION).display(),
+        pnpm_home
+            .join("global")
+            .join(pnpm_config::GLOBAL_LAYOUT_VERSION)
+            .display(),
     );
     assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
     assert!(global_bin.is_dir(), "pacquet root -g should create the global bin dir");
@@ -126,7 +135,10 @@ fn root_global_writes_warnings_to_stderr_so_stdout_stays_a_clean_path() {
 
     let expected = format!(
         "{}\n",
-        pnpm_home.join("global").join(pnpm_config::GLOBAL_LAYOUT_VERSION).display(),
+        pnpm_home
+            .join("global")
+            .join(pnpm_config::GLOBAL_LAYOUT_VERSION)
+            .display(),
     );
     assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -141,17 +153,7 @@ fn root_global_writes_warnings_to_stderr_so_stdout_stays_a_clean_path() {
 /// Differential parity: from a workspace subdirectory pnpm's `root` prints the
 /// cwd's `node_modules` (its `config.dir` is the cwd, not the workspace root).
 /// pacquet must print byte-identical output.
-///
-/// Skipped on Windows, where pnpm is installed as a `pnpm.cmd` shim and
-/// `std::process::Command` does not honor `PATHEXT`, so `Command::new("pnpm")`
-/// fails with "program not found" (the same reason `pnpm_compatibility.rs` and
-/// `hoist.rs` gate their pnpm-spawning tests). The three tests above spawn only
-/// `pacquet`, so they keep running on Windows.
 #[test]
-#[cfg_attr(
-    target_os = "windows",
-    ignore = "spawns the external `pnpm` shim (`pnpm.cmd`); std::process::Command can't resolve it via PATHEXT"
-)]
 fn root_matches_pnpm_from_a_workspace_subdir() {
     let CommandTempCwd { root, workspace, .. } = CommandTempCwd::init();
 

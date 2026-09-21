@@ -10,6 +10,7 @@ fn type_membership() {
     // `pnpm config get` would answer one of them with null.
     assert!(is_type_key("virtual-store-type"));
     assert!(is_type_key("enable-global-virtual-store"));
+    assert!(is_type_key("progress"));
     assert!(!is_type_key("no-such-setting"));
     // prototype-chain names must not be members
     assert!(!is_type_key("constructor"));
@@ -49,8 +50,11 @@ fn config_file_keys() {
     assert!(is_config_file_key("store-dir"));
     assert!(is_config_file_key("fetch-timeout"));
     assert!(is_config_file_key("cache-dir"));
+    assert!(is_config_file_key("node-download-mirrors"));
     assert!(is_config_file_key("virtual-store-type"));
     assert!(is_config_file_key("enable-global-virtual-store"));
+    // A machine-level preference, so it is settable in the global file.
+    assert!(is_config_file_key("progress"));
     // npm-compatible, not excluded
     assert!(is_config_file_key("fetch-retries"));
     assert!(is_config_file_key("registry"));

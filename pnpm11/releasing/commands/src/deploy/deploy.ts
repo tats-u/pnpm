@@ -172,6 +172,10 @@ export async function handler (opts: DeployOptions, params: string[]): Promise<v
     // dedupe-injected-deps to always inject workspace packages since copying is
     // desirable.
     dedupeInjectedDeps: false,
+    // modulesDir below points every importer of this install at the deploy
+    // directory, so the workspace root project a filtered install brings along
+    // would link its own dependencies into the deployed node_modules.
+    excludeWorkspaceRootProject: true,
     // Compute the wanted lockfile correctly by setting pruneLockfileImporters.
     // Since pnpm deploy only installs dependencies for a single selected
     // project, other projects in the "importers" lockfile section will be
@@ -351,11 +355,6 @@ async function deployFromSharedLockfile (
   },
   deployDir: string
 ): Promise<string | undefined> {
-  if (!opts.injectWorkspacePackages) {
-    throw new PnpmError('DEPLOY_NONINJECTED_WORKSPACE', 'By default, starting from pnpm v10, we only deploy from workspaces that have "inject-workspace-packages=true" set', {
-      hint: 'If you want to deploy without using injected dependencies, run "pnpm deploy" with the "--legacy" flag or set "force-legacy-deploy" to true',
-    })
-  }
   const {
     allProjects,
     lockfileDir,

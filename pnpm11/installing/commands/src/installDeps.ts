@@ -73,6 +73,7 @@ export type InstallDepsOptions = Pick<Config,
 | 'catalogMode'
 | 'catalogPrune'
 | 'minimumReleaseAgeExcludePrune'
+| 'trustPolicyExcludePrune'
 | 'dedupePeerDependents'
 | 'dedupePeers'
 | 'depth'
@@ -145,6 +146,8 @@ export type InstallDepsOptions = Pick<Config,
     remain?: string[]
   }
   allowNew?: boolean
+  /** See {@link RecursiveOptions.excludeWorkspaceRootProject}. */
+  excludeWorkspaceRootProject?: boolean
   forceFullResolution?: boolean
   frozenLockfileIfExists?: boolean
   include?: IncludedDependencies
@@ -188,7 +191,7 @@ export async function installDeps (
   opts: InstallDepsOptions,
   params: string[]
 ): Promise<DryRunInstallResult | undefined> {
-  if (!opts.update && !opts.dedupe && params.length === 0 && opts.optimisticRepeatInstall) {
+  if (!opts.update && !opts.dedupe && !opts.force && params.length === 0 && opts.optimisticRepeatInstall) {
     const { upToDate, wantedLockfileToRestore } = await checkDepsStatus({
       ...opts,
       ignoreFilteredInstallCache: true,
@@ -441,6 +444,7 @@ export async function installDeps (
           catalogPrune: opts.catalogPrune,
           resolvedPackageVersions: resolvedPackageVersionsForPrune(opts, newLockfile),
           minimumReleaseAgeExcludePrune: opts.minimumReleaseAgeExcludePrune,
+          trustPolicyExcludePrune: opts.trustPolicyExcludePrune,
           allProjects: opts.allProjects,
           ...policyUpdates,
         }),
@@ -479,6 +483,7 @@ export async function installDeps (
           catalogPrune: opts.catalogPrune,
           resolvedPackageVersions: resolvedPackageVersionsForPrune(opts, newLockfile),
           minimumReleaseAgeExcludePrune: opts.minimumReleaseAgeExcludePrune,
+          trustPolicyExcludePrune: opts.trustPolicyExcludePrune,
           allProjects,
           ...policyUpdates,
         }),
