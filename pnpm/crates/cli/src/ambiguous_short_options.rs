@@ -36,9 +36,6 @@ pub(crate) fn reject_for_add(
             index += 1;
             continue;
         };
-        if token == "--" {
-            break;
-        }
         if short_cluster_contains_ambiguous_t(token, &top_level, &subcommand_union) {
             return Err(cmd.clone().error(
                 ErrorKind::UnknownArgument,
