@@ -150,7 +150,11 @@ impl WorkspaceTreeCtx {
     /// Fold the versions of the workspace packages whose manifest
     /// identity has settled since the cache last looked.
     pub(super) fn fold_settled_identities(&self, cache: &mut RunVersionsCache) {
-        let identities = lock_recoverable(&self.versions.workspace_manifest_identities);
+        let identities = lock_recoverable(
+            &self
+                .versions
+                .workspace_manifest_identities,
+        );
         let RunVersionsCache { awaiting_identity, versions, .. } = cache;
         awaiting_identity.retain(|pkg_id| match identities.get(pkg_id) {
             Some((name, version)) => {
@@ -187,7 +191,11 @@ impl WorkspaceTreeCtx {
         let dedup_caches = (
             take_locked(&mut self.cache.resolved_by_wanted),
             take_locked(&mut self.cache.resolved_workspace_by_wanted),
-            take_locked(&mut self.cache.resolved_workspace_final_by_wanted),
+            take_locked(
+                &mut self
+                    .cache
+                    .resolved_workspace_final_by_wanted,
+            ),
             take_locked(&mut self.children.specs_by_id),
         );
         pnpm_fs::background_drop(dedup_caches);
@@ -223,12 +231,10 @@ impl super::WorkspaceChildrenState {
                     .get(&**pkg_id)
                     .map(owned_missing_names)
                     .unwrap_or_default();
-                record
-                    .map_mut()
-                    .insert(
-                        std::sync::Arc::<str>::clone(pkg_id).to_string(),
-                        OwnerMissingRecord { recorded_by: Some(owner.clone()), names },
-                    );
+                record.map_mut().insert(
+                    std::sync::Arc::<str>::clone(pkg_id).to_string(),
+                    OwnerMissingRecord { recorded_by: Some(owner.clone()), names },
+                );
             }
         }
         for (pkg_id, names) in missing_by_pkg {
@@ -239,12 +245,10 @@ impl super::WorkspaceChildrenState {
                 .get(*pkg_id)
                 .is_none_or(|entry| entry.owner.importer_id != importer_id)
             {
-                record
-                    .map_mut()
-                    .insert(
-                        (*pkg_id).to_owned(),
-                        OwnerMissingRecord { recorded_by: None, names: owned_missing_names(names) },
-                    );
+                record.map_mut().insert(
+                    (*pkg_id).to_owned(),
+                    OwnerMissingRecord { recorded_by: None, names: owned_missing_names(names) },
+                );
             }
         }
     }
@@ -253,13 +257,12 @@ impl super::WorkspaceChildrenState {
     /// See the `first_walk_missing_by_pkg` field doc.
     #[must_use]
     pub fn first_walk_missing_by_pkg(&self) -> Arc<FirstWalkMissing> {
-        lock_recoverable(&self.first_walk_missing_by_pkg)
-            .snapshot(|record| {
-                record
-                    .iter()
-                    .map(|(pkg_id, entry)| (pkg_id.clone(), entry.names.clone()))
-                    .collect()
-            })
+        lock_recoverable(&self.first_walk_missing_by_pkg).snapshot(|record| {
+            record
+                .iter()
+                .map(|(pkg_id, entry)| (pkg_id.clone(), entry.names.clone()))
+                .collect()
+        })
     }
 }
 

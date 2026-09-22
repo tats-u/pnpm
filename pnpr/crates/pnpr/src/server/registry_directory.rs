@@ -63,16 +63,29 @@ fn ecosystem_capability(
 /// access admits them.
 fn registry_is_visible(config: &Config, identity: &Identity, key: &str) -> bool {
     match config.routing.registries.get(key) {
-        Some(Registry::Hosted { .. }) => config.routing.hosted
+        Some(Registry::Hosted { .. }) => config
+            .routing
+            .hosted
             .get(key)
-            .is_some_and(|hosted| hosted.rules.default_access().allows(identity)),
-        Some(Registry::Upstream { .. }) => config.routing.upstreams
+            .is_some_and(|hosted| {
+                hosted
+                    .rules
+                    .default_access()
+                    .allows(identity)
+            }),
+        Some(Registry::Upstream { .. }) => config
+            .routing
+            .upstreams
             .get(key)
             .is_some_and(|upstream| {
-                upstream.access
+                upstream
+                    .access
                     .as_ref()
                     .is_none_or(|access| access.allows(identity))
-                    && upstream.rules.default_access().allows(identity)
+                    && upstream
+                        .rules
+                        .default_access()
+                        .allows(identity)
             }),
         _ => false,
     }
@@ -94,7 +107,10 @@ fn directory_entry(
         return None;
     }
     let sources = registries.sources(key, ecosystem);
-    if !sources.iter().any(|source| visible(source)) {
+    if !sources
+        .iter()
+        .any(|source| visible(source))
+    {
         return None;
     }
     let registry = registries.get(key)?;

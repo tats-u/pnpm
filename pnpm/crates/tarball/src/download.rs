@@ -355,9 +355,12 @@ impl<'a> BodyProgress<'a> {
     }
 
     pub(crate) fn on_chunk<Reporter: self::Reporter>(&mut self, len: usize) {
-        self.downloaded = self.downloaded.saturating_add(len as u64);
-        let throttle_ready =
-            self.last_emit.is_none_or(|instant| instant.elapsed() >= Self::IN_PROGRESS_THROTTLE);
+        self.downloaded = self
+            .downloaded
+            .saturating_add(len as u64);
+        let throttle_ready = self
+            .last_emit
+            .is_none_or(|instant| instant.elapsed() >= Self::IN_PROGRESS_THROTTLE);
         if self.emit && throttle_ready {
             Reporter::emit(&LogEvent::FetchingProgress(FetchingProgressLog {
                 level: LogLevel::Debug,
@@ -473,9 +476,8 @@ pub(crate) fn store_index_cache_key(
     package_id: &str,
     store_projection: ArchiveStoreProjection<'_>,
 ) -> Option<String> {
-    package_integrity.map(|integrity| {
-        store_projection.store_index_key(&integrity.to_string(), package_id)
-    })
+    package_integrity
+        .map(|integrity| store_projection.store_index_key(&integrity.to_string(), package_id))
 }
 
 mod body;

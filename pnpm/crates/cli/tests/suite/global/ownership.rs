@@ -55,7 +55,11 @@ fn global_update_preflights_incomplete_target_ownership_before_activation() {
         .assert()
         .success();
     assert!(!stale_bin.exists(), "the repaired retry must remove the genuinely stale bin");
-    assert!(global_bin.join("print-version").exists());
+    assert!(
+        global_bin
+            .join("print-version")
+            .exists()
+    );
     assert!(!target_install.exists());
     assert_eq!(symlink_entries(&global_pkg_dir).len(), 1);
 
@@ -64,7 +68,11 @@ fn global_update_preflights_incomplete_target_ownership_before_activation() {
         .assert()
         .success();
     assert!(!stale_bin.exists());
-    assert!(global_bin.join("print-version").exists());
+    assert!(
+        global_bin
+            .join("print-version")
+            .exists()
+    );
     assert_eq!(symlink_entries(&global_pkg_dir).len(), 1);
 
     drop((root, npmrc_info));
@@ -133,7 +141,11 @@ fn global_add_preflights_incomplete_survivor_ownership_before_activation() {
         .success();
     assert_eq!(fs::read(&shared_bin).expect("read survivor-owned bin"), b"keeper command\n");
     assert!(!stale_bin.exists());
-    assert!(global_bin.join("touch-file-one-bin").exists());
+    assert!(
+        global_bin
+            .join("touch-file-one-bin")
+            .exists()
+    );
     assert!(!target_install.exists());
     assert!(survivor_install.exists());
     assert_eq!(symlink_entries(&global_pkg_dir).len(), 2);
@@ -144,7 +156,11 @@ fn global_add_preflights_incomplete_survivor_ownership_before_activation() {
         .success();
     assert_eq!(fs::read(&shared_bin).expect("read survivor-owned bin"), b"keeper command\n");
     assert!(!stale_bin.exists());
-    assert!(global_bin.join("touch-file-one-bin").exists());
+    assert!(
+        global_bin
+            .join("touch-file-one-bin")
+            .exists()
+    );
     assert_eq!(symlink_entries(&global_pkg_dir).len(), 2);
 
     drop((root, npmrc_info));
@@ -188,7 +204,11 @@ fn global_add_ignores_incomplete_survivors_when_every_replaced_bin_is_retained()
 
     assert!(!target_install.exists());
     assert!(survivor_install.exists());
-    assert!(global_bin.join("print-version").exists());
+    assert!(
+        global_bin
+            .join("print-version")
+            .exists()
+    );
     assert_eq!(symlink_entries(&global_pkg_dir).len(), 2);
 
     drop((root, npmrc_info));
@@ -232,7 +252,11 @@ fn global_update_ignores_incomplete_survivors_when_every_replaced_bin_is_retaine
 
     assert!(!target_install.exists());
     assert!(survivor_install.exists());
-    assert!(global_bin.join("print-version").exists());
+    assert!(
+        global_bin
+            .join("print-version")
+            .exists()
+    );
     assert_eq!(symlink_entries(&global_pkg_dir).len(), 2);
 
     drop((root, npmrc_info));
@@ -502,9 +526,8 @@ fn global_add_pnpm_is_rejected() {
         assert!(!output.status.success(), "add -g {selector} must fail, got: {stderr}");
         assert!(
             stderr.contains("ERR_PNPM_GLOBAL_PNPM_INSTALL")
-                && stderr.contains(
-                    r#"Use the "pnpm self-update" command to install or update pnpm"#
-                ),
+                && stderr
+                    .contains(r#"Use the "pnpm self-update" command to install or update pnpm"#),
             "add -g {selector} must report the self-update diagnostic, got: {stderr}",
         );
     }

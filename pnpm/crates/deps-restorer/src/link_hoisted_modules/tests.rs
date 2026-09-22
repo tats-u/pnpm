@@ -68,8 +68,12 @@ fn plant_cas_file(
 ) -> HashMap<String, PathBuf> {
     let pkg_dir = cas_root.join(pkg_id);
     let file_path = pkg_dir.join(rel_path);
-    fs::create_dir_all(file_path.parent().expect("file has parent"))
-        .expect("create CAS file parent");
+    fs::create_dir_all(
+        file_path
+            .parent()
+            .expect("file has parent"),
+    )
+    .expect("create CAS file parent");
     fs::write(&file_path, contents).expect("write CAS file");
     let mut paths = HashMap::new();
     paths.insert(rel_path.to_string(), file_path);
@@ -138,7 +142,9 @@ fn import_pass_creates_package_directory() {
         import: crate::PackageImportOptions {
             method: PackageImportMethod::Auto,
             logged_methods: &logged,
-            requester: lockfile_dir.to_str().expect("requester"),
+            requester: lockfile_dir
+                .to_str()
+                .expect("requester"),
         },
         dir_clone_cache: None,
         graph: &graph,
@@ -190,7 +196,9 @@ fn orphan_directory_is_removed() {
         import: crate::PackageImportOptions {
             method: PackageImportMethod::Auto,
             logged_methods: &logged,
-            requester: lockfile_dir.to_str().expect("requester"),
+            requester: lockfile_dir
+                .to_str()
+                .expect("requester"),
         },
         dir_clone_cache: None,
         graph: &graph,
@@ -222,7 +230,9 @@ fn nested_hierarchy_materializes_inner_node_modules() {
     let modules = lockfile_dir.join("node_modules");
 
     let outer_dir = modules.join("outer");
-    let inner_dir = outer_dir.join("node_modules").join("inner");
+    let inner_dir = outer_dir
+        .join("node_modules")
+        .join("inner");
 
     let mut graph = DependenciesGraph::new();
     graph.insert(
@@ -256,7 +266,9 @@ fn nested_hierarchy_materializes_inner_node_modules() {
         import: crate::PackageImportOptions {
             method: PackageImportMethod::Auto,
             logged_methods: &logged,
-            requester: lockfile_dir.to_str().expect("requester"),
+            requester: lockfile_dir
+                .to_str()
+                .expect("requester"),
         },
         dir_clone_cache: None,
         graph: &graph,
@@ -307,7 +319,9 @@ fn missing_cas_for_required_dep_errors() {
         import: crate::PackageImportOptions {
             method: PackageImportMethod::Auto,
             logged_methods: &logged,
-            requester: lockfile_dir.to_str().expect("requester"),
+            requester: lockfile_dir
+                .to_str()
+                .expect("requester"),
         },
         dir_clone_cache: None,
         graph: &graph,
@@ -351,7 +365,9 @@ fn missing_cas_for_optional_dep_skips_silently() {
         import: crate::PackageImportOptions {
             method: PackageImportMethod::Auto,
             logged_methods: &logged,
-            requester: lockfile_dir.to_str().expect("requester"),
+            requester: lockfile_dir
+                .to_str()
+                .expect("requester"),
         },
         dir_clone_cache: None,
         graph: &graph,
@@ -384,7 +400,9 @@ fn no_prev_graph_skips_orphan_pass() {
         import: crate::PackageImportOptions {
             method: PackageImportMethod::Auto,
             logged_methods: &logged,
-            requester: lockfile_dir.to_str().expect("requester"),
+            requester: lockfile_dir
+                .to_str()
+                .expect("requester"),
         },
         dir_clone_cache: None,
         graph: &graph,
@@ -437,7 +455,9 @@ fn orphan_already_removed_is_tolerated() {
         import: crate::PackageImportOptions {
             method: PackageImportMethod::Auto,
             logged_methods: &logged,
-            requester: lockfile_dir.to_str().expect("requester"),
+            requester: lockfile_dir
+                .to_str()
+                .expect("requester"),
         },
         dir_clone_cache: None,
         graph: &graph,
@@ -473,7 +493,9 @@ fn hierarchy_entry_missing_from_graph_errors() {
         import: crate::PackageImportOptions {
             method: PackageImportMethod::Auto,
             logged_methods: &logged,
-            requester: lockfile_dir.to_str().expect("requester"),
+            requester: lockfile_dir
+                .to_str()
+                .expect("requester"),
         },
         dir_clone_cache: None,
         graph: &graph,
@@ -527,7 +549,9 @@ fn import_pass_emits_one_imported_event_per_node() {
         import: crate::PackageImportOptions {
             method: PackageImportMethod::Hardlink,
             logged_methods: &logged,
-            requester: lockfile_dir.to_str().expect("requester"),
+            requester: lockfile_dir
+                .to_str()
+                .expect("requester"),
         },
         dir_clone_cache: None,
         graph: &graph,

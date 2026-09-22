@@ -10,13 +10,8 @@ use assert_cmd::assert::OutputAssertExt;
 
 #[test]
 fn legacy_deploy_installs_selected_project() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
 
@@ -33,8 +28,16 @@ fn legacy_deploy_installs_selected_project() {
     let deploy_dir = workspace.join("legacy-deploy");
     assert!(deploy_dir.join("index.js").exists());
     assert!(!deploy_dir.join("test.js").exists());
-    assert!(deploy_dir.join("node_modules/lib").exists());
-    assert!(!deploy_dir.join("node_modules/dev-only").exists());
+    assert!(
+        deploy_dir
+            .join("node_modules/lib")
+            .exists()
+    );
+    assert!(
+        !deploy_dir
+            .join("node_modules/dev-only")
+            .exists()
+    );
     assert_workspace_lockfile_untouched(&workspace, &workspace_lockfile);
 
     drop((root, mock_instance));
@@ -42,13 +45,8 @@ fn legacy_deploy_installs_selected_project() {
 
 #[test]
 fn legacy_deploy_excludes_fetched_dependencies_of_unselected_projects() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_reachability_workspace(&workspace);
 
@@ -90,13 +88,8 @@ fn legacy_deploy_excludes_fetched_dependencies_of_unselected_projects() {
 
 #[test]
 fn legacy_deploy_injects_transitive_workspace_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     write_project(
@@ -164,13 +157,8 @@ fn legacy_deploy_injects_transitive_workspace_dependencies() {
 
 #[test]
 fn legacy_deploy_prefers_workspace_lockfile_versions() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     set_app_foo_dependency(&workspace, "100.0.0");
@@ -183,10 +171,12 @@ fn legacy_deploy_prefers_workspace_lockfile_versions() {
     let source_wanted_lockfile = Lockfile::load_wanted_from_dir(&workspace)
         .expect("load source wanted lockfile")
         .expect("source wanted lockfile exists");
-    let source_foo_key: PackageKey =
-        "@pnpm.e2e/foo@100.0.0".parse().expect("parse source package key");
+    let source_foo_key: PackageKey = "@pnpm.e2e/foo@100.0.0"
+        .parse()
+        .expect("parse source package key");
     assert!(
-        source_wanted_lockfile.snapshots
+        source_wanted_lockfile
+            .snapshots
             .as_ref()
             .is_some_and(|snapshots| snapshots.contains_key(&source_foo_key)),
         "the source fixture must pin foo at 100.0.0",
@@ -219,16 +209,20 @@ fn legacy_deploy_prefers_workspace_lockfile_versions() {
         .expect("load deploy current lockfile")
         .expect("deploy current lockfile exists");
     assert_eq!(
-        current_lockfile.importers
+        current_lockfile
+            .importers
             .keys()
             .map(String::as_str)
             .collect::<Vec<_>>(),
         vec![Lockfile::ROOT_IMPORTER_KEY],
         "the post-hook deploy manifest should be the sole root importer",
     );
-    let root_importer = current_lockfile.root_project().expect("root deploy importer exists");
+    let root_importer = current_lockfile
+        .root_project()
+        .expect("root deploy importer exists");
     let foo_name = PkgName::parse("@pnpm.e2e/foo").expect("parse fixture package name");
-    let foo_dependency = root_importer.dependencies
+    let foo_dependency = root_importer
+        .dependencies
         .as_ref()
         .expect("root deploy dependencies exist")
         .get(&foo_name)
@@ -236,8 +230,10 @@ fn legacy_deploy_prefers_workspace_lockfile_versions() {
     assert_eq!(foo_dependency.specifier, "^100.0.0");
     assert_eq!(foo_dependency.version.to_string(), "100.0.0");
     assert_eq!(
-        root_importer.dependencies_meta.as_ref().expect("root deploy dependenciesMeta exists")["lib"]
-            ["injected"],
+        root_importer
+            .dependencies_meta
+            .as_ref()
+            .expect("root deploy dependenciesMeta exists")["lib"]["injected"],
         true,
     );
 
@@ -264,7 +260,9 @@ fn legacy_deploy_prefers_workspace_lockfile_versions() {
         deployed_foo_dir.display(),
     );
     assert!(
-        !deploy_dir.join(Lockfile::FILE_NAME).exists(),
+        !deploy_dir
+            .join(Lockfile::FILE_NAME)
+            .exists(),
         "legacy deploy must not copy the source wanted lockfile into the target",
     );
 
@@ -273,13 +271,8 @@ fn legacy_deploy_prefers_workspace_lockfile_versions() {
 
 #[test]
 fn legacy_deploy_prefers_dedicated_lockfile_versions() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     append_workspace_yaml_key(&workspace, "sharedWorkspaceLockfile", false);
@@ -292,16 +285,20 @@ fn legacy_deploy_prefers_dedicated_lockfile_versions() {
     let app_dir = workspace.join("packages/app");
     let source_lockfile_path = app_dir.join(Lockfile::FILE_NAME);
     assert!(
-        !workspace.join(Lockfile::FILE_NAME).exists(),
+        !workspace
+            .join(Lockfile::FILE_NAME)
+            .exists(),
         "a dedicated install must not write the wanted lockfile at the workspace root",
     );
     let source_wanted_lockfile = Lockfile::load_wanted_from_dir(&app_dir)
         .expect("load source project wanted lockfile")
         .expect("source project wanted lockfile exists");
-    let source_foo_key: PackageKey =
-        "@pnpm.e2e/foo@100.0.0".parse().expect("parse source package key");
+    let source_foo_key: PackageKey = "@pnpm.e2e/foo@100.0.0"
+        .parse()
+        .expect("parse source package key");
     assert!(
-        source_wanted_lockfile.snapshots
+        source_wanted_lockfile
+            .snapshots
             .as_ref()
             .is_some_and(|snapshots| snapshots.contains_key(&source_foo_key)),
         "the source project fixture must pin foo at 100.0.0",
@@ -327,7 +324,9 @@ fn legacy_deploy_prefers_dedicated_lockfile_versions() {
         source_lockfile,
     );
     assert!(
-        !workspace.join(Lockfile::FILE_NAME).exists(),
+        !workspace
+            .join(Lockfile::FILE_NAME)
+            .exists(),
         "legacy deploy must not write a wanted lockfile at the workspace root",
     );
     assert_eq!(
@@ -336,7 +335,9 @@ fn legacy_deploy_prefers_dedicated_lockfile_versions() {
         "legacy deploy should prefer the satisfying version pinned by the source project lockfile",
     );
     assert!(
-        !deploy_dir.join(Lockfile::FILE_NAME).exists(),
+        !deploy_dir
+            .join(Lockfile::FILE_NAME)
+            .exists(),
         "legacy deploy must not copy the source project wanted lockfile into the target",
     );
 
@@ -345,13 +346,8 @@ fn legacy_deploy_prefers_dedicated_lockfile_versions() {
 
 #[test]
 fn legacy_deploy_prefers_git_branch_lockfile_versions() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     fs::create_dir(workspace.join(".git")).expect("create source git directory");
@@ -366,7 +362,11 @@ fn legacy_deploy_prefers_git_branch_lockfile_versions() {
         .success();
     let source_lockfile_path = workspace.join("pnpm-lock.feature.yaml");
     let source_lockfile = fs::read(&source_lockfile_path).expect("read source branch lockfile");
-    assert!(!workspace.join(Lockfile::FILE_NAME).exists());
+    assert!(
+        !workspace
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
     set_app_foo_dependency(&workspace, "^100.0.0");
 
     pacquet_cmd(&workspace)
@@ -387,8 +387,16 @@ fn legacy_deploy_prefers_git_branch_lockfile_versions() {
         fs::read(&source_lockfile_path).expect("reread source branch lockfile"),
         source_lockfile,
     );
-    assert!(!workspace.join(Lockfile::FILE_NAME).exists());
-    assert!(!deploy_dir.join(Lockfile::FILE_NAME).exists());
+    assert!(
+        !workspace
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
+    assert!(
+        !deploy_dir
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
@@ -403,8 +411,16 @@ fn legacy_deploy_without_dedicated_lockfile_fresh_resolves() {
     set_app_foo_dependency(&workspace, "^100.0.0");
 
     let app_dir = workspace.join("packages/app");
-    assert!(!workspace.join(Lockfile::FILE_NAME).exists());
-    assert!(!app_dir.join(Lockfile::FILE_NAME).exists());
+    assert!(
+        !workspace
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
+    assert!(
+        !app_dir
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
     pacquet_cmd(&workspace)
         .with_args([
             "--filter",
@@ -419,22 +435,29 @@ fn legacy_deploy_without_dedicated_lockfile_fresh_resolves() {
 
     let deploy_dir = workspace.join("legacy-deploy-without-dedicated-lockfile");
     assert_eq!(deployed_package_version(&deploy_dir, "@pnpm.e2e/foo"), "100.1.0");
-    assert!(!workspace.join(Lockfile::FILE_NAME).exists());
-    assert!(!app_dir.join(Lockfile::FILE_NAME).exists());
-    assert!(!deploy_dir.join(Lockfile::FILE_NAME).exists());
+    assert!(
+        !workspace
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
+    assert!(
+        !app_dir
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
+    assert!(
+        !deploy_dir
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn legacy_deploy_ignores_malformed_dedicated_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     append_workspace_yaml_key(&workspace, "sharedWorkspaceLockfile", false);
@@ -469,8 +492,16 @@ fn legacy_deploy_ignores_malformed_dedicated_lockfile() {
     assert_ignored_broken_source_lockfile(&output, &app_dir);
     let deploy_dir = workspace.join("legacy-deploy-with-malformed-dedicated-lockfile");
     assert_eq!(deployed_package_version(&deploy_dir, "@pnpm.e2e/foo"), "100.1.0");
-    assert!(!workspace.join(Lockfile::FILE_NAME).exists());
-    assert!(!deploy_dir.join(Lockfile::FILE_NAME).exists());
+    assert!(
+        !workspace
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
+    assert!(
+        !deploy_dir
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
     assert_eq!(
         fs::read(&source_lockfile_path).expect("reread malformed source project lockfile"),
         malformed_source_lockfile,
@@ -512,8 +543,16 @@ fn legacy_deploy_preserves_source_pnpmfile_hooks() {
         .success();
 
     let deploy_dir = workspace.join("legacy-deploy-with-pnpmfile");
-    assert!(!workspace.join(Lockfile::FILE_NAME).exists());
-    assert!(!deploy_dir.join(".pnpmfile.cjs").exists());
+    assert!(
+        !workspace
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
+    assert!(
+        !deploy_dir
+            .join(".pnpmfile.cjs")
+            .exists()
+    );
     assert_eq!(deployed_package_version(&deploy_dir, "@pnpm.e2e/foo"), "100.0.0");
     let deploy_manifest: serde_json::Value = serde_json::from_slice(
         &fs::read(deploy_dir.join("package.json")).expect("read deploy manifest"),
@@ -541,13 +580,8 @@ fn legacy_deploy_preserves_source_pnpmfile_hooks() {
 
 #[test]
 fn legacy_deploy_of_the_workspace_root_injects_its_workspace_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     write_root_project_depending_on_lib(&workspace);
@@ -570,7 +604,11 @@ fn legacy_deploy_of_the_workspace_root_injects_its_workspace_dependencies() {
         deploy_manifest["name"], "root",
         "`--filter .` should deploy the project in the current directory, not the projects nested under it: {deploy_manifest:#}",
     );
-    assert!(deploy_dir.join("node_modules/lib").exists());
+    assert!(
+        deploy_dir
+            .join("node_modules/lib")
+            .exists()
+    );
     let virtual_store_entries = virtual_store_entries(&deploy_dir);
     assert!(
         virtual_store_entries
@@ -585,13 +623,8 @@ fn legacy_deploy_of_the_workspace_root_injects_its_workspace_dependencies() {
 
 #[test]
 fn legacy_deploy_without_lockfile_installs_selected_project_at_root() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     set_app_foo_dependency(&workspace, "100.0.0");
@@ -611,10 +644,22 @@ fn legacy_deploy_without_lockfile_installs_selected_project_at_root() {
         .success();
 
     let deploy_dir = workspace.join("legacy-deploy-no-lockfile");
-    assert!(deploy_dir.join("node_modules/lib").exists());
+    assert!(
+        deploy_dir
+            .join("node_modules/lib")
+            .exists()
+    );
     assert_eq!(deployed_package_version(&deploy_dir, "@pnpm.e2e/foo"), "100.1.0");
-    assert!(!deploy_dir.join("legacy-deploy-no-lockfile/node_modules").exists());
-    assert!(!deploy_dir.join(Lockfile::FILE_NAME).exists());
+    assert!(
+        !deploy_dir
+            .join("legacy-deploy-no-lockfile/node_modules")
+            .exists()
+    );
+    assert!(
+        !deploy_dir
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
     assert_eq!(fs::read(&source_lockfile_path).expect("reread source lockfile"), source_lockfile);
 
     drop((root, mock_instance));
@@ -642,21 +687,24 @@ fn legacy_deploy_without_source_lockfile_fresh_resolves() {
 
     let deploy_dir = workspace.join("legacy-deploy-without-source-lockfile");
     assert_eq!(deployed_package_version(&deploy_dir, "@pnpm.e2e/foo"), "100.1.0");
-    assert!(!workspace.join(Lockfile::FILE_NAME).exists());
-    assert!(!deploy_dir.join(Lockfile::FILE_NAME).exists());
+    assert!(
+        !workspace
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
+    assert!(
+        !deploy_dir
+            .join(Lockfile::FILE_NAME)
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn legacy_deploy_ignores_malformed_source_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     set_app_foo_dependency(&workspace, "100.0.0");
@@ -689,7 +737,9 @@ fn legacy_deploy_ignores_malformed_source_lockfile() {
     let deploy_dir = workspace.join("legacy-deploy-with-malformed-source-lockfile");
     assert_eq!(deployed_package_version(&deploy_dir, "@pnpm.e2e/foo"), "100.1.0");
     assert!(
-        !deploy_dir.join(Lockfile::FILE_NAME).exists(),
+        !deploy_dir
+            .join(Lockfile::FILE_NAME)
+            .exists(),
         "legacy deploy must not write a wanted lockfile after ignoring the malformed source lockfile",
     );
     assert_eq!(
@@ -704,13 +754,8 @@ fn legacy_deploy_ignores_malformed_source_lockfile() {
 /// pnpmfile an install of the selected project loads is the project's own.
 #[test]
 fn legacy_deploy_ignores_the_pnpmfile_copied_into_the_deploy_dir() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, true);
     append_workspace_yaml_key(&workspace, "sharedWorkspaceLockfile", false);
@@ -730,16 +775,22 @@ fn legacy_deploy_ignores_the_pnpmfile_copied_into_the_deploy_dir() {
         .success();
 
     assert!(
-        project_dir.join(PNPMFILE_SENTINEL).exists(),
+        project_dir
+            .join(PNPMFILE_SENTINEL)
+            .exists(),
         "the legacy deploy install should run the selected project's pnpmfile",
     );
     let deploy_dir = workspace.join("deploy");
     assert!(
-        deploy_dir.join(".pnpmfile.mjs").exists(),
+        deploy_dir
+            .join(".pnpmfile.mjs")
+            .exists(),
         "the deployed packlist should have carried the project's pnpmfile over",
     );
     assert!(
-        !deploy_dir.join(PNPMFILE_SENTINEL).exists(),
+        !deploy_dir
+            .join(PNPMFILE_SENTINEL)
+            .exists(),
         "the legacy deploy install must not load the pnpmfile it just copied",
     );
 
@@ -751,13 +802,8 @@ fn legacy_deploy_ignores_the_pnpmfile_copied_into_the_deploy_dir() {
 /// lockfiles and must not delete them.
 #[test]
 fn legacy_deploy_keeps_the_workspace_branch_lockfiles() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_reachability_workspace(&workspace);
 

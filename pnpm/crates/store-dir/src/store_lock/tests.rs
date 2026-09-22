@@ -25,7 +25,9 @@ fn prune_waits_for_store_consumers() {
     assert_global_prune_barrier_is_blocked();
 
     drop(consumer);
-    open_lock_file(&store).try_lock().unwrap();
+    open_lock_file(&store)
+        .try_lock()
+        .unwrap();
 }
 
 #[test]
@@ -46,7 +48,9 @@ fn prune_waits_for_frozen_store_consumers() {
     assert_global_prune_barrier_is_blocked();
 
     drop(consumer);
-    open_lock_file(&store).try_lock().unwrap();
+    open_lock_file(&store)
+        .try_lock()
+        .unwrap();
 }
 
 #[test]

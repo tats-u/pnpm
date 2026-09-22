@@ -18,7 +18,10 @@ const IMPORTER_DEPENDENCY_GROUPS: [&str; 3] =
 /// lockfile-shaped — the env lockfile, an `afterAllResolved` result that
 /// dropped a section — pass through untouched.
 pub fn prune_time(document: &mut Value) {
-    if !document.get("time").is_some_and(Value::is_object) {
+    if !document
+        .get("time")
+        .is_some_and(Value::is_object)
+    {
         return;
     }
     let direct_dep_paths = importer_dep_paths(document);
@@ -47,9 +50,13 @@ fn importer_dep_paths(document: &Value) -> HashSet<String> {
 /// The peer-suffix-stripped depPath one importer dependency entry resolves
 /// to. An entry the reader cannot parse names no `time:` key.
 fn resolved_dep_path(alias: &str, dependency: &Value) -> Option<String> {
-    let version = dependency.get("version").and_then(Value::as_str)?;
+    let version = dependency
+        .get("version")
+        .and_then(Value::as_str)?;
     let alias = PkgName::parse(alias).ok()?;
-    let version = version.parse::<ImporterDepVersion>().ok()?;
+    let version = version
+        .parse::<ImporterDepVersion>()
+        .ok()?;
     Some(
         version
             .resolved_key(&alias)?

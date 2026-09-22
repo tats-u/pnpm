@@ -10,7 +10,8 @@ pub(crate) async fn select_global_package_groups<Reporter: self::Reporter>(
     latest: bool,
     prompt: UpdatePrompt,
 ) -> miette::Result<Option<HashSet<String>>> {
-    let global_pkg_dir = base_config.global_pkg_dir
+    let global_pkg_dir = base_config
+        .global_pkg_dir
         .clone()
         .ok_or_else(|| {
             miette!(
@@ -45,7 +46,9 @@ pub(crate) async fn select_global_package_groups<Reporter: self::Reporter>(
         report_cancelled::<Reporter>();
         return Ok(None);
     };
-    let selected = selected_packages(&rows, &selected_indices).into_iter().collect::<HashSet<_>>();
+    let selected = selected_packages(&rows, &selected_indices)
+        .into_iter()
+        .collect::<HashSet<_>>();
     if selected.is_empty() {
         return Ok(None);
     }
@@ -63,7 +66,8 @@ async fn outdated_group_rows(
     for pkg in matched_packages {
         let state = crate::State::init(pkg.install_dir.join("package.json"), config, false)
             .map_err(|err| miette::Report::new(err).wrap_err("initialize global state"))?;
-        let lockfile = state.lockfile
+        let lockfile = state
+            .lockfile
             .get()
             .map_err(|err| miette::Report::new(err).wrap_err("load the lockfile"))?;
         let outdated = collect_outdated_for_importer(

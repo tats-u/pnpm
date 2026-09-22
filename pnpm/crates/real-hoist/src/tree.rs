@@ -21,7 +21,8 @@ pub(super) fn external_placeholder(dep: &str) -> Rc<HoisterTree> {
 /// output tree is stable across runs (matters for snapshot
 /// tests).
 pub(super) fn sorted_non_root_importers(lockfile: &Lockfile) -> Vec<(&String, &ProjectSnapshot)> {
-    let mut non_root: Vec<(&String, &ProjectSnapshot)> = lockfile.importers
+    let mut non_root: Vec<(&String, &ProjectSnapshot)> = lockfile
+        .importers
         .iter()
         .filter(|(id, _)| id.as_str() != Lockfile::ROOT_IMPORTER_KEY)
         .collect();
@@ -150,7 +151,8 @@ fn build_dep_node(
     // matching the TS wrapper, which reads `pkgSnapshot` from the
     // original depPath while stamping `depPathByPkgId.get(id)` as the
     // reference.
-    let reference = cache.dep_key_by_pkg_id
+    let reference = cache
+        .dep_key_by_pkg_id
         .entry(pkg_id(dep_key))
         .or_insert_with(|| dep_key.clone())
         .to_string();
@@ -163,7 +165,9 @@ fn build_dep_node(
         hoist_priority: 0,
         dependencies: RefCell::new(IndexSet::new()),
     });
-    cache.nodes.insert(cache_key, Rc::clone(&node));
+    cache
+        .nodes
+        .insert(cache_key, Rc::clone(&node));
 
     let mut children: IndexSet<RcByPtr<HoisterTree>> = IndexSet::new();
     collect_snapshot_deps(snapshot, lockfile, opts, cache, &mut children)?;
@@ -179,7 +183,8 @@ fn lookup_snapshot<'a>(
     optional: bool,
     lockfile: &'a Lockfile,
 ) -> Result<Option<&'a SnapshotEntry>, HoistError> {
-    match lockfile.snapshots
+    match lockfile
+        .snapshots
         .as_ref()
         .and_then(|snapshots| snapshots.get(dep_key))
     {
@@ -203,7 +208,8 @@ fn peer_names_of(
     }
     let mut peer_names = declared_peer_names(dep_key, lockfile);
     peer_names.extend(
-        snapshot.transitive_peer_dependencies
+        snapshot
+            .transitive_peer_dependencies
             .iter()
             .flatten()
             .cloned(),
@@ -375,7 +381,9 @@ pub(super) fn convert(tree: &HoisterTree, context: &mut ConvertContext) -> Rc<Ho
         hoisted_dependencies: RefCell::new(HashMap::new()),
         decoupled: Cell::new(false),
     });
-    context.result_by_tree.insert(ptr, Rc::clone(&node));
+    context
+        .result_by_tree
+        .insert(ptr, Rc::clone(&node));
 
     // Collect the children before recursing so we can drop the
     // `Ref<'_, IndexSet<...>>` borrow on `tree.dependencies`. The
@@ -383,7 +391,8 @@ pub(super) fn convert(tree: &HoisterTree, context: &mut ConvertContext) -> Rc<Ho
     // holding the borrow across recursive calls is technically
     // safe, but releasing it keeps the panic surface smaller if
     // the algorithm later grows a mutation pass over the input.
-    let to_convert: Vec<RcByPtr<HoisterTree>> = tree.dependencies
+    let to_convert: Vec<RcByPtr<HoisterTree>> = tree
+        .dependencies
         .borrow()
         .iter()
         .cloned()

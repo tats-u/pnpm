@@ -31,7 +31,8 @@ pub(super) fn tool_install_selectors(groups: Vec<SelectorGroup>) -> Vec<Vec<Stri
             if !group.may_name_a_tool {
                 return group.tokens;
             }
-            group.tokens
+            group
+                .tokens
                 .into_iter()
                 .map(|token| tool_install_selector(&token).unwrap_or(token))
                 .collect()
@@ -92,7 +93,10 @@ pub(super) fn replacement_aliases(aliases: &[String]) -> Vec<String> {
     const PNPM_CLI_PACKAGE_ALIASES: [&str; 2] = ["pnpm", "@pnpm/exe"];
 
     let mut expanded = aliases.to_vec();
-    if aliases.iter().any(|alias| is_pnpm_cli_package_name(alias)) {
+    if aliases
+        .iter()
+        .any(|alias| is_pnpm_cli_package_name(alias))
+    {
         for alias in PNPM_CLI_PACKAGE_ALIASES {
             if !expanded
                 .iter()
@@ -135,7 +139,8 @@ pub fn has_pnpm_cli_dependency(pkg: &GlobalPackageInfo) -> bool {
 /// refuses to create one.
 fn is_pnpm_cli_only_group(pkg: &GlobalPackageInfo) -> bool {
     !pkg.dependencies.is_empty()
-        && pkg.dependencies
+        && pkg
+            .dependencies
             .iter()
             .all(|(alias, spec)| is_pnpm_cli_dependency(alias, Some(spec)))
 }
@@ -144,15 +149,16 @@ fn is_pnpm_cli_only_group(pkg: &GlobalPackageInfo) -> bool {
 /// normalized to the package it installs first, so neither a versioned form
 /// like `pnpm@9` nor an aliased one like `foo@npm:pnpm@9` bypasses the guard.
 pub fn selects_pnpm_cli<'a>(params: impl IntoIterator<Item = &'a String>) -> bool {
-    params
-        .into_iter()
-        .any(|param| {
-            let parsed = parse_wanted_dependency(param);
-            is_pnpm_cli_dependency(
-                parsed.alias.as_deref().unwrap_or_default(),
-                parsed.bare_specifier.as_deref(),
-            )
-        })
+    params.into_iter().any(|param| {
+        let parsed = parse_wanted_dependency(param);
+        is_pnpm_cli_dependency(
+            parsed
+                .alias
+                .as_deref()
+                .unwrap_or_default(),
+            parsed.bare_specifier.as_deref(),
+        )
+    })
 }
 
 /// Whether a dependency declared as `alias` at `spec` is the pnpm CLI. An
@@ -242,13 +248,18 @@ pub(super) fn resolve_local_param(param: &str, base_dir: &Path) -> String {
         }
     }
     if param.starts_with('.') {
-        return lexical_normalize(&base_dir.join(param)).display().to_string();
+        return lexical_normalize(&base_dir.join(param))
+            .display()
+            .to_string();
     }
     param.to_string()
 }
 
 pub(super) fn infer_local_package_alias(selector: &str) -> miette::Result<String> {
-    let Some(path) = selector.strip_prefix("file:").map(Path::new) else {
+    let Some(path) = selector
+        .strip_prefix("file:")
+        .map(Path::new)
+    else {
         return Ok(selector.to_string());
     };
     let path_display = path.display().to_string();
@@ -274,7 +285,10 @@ pub(super) fn infer_local_package_alias(selector: &str) -> miette::Result<String
         .get("name")
         .and_then(serde_json::Value::as_str)
         .filter(|name| !name.is_empty())
-        .or_else(|| path.file_name().and_then(|name| name.to_str()))
+        .or_else(|| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+        })
         .filter(|name| !name.is_empty())
         .ok_or_else(|| {
             miette::miette!("The local package at {path_display} has no package name")

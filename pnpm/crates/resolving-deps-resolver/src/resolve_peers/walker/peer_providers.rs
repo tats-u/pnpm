@@ -83,10 +83,14 @@ impl Walker<'_> {
     ) -> Vec<(String, ParentRef)> {
         let mut pins = Vec::new();
         let (Some(locked_peer_context), Some(provider_paths)) = (
-            self.tree.dependencies_tree
+            self.tree
+                .dependencies_tree
                 .get(node_id)
                 .and_then(crate::resolved_tree::DependenciesTreeNode::locked_peer_context),
-            self.opts.scope.resolved_peer_provider_paths.as_ref(),
+            self.opts
+                .scope
+                .resolved_peer_provider_paths
+                .as_ref(),
         ) else {
             return pins;
         };
@@ -107,20 +111,31 @@ impl Walker<'_> {
         previous_dep_path: &DepPath,
         context: &LockedPinContext<'_>,
     ) -> Option<(String, ParentRef)> {
-        let peer_node_id = self.providers.node_ids_by_previous_dep_path.get(previous_dep_path)?;
-        let peer_dep = context.pkg.peer_dependencies.get(peer_name)?;
+        let peer_node_id = self
+            .providers
+            .node_ids_by_previous_dep_path
+            .get(previous_dep_path)?;
+        let peer_dep = context
+            .pkg
+            .peer_dependencies
+            .get(peer_name)?;
         if context.provider_paths.get(peer_node_id) != Some(previous_dep_path) {
             return None;
         }
         // Only pin providers that have no peer context of their
         // own — a suffixed path depends on the very bindings this
         // pass is still computing.
-        if index_of_dep_path_suffix(previous_dep_path.as_str()).peers_index.is_some() {
+        if index_of_dep_path_suffix(previous_dep_path.as_str())
+            .peers_index
+            .is_some()
+        {
             return None;
         }
         // A provider that already resolved to a different path
         // this pass must not be rebound.
-        if self.caches.node_dep_paths
+        if self
+            .caches
+            .node_dep_paths
             .get(peer_node_id)
             .is_some_and(|current| current != previous_dep_path)
         {
@@ -133,8 +148,14 @@ impl Walker<'_> {
         ) {
             return None;
         }
-        let peer_tree_node = self.tree.dependencies_tree.get(peer_node_id)?;
-        let peer_pkg = self.tree.packages.get(&peer_tree_node.resolved_package_id)?;
+        let peer_tree_node = self
+            .tree
+            .dependencies_tree
+            .get(peer_node_id)?;
+        let peer_pkg = self
+            .tree
+            .packages
+            .get(&peer_tree_node.resolved_package_id)?;
         let (_, peer_version) = pkg_name_version(&peer_pkg.result);
         if !satisfies_with_prereleases(&peer_version, &get_peer_version_range(&peer_dep.version)) {
             return None;
@@ -166,8 +187,9 @@ impl Walker<'_> {
         parent_refs: &ParentRefs,
         parent_node_ids: &SharedChain<NodeId>,
     ) -> bool {
-        let Some(peer_node_id) =
-            parent_refs.get(peer_name).and_then(|parent| parent.node_id.as_ref())
+        let Some(peer_node_id) = parent_refs
+            .get(peer_name)
+            .and_then(|parent| parent.node_id.as_ref())
         else {
             return false;
         };
@@ -180,10 +202,12 @@ impl Walker<'_> {
         peer_name: &str,
         peer_node_id: &NodeId,
     ) -> bool {
-        self.providers.current_provider_sources
+        self.providers
+            .current_provider_sources
             .iter()
             .any(|source| {
-                source.direct_node_ids_by_alias
+                source
+                    .direct_node_ids_by_alias
                     .iter()
                     .any(|(alias, direct_node_id)| {
                         direct_node_id == peer_node_id
@@ -200,9 +224,15 @@ impl Walker<'_> {
         peer_node_id: &NodeId,
     ) -> bool {
         alias != peer_name
-            || source.explicitly_requested_direct_dependencies.contains(alias)
-            || (source.declared_direct_dependencies.contains(alias)
-                && self.tree.dependencies_tree
+            || source
+                .explicitly_requested_direct_dependencies
+                .contains(alias)
+            || (source
+                .declared_direct_dependencies
+                .contains(alias)
+                && self
+                    .tree
+                    .dependencies_tree
                     .get(peer_node_id)
                     .is_none_or(|node| node.previous_dep_path().is_none()))
     }
@@ -215,7 +245,11 @@ impl Walker<'_> {
         parent_node_ids: &SharedChain<NodeId>,
     ) -> bool {
         for parent_node_id in parent_node_ids.iter() {
-            let Some(parent_node) = self.tree.dependencies_tree.get(parent_node_id) else {
+            let Some(parent_node) = self
+                .tree
+                .dependencies_tree
+                .get(parent_node_id)
+            else {
                 continue;
             };
             let Some(must_win) = parent_node.must_win_dependency_names() else {

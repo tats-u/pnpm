@@ -41,8 +41,8 @@ fn outdated_lockfile_project() -> TempDir {
     .expect("write local dependency manifest");
     fs::write(
         workspace.join("package.json"),
-        serde_json::json!({ "dependencies": { "local-dependency": "file:dependency" } }).to_string(
-        ),
+        serde_json::json!({ "dependencies": { "local-dependency": "file:dependency" } })
+            .to_string(),
     )
     .expect("write project manifest");
     fs::write(workspace.join("pnpm-lock.yaml"), OUTDATED_LOCKFILE).expect("write stale lockfile");

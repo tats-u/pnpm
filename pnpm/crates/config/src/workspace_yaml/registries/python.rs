@@ -39,12 +39,15 @@ impl PythonRegistryRoute {
 
     #[must_use]
     pub fn is_default(&self) -> bool {
-        self.patterns.iter().any(PythonPattern::is_default)
+        self.patterns
+            .iter()
+            .any(PythonPattern::is_default)
     }
 
     #[must_use]
     pub fn packages(&self) -> Vec<String> {
-        let mut packages: Vec<_> = self.patterns
+        let mut packages: Vec<_> = self
+            .patterns
             .iter()
             .map(PythonPattern::normalized)
             .collect();
@@ -147,12 +150,9 @@ pub(super) fn validate_routes(indexes: &[EcosystemIndex]) -> Result<(), LoadWork
     let mut claims: Vec<(PythonPattern, &str)> = Vec::new();
     for index in indexes {
         for pattern in patterns(index)? {
-            if let Some((_, registry)) = claims
-                .iter()
-                .find(|(other, _)| {
-                    pattern.is_default() == other.is_default() && pattern.overlaps(other)
-                })
-            {
+            if let Some((_, registry)) = claims.iter().find(|(other, _)| {
+                pattern.is_default() == other.is_default() && pattern.overlaps(other)
+            }) {
                 return Err(LoadWorkspaceYamlError::PythonPackageRoutedTwice {
                     pattern: pattern.normalized(),
                     registries: super::quote_and_join(

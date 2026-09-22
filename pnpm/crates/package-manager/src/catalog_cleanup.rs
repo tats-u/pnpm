@@ -180,11 +180,19 @@ pub(crate) fn post_install_prune(
 /// can (a versioned entry is pruned).
 fn resolved_package_versions(lockfile: &Lockfile) -> ResolvedPackageVersions {
     let mut resolved = ResolvedPackageVersions::new();
-    for key in lockfile.snapshots.iter().flat_map(|snapshots| snapshots.keys()) {
-        let versions = resolved.entry(key.name.to_string()).or_default();
-        let version = key.suffix
-            .version_semver()
-            .or_else(|| key.suffix.registry_qualified().map(|(_, version)| version));
+    for key in lockfile
+        .snapshots
+        .iter()
+        .flat_map(|snapshots| snapshots.keys())
+    {
+        let versions = resolved
+            .entry(key.name.to_string())
+            .or_default();
+        let version = key.suffix.version_semver().or_else(|| {
+            key.suffix
+                .registry_qualified()
+                .map(|(_, version)| version)
+        });
         if let Some(version) = version {
             versions.insert(version.to_string());
         }

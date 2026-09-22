@@ -12,11 +12,15 @@ fn request(line: &str) -> Option<VersionRequest> {
 }
 
 fn version(version: &str) -> pep440_rs::Version {
-    version.parse().expect("interpreter version fixture")
+    version
+        .parse()
+        .expect("interpreter version fixture")
 }
 
 fn requires(specifiers: &str) -> pep440_rs::VersionSpecifiers {
-    specifiers.parse().expect("requires-python fixture")
+    specifiers
+        .parse()
+        .expect("requires-python fixture")
 }
 
 #[test]
@@ -57,15 +61,30 @@ fn the_nearest_python_version_file_wins_and_the_search_stops_at_the_workspace() 
 
     let stop = Some(workspace.path());
     let found = version_request::<SilentReporter>(stop, &project).expect("the workspace pin");
-    assert_eq!(found.map(|request| request.version()).as_deref(), Some("3.12"));
+    assert_eq!(
+        found
+            .map(|request| request.version())
+            .as_deref(),
+        Some("3.12")
+    );
 
     std::fs::write(project.join(".python-version"), "3.13\n").expect("project pin");
     let found = version_request::<SilentReporter>(stop, &project).expect("the project pin");
-    assert_eq!(found.map(|request| request.version()).as_deref(), Some("3.13"));
+    assert_eq!(
+        found
+            .map(|request| request.version())
+            .as_deref(),
+        Some("3.13")
+    );
 
     let found =
         version_request::<SilentReporter>(stop, workspace.path()).expect("the workspace pin");
-    assert_eq!(found.map(|request| request.version()).as_deref(), Some("3.12"));
+    assert_eq!(
+        found
+            .map(|request| request.version())
+            .as_deref(),
+        Some("3.12")
+    );
 }
 
 #[test]

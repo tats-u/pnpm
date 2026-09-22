@@ -68,9 +68,14 @@ impl WhyArgs {
             LoadedState::load(&lockfile_dir, Some(state.config.modules_dir.as_path()), false)?;
         let Some(env) = loaded.env(
             &lockfile_dir,
-            state.config.virtual_store_dir_max_length as usize,
+            state
+                .config
+                .virtual_store_dir_max_length as usize,
             &state.config.resolved_registries(),
-            state.config.registry_options_by_url.clone(),
+            state
+                .config
+                .registry_options_by_url
+                .clone(),
         ) else {
             return Ok(());
         };
@@ -86,7 +91,9 @@ impl WhyArgs {
             &BuildGraphOptions { lockfile, include, only_projects: false },
         );
 
-        let searcher = self.searcher(&env, &graph, state.config, &lockfile_dir).await?;
+        let searcher = self
+            .searcher(&env, &graph, state.config, &lockfile_dir)
+            .await?;
 
         let trees = build_dependents_tree(&BuildDependentsOptions {
             env: &env,
@@ -156,7 +163,9 @@ fn collect_importer_info(
         let manifest = safe_importer_dir(lockfile_dir, importer_id)
             .map(|importer_dir| read_project_manifest(&importer_dir))
             .unwrap_or_default();
-        let name = manifest.name.unwrap_or_else(|| importer_display_name(importer_id));
+        let name = manifest
+            .name
+            .unwrap_or_else(|| importer_display_name(importer_id));
         importer_info.insert(
             importer_id.clone(),
             ImporterInfo { name, version: manifest.version.unwrap_or_default() },
@@ -180,7 +189,10 @@ fn why_project_dirs(
     if !config.recursive {
         return Ok(vec![project_dir]);
     }
-    let workspace_root = config.workspace_dir.as_deref().unwrap_or(lockfile_dir);
+    let workspace_root = config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(lockfile_dir);
     let (projects, _) = discover_workspace_projects(workspace_root, config)?;
     Ok(select_recursive_projects(&projects, config, &project_dir, AutoExcludeRoot::Disabled)?
         .selected
@@ -193,7 +205,8 @@ fn state_project_dirs(state: &State, lockfile_dir: &Path) -> miette::Result<Vec<
     why_project_dirs(
         state.config,
         lockfile_dir,
-        state.manifest
+        state
+            .manifest
             .path()
             .parent()
             .expect("manifest path always has a parent dir")

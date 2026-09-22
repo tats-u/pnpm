@@ -33,7 +33,8 @@ pub(super) fn read_virtual_shim_state(path: &Path) -> miette::Result<Option<Virt
             "Virtual shim state at {path_display} has an invalid package owner",
         ));
     }
-    if let Some(bin) = state.bins
+    if let Some(bin) = state
+        .bins
         .iter()
         .find(|bin| !is_safe_bin_name(bin))
     {
@@ -52,7 +53,9 @@ pub(crate) fn record_virtual_shim_state(
 ) -> miette::Result<()> {
     let path = virtual_shim_state_path(bin_dir, package);
     let state = VirtualShimState { package: package.to_string(), bins: bins.to_vec() };
-    let bytes = serde_json::to_vec(&state).into_diagnostic().wrap_err("serialize virtual shims")?;
+    let bytes = serde_json::to_vec(&state)
+        .into_diagnostic()
+        .wrap_err("serialize virtual shims")?;
     pnpm_fs::write_atomic(&path, &bytes)
         .into_diagnostic()
         .wrap_err_with(|| format!("record virtual shims at {}", path.display()))

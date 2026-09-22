@@ -209,14 +209,17 @@ impl PreviewState<'_> {
             self.preview.manifest = None;
             self.manifest_removed = true;
         }
-        self.written_paths.shift_remove(&removed);
+        self.written_paths
+            .shift_remove(&removed);
     }
 
     fn apply_to_manifest(
         &mut self,
         file_patch: &FilePatch<'_, str>,
     ) -> Result<(), PatchApplyError> {
-        let target = self.patched_dir.join(MANIFEST_FILE_NAME);
+        let target = self
+            .patched_dir
+            .join(MANIFEST_FILE_NAME);
         let original = self.manifest_before(&target)?;
         self.manifest_removed = false;
         let text_patch = file_patch
@@ -374,14 +377,12 @@ impl FileApply<'_> {
     /// outside the package directory.
     fn resolve_target(&self, rel: &Path) -> Result<PathBuf, PatchApplyError> {
         let escapes = rel.is_absolute()
-            || rel
-                .components()
-                .any(|component| {
-                    matches!(
-                        component,
-                        Component::ParentDir | Component::RootDir | Component::Prefix(_),
-                    )
-                });
+            || rel.components().any(|component| {
+                matches!(
+                    component,
+                    Component::ParentDir | Component::RootDir | Component::Prefix(_),
+                )
+            });
         if escapes {
             return Err(self.failed(format!("patch path escapes target dir: {}", rel.display())));
         }
@@ -458,10 +459,9 @@ impl FileApply<'_> {
             return Err(self.failed(format!("cannot create {target}: target already exists")));
         }
         if let Some(parent) = target.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|source| {
-                    self.failed(format!("create parent of {}: {source}", target.display()))
-                })?;
+            fs::create_dir_all(parent).map_err(|source| {
+                self.failed(format!("create parent of {}: {source}", target.display()))
+            })?;
         }
         fs::write(target, created)
             .map_err(|source| self.failed(format!("write {}: {source}", target.display())))
@@ -557,7 +557,9 @@ fn write_atomic_with_mode(
 
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let pid = std::process::id();
-    let parent = target.parent().unwrap_or_else(|| Path::new("."));
+    let parent = target
+        .parent()
+        .unwrap_or_else(|| Path::new("."));
     let file_name = target
         .file_name()
         .map_or_else(|| String::from("patched"), |name| name.to_string_lossy().into_owned());
@@ -614,10 +616,9 @@ fn replace_with_permissions(
         return Err(error);
     }
 
-    fs::rename(tmp, target)
-        .inspect_err(|_| {
-            let _ = fs::remove_file(tmp);
-        })
+    fs::rename(tmp, target).inspect_err(|_| {
+        let _ = fs::remove_file(tmp);
+    })
 }
 
 #[cfg(test)]

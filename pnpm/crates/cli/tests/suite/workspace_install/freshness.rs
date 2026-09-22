@@ -141,8 +141,13 @@ fn missing_workspace_importer_is_not_accepted_by_frozen_install() {
     let mut lockfile: pnpm_lockfile::Lockfile =
         serde_saphyr::from_str(&fs::read_to_string(&lockfile_path).expect("read pnpm-lock.yaml"))
             .expect("parse pnpm-lock.yaml");
-    lockfile.importers.remove("pkg-a").expect("pkg-a importer exists");
-    lockfile.save_to_path(&lockfile_path).expect("save lockfile without pkg-a importer");
+    lockfile
+        .importers
+        .remove("pkg-a")
+        .expect("pkg-a importer exists");
+    lockfile
+        .save_to_path(&lockfile_path)
+        .expect("save lockfile without pkg-a importer");
 
     let output = pacquet_at(&workspace)
         .with_args(["install", "--frozen-lockfile"])
@@ -174,8 +179,13 @@ fn normal_install_accepts_missing_dependency_free_workspace_importer() {
     let mut lockfile: pnpm_lockfile::Lockfile =
         serde_saphyr::from_str(&fs::read_to_string(&lockfile_path).expect("read pnpm-lock.yaml"))
             .expect("parse pnpm-lock.yaml");
-    lockfile.importers.remove("pkg-b").expect("pkg-b importer exists");
-    lockfile.save_to_path(&lockfile_path).expect("save lockfile without pkg-b importer");
+    lockfile
+        .importers
+        .remove("pkg-b")
+        .expect("pkg-b importer exists");
+    lockfile
+        .save_to_path(&lockfile_path)
+        .expect("save lockfile without pkg-b importer");
 
     pacquet_at(&workspace)
         .with_arg("install")
@@ -218,8 +228,13 @@ fn normal_install_accepts_missing_importer_with_only_ignored_optional_dependenci
     let mut lockfile: pnpm_lockfile::Lockfile =
         serde_saphyr::from_str(&fs::read_to_string(&lockfile_path).expect("read pnpm-lock.yaml"))
             .expect("parse pnpm-lock.yaml");
-    lockfile.importers.remove("pkg-a").expect("pkg-a importer exists");
-    lockfile.save_to_path(&lockfile_path).expect("save lockfile without pkg-a importer");
+    lockfile
+        .importers
+        .remove("pkg-a")
+        .expect("pkg-a importer exists");
+    lockfile
+        .save_to_path(&lockfile_path)
+        .expect("save lockfile without pkg-a importer");
 
     pacquet_at(&workspace)
         .with_arg("install")

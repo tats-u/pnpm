@@ -83,7 +83,9 @@ pub(super) static WARNED_MISSING_TIME: std::sync::LazyLock<
 > = std::sync::LazyLock::new(|| Mutex::new(indexmap::IndexSet::new()));
 
 pub(crate) fn warn_missing_time_once(pkg_name: &str, skipped_check: SkippedTimeCheck) {
-    let mut warned = WARNED_MISSING_TIME.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut warned = WARNED_MISSING_TIME
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let key = (pkg_name.to_string(), skipped_check);
     if warned.contains(&key) {
         return;

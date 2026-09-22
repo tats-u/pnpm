@@ -27,7 +27,9 @@ impl Seek for CountingReader {
 fn elf_interpreter(elf: &[u8]) -> Option<&str> {
     let layout = elf_layout(elf)?;
     let phoff: usize = layout.phoff.try_into().ok()?;
-    let table_size = layout.phentsize.checked_mul(layout.phnum)?;
+    let table_size = layout
+        .phentsize
+        .checked_mul(layout.phnum)?;
     if table_size > MAX_PROGRAM_HEADERS_SIZE {
         return None;
     }

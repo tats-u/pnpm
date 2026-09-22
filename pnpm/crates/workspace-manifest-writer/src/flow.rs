@@ -93,7 +93,8 @@ pub(crate) fn parse(text: &str, open: usize) -> Option<Collection> {
 /// would choose, and return the document with the rebuilt collection
 /// spliced in. `value_text` is already-rendered YAML.
 pub(crate) fn upsert(text: &str, collection: &Collection, key: &str, value_text: &str) -> String {
-    let mut entries: Vec<String> = collection.entries
+    let mut entries: Vec<String> = collection
+        .entries
         .iter()
         .map(|entry| text[entry.span.clone()].to_string())
         .collect();
@@ -115,10 +116,12 @@ pub(crate) fn upsert(text: &str, collection: &Collection, key: &str, value_text:
 /// Drop the entries whose key is in `keys` and return the document with the
 /// rebuilt collection spliced in.
 pub(crate) fn remove_keys(text: &str, collection: &Collection, keys: &[String]) -> String {
-    let entries: Vec<String> = collection.entries
+    let entries: Vec<String> = collection
+        .entries
         .iter()
         .filter(|entry| {
-            !entry.key
+            !entry
+                .key
                 .as_ref()
                 .is_some_and(|key| keys.contains(key))
         })

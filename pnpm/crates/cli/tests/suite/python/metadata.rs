@@ -84,10 +84,8 @@ async fn dynamic_dependencies_use_the_metadata_hook_or_wheel_fallback() {
     for hook in [false, true] {
         let root = tempfile::tempdir().unwrap();
         let mut server = mockito::Server::new_async().await;
-        let backend = TINY_BACKEND.replace(
-            r#"project = manifest["project"]"#,
-            r#"project = dict(manifest["project"])"#,
-        );
+        let backend = TINY_BACKEND
+            .replace(r#"project = manifest["project"]"#, r#"project = dict(manifest["project"])"#);
         let backend = backend.replace(r#"project = dict(manifest["project"])"#, "project = dict(manifest[\"project\"])\n    project[\"dependencies\"] = open(\"requirements.txt\").read().splitlines()");
         let backend = if hook {
             format!(
@@ -314,7 +312,9 @@ async fn dynamic_metadata_cannot_omit_or_change_static_dependencies() {
             let manifest = root.path().join("pyproject.toml");
             fs::write(
                 &manifest,
-                fs::read_to_string(&manifest).unwrap().replace("version = '1.0'", declaration),
+                fs::read_to_string(&manifest)
+                    .unwrap()
+                    .replace("version = '1.0'", declaration),
             )
             .unwrap();
             super::assert_failure_contains(
@@ -463,7 +463,9 @@ async fn dynamic_versions_cannot_omit_rename_or_add_static_extras() {
         let path = root.path().join("pyproject.toml");
         fs::write(
             &path,
-            fs::read_to_string(&path).unwrap().replace("version = '1.0'", "dynamic = ['version']"),
+            fs::read_to_string(&path)
+                .unwrap()
+                .replace("version = '1.0'", "dynamic = ['version']"),
         )
         .unwrap();
         super::assert_failure_contains(
@@ -507,7 +509,9 @@ def prepare_metadata_for_build_wheel(directory, config_settings=None):
     let path = root.path().join("pyproject.toml");
     fs::write(
         &path,
-        fs::read_to_string(&path).unwrap().replace("requires-python = '>=3.10'\n", ""),
+        fs::read_to_string(&path)
+            .unwrap()
+            .replace("requires-python = '>=3.10'\n", ""),
     )
     .unwrap();
     fs::write(root.path().join(".python-version"), "3.11\n").unwrap();

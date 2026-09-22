@@ -115,7 +115,10 @@ async fn install_rejects_invalid_minimum_release_age_exclude_pattern() {
     let err = result.expect_err("invalid exclude pattern must surface");
     assert!(matches!(err, InstallError::BuildVerifiers(_)), "expected BuildVerifiers, got {err:?}");
     assert!(
-        !dirs.project_root.join("node_modules/.pacquet").exists(),
+        !dirs
+            .project_root
+            .join("node_modules/.pacquet")
+            .exists(),
         "BuildVerifiers must abort before virtual-store materialization",
     );
 
@@ -217,19 +220,42 @@ async fn fresh_install_writes_pnpm_lock_yaml_with_expected_shape() {
     let lockfile: Lockfile = serde_saphyr::from_str(&content).expect("parse fresh lockfile");
 
     assert_eq!(lockfile.lockfile_version.major, 9);
-    let importer = lockfile.root_project().expect("root importer recorded");
-    let deps = importer.dependencies.as_ref().expect("dependencies map");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer recorded");
+    let deps = importer
+        .dependencies
+        .as_ref()
+        .expect("dependencies map");
     let hello_key: pnpm_lockfile::PkgName =
         pnpm_lockfile::PkgName::parse("@pnpm.e2e/hello-world-js-bin").unwrap();
-    let entry = deps.get(&hello_key).expect("hello-world-js-bin recorded");
+    let entry = deps
+        .get(&hello_key)
+        .expect("hello-world-js-bin recorded");
     assert_eq!(entry.specifier, "1.0.0");
 
-    let packages = lockfile.packages.as_ref().expect("packages map populated");
-    let pkg_key: pnpm_lockfile::PackageKey = "@pnpm.e2e/hello-world-js-bin@1.0.0".parse().unwrap();
-    let metadata = packages.get(&pkg_key).expect("packages entry");
-    assert!(metadata.resolution.integrity().is_some(), "registry resolution carries integrity");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages map populated");
+    let pkg_key: pnpm_lockfile::PackageKey = "@pnpm.e2e/hello-world-js-bin@1.0.0"
+        .parse()
+        .unwrap();
+    let metadata = packages
+        .get(&pkg_key)
+        .expect("packages entry");
+    assert!(
+        metadata
+            .resolution
+            .integrity()
+            .is_some(),
+        "registry resolution carries integrity"
+    );
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map populated");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map populated");
     assert!(
         snapshots.contains_key(&pkg_key),
         "snapshot keyed by depPath (pure pkg id when no peers)",
@@ -253,7 +279,9 @@ async fn fresh_install_splits_dev_and_prod_dependency_sections() {
     manifest
         .add_dependency("@pnpm.e2e/hello-world-js-bin", "1.0.0", DependencyGroup::Prod)
         .unwrap();
-    manifest.add_dependency("@pnpm/xyz", "1.0.0", DependencyGroup::Dev).unwrap();
+    manifest
+        .add_dependency("@pnpm/xyz", "1.0.0", DependencyGroup::Dev)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -323,13 +351,21 @@ async fn fresh_install_splits_dev_and_prod_dependency_sections() {
     let content = std::fs::read_to_string(&lockfile_path).expect("read lockfile");
     let lockfile: Lockfile = serde_saphyr::from_str(&content).expect("parse fresh lockfile");
 
-    let importer = lockfile.root_project().expect("root importer");
-    let prod = importer.dependencies.as_ref().expect("prod section");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let prod = importer
+        .dependencies
+        .as_ref()
+        .expect("prod section");
     let hello_key = pnpm_lockfile::PkgName::parse("@pnpm.e2e/hello-world-js-bin").unwrap();
     let xyz_key = pnpm_lockfile::PkgName::parse("@pnpm/xyz").unwrap();
     assert!(prod.contains_key(&hello_key));
     assert!(!prod.contains_key(&xyz_key), "dev dep stays out of the prod section");
-    let dev = importer.dev_dependencies.as_ref().expect("dev section");
+    let dev = importer
+        .dev_dependencies
+        .as_ref()
+        .expect("dev section");
     assert!(dev.contains_key(&xyz_key));
 
     drop((dirs.dir, mock_instance));
@@ -351,7 +387,9 @@ async fn fresh_install_marks_optional_snapshots_in_pnpm_lock_yaml() {
     manifest
         .add_dependency("@pnpm.e2e/hello-world-js-bin", "1.0.0", DependencyGroup::Prod)
         .unwrap();
-    manifest.add_dependency("@pnpm/xyz", "1.0.0", DependencyGroup::Optional).unwrap();
+    manifest
+        .add_dependency("@pnpm/xyz", "1.0.0", DependencyGroup::Optional)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -420,7 +458,10 @@ async fn fresh_install_marks_optional_snapshots_in_pnpm_lock_yaml() {
     let lockfile_path = dirs.path().join(Lockfile::FILE_NAME);
     let content = std::fs::read_to_string(&lockfile_path).expect("read lockfile");
     let lockfile: Lockfile = serde_saphyr::from_str(&content).expect("parse lockfile");
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
 
     // Look snapshots up by package name + version rather than by an
     // exact key parse: `@pnpm/xyz` declares peer deps, so the resolver
@@ -430,9 +471,7 @@ async fn fresh_install_marks_optional_snapshots_in_pnpm_lock_yaml() {
     let find_optional = |scope: &str, bare: &str| -> Option<bool> {
         snapshots
             .iter()
-            .find(|(key, _)| {
-                key.name.scope.as_deref() == Some(scope) && key.name.bare == bare
-            })
+            .find(|(key, _)| key.name.scope.as_deref() == Some(scope) && key.name.bare == bare)
             .map(|(_, entry)| entry.optional)
     };
 
@@ -538,25 +577,36 @@ async fn fresh_install_skips_platform_incompatible_optional_dependency() {
     .expect("install should succeed");
 
     assert!(
-        is_symlink_or_junction(&dirs.project_root.join(
-            "node_modules/@pnpm.e2e/hello-world-js-bin"
-        ))
+        is_symlink_or_junction(
+            &dirs
+                .project_root
+                .join("node_modules/@pnpm.e2e/hello-world-js-bin")
+        )
         .unwrap(),
         "compatible prod dependency should be linked",
     );
     assert!(
-        !dirs.project_root.join("node_modules/@pnpm.e2e/not-compatible-with-any-os").exists(),
+        !dirs
+            .project_root
+            .join("node_modules/@pnpm.e2e/not-compatible-with-any-os")
+            .exists(),
         "platform-incompatible optional dependency must not be linked",
     );
     assert!(
-        !dirs.virtual_store_dir.join("@pnpm.e2e+not-compatible-with-any-os@1.0.0").exists(),
+        !dirs
+            .virtual_store_dir
+            .join("@pnpm.e2e+not-compatible-with-any-os@1.0.0")
+            .exists(),
         "platform-incompatible optional dependency must not be extracted",
     );
 
     let lockfile_path = dirs.path().join(Lockfile::FILE_NAME);
     let content = std::fs::read_to_string(&lockfile_path).expect("read lockfile");
     let lockfile: Lockfile = serde_saphyr::from_str(&content).expect("parse lockfile");
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
     let skipped_key = snapshots
         .iter()
         .find(|(key, _)| {
@@ -569,7 +619,8 @@ async fn fresh_install_skips_platform_incompatible_optional_dependency() {
         })
         .expect("optional dependency should stay in the lockfile");
 
-    let written = dirs.modules_dir
+    let written = dirs
+        .modules_dir
         .pipe_as_ref(read_modules_manifest::<Host>)
         .expect("read .modules.yaml")
         .expect("modules manifest exists");
@@ -580,7 +631,9 @@ async fn fresh_install_skips_platform_incompatible_optional_dependency() {
         ["@pnpm.e2e/dep-of-optional-pkg@1.0.0".to_string(), skipped_key.to_string()],
     );
 
-    let current_lockfile_path = dirs.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME);
+    let current_lockfile_path = dirs
+        .virtual_store_dir
+        .join(Lockfile::CURRENT_FILE_NAME);
     let current_content =
         std::fs::read_to_string(&current_lockfile_path).expect("read current lockfile");
     let current_lockfile: Lockfile =

@@ -61,12 +61,22 @@ async fn from_clients_uses_the_supplied_no_redirect_configuration() {
 
 #[tokio::test]
 async fn https_target_uses_configured_proxy() {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind proxy");
-    let proxy_addr = listener.local_addr().expect("proxy address");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind proxy");
+    let proxy_addr = listener
+        .local_addr()
+        .expect("proxy address");
     let proxy = tokio::spawn(async move {
-        let (mut stream, _) = listener.accept().await.expect("accept proxy connection");
+        let (mut stream, _) = listener
+            .accept()
+            .await
+            .expect("accept proxy connection");
         let mut request = vec![0; 1024];
-        let size = stream.read(&mut request).await.expect("read CONNECT request");
+        let size = stream
+            .read(&mut request)
+            .await
+            .expect("read CONNECT request");
         stream
             .write_all(b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n")
             .await

@@ -168,7 +168,9 @@ pub fn ensure_file(
     // See the "Process-local per-path mutex" bullet above and
     // [`cas_write_lock`] for the rationale.
     let lock = cas_write_lock(file_path);
-    let _guard = lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let _guard = lock
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
 
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
@@ -370,7 +372,9 @@ fn write_atomic(
     content: &[u8],
     mode: Option<u32>,
 ) -> Result<(), EnsureFileError> {
-    let parent = file_path.parent().unwrap_or_else(|| Path::new("."));
+    let parent = file_path
+        .parent()
+        .unwrap_or_else(|| Path::new("."));
     let name = file_path
         .file_name()
         .map(|file_name| file_name.to_string_lossy().into_owned())

@@ -48,7 +48,11 @@ impl Terminal {
     /// Read whatever pacquet and the script write, so neither blocks on a
     /// full terminal buffer. The reader ends when the terminal closes.
     fn drain(&self) {
-        let mut master = File::from(self.master.try_clone().expect("clone the terminal"));
+        let mut master = File::from(
+            self.master
+                .try_clone()
+                .expect("clone the terminal"),
+        );
         thread::spawn(move || {
             let mut sink = [0; 4096];
             while master
@@ -63,7 +67,13 @@ impl Terminal {
     /// terminal and its standard streams.
     pub fn spawn_foreground(&self, mut command: Command) -> Child {
         let slave = self.slave.as_raw_fd();
-        let stream = || Stdio::from(self.slave.try_clone().expect("clone the terminal"));
+        let stream = || {
+            Stdio::from(
+                self.slave
+                    .try_clone()
+                    .expect("clone the terminal"),
+            )
+        };
         command
             .stdin(stream())
             .stdout(stream())
@@ -88,14 +98,22 @@ impl Terminal {
                 receive_terminal_signals()
             });
         }
-        command.spawn().expect("spawn pacquet on the terminal")
+        command
+            .spawn()
+            .expect("spawn pacquet on the terminal")
     }
 
     /// Type `Ctrl+C`, which the terminal turns into a `SIGINT` for its
     /// whole foreground process group.
     pub fn press_ctrl_c(&self) {
-        let mut master = File::from(self.master.try_clone().expect("clone the terminal"));
-        master.write_all(b"\x03").expect("type into the terminal");
+        let mut master = File::from(
+            self.master
+                .try_clone()
+                .expect("clone the terminal"),
+        );
+        master
+            .write_all(b"\x03")
+            .expect("type into the terminal");
     }
 }
 
@@ -118,7 +136,9 @@ pub fn spawn_without_terminal(mut command: Command) -> Child {
             receive_terminal_signals()
         });
     }
-    command.spawn().expect("spawn pacquet without a terminal")
+    command
+        .spawn()
+        .expect("spawn pacquet without a terminal")
 }
 
 /// Undo an ignored or blocked terminal signal inherited from the harness.

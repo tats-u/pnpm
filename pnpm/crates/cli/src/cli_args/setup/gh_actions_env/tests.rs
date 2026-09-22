@@ -84,7 +84,12 @@ fn nothing_is_written_outside_gh_actions() {
 
     write_gh_actions_env_files::<SilentReporter, NoEnv>(dir.path(), &pnpm_home_dir, &bin_dir);
 
-    assert_eq!(std::fs::read_dir(dir.path()).expect("read temp dir").count(), 0);
+    assert_eq!(
+        std::fs::read_dir(dir.path())
+            .expect("read temp dir")
+            .count(),
+        0
+    );
 }
 
 #[test]
@@ -239,7 +244,12 @@ fn non_regular_targets_are_skipped() {
         Some(&github_path),
     );
 
-    assert_eq!(std::fs::read_dir(&github_env).expect("read github env dir").count(), 0);
+    assert_eq!(
+        std::fs::read_dir(&github_env)
+            .expect("read github env dir")
+            .count(),
+        0
+    );
     assert_eq!(
         std::fs::read_to_string(github_path).expect("read github path"),
         format!("{}\n", bin_dir.display()),

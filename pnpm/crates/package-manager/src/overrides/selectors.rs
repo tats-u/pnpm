@@ -25,8 +25,18 @@ pub(super) fn matches_target(target: &PackageSelector, dep_name: &str, dep_spec:
 /// like `foo@1.2.3` wins over the broader `foo@^1`.
 pub(super) fn sort_by_specificity(matching: &mut [&ResolvedOverride]) {
     matching.sort_by(|lhs, rhs| {
-        let lhs_spec = lhs.inner.target_pkg.bare_specifier.as_deref().unwrap_or("");
-        let rhs_spec = rhs.inner.target_pkg.bare_specifier.as_deref().unwrap_or("");
+        let lhs_spec = lhs
+            .inner
+            .target_pkg
+            .bare_specifier
+            .as_deref()
+            .unwrap_or("");
+        let rhs_spec = rhs
+            .inner
+            .target_pkg
+            .bare_specifier
+            .as_deref()
+            .unwrap_or("");
         // Rust's `sort_by` requires a total order, so the comparison
         // widens to a 3-way result: `lhs` is
         // strictly more specific when `rhs ⊇ lhs` but not vice versa,

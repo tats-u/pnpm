@@ -52,8 +52,9 @@ fn opts(project_dir: &str) -> ResolveOptions {
 /// A directory resolution shaped like the npm resolver's workspace output:
 /// the id repeats the recorded directory behind its protocol prefix.
 fn directory_result(id: &str, resolved_via: &str) -> ResolveResult {
-    let directory =
-        id.split_once(':').map_or_else(|| id.to_string(), |(_, directory)| directory.to_string());
+    let directory = id
+        .split_once(':')
+        .map_or_else(|| id.to_string(), |(_, directory)| directory.to_string());
     ResolveResult {
         id: PkgResolutionId::from(id.to_string()),
         resolution: LockfileResolution::Directory(DirectoryResolution { directory }),

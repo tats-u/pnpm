@@ -256,9 +256,13 @@ impl<Reporter: self::Reporter + 'static> PrefetchingResolver<Reporter> {
                 package_file_count,
             );
             let _ = if revision_addressed {
-                download.run_revision_addressed_with_mem_cache::<Reporter>(&ctx.mem_cache).await
+                download
+                    .run_revision_addressed_with_mem_cache::<Reporter>(&ctx.mem_cache)
+                    .await
             } else {
-                download.run_with_mem_cache::<Reporter>(&ctx.mem_cache).await
+                download
+                    .run_with_mem_cache::<Reporter>(&ctx.mem_cache)
+                    .await
             };
         });
     }
@@ -271,11 +275,8 @@ impl<Reporter: self::Reporter + 'static> PrefetchingResolver<Reporter> {
         integrity: &ssri::Integrity,
         revision_addressed: bool,
     ) -> bool {
-        self.spawned_downloads.insert(package_mem_cache_key(
-            package_url,
-            Some(integrity),
-            revision_addressed,
-        ))
+        self.spawned_downloads
+            .insert(package_mem_cache_key(package_url, Some(integrity), revision_addressed))
     }
 
     fn should_skip_prefetch(
@@ -297,7 +298,10 @@ impl<Reporter: self::Reporter + 'static> PrefetchingResolver<Reporter> {
                 cpu: manifest.cpu.as_deref(),
                 libc: manifest.libc.as_deref(),
             },
-            self.ctx.platform.supported_architectures.as_ref(),
+            self.ctx
+                .platform
+                .supported_architectures
+                .as_ref(),
             self.ctx.platform.os,
             self.ctx.platform.cpu,
             self.ctx.platform.libc,
@@ -377,7 +381,10 @@ impl<Reporter: self::Reporter + 'static> Resolver for PrefetchingResolver<Report
         opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         Box::pin(async move {
-            let mut result = self.inner.resolve(wanted_dependency, opts).await?;
+            let mut result = self
+                .inner
+                .resolve(wanted_dependency, opts)
+                .await?;
             if let Some(result_mut) = result.as_mut() {
                 self.populate_missing_tarball_metadata(result_mut, &opts.project.lockfile_dir)
                     .await?;

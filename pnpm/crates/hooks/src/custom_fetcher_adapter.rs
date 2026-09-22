@@ -41,12 +41,16 @@ impl CustomFetcherPicker {
         resolution: &Value,
         opts: &Value,
     ) -> Result<Option<Value>, HookError> {
-        let CustomFetcherSelection { fetcher, resolution } =
-            self.pick_fetcher(pkg_id, resolution).await?;
+        let CustomFetcherSelection { fetcher, resolution } = self
+            .pick_fetcher(pkg_id, resolution)
+            .await?;
         let Some(fetcher) = fetcher else {
             return Ok(None);
         };
-        fetcher.fetch(pkg_id, resolution, opts.clone()).await.map(Some)
+        fetcher
+            .fetch(pkg_id, resolution, opts.clone())
+            .await
+            .map(Some)
     }
 
     pub async fn pick_fetcher(
@@ -71,8 +75,9 @@ impl CustomFetcherPicker {
                 continue;
             }
             let previous = resolution.clone();
-            let (can_fetch, effective_resolution) =
-                fetcher.can_fetch_with_resolution(pkg_id, resolution).await?;
+            let (can_fetch, effective_resolution) = fetcher
+                .can_fetch_with_resolution(pkg_id, resolution)
+                .await?;
             resolution =
                 carried_resolution(effective_resolution, previous, locked_integrity.as_ref());
             if can_fetch {

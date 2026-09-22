@@ -139,7 +139,10 @@ fn satisfies_accepts_prerelease_against_non_prerelease_range() {
 
 /// Strong count of a chain's tip link, for asserting who holds it.
 fn link_strong_count(chain: &SharedChain<String>) -> usize {
-    chain.0.as_ref().map_or(0, std::sync::Arc::strong_count)
+    chain
+        .0
+        .as_ref()
+        .map_or(0, std::sync::Arc::strong_count)
 }
 
 /// Build `root -> ... -> tip` and return the chain at the tip.

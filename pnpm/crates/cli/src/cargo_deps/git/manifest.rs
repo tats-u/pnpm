@@ -50,7 +50,8 @@ impl Checkout {
         // lockfile asks for has to be readable, so a candidate that is
         // not it takes its error out of the way.
         let mut unreadable = None;
-        for dir in self.directories_by_crate
+        for dir in self
+            .directories_by_crate
             .get(name)
             .map(Vec::as_slice)
             .unwrap_or_default()
@@ -167,7 +168,9 @@ fn workspace_manifest<'a>(
         .skip(1)
         .find_map(|ancestor| {
             let document = &manifests.get(ancestor)?.document;
-            document.contains_key("workspace").then_some(document)
+            document
+                .contains_key("workspace")
+                .then_some(document)
         })
 }
 
@@ -192,7 +195,10 @@ pub(super) fn vendored_package(
     let workspace = workspace.and_then(|manifest| manifest.get("workspace")?.as_table());
     let mut vendored = manifest.document.clone();
     let mut inherited = false;
-    if let Some(package) = vendored.get_mut("package").and_then(toml::Value::as_table_mut) {
+    if let Some(package) = vendored
+        .get_mut("package")
+        .and_then(toml::Value::as_table_mut)
+    {
         let workspace_package =
             workspace.and_then(|workspace| workspace.get("package")?.as_table());
         for (field, value) in package.iter_mut() {
@@ -209,7 +215,10 @@ pub(super) fn vendored_package(
         }
     }
     inherited |= inherit_dependencies(&mut vendored, workspace)?;
-    if let Some(lints) = vendored.get_mut("lints").filter(|lints| inherits_from_workspace(lints)) {
+    if let Some(lints) = vendored
+        .get_mut("lints")
+        .filter(|lints| inherits_from_workspace(lints))
+    {
         *lints = workspace
             .and_then(|workspace| workspace.get("lints"))
             .ok_or_else(|| miette::miette!("the workspace declares no `lints` to inherit"))?
@@ -222,7 +231,9 @@ pub(super) fn vendored_package(
 
     let version = package_version(&vendored)?;
     let text = if inherited || had_workspace {
-        toml::to_string(&vendored).into_diagnostic().wrap_err("serialize Cargo.toml")?
+        toml::to_string(&vendored)
+            .into_diagnostic()
+            .wrap_err("serialize Cargo.toml")?
     } else {
         manifest.text.clone()
     };
@@ -254,7 +265,10 @@ fn inherit_dependencies(
     workspace: Option<&toml::Table>,
 ) -> Result<bool> {
     let mut inherited = inherit_dependency_kinds(document, workspace)?;
-    if let Some(targets) = document.get_mut("target").and_then(toml::Value::as_table_mut) {
+    if let Some(targets) = document
+        .get_mut("target")
+        .and_then(toml::Value::as_table_mut)
+    {
         for (_, target) in targets.iter_mut() {
             let Some(target) = target.as_table_mut() else { continue };
             inherited |= inherit_dependency_kinds(target, workspace)?;
@@ -271,7 +285,10 @@ fn inherit_dependency_kinds(
 ) -> Result<bool> {
     let mut inherited = false;
     for kind in DEPENDENCY_KINDS {
-        if let Some(dependencies) = table.get_mut(kind).and_then(toml::Value::as_table_mut) {
+        if let Some(dependencies) = table
+            .get_mut(kind)
+            .and_then(toml::Value::as_table_mut)
+        {
             inherited |= inherit_dependency_table(dependencies, workspace)?;
         }
     }
@@ -319,7 +336,9 @@ fn merge_workspace_declaration(
             ));
         }
     };
-    let local = local.as_table().expect("an inheriting entry is a table");
+    let local = local
+        .as_table()
+        .expect("an inheriting entry is a table");
     for key in ["optional", "public", "default-features"] {
         if let Some(value) = local.get(key) {
             merged.insert(key.to_string(), value.clone());

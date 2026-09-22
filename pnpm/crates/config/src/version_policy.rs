@@ -190,7 +190,8 @@ fn drop_unresolved_spec(spec: &str, resolved: &ResolvedPackageVersions) -> Optio
     if parsed.exact_versions.is_empty() {
         return Some(spec.to_string());
     }
-    let kept: Vec<&str> = parsed.exact_versions
+    let kept: Vec<&str> = parsed
+        .exact_versions
         .iter()
         .map(String::as_str)
         .filter(|version| resolved_versions.contains(*version))
@@ -244,7 +245,8 @@ impl std::fmt::Debug for PackageVersionPolicy {
         f.debug_struct("PackageVersionPolicy")
             .field(
                 "rules",
-                &self.rules
+                &self
+                    .rules
                     .iter()
                     .map(|rule| &rule.exact_versions)
                     .collect::<Vec<_>>(),
@@ -266,7 +268,8 @@ impl PackageVersionPolicy {
     /// A bare-name or wildcard rule matches every version.
     #[must_use]
     pub fn matches(&self, pkg_name: &str) -> PolicyMatch {
-        let matching = self.rules
+        let matching = self
+            .rules
             .iter()
             .filter(|rule| rule.name_matcher.matches(pkg_name));
         let mut merged: Option<(Vec<String>, HashSet<String>)> = None;

@@ -227,7 +227,9 @@ fn retry_classification_matches_pnpm_policy() {
     // sample.
     let bad_integrity: Integrity =
         "sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa==".parse().unwrap();
-    let ssri_err = bad_integrity.check(b"unrelated body").unwrap_err();
+    let ssri_err = bad_integrity
+        .check(b"unrelated body")
+        .unwrap_err();
     let checksum =
         TarballError::Checksum(VerifyChecksumError { url: url.clone(), error: ssri_err });
     assert!(is_transient_error(&checksum), "integrity mismatch should retry");
@@ -382,8 +384,12 @@ async fn synthesized_projection_reuses_only_a_matching_legacy_row_offline() {
     );
     let manifest = br#"{"name":"artifact","version":"1.0.0"}"#;
     let readme = b"legacy runtime archive";
-    let (_, manifest_hash) = store_path.write_cas_file(manifest, false).unwrap();
-    let (_, readme_hash) = store_path.write_cas_file(readme, false).unwrap();
+    let (_, manifest_hash) = store_path
+        .write_cas_file(manifest, false)
+        .unwrap();
+    let (_, readme_hash) = store_path
+        .write_cas_file(readme, false)
+        .unwrap();
     let legacy_key = store_index_key(&package_integrity.to_string(), package_id);
     StoreIndex::open_in(store_path)
         .unwrap()
@@ -477,7 +483,9 @@ async fn raw_archive_projection_skips_npm_identity_checks_on_store_hits() {
     let (store_dir, store_path) = tempdir_with_leaked_path();
     store_path.init().unwrap();
     let contents = b"raw artifact";
-    let (cas_path, file_hash) = store_path.write_cas_file(contents, false).unwrap();
+    let (cas_path, file_hash) = store_path
+        .write_cas_file(contents, false)
+        .unwrap();
     let integrity = integrity("sha256-q80k8iD1xuGM3a48ipTFD+P7KQnhs4e5Blnos+dQpJM=");
     let package_id = "crate:artifact@1.0.0";
     StoreIndex::open_in(store_path)
@@ -601,7 +609,10 @@ async fn run_without_mem_cache_fetches_unverified_and_writes_no_index_row() {
     assert!(cas_paths.contains_key("package.json"));
 
     drop(writer);
-    writer_task.await.expect("writer task").expect("writer flushed");
+    writer_task
+        .await
+        .expect("writer task")
+        .expect("writer flushed");
     let index = StoreIndex::open_in(store_path).expect("open store index");
     let keys: Vec<String> = index.keys().expect("read index keys");
     assert!(keys.is_empty(), "an unverified fetch must claim no index row: {keys:?}");

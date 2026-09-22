@@ -27,14 +27,19 @@ fn walker_single_root_dep_emits_one_node() {
     };
     let result = lockfile_to_hoisted_dep_graph(&lockfile, None, &opts).expect("walker succeeds");
 
-    let expected_dir = lockfile_dir.join("node_modules").join("a");
+    let expected_dir = lockfile_dir
+        .join("node_modules")
+        .join("a");
     assert_eq!(
         result.graph.len(),
         1,
         "one node emitted: {:?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
-    let node = result.graph.get(&expected_dir).expect("node keyed by dir");
+    let node = result
+        .graph
+        .get(&expected_dir)
+        .expect("node keyed by dir");
     assert_eq!(node.alias.as_deref(), Some("a"));
     assert_eq!(node.package.dep_path, DepPath::from("a@1.0.0".to_string()));
     assert_eq!(node.package.name, "a");

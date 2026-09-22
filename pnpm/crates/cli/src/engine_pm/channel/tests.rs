@@ -72,14 +72,20 @@ fn npm_and_pnpm_have_one_channel_each() {
 
 #[test]
 fn registry_engines_pin_their_own_package() {
-    let npm = PackageManager::Npm.engine_packages("11.0.0").unwrap();
+    let npm = PackageManager::Npm
+        .engine_packages("11.0.0")
+        .unwrap();
     assert_eq!((npm.wrapper, npm.pinned, npm.links_native_binary), ("npm", &["npm"][..], false));
 
-    let classic = PackageManager::Yarn.engine_packages("1.22.22").unwrap();
+    let classic = PackageManager::Yarn
+        .engine_packages("1.22.22")
+        .unwrap();
     assert_eq!(classic.wrapper, "yarn");
     assert_eq!(classic.pinned, &["yarn"]);
 
-    let berry = PackageManager::Yarn.engine_packages("4.9.2").unwrap();
+    let berry = PackageManager::Yarn
+        .engine_packages("4.9.2")
+        .unwrap();
     assert_eq!(berry.wrapper, "@yarnpkg/cli-dist");
     assert_eq!(berry.pinned, &["@yarnpkg/cli-dist"]);
 }
@@ -88,16 +94,22 @@ fn registry_engines_pin_their_own_package() {
 /// the JS CLI alone, the JS CLI plus `@pnpm/exe`, then the native `pnpm`.
 #[test]
 fn the_pnpm_engine_follows_its_own_packaging_history() {
-    let legacy = PackageManager::Pnpm.engine_packages("6.0.0").unwrap();
+    let legacy = PackageManager::Pnpm
+        .engine_packages("6.0.0")
+        .unwrap();
     assert_eq!(legacy.wrapper, "pnpm");
     assert!(!legacy.links_native_binary);
 
-    let with_exe = PackageManager::Pnpm.engine_packages("11.0.0").unwrap();
+    let with_exe = PackageManager::Pnpm
+        .engine_packages("11.0.0")
+        .unwrap();
     assert_eq!(with_exe.wrapper, "@pnpm/exe");
     assert_eq!(with_exe.pinned, &["pnpm", "@pnpm/exe"]);
     assert!(with_exe.links_native_binary);
 
-    let native = PackageManager::Pnpm.engine_packages("12.0.0").unwrap();
+    let native = PackageManager::Pnpm
+        .engine_packages("12.0.0")
+        .unwrap();
     assert_eq!(native.wrapper, "pnpm");
     assert_eq!(native.pinned, &["pnpm"]);
     assert!(native.links_native_binary);

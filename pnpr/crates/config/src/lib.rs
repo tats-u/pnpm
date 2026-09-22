@@ -427,9 +427,15 @@ fn registry_mock_rules() -> PackageRules {
         .map(|pattern| PackageRule {
             pattern: PackagePattern::parse(pattern, Ecosystem::Npm)
                 .expect("valid built-in fixture registry pattern"),
-            access: (*pattern == "@private/*").then(authenticated).flatten(),
-            publish: (*pattern == "@private/*").then(authenticated).flatten(),
-            unpublish: (*pattern == "@private/*").then(authenticated).flatten(),
+            access: (*pattern == "@private/*")
+                .then(authenticated)
+                .flatten(),
+            publish: (*pattern == "@private/*")
+                .then(authenticated)
+                .flatten(),
+            unpublish: (*pattern == "@private/*")
+                .then(authenticated)
+                .flatten(),
         })
         .collect();
     rules.push(PackageRule {
@@ -494,10 +500,9 @@ fn build_cors_config(file: CorsFile) -> Result<CorsConfig, RegistryError> {
 }
 
 fn normalize_cors_origin(raw: &str) -> Result<String, RegistryError> {
-    let parsed = url::Url::parse(raw)
-        .map_err(|_| RegistryError::InvalidConfig {
-            reason: format!("CORS allowed origin {raw:?} is not an absolute URL"),
-        })?;
+    let parsed = url::Url::parse(raw).map_err(|_| RegistryError::InvalidConfig {
+        reason: format!("CORS allowed origin {raw:?} is not an absolute URL"),
+    })?;
     if !matches!(parsed.scheme(), "http" | "https")
         || !parsed.username().is_empty()
         || parsed.password().is_some()
@@ -518,7 +523,8 @@ fn build_route_policy(file: Option<RoutesFile>) -> RoutePolicy {
     match file {
         None => RoutePolicy::default(),
         Some(file) => RoutePolicy {
-            public: file.public
+            public: file
+                .public
                 .into_iter()
                 .map(|route| PublicRoute { registry: route.registry, package: route.package })
                 .collect(),
@@ -563,7 +569,10 @@ fn random_secret() -> Arc<[u8]> {
 fn build_osv_config(file: &OsvFile, base_dir: &Path) -> OsvConfig {
     OsvConfig {
         enabled: file.enabled,
-        path: file.path.as_deref().map(|path| resolve_relative(path, base_dir)),
+        path: file
+            .path
+            .as_deref()
+            .map(|path| resolve_relative(path, base_dir)),
     }
 }
 
@@ -637,7 +646,8 @@ fn parse_storage_access(
 
 fn resolve_storage_paths(file: &ConfigFile, base_dir: &Path) -> (PathBuf, PathBuf) {
     let storage = resolve_relative(&file.storage, base_dir);
-    let cache = file.cache
+    let cache = file
+        .cache
         .as_deref()
         .map_or_else(|| default_cache_dir(&storage), |raw| resolve_relative(raw, base_dir));
     (storage, cache)

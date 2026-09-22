@@ -41,7 +41,11 @@ fn adding_and_removing_an_ignored_optional_dependency_uses_the_safe_path() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -59,33 +63,44 @@ fn adding_and_removing_an_ignored_optional_dependency_uses_the_safe_path() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let current = pnpm_lockfile::Lockfile::load_current_from_virtual_store_dir(&workspace.join(
-        "node_modules/.pnpm",
-    ))
+    let current = pnpm_lockfile::Lockfile::load_current_from_virtual_store_dir(
+        &workspace.join("node_modules/.pnpm"),
+    )
     .expect("load current lockfile")
     .expect("current lockfile");
-    let parent_key = "@pnpm.e2e/pkg-with-good-optional@1.0.0".parse().expect("parent package key");
-    let removed_key = "is-positive@1.0.0".parse().expect("removed package key");
-    let removed_name = "is-positive".parse().expect("removed package name");
+    let parent_key = "@pnpm.e2e/pkg-with-good-optional@1.0.0"
+        .parse()
+        .expect("parent package key");
+    let removed_key = "is-positive@1.0.0"
+        .parse()
+        .expect("removed package key");
+    let removed_name = "is-positive"
+        .parse()
+        .expect("removed package name");
     for lockfile in [&wanted, &current] {
         assert_eq!(
-            lockfile.ignored_optional_dependencies.as_deref(),
+            lockfile
+                .ignored_optional_dependencies
+                .as_deref(),
             Some(["is-positive".to_string()].as_slice()),
         );
         assert!(
-            lockfile.snapshots
+            lockfile
+                .snapshots
                 .as_ref()
                 .and_then(|snapshots| snapshots.get(&parent_key))
                 .and_then(|snapshot| snapshot.optional_dependencies.as_ref())
                 .is_none_or(|dependencies| !dependencies.contains_key(&removed_name)),
         );
         assert!(
-            lockfile.snapshots
+            lockfile
+                .snapshots
                 .as_ref()
                 .is_none_or(|snapshots| !snapshots.contains_key(&removed_key)),
         );
         assert!(
-            lockfile.packages
+            lockfile
+                .packages
                 .as_ref()
                 .is_none_or(|packages| !packages.contains_key(&removed_key)),
         );
@@ -118,18 +133,26 @@ fn adding_and_removing_an_ignored_optional_dependency_uses_the_safe_path() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let parent_key = "@pnpm.e2e/pkg-with-good-optional@1.0.0".parse().expect("parent package key");
-    let restored_key = "is-positive@1.0.0".parse().expect("restored package key");
-    let restored_name = "is-positive".parse().expect("restored package name");
+    let parent_key = "@pnpm.e2e/pkg-with-good-optional@1.0.0"
+        .parse()
+        .expect("parent package key");
+    let restored_key = "is-positive@1.0.0"
+        .parse()
+        .expect("restored package key");
+    let restored_name = "is-positive"
+        .parse()
+        .expect("restored package name");
     assert!(
-        wanted.snapshots
+        wanted
+            .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.get(&parent_key))
             .and_then(|snapshot| snapshot.optional_dependencies.as_ref())
             .is_some_and(|dependencies| dependencies.contains_key(&restored_name)),
     );
     assert!(
-        wanted.snapshots
+        wanted
+            .snapshots
             .as_ref()
             .is_some_and(|snapshots| snapshots.contains_key(&restored_key)),
     );
@@ -185,7 +208,11 @@ fn dropping_a_dependency_from_the_manifest_skips_resolution() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -204,11 +231,14 @@ fn dropping_a_dependency_from_the_manifest_skips_resolution() {
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
     assert!(
-        !wanted.packages
+        !wanted
+            .packages
             .as_ref()
             .expect("packages")
             .keys()
-            .any(|key| key.to_string().starts_with("is-positive@")),
+            .any(|key| key
+                .to_string()
+                .starts_with("is-positive@")),
         "the dropped package is pruned from the lockfile",
     );
     assert!(
@@ -257,7 +287,11 @@ fn remove_command_drops_the_dependency_without_resolving() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -276,16 +310,24 @@ fn remove_command_drops_the_dependency_without_resolving() {
         &fs::read_to_string(workspace.join("package.json")).expect("read package.json"),
     )
     .expect("parse package.json");
-    assert!(manifest["dependencies"].get("is-positive").is_none(), "the manifest entry is gone");
+    assert!(
+        manifest["dependencies"]
+            .get("is-positive")
+            .is_none(),
+        "the manifest entry is gone"
+    );
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
     assert!(
-        !wanted.packages
+        !wanted
+            .packages
             .as_ref()
             .expect("packages")
             .keys()
-            .any(|key| key.to_string().starts_with("is-positive@")),
+            .any(|key| key
+                .to_string()
+                .starts_with("is-positive@")),
         "the removed package is pruned from the lockfile",
     );
     assert!(
@@ -296,14 +338,21 @@ fn remove_command_drops_the_dependency_without_resolving() {
         "and unlinked from node_modules",
     );
     assert!(
-        manifest["dependencies"].get("@pnpm.e2e/pkg-with-1-dep").is_some(),
+        manifest["dependencies"]
+            .get("@pnpm.e2e/pkg-with-1-dep")
+            .is_some(),
         "the surviving dependency keeps its manifest entry",
     );
     assert!(
-        wanted.importers["."].dependencies
+        wanted.importers["."]
+            .dependencies
             .as_ref()
             .is_some_and(|dependencies| {
-                dependencies.contains_key(&"@pnpm.e2e/pkg-with-1-dep".parse().expect("alias"))
+                dependencies.contains_key(
+                    &"@pnpm.e2e/pkg-with-1-dep"
+                        .parse()
+                        .expect("alias"),
+                )
             }),
         "and its importer entry",
     );
@@ -316,7 +365,9 @@ fn remove_command_drops_the_dependency_without_resolving() {
         "and its node_modules link",
     );
     assert!(
-        !workspace.join("postinstall-ran").exists(),
+        !workspace
+            .join("postinstall-ran")
+            .exists(),
         "a remove runs no project lifecycle script",
     );
 
@@ -361,7 +412,11 @@ fn moving_a_dependency_between_groups_skips_resolution() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -380,20 +435,27 @@ fn moving_a_dependency_between_groups_skips_resolution() {
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
     let importer = &wanted.importers["."];
-    let moved_alias = "@pnpm.e2e/pkg-with-1-dep".parse().expect("alias");
+    let moved_alias = "@pnpm.e2e/pkg-with-1-dep"
+        .parse()
+        .expect("alias");
     assert!(
-        importer.optional_dependencies
+        importer
+            .optional_dependencies
             .as_ref()
             .is_some_and(|dependencies| dependencies.contains_key(&moved_alias)),
         "the importer records the moved dependency under optionalDependencies",
     );
     assert!(
-        !importer.dependencies
+        !importer
+            .dependencies
             .as_ref()
             .is_some_and(|dependencies| dependencies.contains_key(&moved_alias)),
         "and no longer under dependencies",
     );
-    let snapshots = wanted.snapshots.as_ref().expect("snapshots");
+    let snapshots = wanted
+        .snapshots
+        .as_ref()
+        .expect("snapshots");
     for prefix in ["@pnpm.e2e/pkg-with-1-dep@", "@pnpm.e2e/dep-of-pkg-with-1-dep@"] {
         let (key, snapshot) = snapshots
             .iter()
@@ -457,7 +519,11 @@ fn a_remove_with_an_unchanged_pnpmfile_skips_resolution() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -475,17 +541,28 @@ fn a_remove_with_an_unchanged_pnpmfile_skips_resolution() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let snapshots = wanted.snapshots.as_ref().expect("snapshots");
+    let snapshots = wanted
+        .snapshots
+        .as_ref()
+        .expect("snapshots");
     let pinned = snapshots
         .iter()
-        .find(|(key, _)| key.to_string().starts_with("@pnpm.e2e/pkg-with-1-dep@"))
+        .find(|(key, _)| {
+            key.to_string()
+                .starts_with("@pnpm.e2e/pkg-with-1-dep@")
+        })
         .expect("hooked package snapshot")
         .1;
     assert!(
-        pinned.dependencies
+        pinned
+            .dependencies
             .as_ref()
             .is_some_and(|dependencies| dependencies
-                .get(&"@pnpm.e2e/dep-of-pkg-with-1-dep".parse().expect("alias"))
+                .get(
+                    &"@pnpm.e2e/dep-of-pkg-with-1-dep"
+                        .parse()
+                        .expect("alias")
+                )
                 .is_some_and(|reference| reference.to_string() == "100.0.0")),
         "the hook's pin survives the fast update",
     );
@@ -524,8 +601,10 @@ fn a_remove_keeps_the_specifiers_a_project_rewriting_pnpmfile_recorded() {
         .assert()
         .success();
     let recorded_specifier = |lockfile: &pnpm_lockfile::Lockfile| {
-        lockfile.importers["."].dependencies.as_ref().expect("dependencies")
-            [&"is-positive".parse().expect("alias")]
+        lockfile.importers["."]
+            .dependencies
+            .as_ref()
+            .expect("dependencies")[&"is-positive".parse().expect("alias")]
             .specifier
             .clone()
     };
@@ -538,7 +617,11 @@ fn a_remove_keeps_the_specifiers_a_project_rewriting_pnpmfile_recorded() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -604,7 +687,11 @@ fn removing_a_workspace_project_prunes_its_importer_without_resolving() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -622,7 +709,8 @@ fn removing_a_workspace_project_prunes_its_importer_without_resolving() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let mut importers: Vec<_> = wanted.importers
+    let mut importers: Vec<_> = wanted
+        .importers
         .keys()
         .map(String::as_str)
         .collect();
@@ -633,11 +721,14 @@ fn removing_a_workspace_project_prunes_its_importer_without_resolving() {
         "the departed project's importer is gone, the root and its sibling stay",
     );
     assert!(
-        !wanted.packages
+        !wanted
+            .packages
             .as_ref()
             .expect("packages")
             .keys()
-            .any(|key| key.to_string().starts_with("@pnpm.e2e/bar@")),
+            .any(|key| key
+                .to_string()
+                .starts_with("@pnpm.e2e/bar@")),
         "and so is what only it depended on",
     );
 
@@ -688,8 +779,12 @@ fn add_command_reuses_a_locked_version_without_resolving() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let added = &wanted.importers["."].dependencies.as_ref().expect("dependencies")
-        [&"@pnpm.e2e/dep-of-pkg-with-1-dep".parse().expect("alias")];
+    let added = &wanted.importers["."]
+        .dependencies
+        .as_ref()
+        .expect("dependencies")[&"@pnpm.e2e/dep-of-pkg-with-1-dep"
+        .parse()
+        .expect("alias")];
     assert_eq!(added.specifier, "100.1.0");
     assert_eq!(added.version.to_string(), "100.1.0");
     assert!(
@@ -741,8 +836,12 @@ fn add_command_resolves_a_version_the_lockfile_does_not_hold() {
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
     assert_eq!(
-        wanted.importers["."].dependencies.as_ref().expect("dependencies")
-            [&"@pnpm.e2e/dep-of-pkg-with-1-dep".parse().expect("alias")]
+        wanted.importers["."]
+            .dependencies
+            .as_ref()
+            .expect("dependencies")[&"@pnpm.e2e/dep-of-pkg-with-1-dep"
+            .parse()
+            .expect("alias")]
             .version
             .to_string(),
         "101.0.0",

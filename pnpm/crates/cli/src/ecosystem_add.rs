@@ -38,12 +38,15 @@ pub(crate) async fn plan<Reporter: pnpm_reporter::Reporter + 'static>(
     }
     if !requirements.is_empty() {
         let (task, projects) =
-            python_add_task::<Reporter>(context.clone(), &root, requirements, (args, scope)).await?;
+            python_add_task::<Reporter>(context.clone(), &root, requirements, (args, scope))
+                .await?;
         python = projects;
         tasks.push(task);
     }
     let mut plan = InstallPlan::new(
-        context.config.workspace_dir
+        context
+            .config
+            .workspace_dir
             .clone()
             .or(cargo_transaction_root)
             .unwrap_or(root),
@@ -73,7 +76,9 @@ async fn cargo_add_task<Reporter: pnpm_reporter::Reporter + 'static>(
         root.join("Cargo.toml"),
         cargo_deps::add::AddOptions {
             packages,
-            dependency_kind: args.dependency_options.cargo_dependency_kind(has_node_packages)?,
+            dependency_kind: args
+                .dependency_options
+                .cargo_dependency_kind(has_node_packages)?,
             save_exact: args.save.exact,
             save_prefix: args.save.prefix.clone(),
         },
@@ -102,7 +107,10 @@ async fn python_add_task<Reporter: pnpm_reporter::Reporter + 'static>(
     let inventory =
         |workspace_root: PathBuf| EcosystemWorkspaceInventory::new(workspace_root, config);
     let (discovery, selected) = if let Some(scope) = scope {
-        let workspace_root = config.workspace_dir.clone().unwrap_or_else(|| root.to_path_buf());
+        let workspace_root = config
+            .workspace_dir
+            .clone()
+            .unwrap_or_else(|| root.to_path_buf());
         let discovery = python::discover(config, &inventory(workspace_root)).await?;
         let selected = python::selected_projects(config, root, &discovery, Some(scope))?;
         (discovery, selected)
@@ -170,7 +178,9 @@ fn python_add_options(
 ) -> miette::Result<pnpm_python_installer::AddOptions> {
     Ok(pnpm_python_installer::AddOptions {
         requirements,
-        development: args.dependency_options.python_development()?,
+        development: args
+            .dependency_options
+            .python_development()?,
         exact: args.save.exact,
         prefix: args.save.prefix.clone(),
     })

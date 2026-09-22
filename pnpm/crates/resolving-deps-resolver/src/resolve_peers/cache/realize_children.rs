@@ -11,7 +11,9 @@ impl Walker<'_> {
         pkg_id: &Arc<str>,
     ) -> DeferredChildResolution {
         if let Some(dep_path) = self.caches.pure_pkgs.get(&**pkg_id)
-            && self.tree.packages[&**pkg_id].peer_dependencies.is_empty()
+            && self.tree.packages[&**pkg_id]
+                .peer_dependencies
+                .is_empty()
         {
             return DeferredChildResolution::Pure(dep_path.clone());
         }
@@ -43,16 +45,25 @@ impl Walker<'_> {
                     ),
                 );
                 let output = self.resolve_node(&context.node_id, context.walk);
-                if !self.caches.parent_pkgs_of_node.contains_key(&context.node_id)
+                if !self
+                    .caches
+                    .parent_pkgs_of_node
+                    .contains_key(&context.node_id)
                     && !should_retain_materialized_node(
                         &self.caches.retained_peer_node_ids,
                         Some(&output),
                         &context.node_id,
                     )
                 {
-                    self.tree.dependencies_tree.remove(&context.node_id);
-                    self.caches.node_dep_paths.remove(&context.node_id);
-                    self.traversal.visited_this_call.remove(&context.node_id);
+                    self.tree
+                        .dependencies_tree
+                        .remove(&context.node_id);
+                    self.caches
+                        .node_dep_paths
+                        .remove(&context.node_id);
+                    self.traversal
+                        .visited_this_call
+                        .remove(&context.node_id);
                 }
                 output
             }
@@ -73,14 +84,22 @@ impl Walker<'_> {
             return children;
         }
         for parent_node_id in parent_node_ids.iter() {
-            let same_pkg = self.tree.dependencies_tree
+            let same_pkg = self
+                .tree
+                .dependencies_tree
                 .get(parent_node_id)
                 .is_some_and(|node| &*node.resolved_package_id == current_pkg_id);
             if !same_pkg {
                 continue;
             }
-            for (alias, child_node_id) in self.realize_children(parent_node_id).0.iter() {
-                children.entry(alias.clone()).or_insert_with(|| child_node_id.clone());
+            for (alias, child_node_id) in self
+                .realize_children(parent_node_id)
+                .0
+                .iter()
+            {
+                children
+                    .entry(alias.clone())
+                    .or_insert_with(|| child_node_id.clone());
             }
         }
         children
@@ -91,7 +110,8 @@ impl Walker<'_> {
         pkg_id: &str,
         edges: &BTreeMap<String, NodeId>,
     ) -> HashSet<String> {
-        self.tree.children_by_id
+        self.tree
+            .children_by_id
             .get(pkg_id)
             .into_iter()
             .flat_map(|children| children.iter())
@@ -122,9 +142,14 @@ impl Walker<'_> {
         children
             .iter()
             .filter(|(alias, child_node_id)| {
-                self.tree.dependencies_tree
+                self.tree
+                    .dependencies_tree
                     .get(*child_node_id)
-                    .and_then(|child| self.tree.packages.get(&child.resolved_package_id))
+                    .and_then(|child| {
+                        self.tree
+                            .packages
+                            .get(&child.resolved_package_id)
+                    })
                     .is_some_and(|pkg| self.is_peer_relevant(alias, pkg))
             })
             .map(|(alias, child_node_id)| (alias.clone(), child_node_id.clone()))
@@ -138,15 +163,25 @@ impl Walker<'_> {
         &mut self,
         lazy: LazyProviders,
     ) -> (BTreeMap<String, NodeId>, Option<UndoRealize>) {
-        let children = self.tree.children_by_id
+        let children = self
+            .tree
+            .children_by_id
             .get(&lazy.pkg_id)
             .cloned()
             .unwrap_or_default();
-        let provider_edge_indices = self.caches.peer_provider_children_by_pkg_id
+        let provider_edge_indices = self
+            .caches
+            .peer_provider_children_by_pkg_id
             .get(&*lazy.pkg_id)
-            .map_or(&[][..], |providers| providers.relevant_edge_indices.as_slice());
+            .map_or(&[][..], |providers| {
+                providers
+                    .relevant_edge_indices
+                    .as_slice()
+            });
         let canonical_scc = self.canonical_scc();
-        let full_chain = lazy.parent_ids.pushed(lazy.pkg_id.to_string());
+        let full_chain = lazy
+            .parent_ids
+            .pushed(lazy.pkg_id.to_string());
         let mut providers = BTreeMap::new();
         let mut newly_inserted = Vec::new();
         for &edge_index in provider_edge_indices {
@@ -157,7 +192,11 @@ impl Walker<'_> {
             }
             let child_node_id =
                 if pkg.is_leaf { NodeId::leaf(&edge.pkg_id) } else { NodeId::next() };
-            if !self.tree.dependencies_tree.contains_key(&child_node_id) {
+            if !self
+                .tree
+                .dependencies_tree
+                .contains_key(&child_node_id)
+            {
                 self.tree.dependencies_tree.insert(
                     child_node_id.clone(),
                     DependenciesTreeNode::new(
@@ -219,7 +258,9 @@ impl Walker<'_> {
         };
         // No spec means the first walk never recorded children for this
         // package id — defensive empty case.
-        let children_spec = self.tree.children_by_id
+        let children_spec = self
+            .tree
+            .children_by_id
             .get(&pkg_id)
             .map_or_else(|| Arc::new(Vec::new()), Arc::clone);
         let canonical_scc = self.canonical_scc();
@@ -242,7 +283,11 @@ impl Walker<'_> {
         let realized = Arc::new(realized);
         // Replace this node's `Lazy` with `Realized` so future
         // visitors reuse the work.
-        if let Some(node) = self.tree.dependencies_tree.get_mut(node_id) {
+        if let Some(node) = self
+            .tree
+            .dependencies_tree
+            .get_mut(node_id)
+        {
             node.children = TreeChildren::Realized(Arc::clone(&realized));
         }
         (realized, Some(UndoRealize { newly_inserted, prev_parent_ids: parent_ids }))
@@ -287,7 +332,11 @@ impl Walker<'_> {
         {
             return previewed_node_id.clone();
         }
-        let is_leaf = self.tree.packages.get(&edge.pkg_id).is_some_and(|pkg| pkg.is_leaf);
+        let is_leaf = self
+            .tree
+            .packages
+            .get(&edge.pkg_id)
+            .is_some_and(|pkg| pkg.is_leaf);
         if is_leaf { NodeId::leaf(&edge.pkg_id) } else { NodeId::next() }
     }
 
@@ -300,7 +349,11 @@ impl Walker<'_> {
         context: &EdgeRealization<'_>,
     ) -> bool {
         let child_depth = context.child_depth;
-        let Some(node) = self.tree.dependencies_tree.get_mut(child_node_id) else {
+        let Some(node) = self
+            .tree
+            .dependencies_tree
+            .get_mut(child_node_id)
+        else {
             self.tree.dependencies_tree.insert(
                 child_node_id.clone(),
                 DependenciesTreeNode::new(
@@ -333,12 +386,24 @@ impl Walker<'_> {
             ) {
                 continue;
             }
-            self.tree.dependencies_tree.remove(child_id);
-            self.caches.parent_pkgs_of_node.remove(child_id);
-            self.caches.node_dep_paths.remove(child_id);
-            self.traversal.visited_this_call.remove(child_id);
+            self.tree
+                .dependencies_tree
+                .remove(child_id);
+            self.caches
+                .parent_pkgs_of_node
+                .remove(child_id);
+            self.caches
+                .node_dep_paths
+                .remove(child_id);
+            self.traversal
+                .visited_this_call
+                .remove(child_id);
         }
-        if let Some(node) = self.tree.dependencies_tree.get_mut(node_id) {
+        if let Some(node) = self
+            .tree
+            .dependencies_tree
+            .get_mut(node_id)
+        {
             node.children = TreeChildren::Lazy { parent_ids: undo.prev_parent_ids };
         }
     }

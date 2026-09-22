@@ -56,7 +56,9 @@ fn install_options_for(
     std::fs::create_dir_all(&project_dir).expect("create project dir");
     std::fs::write(project_dir.join("package.json"), "{}\n").expect("write package.json");
 
-    let project_dir_string = project_dir.to_string_lossy().into_owned();
+    let project_dir_string = project_dir
+        .to_string_lossy()
+        .into_owned();
     let mut options = install_options();
     options.dir = project_dir_string.clone();
     options.projects =

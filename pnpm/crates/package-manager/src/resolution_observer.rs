@@ -113,31 +113,39 @@ impl ObservingResolver {
             return;
         };
         let revision = match &result.resolution {
-            pnpm_lockfile::LockfileResolution::Tarball(tarball) => {
-                tarball.revision.map(pnpm_lockfile::TarballRevision::get)
-            }
+            pnpm_lockfile::LockfileResolution::Tarball(tarball) => tarball
+                .revision
+                .map(pnpm_lockfile::TarballRevision::get),
             _ => None,
         };
-        if !self.seen.insert(pnpm_tarball::package_mem_cache_key(
-            tarball_url,
-            Some(&integrity),
-            revision.is_some(),
-        )) {
+        if !self
+            .seen
+            .insert(pnpm_tarball::package_mem_cache_key(
+                tarball_url,
+                Some(&integrity),
+                revision.is_some(),
+            ))
+        {
             return;
         }
         let id = name_ver.to_string();
         let name = name_ver.name.to_string();
         let version = name_ver.suffix.to_string();
         let integrity = integrity.to_string();
-        self.observer.on_resolved(ResolvedPackageHint {
-            integrity: &integrity,
-            tarball_url,
-            unpacked_size: manifest_unpacked_size(result.package.manifest.as_deref()),
-            file_count: manifest_file_count(result.package.manifest.as_deref()),
-            revision,
-            from_registry: is_registry_resolution(&result.resolved_via),
-            identity: crate::ResolvedPackageIdentity { id: &id, name: &name, version: &version },
-        });
+        self.observer
+            .on_resolved(ResolvedPackageHint {
+                integrity: &integrity,
+                tarball_url,
+                unpacked_size: manifest_unpacked_size(result.package.manifest.as_deref()),
+                file_count: manifest_file_count(result.package.manifest.as_deref()),
+                revision,
+                from_registry: is_registry_resolution(&result.resolved_via),
+                identity: crate::ResolvedPackageIdentity {
+                    id: &id,
+                    name: &name,
+                    version: &version,
+                },
+            });
     }
 }
 
@@ -154,7 +162,10 @@ impl Resolver for ObservingResolver {
         opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         Box::pin(async move {
-            let result = self.inner.resolve(wanted_dependency, opts).await?;
+            let result = self
+                .inner
+                .resolve(wanted_dependency, opts)
+                .await?;
             if let Some(result_ref) = result.as_ref() {
                 self.maybe_report(result_ref);
             }

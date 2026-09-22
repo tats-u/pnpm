@@ -95,13 +95,21 @@ pub fn get_pkg_info(
     let full_package_path = if let Some(dep_path) = &edge.dep_path {
         resolve_package_path(&env.layout, dep_path, &locked.name, &edge.alias, ctx)
     } else {
-        let link_target = edge.link_target.as_deref().unwrap_or("");
-        lexical_normalize(&ctx.linked_path_base_dir.join(link_target))
+        let link_target = edge
+            .link_target
+            .as_deref()
+            .unwrap_or("");
+        lexical_normalize(
+            &ctx.linked_path_base_dir
+                .join(link_target),
+        )
     };
 
     locked.rewrite_link_version(edge, ctx, &full_package_path);
 
-    let path = full_package_path.to_string_lossy().into_owned();
+    let path = full_package_path
+        .to_string_lossy()
+        .into_owned();
     let manifest_source = ManifestSource {
         path: full_package_path,
         integrity: locked.integrity,
@@ -115,10 +123,15 @@ pub fn get_pkg_info(
             version: locked.version,
             path,
             resolved: locked.resolved,
-            peers_suffix_hash: edge.dep_path.as_ref().and_then(peers_suffix_hash),
+            peers_suffix_hash: edge
+                .dep_path
+                .as_ref()
+                .and_then(peers_suffix_hash),
         },
         status: crate::DependencyStatus {
-            is_peer: ctx.peers.is_some_and(|peers| peers.contains(&edge.alias)),
+            is_peer: ctx
+                .peers
+                .is_some_and(|peers| peers.contains(&edge.alias)),
             is_skipped: locked.is_skipped,
             dev: locked.dev,
             optional: locked.optional,
@@ -161,14 +174,20 @@ impl LockedPkg {
         full_package_path: &Path,
     ) {
         if self.version.is_empty() {
-            self.version.clone_from(&edge.ref_display);
+            self.version
+                .clone_from(&edge.ref_display);
         }
         if self.version.starts_with("link:")
             && let Some(rewrite_dir) = &ctx.rewrite_link_version_dir
         {
             let relative = pathdiff::diff_paths(full_package_path, rewrite_dir)
                 .unwrap_or_else(|| full_package_path.to_path_buf());
-            self.version = format!("link:{}", relative.to_string_lossy().replace('\\', "/"));
+            self.version = format!(
+                "link:{}",
+                relative
+                    .to_string_lossy()
+                    .replace('\\', "/")
+            );
         }
     }
 }
@@ -185,7 +204,9 @@ fn locked_pkg(env: &PkgInfoEnv<'_>, edge: &GraphEdge, dep_path: &PkgNameVerPeer)
         // The package is missing from the current lockfile — it was
         // never materialized (e.g. skipped platform-specific
         // optional deps).
-        is_skipped = env.skipped.contains(&dep_path.to_string());
+        is_skipped = env
+            .skipped
+            .contains(&dep_path.to_string());
         match env.wanted_lockfile {
             Some(wanted) => lookup_dep(wanted, dep_path, &metadata_key),
             None => (false, None, None),
@@ -208,11 +229,13 @@ fn locked_pkg(env: &PkgInfoEnv<'_>, edge: &GraphEdge, dep_path: &PkgNameVerPeer)
         .and_then(|metadata| metadata.version.clone())
         .unwrap_or_else(|| dep_path.suffix.version().to_string());
     LockedPkg {
-        resolved: metadata.and_then(|metadata| {
-            resolved_tarball_url(env, &metadata.resolution, &name, &version)
-        }),
+        resolved: metadata
+            .and_then(|metadata| resolved_tarball_url(env, &metadata.resolution, &name, &version)),
         integrity: metadata.and_then(|metadata| {
-            metadata.resolution.integrity().map(ToString::to_string)
+            metadata
+                .resolution
+                .integrity()
+                .map(ToString::to_string)
         }),
         optional: snapshot.is_some_and(|snapshot| snapshot.optional),
         name,
@@ -235,10 +258,12 @@ fn lookup_dep<'l>(
     dep_path: &PkgNameVerPeer,
     metadata_key: &PkgNameVerPeer,
 ) -> (bool, Option<&'l pnpm_lockfile::SnapshotEntry>, Option<&'l pnpm_lockfile::PackageMetadata>) {
-    let snapshot = lockfile.snapshots
+    let snapshot = lockfile
+        .snapshots
         .as_ref()
         .and_then(|snapshots| snapshots.get(dep_path));
-    let metadata = lockfile.packages
+    let metadata = lockfile
+        .packages
         .as_ref()
         .and_then(|packages| packages.get(metadata_key));
     (snapshot.is_some() || metadata.is_some(), snapshot, metadata)
@@ -307,7 +332,8 @@ pub fn resolve_package_path(
     if is_unsafe_path_component(&store_name) || is_unsafe_path_component(name) {
         return layout.virtual_store_dir.clone();
     }
-    let constructed = layout.virtual_store_dir
+    let constructed = layout
+        .virtual_store_dir
         .join(store_name)
         .join("node_modules")
         .join(name);
@@ -325,7 +351,11 @@ pub fn resolve_package_path(
             // Scoped parents live one level deeper (`node_modules/@scope/pkg`).
             if dir
                 .file_name()
-                .is_some_and(|component| component.to_string_lossy().starts_with('@'))
+                .is_some_and(|component| {
+                    component
+                        .to_string_lossy()
+                        .starts_with('@')
+                })
                 && let Some(grandparent) = dir.parent()
             {
                 dir = grandparent.to_path_buf();

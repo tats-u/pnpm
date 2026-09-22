@@ -89,14 +89,21 @@ fn importer_bins_are_relocatable(
     project_manifests: &[(PathBuf, &PackageManifest)],
     root: &Path,
 ) -> bool {
-    let modules_dir_name: &std::ffi::OsStr =
-        config.modules_dir.file_name().unwrap_or_else(|| std::ffi::OsStr::new("node_modules"));
+    let modules_dir_name: &std::ffi::OsStr = config
+        .modules_dir
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new("node_modules"));
     bin_dir_is_relocatable(&config.modules_dir.join(".bin"), root)
         && project_manifests
             .iter()
             .filter(|(project_dir, _)| project_dir != root)
             .all(|(project_dir, _)| {
-                bin_dir_is_relocatable(&project_dir.join(modules_dir_name).join(".bin"), root)
+                bin_dir_is_relocatable(
+                    &project_dir
+                        .join(modules_dir_name)
+                        .join(".bin"),
+                    root,
+                )
             })
 }
 
@@ -107,20 +114,26 @@ fn virtual_store_bins_are_relocatable(config: &Config, lockfile: &Lockfile, root
         config.virtual_store_dir.clone(),
         config.virtual_store_dir_max_length as usize,
     );
-    bin_dir_is_relocatable(&config.virtual_store_dir.join("node_modules").join(".bin"), root)
-        && lockfile.snapshots
-            .as_ref()
-            .is_none_or(|snapshots| {
-                snapshots
-                    .par_iter()
-                    .all(|(key, _)| {
-                        slot_bins_are_relocatable(
-                            &layout.slot_dir(key).join("node_modules"),
-                            key,
-                            root,
-                        )
-                    })
+    bin_dir_is_relocatable(
+        &config
+            .virtual_store_dir
+            .join("node_modules")
+            .join(".bin"),
+        root,
+    ) && lockfile
+        .snapshots
+        .as_ref()
+        .is_none_or(|snapshots| {
+            snapshots.par_iter().all(|(key, _)| {
+                slot_bins_are_relocatable(
+                    &layout
+                        .slot_dir(key)
+                        .join("node_modules"),
+                    key,
+                    root,
+                )
             })
+        })
 }
 
 /// The `.bin` dirs the hoisted linker writes inside the packages it placed,
@@ -132,14 +145,20 @@ fn hoisted_bins_are_relocatable(config: &Config, root: &Path) -> bool {
     else {
         return false;
     };
-    modules.hoisted_locations
+    modules
+        .hoisted_locations
         .iter()
         .flat_map(BTreeMap::values)
         .flatten()
         .all(|location| {
             let package_dir = root.join(location);
             pnpm_fs::is_subdir(root, &package_dir)
-                && bin_dir_is_relocatable(&package_dir.join("node_modules").join(".bin"), root)
+                && bin_dir_is_relocatable(
+                    &package_dir
+                        .join("node_modules")
+                        .join(".bin"),
+                    root,
+                )
         })
 }
 
@@ -257,7 +276,8 @@ pub(super) fn has_newly_allowed_ignored_builds(
     modules: &pnpm_modules_yaml::ModulesLayout,
     config: &Config,
 ) -> bool {
-    let Some(ignored) = modules.ignored_builds
+    let Some(ignored) = modules
+        .ignored_builds
         .as_ref()
         .filter(|set| !set.is_empty())
     else {
@@ -291,7 +311,8 @@ pub(super) fn recorded_allow_builds_differ(
     config: &Config,
 ) -> bool {
     let recorded = || {
-        modules.allow_builds
+        modules
+            .allow_builds
             .iter()
             .flatten()
             .filter_map(|(spec, value)| match value {
@@ -326,7 +347,8 @@ pub(super) fn unapproved_recorded_ignored_builds(
     modules: &pnpm_modules_yaml::ModulesLayout,
     config: &Config,
 ) -> Result<Option<Vec<String>>, pnpm_config::version_policy::VersionPolicyError> {
-    let Some(ignored) = modules.ignored_builds
+    let Some(ignored) = modules
+        .ignored_builds
         .as_ref()
         .filter(|set| !set.is_empty())
     else {
@@ -335,7 +357,11 @@ pub(super) fn unapproved_recorded_ignored_builds(
     let policy = crate::AllowBuildPolicy::from_config(config)?;
     let mut names: Vec<String> = ignored
         .iter()
-        .filter(|dep_path| policy.check(dep_path.as_str()).is_none())
+        .filter(|dep_path| {
+            policy
+                .check(dep_path.as_str())
+                .is_none()
+        })
         .map(|dep_path| dep_path.as_str().to_string())
         .collect();
     names.sort();
@@ -443,14 +469,17 @@ pub(super) fn build_modules_manifest(
         // recorded set is what a later install diffs against to decide
         // whether its slots need re-linking.
         allow_builds: Some(
-            config.allow_builds
+            config
+                .allow_builds
                 .iter()
                 .map(|(spec, allowed)| {
                     (spec.clone(), pnpm_modules_yaml::AllowBuildValue::Bool(*allowed))
                 })
                 .collect(),
         ),
-        virtual_store_only: config.virtual_store_only.then_some(true),
+        virtual_store_only: config
+            .virtual_store_only
+            .then_some(true),
         ..Default::default()
     }
 }
@@ -481,7 +510,9 @@ where
         return Ok(());
     };
     let before = modules.pending_builds.len();
-    modules.pending_builds.retain(|entry| !settled.contains(entry));
+    modules
+        .pending_builds
+        .retain(|entry| !settled.contains(entry));
     if modules.pending_builds.len() == before {
         return Ok(());
     }

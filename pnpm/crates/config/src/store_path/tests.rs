@@ -82,7 +82,10 @@ fn resolve_store_dir_cross_volume_uses_project_drive_without_verbatim_prefix() {
     let pkg_root = tmp.path().join("project");
     fs::create_dir_all(&pkg_root).expect("create project dir");
     let project_drive = filesystem_root(&pkg_root);
-    let pnpm_home = if project_drive.to_string_lossy().eq_ignore_ascii_case(r"C:\") {
+    let pnpm_home = if project_drive
+        .to_string_lossy()
+        .eq_ignore_ascii_case(r"C:\")
+    {
         PathBuf::from(r"D:\pnpm-home")
     } else {
         PathBuf::from(r"C:\pnpm-home")
@@ -120,9 +123,15 @@ macro_rules! prefix_probe {
         }
 
         fn set_allow(prefixes: &[&Path]) {
-            let mut slot = ALLOW_PREFIXES.lock().expect("ALLOW_PREFIXES not poisoned");
+            let mut slot = ALLOW_PREFIXES
+                .lock()
+                .expect("ALLOW_PREFIXES not poisoned");
             slot.clear();
-            slot.extend(prefixes.iter().map(|prefix| prefix.to_path_buf()));
+            slot.extend(
+                prefixes
+                    .iter()
+                    .map(|prefix| prefix.to_path_buf()),
+            );
         }
     };
 }
@@ -191,7 +200,12 @@ fn resolve_store_dir_uses_node_modules_when_only_pkg_root_is_linkable() {
 
     set_allow(&[&pkg_root_canon]);
     let resolved = resolve_store_dir::<PrefixProbe>(home_default, &pnpm_home, &pkg_root_canon);
-    assert_eq!(resolved, pkg_root_canon.join("node_modules").join(".pnpm-store"));
+    assert_eq!(
+        resolved,
+        pkg_root_canon
+            .join("node_modules")
+            .join(".pnpm-store")
+    );
 }
 
 #[test]

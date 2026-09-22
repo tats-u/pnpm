@@ -134,7 +134,9 @@ pub fn create_exportable_manifest(
     opts: &CreateExportableManifestOptions<'_>,
 ) -> Result<Value, CreateExportableManifestError> {
     let empty = Map::new();
-    let original = original_manifest.as_object().unwrap_or(&empty);
+    let original = original_manifest
+        .as_object()
+        .unwrap_or(&empty);
 
     let mut publish = publication_fields(original, opts.skip_manifest_obfuscation);
 
@@ -158,11 +160,9 @@ pub fn create_exportable_manifest(
 
     if opts.embed_readme
         && !publish.contains_key("readme")
-        && let Some(readme) = read_readme_file(dir)
-            .map_err(|source| CreateExportableManifestError::ReadReadme {
-                dir: dir.display().to_string(),
-                source,
-            })?
+        && let Some(readme) = read_readme_file(dir).map_err(|source| {
+            CreateExportableManifestError::ReadReadme { dir: dir.display().to_string(), source }
+        })?
     {
         publish.insert("readme".to_string(), Value::String(readme));
     }
@@ -176,7 +176,10 @@ fn publication_fields(original: &Map<String, Value>, skip_obfuscation: bool) -> 
         omit_keys(original, &["pnpm"])
     } else {
         let mut publish = omit_keys(original, &["scripts", "packageManager", "pnpm"]);
-        if let Some(scripts) = original.get("scripts").and_then(Value::as_object) {
+        if let Some(scripts) = original
+            .get("scripts")
+            .and_then(Value::as_object)
+        {
             publish.insert(
                 "scripts".to_string(),
                 Value::Object(omit_keys(scripts, PREPUBLISH_SCRIPTS)),

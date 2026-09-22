@@ -24,8 +24,14 @@ impl ImporterHoistState {
             return Ok(());
         }
         if self.progress.discovery_converged
-            && self.ctx.workspace().tree.children_rewrites()
-                == self.progress.converged_children_rewrites
+            && self
+                .ctx
+                .workspace()
+                .tree
+                .children_rewrites()
+                == self
+                    .progress
+                    .converged_children_rewrites
         {
             // See [`Self::discovery_converged`]: re-discovering an
             // unchanged importer reproduces the state its last round
@@ -34,7 +40,8 @@ impl ImporterHoistState {
             return Ok(());
         }
         self.begin_required_round();
-        self.complete_required_round(resolver, None, peer_discovery).await
+        self.complete_required_round(resolver, None, peer_discovery)
+            .await
     }
 
     pub(crate) fn prepare_initial_required_round(
@@ -76,7 +83,8 @@ impl ImporterHoistState {
     where
         Chain: Resolver + ?Sized,
     {
-        self.complete_required_round(resolver, Some(round), peer_discovery).await
+        self.complete_required_round(resolver, Some(round), peer_discovery)
+            .await
     }
 
     pub(super) fn begin_required_round(&mut self) {
@@ -85,7 +93,9 @@ impl ImporterHoistState {
         // the owner walk's children report is reused there, so those
         // peers never reach a non-owner importer's hoist. The final peer
         // pass keeps the unscoped options so warnings stay complete.
-        self.dependencies.all_missing_optional_peers.clear();
+        self.dependencies
+            .all_missing_optional_peers
+            .clear();
     }
 
     pub(super) fn resolve_required_round(
@@ -93,7 +103,11 @@ impl ImporterHoistState {
         hoist_missing_scope: Option<Arc<HoistMissingScope>>,
         peer_discovery: &mut PeerHoistDiscovery,
     ) -> RequiredRound {
-        let children_rewrites = self.ctx.workspace().tree.children_rewrites();
+        let children_rewrites = self
+            .ctx
+            .workspace()
+            .tree
+            .children_rewrites();
         let walk_was_full = self.progress.walked_direct_len == 0
             || children_rewrites != self.progress.walked_children_rewrites;
         let walk_from = if walk_was_full { 0 } else { self.progress.walked_direct_len };
@@ -109,10 +123,15 @@ impl ImporterHoistState {
         };
         self.progress.walked_direct_len = self.dependencies.direct.len();
         self.progress.walked_children_rewrites = children_rewrites;
-        let provider_pkg_ids = self.ctx
+        let provider_pkg_ids = self
+            .ctx
             .workspace()
             .tree
-            .provider_pkg_ids(discovery.resolved_peer_providers_by_alias.values());
+            .provider_pkg_ids(
+                discovery
+                    .resolved_peer_providers_by_alias
+                    .values(),
+            );
         self.ctx
             .workspace()
             .children
@@ -141,10 +160,14 @@ impl ImporterHoistState {
             let (missing_required, fresh_optional) = partition_missing_peers(
                 &self.progress.merged_missing,
                 &self.dependencies.parent_pkg_aliases,
-                self.policy.peers.auto_install_peers_from_highest_match,
+                self.policy
+                    .peers
+                    .auto_install_peers_from_highest_match,
             );
             self.append_resolved_peer_providers(
-                &round.discovery.resolved_peer_providers_by_alias,
+                &round
+                    .discovery
+                    .resolved_peer_providers_by_alias,
                 &round.provider_pkg_ids,
                 &missing_required,
             );
@@ -152,11 +175,18 @@ impl ImporterHoistState {
 
             if missing_required.is_empty() {
                 self.progress.discovery_converged = true;
-                self.progress.converged_children_rewrites =
-                    self.ctx.workspace().tree.children_rewrites();
+                self.progress
+                    .converged_children_rewrites = self
+                    .ctx
+                    .workspace()
+                    .tree
+                    .children_rewrites();
                 break;
             }
-            if !self.hoist_missing_required(resolver, &missing_required).await? {
+            if !self
+                .hoist_missing_required(resolver, &missing_required)
+                .await?
+            {
                 break;
             }
         }
@@ -183,14 +213,19 @@ impl ImporterHoistState {
             .collect();
         let hoist_preferred = self.ctx.preferred_versions_for_names(
             &self.selection.preferred_versions,
-            missing_as_pairs.iter().map(|(name, _)| name.as_str()),
+            missing_as_pairs
+                .iter()
+                .map(|(name, _)| name.as_str()),
         );
         let hoisted = hoist_peers(
             &HoistPeersOptions {
                 auto_install_peers: self.policy.peers.auto_install_peers,
                 all_preferred_versions: &hoist_preferred,
                 workspace_root_deps: self.hoist_root_deps(),
-                override_bare_specifier: self.selection.override_bare_specifier.as_deref(),
+                override_bare_specifier: self
+                    .selection
+                    .override_bare_specifier
+                    .as_deref(),
                 project_dir: &self.project_dir,
             },
             &missing_as_pairs,
@@ -200,7 +235,9 @@ impl ImporterHoistState {
         }
 
         for name in hoisted.keys() {
-            self.dependencies.parent_pkg_aliases.insert(name.clone());
+            self.dependencies
+                .parent_pkg_aliases
+                .insert(name.clone());
         }
 
         // Hoisted required peers are installed at the importer
@@ -220,17 +257,27 @@ impl ImporterHoistState {
             resolver,
             new_wanted,
             &self.importer_id,
-            &ParentPkgAliases::root(self.dependencies.parent_pkg_aliases.clone()),
+            &ParentPkgAliases::root(
+                self.dependencies
+                    .parent_pkg_aliases
+                    .clone(),
+            ),
         )
         .await?;
-        self.dependencies.direct.extend(new_direct);
+        self.dependencies
+            .direct
+            .extend(new_direct);
         Ok(true)
     }
 
     /// The workspace root's own dependencies, when peers resolve from there.
     /// They bound what a hoist may install.
     pub(super) fn hoist_root_deps(&self) -> &[WorkspaceRootDep] {
-        if self.policy.peers.resolve_peers_from_workspace_root {
+        if self
+            .policy
+            .peers
+            .resolve_peers_from_workspace_root
+        {
             &self.dependencies.workspace_root_deps
         } else {
             &[]
@@ -244,8 +291,12 @@ impl ImporterHoistState {
         self.resolve_required_round(
             Some(Arc::new(HoistMissingScope {
                 importer_id: self.importer_id.clone(),
-                first_importer_by_pkg: self.ctx.workspace().first_importer_by_pkg(),
-                first_walk_missing_by_pkg: self.ctx
+                first_importer_by_pkg: self
+                    .ctx
+                    .workspace()
+                    .first_importer_by_pkg(),
+                first_walk_missing_by_pkg: self
+                    .ctx
                     .workspace()
                     .children
                     .first_walk_missing_by_pkg(),
@@ -266,7 +317,8 @@ impl ImporterHoistState {
             self.progress.merged_missing.clear();
         }
         for (peer_name, issues) in &discovery.peer_dependency_issues.missing {
-            self.progress.merged_missing
+            self.progress
+                .merged_missing
                 .entry(peer_name.clone())
                 .or_default()
                 .extend(issues.iter().cloned());
@@ -278,7 +330,11 @@ impl ImporterHoistState {
         fresh_optional: BTreeMap<String, Vec<String>>,
     ) {
         for (name, ranges) in fresh_optional {
-            let bucket = self.dependencies.all_missing_optional_peers.entry(name).or_default();
+            let bucket = self
+                .dependencies
+                .all_missing_optional_peers
+                .entry(name)
+                .or_default();
             for range in ranges {
                 if !bucket
                     .iter()
@@ -300,7 +356,10 @@ impl ImporterHoistState {
             return;
         }
         for (alias, node_id) in providers {
-            if self.dependencies.parent_pkg_aliases.contains(alias)
+            if self
+                .dependencies
+                .parent_pkg_aliases
+                .contains(alias)
                 || missing_required.contains_key(alias)
             {
                 continue;
@@ -308,13 +367,19 @@ impl ImporterHoistState {
             let Some(pkg_id) = provider_pkg_ids.get(node_id) else {
                 continue;
             };
-            self.dependencies.direct.push(DirectDep {
-                alias: alias.clone(),
-                node_id: node_id.clone(),
-                id: pkg_id.clone(),
-            });
-            self.dependencies.hoisted_peer_provider_node_ids.insert(node_id.clone());
-            self.dependencies.parent_pkg_aliases.insert(alias.clone());
+            self.dependencies
+                .direct
+                .push(DirectDep {
+                    alias: alias.clone(),
+                    node_id: node_id.clone(),
+                    id: pkg_id.clone(),
+                });
+            self.dependencies
+                .hoisted_peer_provider_node_ids
+                .insert(node_id.clone());
+            self.dependencies
+                .parent_pkg_aliases
+                .insert(alias.clone());
         }
     }
 
@@ -329,16 +394,24 @@ impl ImporterHoistState {
         Chain: Resolver + ?Sized,
     {
         if !self.policy.should_hoist_peers()
-            || self.dependencies.all_missing_optional_peers.is_empty()
+            || self
+                .dependencies
+                .all_missing_optional_peers
+                .is_empty()
         {
             return Ok(false);
         }
         let hoist_preferred = self.ctx.preferred_versions_for_names(
             &self.selection.preferred_versions,
-            self.dependencies.all_missing_optional_peers.keys().map(String::as_str),
+            self.dependencies
+                .all_missing_optional_peers
+                .keys()
+                .map(String::as_str),
         );
         let hoisted_optional = get_hoistable_optional_peers_with_locked_versions(
-            &self.dependencies.all_missing_optional_peers,
+            &self
+                .dependencies
+                .all_missing_optional_peers,
             &hoist_preferred,
             self.hoist_root_deps(),
             &self.selection.locked_versions,
@@ -347,7 +420,9 @@ impl ImporterHoistState {
             return Ok(false);
         }
         for name in hoisted_optional.keys() {
-            self.dependencies.parent_pkg_aliases.insert(name.clone());
+            self.dependencies
+                .parent_pkg_aliases
+                .insert(name.clone());
         }
         // Optional peers picked up via `getHoistableOptionalPeers` are
         // also installed at the importer level — the picker already
@@ -363,10 +438,16 @@ impl ImporterHoistState {
             resolver,
             new_wanted,
             &self.importer_id,
-            &ParentPkgAliases::root(self.dependencies.parent_pkg_aliases.clone()),
+            &ParentPkgAliases::root(
+                self.dependencies
+                    .parent_pkg_aliases
+                    .clone(),
+            ),
         )
         .await?;
-        self.dependencies.direct.extend(new_direct);
+        self.dependencies
+            .direct
+            .extend(new_direct);
         // The direct set changed; the next required round must
         // re-discover so the hoisted names leave the missing buckets.
         self.progress.discovery_converged = false;

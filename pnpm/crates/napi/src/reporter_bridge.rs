@@ -185,8 +185,13 @@ fn accumulate_stats(event: &LogEvent) {
         },
         LogEvent::IgnoredScripts(log) => {
             for name in &log.package_names {
-                if !stats.deps_requiring_build.contains(name) {
-                    stats.deps_requiring_build.push(name.clone());
+                if !stats
+                    .deps_requiring_build
+                    .contains(name)
+                {
+                    stats
+                        .deps_requiring_build
+                        .push(name.clone());
                 }
             }
         }

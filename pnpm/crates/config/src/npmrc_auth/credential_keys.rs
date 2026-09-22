@@ -16,7 +16,8 @@ pub(crate) fn enforce_token_helper_trust(
     for (uri, by_scope) in &full.creds_by_scope_by_uri {
         for (scope, raw) in by_scope {
             let Some(value) = &raw.token_helper else { continue };
-            let trusted_value = trusted.creds_by_scope_by_uri
+            let trusted_value = trusted
+                .creds_by_scope_by_uri
                 .get(uri)
                 .and_then(|by_scope| by_scope.get(scope))
                 .and_then(|raw| raw.token_helper.as_deref());
@@ -30,7 +31,11 @@ pub(crate) fn enforce_token_helper_trust(
     // `default_creds` is normally emptied by `rescope_unscoped` before the
     // merge; guard it too for the paths that skip rescoping.
     if let Some(value) = &full.default_creds.token_helper
-        && trusted.default_creds.token_helper.as_deref() != Some(value.as_str())
+        && trusted
+            .default_creds
+            .token_helper
+            .as_deref()
+            != Some(value.as_str())
     {
         return Err(LoadWorkspaceYamlError::TokenHelperInProjectConfig {
             key: "tokenHelper".to_owned(),

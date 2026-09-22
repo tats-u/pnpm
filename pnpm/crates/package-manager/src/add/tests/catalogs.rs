@@ -34,14 +34,16 @@ async fn selected_add_merges_catalog_updates_in_command_order() {
     assert_eq!(dependency_specifier(&projects[0].manifest, "foo"), Some("1.0.0"));
     assert_eq!(dependency_specifier(&projects[1].manifest, "foo"), Some("catalog:"));
     assert_eq!(
-        prepared.updated_catalogs
+        prepared
+            .updated_catalogs
             .get("default")
             .and_then(|catalog| catalog.get("foo"))
             .map(String::as_str),
         Some("2.0.0"),
     );
     assert_eq!(
-        prepared.catalogs_override
+        prepared
+            .catalogs_override
             .as_ref()
             .and_then(|catalogs| catalogs.get("default"))
             .and_then(|catalog| catalog.get("foo"))

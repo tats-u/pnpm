@@ -4,12 +4,8 @@ use std::fs;
 
 #[test]
 fn cat_file_works() {
-    let CommandTempCwd {
-        mut pacquet,
-        root: _root,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, root: _root, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     let store_dir = npmrc_info.store_dir;
     let files_dir = store_dir.join("v11").join("files");
@@ -35,12 +31,8 @@ fn cat_file_works() {
 
 #[test]
 fn cat_file_works_with_binary() {
-    let CommandTempCwd {
-        mut pacquet,
-        root: _root,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, root: _root, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     let store_dir = npmrc_info.store_dir;
     let files_dir = store_dir.join("v11").join("files");

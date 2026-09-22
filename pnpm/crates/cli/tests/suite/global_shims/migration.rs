@@ -37,7 +37,9 @@ fn native_shim_dispatches_and_falls_back_to_cmd_targets() {
     let local_package = project.join("node_modules/tool");
     let local_target = local_package.join("cli.cmd");
     let local_bin = project.join("node_modules/.bin");
-    let global_package = root.path().join("global/node_modules/tool");
+    let global_package = root
+        .path()
+        .join("global/node_modules/tool");
     let global_target = global_package.join("cli.cmd");
     fs::create_dir_all(&local_package).unwrap();
     fs::create_dir_all(&local_bin).unwrap();
@@ -127,20 +129,30 @@ fn legacy_shim_launch_dispatches_and_migrates_the_bin_dir() {
     assert!(first.status.success(), "stderr:\n{}", String::from_utf8_lossy(&first.stderr));
     assert_eq!(String::from_utf8_lossy(&first.stdout).trim(), "<--flag>\n<value with spaces>");
 
-    let executable_len = fs::metadata(assert_cmd::cargo::cargo_bin("pnpm")).unwrap().len();
+    let executable_len = fs::metadata(assert_cmd::cargo::cargo_bin("pnpm"))
+        .unwrap()
+        .len();
     for name in ["tool", "other"] {
         assert_eq!(
-            fs::metadata(global_bin.join(name)).unwrap().len(),
+            fs::metadata(global_bin.join(name))
+                .unwrap()
+                .len(),
             executable_len,
             "the legacy {name} shim must have become the executable",
         );
     }
     assert_eq!(
         fs::read(global_bin.join(".pnpm-shim-v1-tool-target")).unwrap(),
-        global_target.as_os_str().as_encoded_bytes(),
+        global_target
+            .as_os_str()
+            .as_encoded_bytes(),
     );
     assert_eq!(fs::read(global_bin.join(".pnpm-shim-v1-other-target")).unwrap(), b"pkg:other");
-    assert!(!global_bin.join(".pnpm-shim-v1").exists());
+    assert!(
+        !global_bin
+            .join(".pnpm-shim-v1")
+            .exists()
+    );
 
     let second = launch(&shim);
     assert!(second.status.success(), "stderr:\n{}", String::from_utf8_lossy(&second.stderr));
@@ -172,8 +184,16 @@ fn legacy_dispatcher_rejects_a_shim_from_another_directory() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     pnpm_testing_utils::diagnostics::assert_diagnostic_contains(&stderr, "legacy shim path");
     pnpm_testing_utils::diagnostics::assert_diagnostic_contains(&stderr, "executing dispatcher");
-    assert!(foreign_bin.join(".pnpm-shim-v1").exists());
-    assert!(fs::read(&foreign_shim).unwrap().starts_with(b"#!"));
+    assert!(
+        foreign_bin
+            .join(".pnpm-shim-v1")
+            .exists()
+    );
+    assert!(
+        fs::read(&foreign_shim)
+            .unwrap()
+            .starts_with(b"#!")
+    );
 }
 
 #[cfg(unix)]
@@ -196,8 +216,16 @@ fn legacy_shim_dispatches_without_waiting_for_the_migration_lock() {
 
     assert!(output.status.success(), "stderr:\n{}", String::from_utf8_lossy(&output.stderr));
     assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "launched");
-    assert!(global_bin.join(".pnpm-shim-v1").exists());
-    assert!(fs::read(&shim).unwrap().starts_with(b"#!"));
+    assert!(
+        global_bin
+            .join(".pnpm-shim-v1")
+            .exists()
+    );
+    assert!(
+        fs::read(&shim)
+            .unwrap()
+            .starts_with(b"#!")
+    );
 }
 
 /// A shim an earlier pnpm 12 wrote for the package is migrated before the
@@ -235,7 +263,9 @@ fn adding_a_shim_migrates_the_legacy_shim_for_the_same_package() {
     assert_eq!(fs::read(global_bin.join(".pnpm-shim-v1-yarn-target")).unwrap(), b"pkg:yarn");
     assert_eq!(
         fs::metadata(&legacy).unwrap().len(),
-        fs::metadata(assert_cmd::cargo::cargo_bin("pnpm")).unwrap().len(),
+        fs::metadata(assert_cmd::cargo::cargo_bin("pnpm"))
+            .unwrap()
+            .len(),
         "the legacy shell shim must have become the executable",
     );
     assert!(!dispatcher.exists());
@@ -267,5 +297,9 @@ fn removing_a_shim_migrates_the_legacy_shim_first() {
 
     assert!(stdout_of(&removed).contains("Removed yarn"));
     assert!(!legacy.exists());
-    assert!(!global_bin.join(".pnpm-shim-v1-yarn-target").exists());
+    assert!(
+        !global_bin
+            .join(".pnpm-shim-v1-yarn-target")
+            .exists()
+    );
 }

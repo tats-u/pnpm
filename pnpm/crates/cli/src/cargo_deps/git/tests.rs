@@ -14,7 +14,9 @@ fn manifest(text: &str) -> Manifest {
 }
 
 fn source_id(source: &str) -> cargo_lock::SourceId {
-    source.parse().expect("parse Cargo source")
+    source
+        .parse()
+        .expect("parse Cargo source")
 }
 
 /// Commit `files` into a fresh repository, answering the URL and commit
@@ -106,7 +108,9 @@ workspace = true
     assert_eq!(document["dependencies"]["libc"]["optional"].as_bool(), Some(true));
     assert_eq!(document["dependencies"]["libc"]["default-features"].as_bool(), Some(false));
     assert_eq!(
-        document["dependencies"]["libc"]["features"].as_array().map(Vec::as_slice),
+        document["dependencies"]["libc"]["features"]
+            .as_array()
+            .map(Vec::as_slice),
         Some(["extra".into(), "std".into()].as_slice()),
     );
     assert_eq!(document["build-dependencies"]["serde"]["version"].as_str(), Some("1"));
@@ -128,7 +132,13 @@ members = ["member"]
 
     let vendored = vendored_package(&root, Some(&root.document)).unwrap();
 
-    assert!(!vendored.manifest.contains("[workspace]"), "{}", vendored.manifest);
+    assert!(
+        !vendored
+            .manifest
+            .contains("[workspace]"),
+        "{}",
+        vendored.manifest
+    );
 }
 
 #[test]
@@ -167,7 +177,13 @@ fn a_branch_source_keeps_the_branch_it_was_locked_from() {
     ))
     .unwrap();
 
-    assert!(source.config_block().contains("branch = \"next\"\n"), "{}", source.config_block());
+    assert!(
+        source
+            .config_block()
+            .contains("branch = \"next\"\n"),
+        "{}",
+        source.config_block()
+    );
 }
 
 #[test]
@@ -265,12 +281,16 @@ fn a_workspace_member_is_vendored_without_the_repository_around_it() {
 
     let linked = vendor_from(&repository, &commit, &store_dir, &[("member", "0.3.0")]);
 
-    let (link_name, slot) = linked.first().expect("the member is vendored");
+    let (link_name, slot) = linked
+        .first()
+        .expect("the member is vendored");
     assert_eq!(link_name, "member-0.3.0");
     // Trimmed: a checkout on Windows ends the line the way git configures
     // it to, not the way the fixture wrote it.
     assert_eq!(
-        fs::read_to_string(slot.join("src/lib.rs")).unwrap().trim_end(),
+        fs::read_to_string(slot.join("src/lib.rs"))
+            .unwrap()
+            .trim_end(),
         "pub fn answer() -> u8 { 42 }",
     );
     let manifest: toml::Table =
@@ -312,7 +332,11 @@ fn a_root_package_leaves_the_members_nested_in_it_to_their_own_slots() {
         .1;
     assert!(root.join("src/lib.rs").is_file());
     assert!(!root.join("member").exists());
-    assert!(!fs::read_to_string(root.join("Cargo.toml")).unwrap().contains("[workspace]"));
+    assert!(
+        !fs::read_to_string(root.join("Cargo.toml"))
+            .unwrap()
+            .contains("[workspace]")
+    );
 }
 
 #[test]
@@ -338,7 +362,9 @@ fn a_vendored_package_is_taken_from_the_store_without_a_second_checkout() {
     eprintln!("Legacy Git slots must be refetched: {linked:?}");
     assert_ne!(linked[0].1, legacy);
     assert_eq!(
-        fs::read_to_string(linked[0].1.join("src/lib.rs")).unwrap().trim(),
+        fs::read_to_string(linked[0].1.join("src/lib.rs"))
+            .unwrap()
+            .trim(),
         "pub fn demo() {}",
     );
 
@@ -371,7 +397,9 @@ fn a_member_that_names_its_workspace_by_path_inherits_from_it() {
 
     let linked = vendor_from(&repository, &commit, &store_dir, &[("member", "0.3.0")]);
 
-    let (_, slot) = linked.first().expect("the member is vendored");
+    let (_, slot) = linked
+        .first()
+        .expect("the member is vendored");
     let manifest: toml::Table =
         toml::from_str(&fs::read_to_string(slot.join("Cargo.toml")).unwrap()).unwrap();
     assert_eq!(manifest["package"]["version"].as_str(), Some("0.3.0"));
@@ -395,7 +423,9 @@ fn a_symlinked_file_is_vendored_as_its_contents_unless_it_leaves_the_checkout() 
 
     let linked = vendor_from(&repository.file_url(), &commit, &store_dir, &[("demo", "1.0.0")]);
 
-    let (_, slot) = linked.first().expect("the crate is vendored");
+    let (_, slot) = linked
+        .first()
+        .expect("the crate is vendored");
     assert_eq!(fs::read_to_string(slot.join("LICENSE")).unwrap(), "the license\n");
     assert_eq!(fs::read_to_string(slot.join("src/lib.rs")).unwrap(), "the license\n");
     assert!(!slot.join("escaped").exists());
@@ -418,7 +448,9 @@ fn a_crate_is_found_past_a_manifest_that_shares_its_name_and_reads_no_version() 
 
     let linked = vendor_from(&repository, &commit, &store_dir, &[("demo", "1.0.0")]);
 
-    let (_, slot) = linked.first().expect("the crate is vendored");
+    let (_, slot) = linked
+        .first()
+        .expect("the crate is vendored");
     assert!(slot.join("src/lib.rs").is_file());
 }
 

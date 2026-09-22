@@ -25,7 +25,9 @@ use std::{fs, path::Path, process::Command};
 /// isn't `Clone` and each invocation consumes the builder, so tests that
 /// run pacquet more than once rebuild it here.
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 /// Content-addressable tarball blobs under the store (`v11/files/...`).
@@ -50,13 +52,8 @@ fn cas_blobs(store_dir: &Path) -> Vec<String> {
 /// properties.
 #[test]
 fn writes_lockfile_without_downloading_or_linking() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -122,7 +119,9 @@ fn writes_lockfile_without_downloading_or_linking() {
         .assert()
         .success();
     assert!(
-        workspace.join("node_modules/.pnpm/@pnpm.e2e+pkg-with-1-dep@100.0.0").exists(),
+        workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+pkg-with-1-dep@100.0.0")
+            .exists(),
         "a normal install after --lockfile-only must materialize the virtual store",
     );
 
@@ -136,13 +135,8 @@ fn writes_lockfile_without_downloading_or_linking() {
 /// the quoted name are what CI logs show.
 #[test]
 fn frozen_lockfile_only_rejects_a_drifted_setting() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -186,13 +180,8 @@ fn frozen_lockfile_only_rejects_a_drifted_setting() {
 /// fails when the manifest has drifted, never rewriting the lockfile.
 #[test]
 fn frozen_lockfile_only_rejects_a_stale_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -242,13 +231,8 @@ fn frozen_lockfile_only_rejects_a_stale_lockfile() {
 /// (`preferFrozenLockfile`) repeat run covered above.
 #[test]
 fn frozen_lockfile_only_succeeds_without_materializing_when_fresh() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -295,13 +279,8 @@ fn frozen_lockfile_only_succeeds_without_materializing_when_fresh() {
 /// flag produces is the lockfile, which `lockfile: false` disables.
 #[test]
 fn lockfile_false_with_lockfile_only_is_a_config_conflict() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -334,7 +313,9 @@ fn lockfile_false_with_lockfile_only_is_a_config_conflict() {
         "stderr must name the upstream config-conflict code; got:\n{stderr}",
     );
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "no pnpm-lock.yaml must be written on the rejected install",
     );
 
@@ -346,13 +327,8 @@ fn lockfile_false_with_lockfile_only_is_a_config_conflict() {
 /// lockfile to include it — all without materializing `node_modules`.
 #[test]
 fn lockfile_only_updates_importers_when_a_project_is_added() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -490,7 +466,9 @@ fn computes_the_integrity_of_an_unpinned_tarball() {
         .assert()
         .success();
     assert!(
-        workspace.join("node_modules/unpinned/package.json").exists(),
+        workspace
+            .join("node_modules/unpinned/package.json")
+            .exists(),
         "the frozen install must materialize the unpinned dependency",
     );
 

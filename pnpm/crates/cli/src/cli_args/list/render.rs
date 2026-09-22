@@ -84,7 +84,11 @@ fn render_tree_for_project(
         .groups()
         .iter()
         .any(|(_, nodes)| !nodes.is_empty())
-        || (opts.show_extraneous && !project.hierarchy.unsaved_dependencies.is_empty());
+        || (opts.show_extraneous
+            && !project
+                .hierarchy
+                .unsaved_dependencies
+                .is_empty());
     if !opts.always_print_root_package && !has_deps {
         return None;
     }
@@ -100,7 +104,12 @@ fn render_tree_for_project(
             nodes: to_archy_nodes(get_pkg_color, nodes, opts.long, multi_peer_pkgs),
         });
     }
-    if opts.show_extraneous && !project.hierarchy.unsaved_dependencies.is_empty() {
+    if opts.show_extraneous
+        && !project
+            .hierarchy
+            .unsaved_dependencies
+            .is_empty()
+    {
         groups.push(TreeNodeGroup {
             group: cyan_bright(
                 "not saved (you should add these dependencies to package.json if you need them):",
@@ -119,7 +128,11 @@ fn render_tree_for_project(
         return Some(root_label);
     }
     let tree = TreeNode { label: root_label, groups };
-    Some(render_archy(&tree).trim_end().to_string())
+    Some(
+        render_archy(&tree)
+            .trim_end()
+            .to_string(),
+    )
 }
 
 /// The project's own line: its name and version when it has them, then
@@ -219,7 +232,9 @@ fn print_label(
             multi_peer_pkgs,
             &node.package.name,
             &node.package.version,
-            node.package.peers_suffix_hash.as_deref(),
+            node.package
+                .peers_suffix_hash
+                .as_deref(),
         ));
     }
     if node.status.deduped {
@@ -252,7 +267,9 @@ fn find_multi_peer_packages(projects: &[ProjectHierarchy]) -> HashMap<String, us
             variants.collect(
                 &node.package.name,
                 &node.package.version,
-                node.package.peers_suffix_hash.as_deref(),
+                node.package
+                    .peers_suffix_hash
+                    .as_deref(),
             );
             walk(variants, &node.dependencies);
         }

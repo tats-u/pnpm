@@ -78,14 +78,20 @@ impl AuthHeaders {
         scope: &str,
     ) -> Option<Option<String>> {
         let scoped_by_uri = self.scoped_by_scope.get(scope)?;
-        let max_scoped_parts = self.max_scoped_parts_by_scope.get(scope).copied()?;
+        let max_scoped_parts = self
+            .max_scoped_parts_by_scope
+            .get(scope)
+            .copied()?;
         let nerfed = parsed.nerf_dart();
         let parts: Vec<&str> = nerfed.split('/').collect();
         let upper = parts.len().min(max_scoped_parts);
         for i in (3..upper).rev() {
             let key = format!("{}/", parts[..i].join("/"));
             if let Some(entry) = scoped_by_uri.get(&key) {
-                return Some(self.token_helpers.resolve_entry(&key, scope, entry));
+                return Some(
+                    self.token_helpers
+                        .resolve_entry(&key, scope, entry),
+                );
             }
         }
         None
@@ -109,7 +115,10 @@ impl AuthHeaders {
         for i in (3..upper).rev() {
             let key = format!("{}/", parts[..i].join("/"));
             if let Some(entry) = self.by_uri.get(&key) {
-                return Some(self.token_helpers.resolve_entry(&key, DEFAULT_REGISTRY_SCOPE, entry));
+                return Some(
+                    self.token_helpers
+                        .resolve_entry(&key, DEFAULT_REGISTRY_SCOPE, entry),
+                );
             }
         }
         None
@@ -139,17 +148,22 @@ impl TokenHelpers {
                 // `OnceLock` still serializes concurrent first-lookups of the
                 // *same* key, so the command runs at most once.
                 let cell = {
-                    let mut cache = self.resolved_token_helpers
+                    let mut cache = self
+                        .resolved_token_helpers
                         .lock()
                         .unwrap_or_else(std::sync::PoisonError::into_inner);
                     Arc::clone(cache.entry(cache_key).or_default())
                 };
                 cell.get_or_init(|| {
-                    let runner = self.token_helper_runner.unwrap_or(run_token_helper_command);
+                    let runner = self
+                        .token_helper_runner
+                        .unwrap_or(run_token_helper_command);
                     match execute_token_helper(command, runner) {
                         Ok(header) => Some(header),
                         Err(error) => {
-                            let program = command.first().map_or("", String::as_str);
+                            let program = command
+                                .first()
+                                .map_or("", String::as_str);
                             tracing::error!(
                                 target: "pacquet::auth",
                                 "token helper {program:?} failed; the request will be sent \

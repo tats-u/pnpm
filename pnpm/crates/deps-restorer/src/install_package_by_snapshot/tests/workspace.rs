@@ -72,19 +72,27 @@ fn node_extras_filter_matches_upstream_regex_alternations() {
 }
 #[test]
 fn archive_filter_for_only_returns_filter_for_unscoped_node() {
-    let key_node: PackageKey = "node@22.0.0".parse().expect("parse node key");
+    let key_node: PackageKey = "node@22.0.0"
+        .parse()
+        .expect("parse node key");
     assert!(archive_filter_for(&key_node).is_some(), "node must get the filter");
 
-    let key_scoped_node: PackageKey = "@foo/node@22.0.0".parse().expect("parse @foo/node key");
+    let key_scoped_node: PackageKey = "@foo/node@22.0.0"
+        .parse()
+        .expect("parse @foo/node key");
     assert!(
         archive_filter_for(&key_scoped_node).is_none(),
         "scoped `@foo/node` must not get the filter; upstream `archiveFilters` is keyed by pkg.name and only matches the unscoped string `node`",
     );
 
-    let key_react: PackageKey = "react@18.0.0".parse().expect("parse react key");
+    let key_react: PackageKey = "react@18.0.0"
+        .parse()
+        .expect("parse react key");
     assert!(archive_filter_for(&key_react).is_none());
 
-    let key_bun: PackageKey = "bun@1.0.0".parse().expect("parse bun key");
+    let key_bun: PackageKey = "bun@1.0.0"
+        .parse()
+        .expect("parse bun key");
     assert!(
         archive_filter_for(&key_bun).is_none(),
         "bun runtime has no bundled-tooling filter upstream (yet); leaving it `None` matches",

@@ -18,15 +18,18 @@ use pretty_assertions::assert_eq;
 #[test]
 fn registry_revision_uses_the_registry_declared_for_its_prefix() {
     let mut config = Config::new();
-    config.registries_by_prefix.insert(
-        "work".to_string(),
-        "https://registry.example/workspace/npm/".to_string(),
-    );
+    config
+        .registries_by_prefix
+        .insert("work".to_string(), "https://registry.example/workspace/npm/".to_string());
     let resolution = LockfileResolution::Registry(RegistryResolution {
-        integrity: DUMMY_SHA512.parse().expect("parse integrity"),
+        integrity: DUMMY_SHA512
+            .parse()
+            .expect("parse integrity"),
         revision: Some(TarballRevision::try_from(4).unwrap()),
     });
-    let package_key: PackageKey = "foo@work:1.0.0".parse().expect("parse package key");
+    let package_key: PackageKey = "foo@work:1.0.0"
+        .parse()
+        .expect("parse package key");
 
     let (tarball_url, _) = tarball_url_and_integrity(&resolution, &package_key, &config)
         .expect("a prefixed registry revision is fetchable");
@@ -41,12 +44,18 @@ fn tarball_revision_rejects_a_url_outside_its_effective_registry() {
     let config = Config::new();
     let resolution = LockfileResolution::Tarball(TarballResolution {
         tarball: format!("https://attacker.example/-/tarballs/sha512/{}", "A".repeat(86)),
-        integrity: Some(DUMMY_SHA512.parse().expect("parse integrity")),
+        integrity: Some(
+            DUMMY_SHA512
+                .parse()
+                .expect("parse integrity"),
+        ),
         revision: Some(TarballRevision::try_from(1).unwrap()),
         git_hosted: None,
         path: None,
     });
-    let package_key: PackageKey = "foo@1.0.0".parse().expect("parse package key");
+    let package_key: PackageKey = "foo@1.0.0"
+        .parse()
+        .expect("parse package key");
 
     let err = tarball_url_and_integrity(&resolution, &package_key, &config)
         .expect_err("a revision URL from another registry must be rejected");
@@ -59,13 +68,19 @@ fn tarball_revision_rejects_a_url_outside_its_effective_registry() {
 #[test]
 fn tarball_revision_rejects_non_registry_tarballs() {
     let config = Config::new();
-    let package_key: PackageKey = "foo@1.0.0".parse().expect("parse package key");
+    let package_key: PackageKey = "foo@1.0.0"
+        .parse()
+        .expect("parse package key");
     for (tarball, git_hosted) in
         [("file:../foo.tgz", None), ("https://codeload.github.com/foo/bar/tar.gz/abc", Some(true))]
     {
         let resolution = LockfileResolution::Tarball(TarballResolution {
             tarball: tarball.to_string(),
-            integrity: Some(DUMMY_SHA512.parse().expect("parse integrity")),
+            integrity: Some(
+                DUMMY_SHA512
+                    .parse()
+                    .expect("parse integrity"),
+            ),
             revision: Some(TarballRevision::try_from(1).unwrap()),
             git_hosted,
             path: None,
@@ -171,7 +186,11 @@ async fn cold_batch_falls_back_when_prefetch_failed() {
     mem_cache.insert(
         package_mem_cache_key(
             "https://registry.test/foo/-/foo-1.0.0.tgz",
-            Some(&DUMMY_SHA512.parse().expect("parse integrity")),
+            Some(
+                &DUMMY_SHA512
+                    .parse()
+                    .expect("parse integrity"),
+            ),
             false,
         ),
         Arc::new(tokio::sync::RwLock::new(CacheValue::Failed)),
@@ -255,7 +274,11 @@ async fn custom_fetcher_delegate_rewrites_the_resolution() {
     let mut metadata = registry_metadata();
     metadata.resolution = LockfileResolution::Tarball(pnpm_lockfile::TarballResolution {
         tarball: "https://original.test/foo-1.0.0.tgz".to_string(),
-        integrity: Some(DUMMY_SHA512.parse().expect("parse integrity")),
+        integrity: Some(
+            DUMMY_SHA512
+                .parse()
+                .expect("parse integrity"),
+        ),
         revision: None,
         git_hosted: None,
         path: None,
@@ -267,7 +290,11 @@ async fn custom_fetcher_delegate_rewrites_the_resolution() {
     mem_cache.insert(
         package_mem_cache_key(
             "https://registry.test/foo/-/foo-1.0.0.tgz",
-            Some(&DUMMY_SHA512.parse().expect("parse integrity")),
+            Some(
+                &DUMMY_SHA512
+                    .parse()
+                    .expect("parse integrity"),
+            ),
             false,
         ),
         Arc::new(tokio::sync::RwLock::new(CacheValue::Available(CachedTarball::from_files(
@@ -313,7 +340,11 @@ async fn custom_fetcher_declining_falls_through_to_the_original_resolution() {
     mem_cache.insert(
         package_mem_cache_key(
             "https://registry.test/foo/-/foo-1.0.0.tgz",
-            Some(&DUMMY_SHA512.parse().expect("parse integrity")),
+            Some(
+                &DUMMY_SHA512
+                    .parse()
+                    .expect("parse integrity"),
+            ),
             false,
         ),
         Arc::new(tokio::sync::RwLock::new(CacheValue::Available(CachedTarball::from_files(
@@ -444,7 +475,11 @@ async fn custom_typed_resolution_installs_via_delegating_fetcher() {
     mem_cache.insert(
         package_mem_cache_key(
             "https://registry.test/foo/-/foo-1.0.0.tgz",
-            Some(&DUMMY_SHA512.parse().expect("parse integrity")),
+            Some(
+                &DUMMY_SHA512
+                    .parse()
+                    .expect("parse integrity"),
+            ),
             false,
         ),
         Arc::new(tokio::sync::RwLock::new(CacheValue::Available(CachedTarball::from_files(

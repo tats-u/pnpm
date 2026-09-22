@@ -33,13 +33,16 @@ impl SharedArtifactStore {
         // The markers an entry needed are objects this publication wrote, and
         // they outlive it, so it carries them even though they name artifacts
         // somebody else stored.
-        self.backfill_scopes(publication).await?;
+        self.backfill_scopes(publication)
+            .await?;
         let claimed = match compatibility_scopes(&payload.compatibility) {
             CompatibilityScopes::Every => {
-                self.claim_universal_scope(owner, entry, envelope_digest, created).await
+                self.claim_universal_scope(owner, entry, envelope_digest, created)
+                    .await
             }
             CompatibilityScopes::These(scopes) => {
-                self.claim_tagged_scopes(owner, entry, envelope_digest, &scopes, created).await
+                self.claim_tagged_scopes(owner, entry, envelope_digest, &scopes, created)
+                    .await
             }
         };
         let claimed = match claimed {
@@ -52,7 +55,10 @@ impl SharedArtifactStore {
         // The scopes belong to this artifact either way. Whether *this* envelope
         // is the one already stored for them is the variant's own question, and
         // a stored one under a different envelope means two builds share a slot.
-        match self.read_object_bounded(variant_path, MAX_RESOLVE_RESPONSE_SIZE as u64).await {
+        match self
+            .read_object_bounded(variant_path, MAX_RESOLVE_RESPONSE_SIZE as u64)
+            .await
+        {
             Ok(Some(stored)) if &stored == envelope_bytes => Ok(SlotClaim::Held),
             Ok(Some(_)) => Ok(SlotClaim::HeldByAnother),
             Ok(None) => Ok(SlotClaim::Free),
@@ -70,12 +76,7 @@ impl SharedArtifactStore {
         publication: &PreparedPublication,
     ) -> Result<bool> {
         let PreparedPublication {
-            owner,
-            entry,
-            envelope_digest,
-            variant_path,
-            envelope_bytes,
-            ..
+            owner, entry, envelope_digest, variant_path, envelope_bytes, ..
         } = publication;
         if self
             .read_object_bounded(variant_path, MAX_RESOLVE_RESPONSE_SIZE as u64)
@@ -89,7 +90,11 @@ impl SharedArtifactStore {
             CompatibilityScopes::These(scopes) => scopes,
         };
         for scope in &scopes {
-            if self.scope_marker(owner, entry, scope, envelope_digest).await? != ScopeMarker::Ours {
+            if self
+                .scope_marker(owner, entry, scope, envelope_digest)
+                .await?
+                != ScopeMarker::Ours
+            {
                 return Ok(false);
             }
         }
@@ -99,12 +104,17 @@ impl SharedArtifactStore {
         // than reported as already published.
         match compatibility_scopes(&publication.payload.compatibility) {
             CompatibilityScopes::Every => {
-                if !self.tagged_scopes_are_free(owner, entry).await? {
+                if !self
+                    .tagged_scopes_are_free(owner, entry)
+                    .await?
+                {
                     return Ok(false);
                 }
             }
             CompatibilityScopes::These(_) => {
-                if self.scope_marker(owner, entry, UNIVERSAL_SCOPE, envelope_digest).await?
+                if self
+                    .scope_marker(owner, entry, UNIVERSAL_SCOPE, envelope_digest)
+                    .await?
                     == ScopeMarker::Another
                 {
                     return Ok(false);
@@ -125,10 +135,14 @@ impl SharedArtifactStore {
         holder: &str,
         created: &mut Vec<String>,
     ) -> Result<bool> {
-        if !self.claim_scope(owner, entry, UNIVERSAL_SCOPE, holder, created).await? {
+        if !self
+            .claim_scope(owner, entry, UNIVERSAL_SCOPE, holder, created)
+            .await?
+        {
             return Ok(false);
         }
-        self.tagged_scopes_are_free(owner, entry).await
+        self.tagged_scopes_are_free(owner, entry)
+            .await
     }
 
     pub(super) async fn claim_tagged_scopes(
@@ -140,7 +154,10 @@ impl SharedArtifactStore {
         created: &mut Vec<String>,
     ) -> Result<bool> {
         for scope in scopes {
-            if !self.claim_scope(owner, entry, scope, holder, created).await? {
+            if !self
+                .claim_scope(owner, entry, scope, holder, created)
+                .await?
+            {
                 return Ok(false);
             }
         }
@@ -148,7 +165,10 @@ impl SharedArtifactStore {
         // rather than any of these, so reading it afterwards is what settles
         // which of the two arrived first. Nobody holding it is the ordinary
         // case, not a conflict.
-        Ok(self.scope_marker(owner, entry, UNIVERSAL_SCOPE, holder).await? != ScopeMarker::Another)
+        Ok(self
+            .scope_marker(owner, entry, UNIVERSAL_SCOPE, holder)
+            .await?
+            != ScopeMarker::Another)
     }
 
     /// Whether this artifact holds `scope`, having either created the marker or
@@ -162,7 +182,9 @@ impl SharedArtifactStore {
         holder: &str,
         created: &mut Vec<String>,
     ) -> Result<bool> {
-        match self.create_object(&scope_marker_path(owner, entry, scope), holder.to_string()).await
+        match self
+            .create_object(&scope_marker_path(owner, entry, scope), holder.to_string())
+            .await
         {
             Ok(true) => {
                 created.push(scope.to_string());
@@ -170,9 +192,10 @@ impl SharedArtifactStore {
             }
             // A marker that lost the create and then went is nobody's, this
             // artifact's least of all, so it is refused rather than assumed.
-            Ok(false) => {
-                Ok(self.scope_marker(owner, entry, scope, holder).await? == ScopeMarker::Ours)
-            }
+            Ok(false) => Ok(self
+                .scope_marker(owner, entry, scope, holder)
+                .await?
+                == ScopeMarker::Ours),
             Err(error) => {
                 // The write can reach the store and still report failure, and a
                 // marker nobody is tracking would refuse every later artifact
@@ -202,11 +225,12 @@ impl SharedArtifactStore {
         holder: &str,
     ) -> Result<ScopeMarker> {
         Ok(
-            match self.read_object_bounded(
-                &scope_marker_path(owner, entry, scope),
-                MAX_SCOPE_MARKER_BYTES,
-            )
-            .await?
+            match self
+                .read_object_bounded(
+                    &scope_marker_path(owner, entry, scope),
+                    MAX_SCOPE_MARKER_BYTES,
+                )
+                .await?
             {
                 None => ScopeMarker::Gone,
                 Some(stored) if stored == holder.as_bytes() => ScopeMarker::Ours,
@@ -229,10 +253,16 @@ impl SharedArtifactStore {
         // scan stops at the first store error, so a marker only says some
         // artifact was reached, while the sentinel says every one was.
         let done = scope_marker_path(owner, entry, BACKFILLED_SCOPE);
-        if self.read_object_bounded(&done, MAX_SCOPE_MARKER_BYTES).await?.is_some() {
+        if self
+            .read_object_bounded(&done, MAX_SCOPE_MARKER_BYTES)
+            .await?
+            .is_some()
+        {
             return Ok(());
         }
-        let variants = self.list_variant_locations(owner, entry).await?;
+        let variants = self
+            .list_variant_locations(owner, entry)
+            .await?;
         // Legacy variants can reach a scope another already reached — an overlap
         // the markers are being written to stop. Writing the marker once rather
         // than once per variant keeps a crowded entry from turning one backfill
@@ -246,10 +276,12 @@ impl SharedArtifactStore {
                 if !attempted.insert(scope.clone()) {
                     continue;
                 }
-                self.backfill_scope_marker(owner, entry, scope, &digest).await?;
+                self.backfill_scope_marker(owner, entry, scope, &digest)
+                    .await?;
             }
         }
-        self.create_object(&done, Vec::new()).await?;
+        self.create_object(&done, Vec::new())
+            .await?;
         Ok(())
     }
 
@@ -277,11 +309,15 @@ impl SharedArtifactStore {
         &self,
         location: &object_store::path::Path,
     ) -> Result<Option<(String, BTreeSet<String>)>> {
-        let Some(relative) = self.relative_path(location).map(str::to_string) else {
+        let Some(relative) = self
+            .relative_path(location)
+            .map(str::to_string)
+        else {
             return Ok(None);
         };
-        let Some(bytes) =
-            self.read_object_bounded(&relative, MAX_RESOLVE_RESPONSE_SIZE as u64).await?
+        let Some(bytes) = self
+            .read_object_bounded(&relative, MAX_RESOLVE_RESPONSE_SIZE as u64)
+            .await?
         else {
             return Ok(None);
         };
@@ -311,10 +347,15 @@ impl SharedArtifactStore {
     ) -> Result<()> {
         let bytes = digest.len() as u64;
         self.reserve_quota(owner, bytes).await?;
-        match self.create_object(&scope_marker_path(owner, entry, scope), digest.to_string()).await
+        match self
+            .create_object(&scope_marker_path(owner, entry, scope), digest.to_string())
+            .await
         {
             Ok(true) => Ok(()),
-            Ok(false) => self.release_uncommitted(owner, bytes, 0).await,
+            Ok(false) => {
+                self.release_uncommitted(owner, bytes, 0)
+                    .await
+            }
             Err(error) => {
                 // A store error says nothing about whether the marker landed, so
                 // what is charged is settled by looking rather than assumed.
@@ -323,8 +364,13 @@ impl SharedArtifactStore {
                 // digest is charged to whoever wrote it. A read that fails too
                 // leaves the charge standing, since letting storage outgrow a
                 // quota is the worse way to be wrong.
-                if self.scope_marker(owner, entry, scope, digest).await? != ScopeMarker::Ours {
-                    self.release_uncommitted(owner, bytes, 0).await?;
+                if self
+                    .scope_marker(owner, entry, scope, digest)
+                    .await?
+                    != ScopeMarker::Ours
+                {
+                    self.release_uncommitted(owner, bytes, 0)
+                        .await?;
                 }
                 Err(error)
             }

@@ -99,7 +99,9 @@ impl EnvLockfile {
     /// Convenience accessor for the root importer's snapshot, creating
     /// it if absent. The env-installer always operates on `.`.
     pub fn root_importer_mut(&mut self) -> &mut EnvImporterSnapshot {
-        self.importers.entry(Self::ROOT_IMPORTER_KEY.to_string()).or_default()
+        self.importers
+            .entry(Self::ROOT_IMPORTER_KEY.to_string())
+            .or_default()
     }
 
     /// Read the env document (first YAML document) from
@@ -153,7 +155,9 @@ impl EnvLockfile {
             Err(error) if error.kind() == ErrorKind::NotFound => None,
             Err(error) => return Err(SaveLockfileError::WriteFile(error)),
         };
-        let existing = raw.as_deref().map(normalize_lockfile_content);
+        let existing = raw
+            .as_deref()
+            .map(normalize_lockfile_content);
         let main_doc = existing
             .as_deref()
             .map(extract_main_document)

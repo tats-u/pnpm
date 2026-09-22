@@ -110,7 +110,8 @@ pub(super) async fn handle_resolve(
     if let Some(response) = reject_unusable_request(runtime, &request, &index) {
         return response;
     }
-    let requirements = match request.requirements
+    let requirements = match request
+        .requirements
         .iter()
         .map(|requirement| parse_requirement(requirement))
         .collect::<miette::Result<Vec<_>>>()
@@ -119,12 +120,9 @@ pub(super) async fn handle_resolve(
         Err(err) => return json_error(StatusCode::BAD_REQUEST, &super::report_message(&err)),
     };
 
-    if requirements
-        .iter()
-        .any(|requirement| {
-            matches!(requirement.version_or_url, Some(pep508_rs::VersionOrUrl::Url(_)))
-        })
-    {
+    if requirements.iter().any(|requirement| {
+        matches!(requirement.version_or_url, Some(pep508_rs::VersionOrUrl::Url(_)))
+    }) {
         return json_error(
             StatusCode::BAD_REQUEST,
             "Python direct URL requirements must be resolved by the client",
@@ -162,13 +160,21 @@ async fn resolve(
                     ));
                 }
                 let offered = reader.candidates(&name, target).await?;
-                packages.candidates.insert(name.clone(), offered.candidates);
-                packages.excluded.insert(name, offered.excluded);
+                packages
+                    .candidates
+                    .insert(name.clone(), offered.candidates);
+                packages
+                    .excluded
+                    .insert(name, offered.excluded);
             }
             Step::NeedMetadata(name, version) => {
                 let candidate = readable_wheel(&packages, &name, &version)?;
-                let metadata = reader.metadata(&name, &version, candidate).await?;
-                packages.metadata.insert((name, version), metadata);
+                let metadata = reader
+                    .metadata(&name, &version, candidate)
+                    .await?;
+                packages
+                    .metadata
+                    .insert((name, version), metadata);
             }
         }
         tokio::task::yield_now().await;
@@ -186,7 +192,8 @@ fn readable_wheel<'a>(
     name: &pep508_rs::PackageName,
     version: &pep440_rs::Version,
 ) -> Result<&'a IndexCandidate, String> {
-    let offered = packages.candidates
+    let offered = packages
+        .candidates
         .get(name)
         .and_then(|versions| versions.get(version))
         .ok_or_else(|| format!("{name} {version} is not a candidate"))?;
@@ -256,21 +263,19 @@ impl IndexReader {
             let page = self.hold("page", cached.body)?;
             return parse_page(&page, &source, name, target);
         }
-        let _reading = self.locks.lock(&cache_path.to_string_lossy()).await;
+        let _reading = self
+            .locks
+            .lock(&cache_path.to_string_lossy())
+            .await;
         if let Some(cached) = self.cached(&cache_path).await {
             let source = cached.url(&page_url)?;
             let page = self.hold("page", cached.body)?;
             return parse_page(&page, &source, name, target);
         }
 
-        let (page, source) = self.fetch(
-            &auth,
-            &page_url,
-            "page",
-            MAX_PAGE_BYTES,
-            Some(pnpr_pypi::JSON_CONTENT_TYPE),
-        )
-        .await?;
+        let (page, source) = self
+            .fetch(&auth, &page_url, "page", MAX_PAGE_BYTES, Some(pnpr_pypi::JSON_CONTENT_TYPE))
+            .await?;
         let page = text(page, "project page", name.as_ref())?;
         // Parsed before it is cached, so a page that is not one is not
         // served to every resolve that follows for the whole TTL.
@@ -301,26 +306,35 @@ impl IndexReader {
         // entry is bound to the wheel it came out of instead.
         let derived_from = match candidate.core_metadata {
             Some(_) => None,
-            None => candidate.wheel.hashes.get("sha256").map(String::as_str),
+            None => candidate
+                .wheel
+                .hashes
+                .get("sha256")
+                .map(String::as_str),
         };
         let cache_path = self.cache_path(&auth, &metadata_url(&wheel_url), derived_from);
         if let Some(cached) = self.cached(&cache_path).await {
             let document = self.hold("metadata", cached.body)?;
             return Self::cached_metadata(&document, name, version, candidate);
         }
-        let _reading = self.locks.lock(&cache_path.to_string_lossy()).await;
+        let _reading = self
+            .locks
+            .lock(&cache_path.to_string_lossy())
+            .await;
         if let Some(cached) = self.cached(&cache_path).await {
             let document = self.hold("metadata", cached.body)?;
             return Self::cached_metadata(&document, name, version, candidate);
         }
         let document = if let Some(digests) = &candidate.core_metadata {
-            let (document, _) =
-                self.fetch(&auth, &metadata_url(&wheel_url), "metadata", MAX_METADATA_BYTES, None)
-                    .await?;
+            let (document, _) = self
+                .fetch(&auth, &metadata_url(&wheel_url), "metadata", MAX_METADATA_BYTES, None)
+                .await?;
             verify_digest(&document, digests, "metadata file", &candidate.wheel.name)?;
             document
         } else {
-            let (wheel, _) = self.fetch(&auth, &wheel_url, "wheel", MAX_WHEEL_BYTES, None).await?;
+            let (wheel, _) = self
+                .fetch(&auth, &wheel_url, "wheel", MAX_WHEEL_BYTES, None)
+                .await?;
             verify_digest(&wheel, &candidate.wheel.hashes, "wheel", &candidate.wheel.name)?;
             metadata_from_wheel(&wheel, &candidate.wheel.name)?
         };
@@ -370,7 +384,8 @@ impl IndexReader {
                  registry as a public route or an upstream",
             ));
         }
-        let response = self.client
+        let response = self
+            .client
             .get_limited_bytes_with_secure_auth_and_retry(
                 url.as_str(),
                 auth,
@@ -394,8 +409,10 @@ impl IndexReader {
     /// Account bytes against this resolve's budget, which bounds what one
     /// request can make the server hold and cache.
     fn hold<Body: AsRef<[u8]>>(&self, kind: &str, body: Body) -> Result<Body, String> {
-        let held =
-            self.bytes_held.fetch_add(body.as_ref().len(), Ordering::Relaxed) + body.as_ref().len();
+        let held = self
+            .bytes_held
+            .fetch_add(body.as_ref().len(), Ordering::Relaxed)
+            + body.as_ref().len();
         if held > MAX_TOTAL_BYTES {
             return Err(budget_exhausted(kind));
         }
@@ -406,11 +423,10 @@ impl IndexReader {
     /// route policy for the caller, with the project bound in so the
     /// package-blind fetch helpers still classify by it.
     fn auth_for(&self, canonical_name: &str) -> AuthHeaders {
-        AuthHeaders::default()
-            .with_route_hook(Arc::new(PackageRoute::new(
-                Arc::clone(&self.hook),
-                canonical_name.to_string(),
-            )))
+        AuthHeaders::default().with_route_hook(Arc::new(PackageRoute::new(
+            Arc::clone(&self.hook),
+            canonical_name.to_string(),
+        )))
     }
 
     /// Where `url`'s document is cached. The route scope keys the
@@ -512,7 +528,10 @@ fn reject_unusable_request(
              configure an upstream credential alias instead",
         ));
     }
-    if !runtime.route_context.allows_registry(index.as_str()) {
+    if !runtime
+        .route_context
+        .allows_registry(index.as_str())
+    {
         return Some(forbidden_off_allowlist(index.as_str()));
     }
     if request.requirements.len() > MAX_REQUIREMENTS {

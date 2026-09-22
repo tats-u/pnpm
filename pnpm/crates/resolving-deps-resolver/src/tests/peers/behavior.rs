@@ -32,11 +32,23 @@ async fn pure_package_has_dep_path_equal_to_pkg_id() {
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
     assert_eq!(
-        result.direct_dependencies_by_alias.get("foo"),
+        result
+            .direct_dependencies_by_alias
+            .get("foo"),
         Some(&DepPath::from("foo@1.0.0".to_string())),
     );
-    assert!(result.peer_dependency_issues.missing.is_empty());
-    assert!(result.peer_dependency_issues.bad.is_empty());
+    assert!(
+        result
+            .peer_dependency_issues
+            .missing
+            .is_empty()
+    );
+    assert!(
+        result
+            .peer_dependency_issues
+            .bad
+            .is_empty()
+    );
 }
 
 /// A package's graph-node `depth` is the minimum across all
@@ -213,24 +225,33 @@ async fn pure_revisit_leaves_lazy_children_unrealized() {
     // Sanity: `pure` got two per-occurrence tree entries, the
     // first carrying Realized children (eager walk), the second
     // carrying Lazy children (revisit).
-    let pure_pre: Vec<(&crate::node_id::NodeId, bool)> = tree.dependencies_tree
+    let pure_pre: Vec<(&crate::node_id::NodeId, bool)> = tree
+        .dependencies_tree
         .iter()
         .filter(|(_, node)| node.resolved_package_id == "pure@1.0.0".into())
         .map(|(id, node)| (id, matches!(node.children, TreeChildren::Lazy { .. })))
         .collect();
     assert_eq!(pure_pre.len(), 2, "expected two occurrences of pure, got {pure_pre:?}");
     assert!(
-        pure_pre.iter().any(|(_, is_lazy)| !*is_lazy),
+        pure_pre
+            .iter()
+            .any(|(_, is_lazy)| !*is_lazy),
         "first walk should produce a Realized entry",
     );
-    assert!(pure_pre.iter().any(|(_, is_lazy)| *is_lazy), "revisit should produce a Lazy entry");
+    assert!(
+        pure_pre
+            .iter()
+            .any(|(_, is_lazy)| *is_lazy),
+        "revisit should produce a Lazy entry"
+    );
 
     resolve_peers(&mut tree, ResolvePeersOptions::default());
 
     // After peer resolution: the lazy occurrence stays Lazy
     // because `purePkgs` short-circuits before `realize_children`
     // is called.
-    let still_lazy = tree.dependencies_tree
+    let still_lazy = tree
+        .dependencies_tree
         .iter()
         .filter(|(_, node)| node.resolved_package_id == "pure@1.0.0".into())
         .filter(|(_, node)| matches!(node.children, TreeChildren::Lazy { .. }))

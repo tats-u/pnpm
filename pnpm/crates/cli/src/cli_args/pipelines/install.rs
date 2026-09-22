@@ -22,7 +22,8 @@ pub(crate) struct InstallPipeline {
 
 impl InstallPipeline {
     pub(crate) async fn run<Reporter: self::Reporter + 'static>(self) -> miette::Result<()> {
-        self.run_with_config::<Reporter>().await
+        self.run_with_config::<Reporter>()
+            .await
             .map(|_| ())
     }
 
@@ -46,7 +47,8 @@ impl InstallPipeline {
         // through the separate repair loader, which this prefetch does
         // not feed. Only the shared-lockfile arms consume this
         // lockfile; the per-project arms load their own.
-        let lockfile = self.cfg
+        let lockfile = self
+            .cfg
             .shares_one_lockfile()
             .then(|| State::lazy_lockfile(self.cfg, &self.manifest_path, self.require_lockfile));
         let certain_full_install = self.certain_full_install();
@@ -78,7 +80,8 @@ impl InstallPipeline {
             }
         }
 
-        self.run_prepared::<Reporter>(family, lockfile).await
+        self.run_prepared::<Reporter>(family, lockfile)
+            .await
     }
 
     async fn run_prepared<Reporter: self::Reporter + 'static>(
@@ -101,7 +104,8 @@ impl InstallPipeline {
             .await?;
             return Ok(self.cfg);
         }
-        self.run_with_ecosystems::<Reporter>(family, lockfile, http_client).await
+        self.run_with_ecosystems::<Reporter>(family, lockfile, http_client)
+            .await
     }
 
     async fn run_with_ecosystems<Reporter: self::Reporter + 'static>(
@@ -127,7 +131,9 @@ impl InstallPipeline {
         if let Some(unmatched) = family.unmatched
             && ecosystem.python.selected == 0
         {
-            return Err(unmatched.counting(ecosystem.python.discovered).report());
+            return Err(unmatched
+                .counting(ecosystem.python.discovered)
+                .report());
         }
         let node_install = run_node_install::<Reporter>(
             family.plan,
@@ -138,7 +144,8 @@ impl InstallPipeline {
             lockfile,
             http_client,
         );
-        ecosystem.plan
+        ecosystem
+            .plan
             .with_task(pnpm_install_coordinator::InstallTask::in_place(Vec::new(), node_install))
             .run()
             .await?;
@@ -149,8 +156,10 @@ impl InstallPipeline {
     /// is certain to read the wanted lockfile.
     fn certain_full_install(&self) -> bool {
         self.cfg.shares_one_lockfile() && {
-            let manifest_dir =
-                self.manifest_path.parent().expect("manifest path always has a parent dir");
+            let manifest_dir = self
+                .manifest_path
+                .parent()
+                .expect("manifest path always has a parent dir");
             let lockfile_dir = self.cfg.lockfile_dir_for(manifest_dir);
             self.frozen_lockfile
                 || self.cfg.force
@@ -238,7 +247,9 @@ pub(super) async fn run_dedicated_lockfile_workspace_install<Reporter: self::Rep
     let mut names = project_names(cfg, &projects);
     let normalized_root = pnpm_fs::lexical_normalize(workspace_root);
     let mut project_dirs: Vec<PathBuf> = Vec::with_capacity(projects.len() + 1);
-    if workspace_root.join("package.json").is_file()
+    if workspace_root
+        .join("package.json")
+        .is_file()
         && !projects
             .iter()
             .any(|project| pnpm_fs::lexical_normalize(&project.root_dir) == normalized_root)
@@ -250,7 +261,11 @@ pub(super) async fn run_dedicated_lockfile_workspace_install<Reporter: self::Rep
             names.insert(workspace_root.to_path_buf(), name);
         }
     }
-    project_dirs.extend(projects.into_iter().map(|project| project.root_dir));
+    project_dirs.extend(
+        projects
+            .into_iter()
+            .map(|project| project.root_dir),
+    );
     // One `Config::leak` per project: `State::init` needs a
     // `&'static Config`, and a leaked shared reference can't be
     // reclaimed for the next iteration. The leak is bounded by the
@@ -261,7 +276,9 @@ pub(super) async fn run_dedicated_lockfile_workspace_install<Reporter: self::Rep
         let state = init_dedicated_project_state(
             cfg,
             &project_dir,
-            names.get(&project_dir).map(String::as_str),
+            names
+                .get(&project_dir)
+                .map(String::as_str),
             require_lockfile,
             Some(Arc::clone(&http_client)),
         )?;

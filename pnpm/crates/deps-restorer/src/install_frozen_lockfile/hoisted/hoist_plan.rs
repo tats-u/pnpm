@@ -68,12 +68,14 @@ pub fn compute_hoist_plan(
     }
     let (Some(snaps), Some(pkgs)) = (snapshots, packages) else { return None };
     let private_pattern = create_matcher(
-        config.hoist_pattern
+        config
+            .hoist_pattern
             .as_deref()
             .unwrap_or(&[]),
     );
     let public_pattern = create_matcher(
-        config.public_hoist_pattern
+        config
+            .public_hoist_pattern
             .as_deref()
             .unwrap_or(&[]),
     );
@@ -137,7 +139,9 @@ pub fn collect_public_hoist_targets(
     // the hoist symlink points at.
     for (alias, kind, project_dir) in &result.hoisted_workspace_aliases {
         if matches!(kind, pnpm_modules_yaml::HoistKind::Public) {
-            targets.entry(alias.clone()).or_insert_with(|| project_dir.clone());
+            targets
+                .entry(alias.clone())
+                .or_insert_with(|| project_dir.clone());
         }
     }
     for (node_id, alias_map) in &result.hoisted_dependencies_by_node_id {
@@ -163,7 +167,9 @@ pub(super) fn add_public_aliases(
 ) {
     for (alias, kind) in alias_map {
         if matches!(kind, pnpm_modules_yaml::HoistKind::Public) {
-            targets.entry(alias.clone()).or_insert_with(|| dep_dir.to_path_buf());
+            targets
+                .entry(alias.clone())
+                .or_insert_with(|| dep_dir.to_path_buf());
         }
     }
 }
@@ -174,7 +180,9 @@ pub(super) fn add_public_aliases(
 /// `node --version`.
 #[must_use]
 pub fn parse_major_from_version(version: &str) -> Option<u32> {
-    let after_v = version.strip_prefix('v').unwrap_or(version);
+    let after_v = version
+        .strip_prefix('v')
+        .unwrap_or(version);
     after_v.split('.').next()?.parse().ok()
 }
 /// Pull the `node@runtime:<version>` major out of a lockfile's

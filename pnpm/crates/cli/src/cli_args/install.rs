@@ -196,11 +196,13 @@ impl InstallArgs {
     /// `--frozen-lockfile` / `--no-frozen-lockfile` layered over the
     /// `frozenLockfile` setting.
     pub(crate) fn effective_frozen_lockfile(&self, config: &pnpm_config::Config) -> bool {
-        self.configured_frozen_lockfile(config).unwrap_or(false)
+        self.configured_frozen_lockfile(config)
+            .unwrap_or(false)
     }
 
     fn configured_frozen_lockfile(&self, config: &pnpm_config::Config) -> Option<bool> {
-        self.frozen_lockfile_flag().or(config.frozen_lockfile)
+        self.frozen_lockfile_flag()
+            .or(config.frozen_lockfile)
     }
 
     /// `--frozen-lockfile` / `--no-frozen-lockfile` as typed on the command
@@ -232,7 +234,9 @@ impl InstallArgs {
         state: State,
         selection: Option<InstallFamilySelection>,
     ) -> miette::Result<()> {
-        state.http_client.set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+        state
+            .http_client
+            .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
         let frozen_lockfile = self.resolve_frozen_lockfile(&state)?;
         let lockfile_path = state.lockfile_path();
         let link = self.resolve_link_options(state.config, &lockfile_path, frozen_lockfile);
@@ -248,7 +252,8 @@ impl InstallArgs {
             ))
             .await;
         }
-        self.run_local::<Reporter>(&state, link, selection.as_ref()).await?;
+        self.run_local::<Reporter>(&state, link, selection.as_ref())
+            .await?;
         // Resolution watch senders must close inline; only inert manifest and lockfile data
         // may outlive the command through background destruction.
         pnpm_fs::background_drop((state.lockfile, state.manifest, selection));
@@ -262,14 +267,17 @@ impl InstallArgs {
         frozen_lockfile: bool,
     ) -> PnprLink<'a> {
         PnprLink {
-            dependency_groups: self.dependency_options.dependency_groups(config.optional).collect(),
-            supported_architectures: self.supported_architectures.apply_to(
-                config.supported_architectures.clone(),
-            ),
-            node_linker: self.materialization.node_linker.map_or(
-                config.node_linker,
-                NodeLinkerArg::into_config,
-            ),
+            dependency_groups: self
+                .dependency_options
+                .dependency_groups(config.optional)
+                .collect(),
+            supported_architectures: self
+                .supported_architectures
+                .apply_to(config.supported_architectures.clone()),
+            node_linker: self
+                .materialization
+                .node_linker
+                .map_or(config.node_linker, NodeLinkerArg::into_config),
             skip_runtimes: config.skip_runtimes || self.materialization.no_runtime,
             lockfile_path: Some(lockfile_path),
             use_state_lockfile: true,
@@ -313,34 +321,45 @@ impl InstallArgs {
         let install = {
             let mut base_install = state.install(link.dependency_groups);
             base_install.lockfile_policy.frozen = link.lockfile.frozen;
-            base_install.lockfile_policy.prefer_frozen = self.prefer_frozen_override();
-            base_install.lockfile_policy.ignore_manifest_check =
-                link.lockfile.ignore_manifest_check;
+            base_install
+                .lockfile_policy
+                .prefer_frozen = self.prefer_frozen_override();
+            base_install
+                .lockfile_policy
+                .ignore_manifest_check = link.lockfile.ignore_manifest_check;
             base_install.lockfile_policy.trust = link.lockfile.trust;
-            base_install.lockfile_policy.update_checksums = self
-                .lockfile_updates
-                .update_checksums;
+            base_install
+                .lockfile_policy
+                .update_checksums = self.lockfile_updates.update_checksums;
             base_install.lockfile_policy.excludes = PolicyExcludes::Persist;
-            base_install.lockfile_policy.disable_optimistic_repeat = self
+            base_install
+                .lockfile_policy
+                .disable_optimistic_repeat = self
                 .materialization
                 .verify_deps_before_run_install;
             base_install.execution.skip_runtimes = link.skip_runtimes;
             base_install.execution.node_linker = link.node_linker;
             base_install.execution.lockfile_only = link.lockfile.only;
             base_install.execution.dry_run = self.materialization.dry_run;
-            base_install.resolution.update_seed_policy = if self.lockfile.fix {
+            base_install
+                .resolution
+                .update_seed_policy = if self.lockfile.fix {
                 UpdateSeedPolicy::FixLockfile
             } else {
                 UpdateSeedPolicy::KeepAll
             };
             base_install.context.lockfile_path = link.lockfile_path;
             base_install.context.lockfile = install_lockfile;
-            base_install.projects.supported_architectures = link.supported_architectures;
+            base_install
+                .projects
+                .supported_architectures = link.supported_architectures;
             base_install
         };
         match selection {
             Some(selection) => {
-                install.run_selected::<Reporter>(workspace_install_selection(selection)).await
+                install
+                    .run_selected::<Reporter>(workspace_install_selection(selection))
+                    .await
             }
             None => install.run::<Reporter>().await,
         }
@@ -365,11 +384,15 @@ impl InstallArgs {
             && !self.lockfile.only
             && !self.lockfile.prefer_frozen
             && !self.lockfile.no_prefer_frozen
-            && !state.config.explicit_settings.contains_key("preferFrozenLockfile");
+            && !state
+                .config
+                .explicit_settings
+                .contains_key("preferFrozenLockfile");
         if !ci_default {
             return Ok(false);
         }
-        Ok(state.lockfile
+        Ok(state
+            .lockfile
             .get()?
             .is_some_and(|lockfile| !lockfile.is_empty()))
     }
@@ -385,7 +408,8 @@ pub(crate) fn workspace_install_selection(
         selected_dirs: selection.selected_dirs.as_ref(),
         install_dirs: selection.install_dirs.as_ref(),
         active_manifest_is_standin: selection.active_manifest_is_standin,
-        workspace_cycles: selection.workspace_cycles
+        workspace_cycles: selection
+            .workspace_cycles
             .as_ref()
             .map_or(pnpm_package_manager::PrecomputedWorkspaceCycles::Unknown, |cycles| {
                 pnpm_package_manager::PrecomputedWorkspaceCycles::Known(

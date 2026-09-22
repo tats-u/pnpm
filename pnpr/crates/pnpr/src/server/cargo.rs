@@ -111,8 +111,10 @@ async fn get_search(
     let size = pnpr_search::parse_usize_param(&query_string, "per_page")
         .map_or(DEFAULT_SEARCH_PAGE, |size| size.clamp(1, pnpr_search::MAX_PAGE_SIZE));
     // crates.io numbers pages from one; anything lower starts at the first.
-    let from = pnpr_search::parse_usize_param(&query_string, "page")
-        .map_or(0, |page| page.saturating_sub(1).saturating_mul(size));
+    let from = pnpr_search::parse_usize_param(&query_string, "page").map_or(0, |page| {
+        page.saturating_sub(1)
+            .saturating_mul(size)
+    });
 
     let mut page = SearchPage::new(from, size);
     if let Err(err) = collect_hosted_crates(&state, &identity, &target, &text, &mut page).await {
@@ -167,7 +169,8 @@ async fn add_crates_to_page(
             continue;
         };
         if page.push_name(&name) {
-            page.objects.push(search_crate(storage, &key).await);
+            page.objects
+                .push(search_crate(storage, &key).await);
         }
     }
 }
@@ -177,20 +180,21 @@ async fn add_crates_to_page(
 /// so the page never disagrees with the total it reports.
 async fn search_crate(storage: &pnpr_storage::Storage, key: &CanonicalPackageName) -> SearchCrate {
     let document = async {
-        let bytes = storage.read_hosted_document(key).await.ok()??;
+        let bytes = storage
+            .read_hosted_document(key)
+            .await
+            .ok()??;
         CrateDocument::parse(&bytes).ok()
     }
     .await;
-    document
-        .as_ref()
-        .map_or_else(
-            || SearchCrate {
-                name: key.as_str().to_string(),
-                description: None,
-                max_version: String::new(),
-            },
-            CrateDocument::to_search_crate,
-        )
+    document.as_ref().map_or_else(
+        || SearchCrate {
+            name: key.as_str().to_string(),
+            description: None,
+            max_version: String::new(),
+        },
+        CrateDocument::to_search_crate,
+    )
 }
 
 /// A registry error in the crates API's JSON shape, so `cargo` prints the
@@ -286,15 +290,16 @@ async fn load_upstream_index(
         decode_index_text(document.bytes, path).map(String::into_bytes)
     })
     .await?;
-    bytes.map(|bytes| decode_index_text(bytes, path)).transpose()
+    bytes
+        .map(|bytes| decode_index_text(bytes, path))
+        .transpose()
 }
 
 fn decode_index_text(bytes: Vec<u8>, path: &str) -> Result<String, RegistryError> {
-    String::from_utf8(bytes)
-        .map_err(|err| RegistryError::UpstreamResponse {
-            url: path.to_string(),
-            reason: format!("sparse index is not valid UTF-8: {err}"),
-        })
+    String::from_utf8(bytes).map_err(|err| RegistryError::UpstreamResponse {
+        url: path.to_string(),
+        reason: format!("sparse index is not valid UTF-8: {err}"),
+    })
 }
 
 /// `GET api/v1/crates/<crate>/<version>/download`.
@@ -338,7 +343,9 @@ async fn download_hosted_crate(
     let document = read_hosted_document::<CrateDocument>(state, identity, source, key)
         .await?
         .ok_or(RegistryError::NotFound)?;
-    let entry = document.version(version).ok_or(RegistryError::NotFound)?;
+    let entry = document
+        .version(version)
+        .ok_or(RegistryError::NotFound)?;
     let filename = crate_filename(&entry.name, &entry.vers);
     serve_hosted_blob(state, identity, source, key, &filename).await
 }
@@ -426,9 +433,8 @@ async fn upstream_index_config(
 }
 
 fn parse_upstream_index(index: &str, name: &str) -> Result<Vec<IndexEntry>, RegistryError> {
-    parse_index(index)
-        .map_err(|err| RegistryError::UpstreamResponse {
-            url: sparse_index_path(name),
-            reason: err.to_string(),
-        })
+    parse_index(index).map_err(|err| RegistryError::UpstreamResponse {
+        url: sparse_index_path(name),
+        reason: err.to_string(),
+    })
 }

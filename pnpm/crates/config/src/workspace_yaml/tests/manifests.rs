@@ -34,7 +34,9 @@ fn find_propagates_when_manifest_path_is_a_directory() {
 #[test]
 fn find_propagates_parse_yaml_error_on_malformed_manifest() {
     let tmp = tempfile::tempdir().unwrap();
-    let manifest = tmp.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let manifest = tmp
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     // Unmatched bracket; serde-saphyr rejects.
     fs::write(&manifest, "storeDir: [unterminated\n").unwrap();
 
@@ -51,7 +53,11 @@ fn find_propagates_parse_yaml_error_on_malformed_manifest() {
 #[test]
 fn find_returns_none_when_no_manifest() {
     let tmp = tempfile::tempdir().unwrap();
-    assert!(WorkspaceSettings::find_and_load(tmp.path()).unwrap().is_none());
+    assert!(
+        WorkspaceSettings::find_and_load(tmp.path())
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[test]
@@ -59,10 +65,16 @@ fn resolves_script_shell_from_the_manifest_found_above_a_nested_package() {
     let root = tempfile::tempdir().unwrap();
     let nested = root.path().join("packages/nested");
     fs::create_dir_all(&nested).unwrap();
-    fs::write(root.path().join(WORKSPACE_MANIFEST_FILENAME), "scriptShell: ./a.sh\n").unwrap();
+    fs::write(
+        root.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
+        "scriptShell: ./a.sh\n",
+    )
+    .unwrap();
 
-    let (manifest, mut settings) =
-        WorkspaceSettings::find_and_load(&nested).unwrap().expect("ancestor workspace manifest");
+    let (manifest, mut settings) = WorkspaceSettings::find_and_load(&nested)
+        .unwrap()
+        .expect("ancestor workspace manifest");
     assert_eq!(manifest.parent(), Some(root.path()));
 
     let mut config = Config::new();

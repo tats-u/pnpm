@@ -157,7 +157,8 @@ where
     let remove_targets = dirs
         .iter()
         .flat_map(|dir| {
-            cleanup.remove
+            cleanup
+                .remove
                 .iter()
                 .map(move |name| dir.join(name))
         })
@@ -233,7 +234,9 @@ pub(super) fn create_install_script(
     // The proxy-cache populator must reach the registry, so a scenario
     // whose measured args are offline hands it the online pre-warm args.
     let args = if id.is_proxy_cache_populator() {
-        scenario.prewarm_install_args().unwrap_or_else(|| scenario.install_args())
+        scenario
+            .prewarm_install_args()
+            .unwrap_or_else(|| scenario.install_args())
     } else {
         scenario.install_args()
     };

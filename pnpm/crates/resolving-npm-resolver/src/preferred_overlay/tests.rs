@@ -14,13 +14,17 @@ use super::held_back_preferred;
 use crate::pick_package_from_meta::{RegistryPackageSpec, RegistryPackageSpecType};
 
 fn parse_iso(input: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(input).expect("rfc3339").with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(input)
+        .expect("rfc3339")
+        .with_timezone(&Utc)
 }
 
 fn make_pkg_version(name: &str, version: &str) -> PackageVersion {
     PackageVersion {
         name: name.to_string(),
-        version: version.parse::<Version>().expect("parse semver"),
+        version: version
+            .parse::<Version>()
+            .expect("parse semver"),
         dist: PackageDistribution::default(),
         dependencies: None,
         dev_dependencies: None,

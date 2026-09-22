@@ -11,7 +11,9 @@ use super::{
 #[tokio::test]
 async fn takes_old_format_tarball_url_from_the_packument() {
     let harness = harness();
-    let aliased_registry = harness.registry_url.replace("127.0.0.1", "localhost");
+    let aliased_registry = harness
+        .registry_url
+        .replace("127.0.0.1", "localhost");
     let (resolver, _cache) = build_resolver(&aliased_registry);
     let root = TempDir::new().unwrap();
 
@@ -31,7 +33,9 @@ async fn takes_old_format_tarball_url_from_the_packument() {
         .await
         .unwrap();
 
-    let env = EnvLockfile::read(root.path()).unwrap().expect("env lockfile written");
+    let env = EnvLockfile::read(root.path())
+        .unwrap()
+        .expect("env lockfile written");
     let key: PackageKey = "@pnpm.e2e/foo@100.0.0".parse().unwrap();
     let resolution = &env.packages[&key].resolution;
     dbg!(resolution);
@@ -40,7 +44,8 @@ async fn takes_old_format_tarball_url_from_the_packument() {
     };
     assert_eq!(tarball.tarball, advertised_tarball);
     assert_eq!(
-        tarball.integrity
+        tarball
+            .integrity
             .as_ref()
             .unwrap()
             .to_string(),

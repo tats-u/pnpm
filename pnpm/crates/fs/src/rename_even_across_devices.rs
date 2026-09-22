@@ -32,11 +32,15 @@ where
         result => return result,
     }
     refuse_occupied_directory(src, dst)?;
-    let parent = dst.parent().unwrap_or_else(|| Path::new("."));
+    let parent = dst
+        .parent()
+        .unwrap_or_else(|| Path::new("."));
     // Dropping the staging directory removes a copy left behind by a
     // failure, and the empty directory itself once the rename below has
     // taken the copy out of it.
-    let staging = tempfile::Builder::new().prefix(".pnpm-cross-device-").tempdir_in(parent)?;
+    let staging = tempfile::Builder::new()
+        .prefix(".pnpm-cross-device-")
+        .tempdir_in(parent)?;
     let staged = staging.path().join("dirent");
     copy_dirent(src, &staged)?;
     // The copy is on the destination's own device, so this rename is

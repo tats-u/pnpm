@@ -131,7 +131,9 @@ impl DepStateHasher {
         pnpm_graph_hasher::warm_deps_state_cache(
             &graph,
             &mut cache,
-            in_lockfile_order(&graph).into_iter().map(|(key, _)| key),
+            in_lockfile_order(&graph)
+                .into_iter()
+                .map(|(key, _)| key),
         );
         Self {
             graph,
@@ -198,7 +200,10 @@ pub(super) async fn plan_root(
     {
         return None;
     }
-    let store_index_key = plan.store_index_keys_by_snapshot.get(root.snapshot_key).cloned()?;
+    let store_index_key = plan
+        .store_index_keys_by_snapshot
+        .get(root.snapshot_key)
+        .cloned()?;
     Some(PlannedRoot { candidate, local_cache_key, store_index_key })
 }
 /// The artifact one snapshot would look up. `None` when the package has
@@ -211,7 +216,10 @@ pub(super) fn artifact_candidate(
 ) -> Option<ArtifactCandidate> {
     let metadata_key = snapshot_key.without_peer();
     let metadata = plan.packages.get(&metadata_key)?;
-    let source_integrity = metadata.resolution.checkable_integrity().map(ToString::to_string)?;
+    let source_integrity = metadata
+        .resolution
+        .checkable_integrity()
+        .map(ToString::to_string)?;
     Some(ArtifactCandidate {
         key: input_key.to_owned(),
         subject: ArtifactSubject::dependency_side_effects(

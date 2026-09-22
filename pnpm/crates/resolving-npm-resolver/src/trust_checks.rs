@@ -131,13 +131,17 @@ pub fn fail_if_trust_downgraded(
     // Ignore-after cutoff: a version old enough to be "settled" gets a pass.
     if let Some(ignore_after_minutes) = opts.trust_policy_ignore_after_minutes {
         let now = opts.now.unwrap_or_else(Utc::now);
-        let minutes_since_publish = (now - version_date).num_seconds().max(0) as u64 / 60;
+        let minutes_since_publish = (now - version_date)
+            .num_seconds()
+            .max(0) as u64
+            / 60;
         if minutes_since_publish > ignore_after_minutes {
             return Ok(());
         }
     }
 
-    let manifest = meta.versions
+    let manifest = meta
+        .versions
         .get(version)
         .ok_or_else(|| TrustViolation::TrustCheckFailed {
             reason: format!(
@@ -221,15 +225,13 @@ fn detect_strongest_trust_evidence_before(
     // `time` entry would otherwise mask every earlier version's evidence and
     // allow a downgrade to slip through. Each timestamp is checked in
     // isolation.
-    let earlier = meta.versions
-        .keys()
-        .filter(|version| {
-            !(exclude_prerelease && is_prerelease(version))
-                && meta
-                    .published_at(version)
-                    .and_then(parse_packument_timestamp)
-                    .is_some_and(|parsed| parsed < before_date)
-        });
+    let earlier = meta.versions.keys().filter(|version| {
+        !(exclude_prerelease && is_prerelease(version))
+            && meta
+                .published_at(version)
+                .and_then(parse_packument_timestamp)
+                .is_some_and(|parsed| parsed < before_date)
+    });
     for version in earlier {
         let Some(manifest) = meta.versions.get(version) else {
             return Err(TrustViolation::TrustCheckFailed {
@@ -261,18 +263,22 @@ fn detect_strongest_trust_evidence_before(
 /// exposes.
 #[must_use]
 pub fn get_trust_evidence(version: &PackageVersion) -> Option<TrustEvidence> {
-    let has_approver = version.npm_user
+    let has_approver = version
+        .npm_user
         .as_ref()
         .and_then(|user| user.approver.as_ref())
         .is_some();
     if has_approver {
         return Some(TrustEvidence::StagedPublish);
     }
-    let has_provenance = version.dist.attestations
+    let has_provenance = version
+        .dist
+        .attestations
         .as_ref()
         .and_then(|att| att.provenance.as_ref())
         .is_some();
-    let has_trusted_publisher = version.npm_user
+    let has_trusted_publisher = version
+        .npm_user
         .as_ref()
         .and_then(|user| user.trusted_publisher.as_ref())
         .is_some();
@@ -301,10 +307,11 @@ fn trust_version_date(meta: &Package, version: &str) -> Result<DateTime<Utc>, Tr
                 name = meta.name,
             ),
         })?;
-    let version_date = parse_packument_timestamp(published_at)
-        .ok_or_else(|| TrustViolation::TrustCheckFailed {
+    let version_date = parse_packument_timestamp(published_at).ok_or_else(|| {
+        TrustViolation::TrustCheckFailed {
             reason: "publish timestamp is not a valid date".to_string(),
-        })?;
+        }
+    })?;
 
     Ok(version_date)
 }

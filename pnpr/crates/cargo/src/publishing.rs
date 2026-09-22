@@ -123,30 +123,26 @@ impl PublishMetadata {
     /// Reject metadata whose names or versions no registry could index.
     pub fn validate(&self) -> Result<(), PublishMetadataError> {
         validate_crate_name(&self.name).map_err(PublishMetadataError::CrateName)?;
-        semver::Version::parse(&self.vers)
-            .map_err(|source| PublishMetadataError::Version {
-                version: self.vers.clone(),
-                source,
-            })?;
+        semver::Version::parse(&self.vers).map_err(|source| PublishMetadataError::Version {
+            version: self.vers.clone(),
+            source,
+        })?;
         for dep in &self.deps {
-            validate_crate_name(&dep.name)
-                .map_err(|source| PublishMetadataError::DependencyName {
-                    name: dep.name.clone(),
-                    source,
-                })?;
+            validate_crate_name(&dep.name).map_err(|source| {
+                PublishMetadataError::DependencyName { name: dep.name.clone(), source }
+            })?;
             if let Some(alias) = &dep.explicit_name_in_toml {
-                validate_crate_name(alias)
-                    .map_err(|source| PublishMetadataError::DependencyName {
-                        name: alias.clone(),
-                        source,
-                    })?;
+                validate_crate_name(alias).map_err(|source| {
+                    PublishMetadataError::DependencyName { name: alias.clone(), source }
+                })?;
             }
-            semver::VersionReq::parse(&dep.version_req)
-                .map_err(|source| PublishMetadataError::DependencyRequirement {
+            semver::VersionReq::parse(&dep.version_req).map_err(|source| {
+                PublishMetadataError::DependencyRequirement {
                     name: dep.name.clone(),
                     req: dep.version_req.clone(),
                     source,
-                })?;
+                }
+            })?;
         }
         Ok(())
     }
@@ -157,7 +153,8 @@ impl PublishMetadata {
     /// understand them does not read them.
     #[must_use]
     pub fn into_index_entry(self, cksum: String) -> IndexEntry {
-        let deps = self.deps
+        let deps = self
+            .deps
             .into_iter()
             .map(PublishDependency::into_index_dependency)
             .collect();
@@ -251,7 +248,9 @@ pub(super) fn validate_crate_archive_with_limit(
     let mut limited = decoder.take(limit + 1);
     let mut tar = tar::Archive::new(&mut limited);
     let mut found_manifest = false;
-    let entries = tar.entries().map_err(CrateArchiveError::Read)?;
+    let entries = tar
+        .entries()
+        .map_err(CrateArchiveError::Read)?;
     for entry in entries {
         let mut entry = entry.map_err(CrateArchiveError::Read)?;
         let Some(inner) = crate_entry_path(&entry, &expected)? else {
@@ -279,7 +278,9 @@ pub(super) fn crate_entry_path<Reader: io::Read>(
     entry: &tar::Entry<'_, Reader>,
     expected: &str,
 ) -> Result<Option<String>, CrateArchiveError> {
-    let path = entry.path().map_err(CrateArchiveError::Read)?;
+    let path = entry
+        .path()
+        .map_err(CrateArchiveError::Read)?;
     let path = path.to_string_lossy().into_owned();
     let entry_type = entry.header().entry_type();
     if path == expected && entry_type.is_dir() {
@@ -315,7 +316,9 @@ pub(super) fn validate_crate_manifest<Reader: io::Read>(
     version: &str,
 ) -> Result<(), CrateArchiveError> {
     let mut manifest = String::new();
-    entry.read_to_string(&mut manifest).map_err(CrateArchiveError::Read)?;
+    entry
+        .read_to_string(&mut manifest)
+        .map_err(CrateArchiveError::Read)?;
     let matches = toml::from_str::<toml::Value>(&manifest)
         .ok()
         .is_some_and(|manifest| {

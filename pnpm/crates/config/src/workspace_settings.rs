@@ -51,7 +51,9 @@ impl Config {
             // been applied yet at this point in the cascade.
             self.modules_dir = base_dir.join("node_modules");
             if !explicit.virtual_store_dir {
-                self.virtual_store_dir = base_dir.join("node_modules").join(".pnpm");
+                self.virtual_store_dir = base_dir
+                    .join("node_modules")
+                    .join(".pnpm");
             }
             // The workspace root is structural context (env-lockfile reads/
             // writes, pin persistence), not a "setting" — set it whenever a

@@ -21,13 +21,8 @@ fn write_manifest(dir: &Path, manifest: &serde_json::Value) {
 /// importer's.
 #[test]
 fn nested_file_dep_resolves_against_the_declaring_manifest() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -83,13 +78,8 @@ fn nested_file_dep_resolves_against_the_declaring_manifest() {
 /// because the alias equals the package's own name.
 #[test]
 fn nested_file_dep_of_a_workspace_project_matches_the_pnpm_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(

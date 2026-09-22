@@ -55,8 +55,12 @@ impl Store {
             Err(err) if err.kind() == ErrorKind::NotFound => return Ok(None),
             Err(err) => return Err(err.into()),
         };
-        let mtime = metadata.modified().map_err(RegistryError::Io)?;
-        let age = SystemTime::now().duration_since(mtime).unwrap_or(Duration::ZERO);
+        let mtime = metadata
+            .modified()
+            .map_err(RegistryError::Io)?;
+        let age = SystemTime::now()
+            .duration_since(mtime)
+            .unwrap_or(Duration::ZERO);
         if age <= ttl {
             // Fresh: read the body and serve it.
             Ok(Some(CachedDocument::Fresh(fs::read(&path).await?)))
@@ -140,7 +144,8 @@ impl Store {
     }
 
     pub(super) async fn open_revision_blob_tmp(&self, digest: &str) -> Result<BlobWrite> {
-        self.open_blob_tmp_at(self.revision_blob_path(digest)).await
+        self.open_blob_tmp_at(self.revision_blob_path(digest))
+            .await
     }
 
     pub(super) async fn open_blob_tmp_at(&self, final_path: PathBuf) -> Result<BlobWrite> {
@@ -231,7 +236,10 @@ impl Store {
                 continue;
             };
             while let Some(entry) = entries.next_entry().await? {
-                match self.classify_index_entry(&entry, &name).await? {
+                match self
+                    .classify_index_entry(&entry, &name)
+                    .await?
+                {
                     IndexEntry::Package => names.push(name.clone()),
                     IndexEntry::Child(path, child) => pending.push((path, child)),
                     IndexEntry::Ignored => {}
@@ -253,8 +261,8 @@ impl Store {
             .into_owned();
         if component == ".present" {
             // A marker whose document is gone is a stale index entry.
-            let present =
-                !name.is_empty() && fs::try_exists(self.root.join(name).join(DOCUMENT_FILE)).await?;
+            let present = !name.is_empty()
+                && fs::try_exists(self.root.join(name).join(DOCUMENT_FILE)).await?;
             return Ok(if present { IndexEntry::Package } else { IndexEntry::Ignored });
         }
         if component.starts_with('.') || !entry.file_type().await?.is_dir() {
@@ -266,7 +274,12 @@ impl Store {
 
     pub(super) async fn list_package_names(&self) -> Result<Vec<String>> {
         let mut names = self.indexed_package_names().await?;
-        if fs::try_exists(self.root.join(".package-index/.complete")).await? {
+        if fs::try_exists(
+            self.root
+                .join(".package-index/.complete"),
+        )
+        .await?
+        {
             names.sort();
             return Ok(names);
         }
@@ -294,7 +307,8 @@ impl Store {
     }
 
     pub(super) fn document_path(&self, name: &CanonicalPackageName) -> PathBuf {
-        self.package_dir(name).join(DOCUMENT_FILE)
+        self.package_dir(name)
+            .join(DOCUMENT_FILE)
     }
 
     pub(super) fn blob_path(&self, name: &CanonicalPackageName, filename: &str) -> PathBuf {
@@ -346,7 +360,12 @@ impl Store {
         bytes: &[u8],
     ) -> Result<DocumentWrite> {
         let _guard = self.record_write_lock.lock().await;
-        if self.read_record(namespace, key).await?.as_deref() != Some(expected) {
+        if self
+            .read_record(namespace, key)
+            .await?
+            .as_deref()
+            != Some(expected)
+        {
             return Ok(DocumentWrite::Conflict);
         }
         write_atomic(&self.record_path(namespace, key), bytes).await?;
@@ -422,12 +441,19 @@ pub(super) async fn classify_hosted_entry(
     if name.starts_with('.') {
         return HostedEntry::Ignored;
     }
-    if !entry.file_type().await.is_ok_and(|kind| kind.is_dir()) {
+    if !entry
+        .file_type()
+        .await
+        .is_ok_and(|kind| kind.is_dir())
+    {
         return if depth > 1 { HostedEntry::EndOfPackageDir } else { HostedEntry::Ignored };
     }
     let path = entry.path();
     let name = if prefix.is_empty() { name.into_owned() } else { format!("{prefix}/{name}") };
-    if fs::try_exists(path.join(DOCUMENT_FILE)).await.unwrap_or(false) {
+    if fs::try_exists(path.join(DOCUMENT_FILE))
+        .await
+        .unwrap_or(false)
+    {
         return HostedEntry::Package(name);
     }
     if depth < MAX_NAME_COMPONENTS {

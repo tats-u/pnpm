@@ -157,15 +157,21 @@ fn recursive_run_resumes_from_exactly_the_tasks_that_passed_before_a_failure() {
             .count(),
         1,
     );
-    let state_dir = workspace.join("node_modules").join(".pnpm-task-run-state-v1");
+    let state_dir = workspace
+        .join("node_modules")
+        .join(".pnpm-task-run-state-v1");
     let latest: Value = serde_json::from_str(
         &fs::read_to_string(state_dir.join("latest.json")).expect("read latest state pointer"),
     )
     .expect("parse latest state pointer");
     let latest_journal = state_dir.join(format!(
         "{}.{}.jsonl",
-        latest["invocation"].as_str().expect("latest invocation"),
-        latest["run"].as_str().expect("latest run"),
+        latest["invocation"]
+            .as_str()
+            .expect("latest invocation"),
+        latest["run"]
+            .as_str()
+            .expect("latest run"),
     ));
     assert!(!latest_journal.exists(), "successful resume removes its current checkpoint");
 
@@ -375,7 +381,9 @@ fn recursive_run_reads_bail_from_workspace_config() {
 
     assert!(!output.status.success(), "the failed project must still fail the command");
     assert!(
-        workspace.join("later-continues/ran.txt").exists(),
+        workspace
+            .join("later-continues/ran.txt")
+            .exists(),
         "bail: false must keep running unrelated projects after a failure",
     );
 
@@ -412,9 +420,17 @@ fn recursive_run_bail_writes_summary_then_stops_at_first_failure() {
     );
 
     let statuses = summary_statuses(&workspace);
-    assert_eq!(statuses.get("project-1").map(String::as_str), Some("failure"), "project-1 failed");
     assert_eq!(
-        statuses.get("project-2").map(String::as_str),
+        statuses
+            .get("project-1")
+            .map(String::as_str),
+        Some("failure"),
+        "project-1 failed"
+    );
+    assert_eq!(
+        statuses
+            .get("project-2")
+            .map(String::as_str),
         Some("queued"),
         "project-2 never ran because bail stopped at project-1",
     );
@@ -448,7 +464,9 @@ fn recursive_run_bail_without_report_summary_writes_no_file() {
         "stderr should carry the bail first-fail code, got: {stderr}",
     );
     assert!(
-        !workspace.join("pnpm-exec-summary.json").exists(),
+        !workspace
+            .join("pnpm-exec-summary.json")
+            .exists(),
         "no summary file should be written without --report-summary",
     );
 

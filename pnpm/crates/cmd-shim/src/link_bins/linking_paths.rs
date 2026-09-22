@@ -21,7 +21,8 @@ impl<'a> LinkingPaths<'a> {
             relocatable_root: None,
             extra_node_paths: Cow::Borrowed(&options.extra_node_paths),
         };
-        let Some(root) = options.relocatable_root
+        let Some(root) = options
+            .relocatable_root
             .as_deref()
             .filter(|_| cfg!(unix))
         else {
@@ -33,7 +34,8 @@ impl<'a> LinkingPaths<'a> {
             return Ok(paths);
         }
         paths.bins_dir = Cow::Owned(physical_bins);
-        paths.extra_node_paths = options.extra_node_paths
+        paths.extra_node_paths = options
+            .extra_node_paths
             .iter()
             .map(|entry| resolve_extra(entry, root, &physical_root))
             .collect::<Vec<_>>()

@@ -37,7 +37,8 @@ fn find_project_names(root: &Path, patterns: &[&str]) -> Vec<String> {
     .unwrap()
     .iter()
     .map(|project| {
-        project.manifest
+        project
+            .manifest
             .value()
             .get("name")
             .unwrap()
@@ -107,7 +108,8 @@ fn expands_packages_glob() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -181,7 +183,12 @@ fn terminal_star_matches_only_immediate_child_directories() {
     make_project(tmp.path(), ".", "root");
     make_project(tmp.path(), "packages/alpha", "alpha");
     make_project(tmp.path(), "packages/group/beta", "beta");
-    fs::write(tmp.path().join("packages/not-a-directory"), "text").unwrap();
+    fs::write(
+        tmp.path()
+            .join("packages/not-a-directory"),
+        "text",
+    )
+    .unwrap();
 
     let names = find_project_names(tmp.path(), &["packages/*"]);
     assert_eq!(names, vec!["root".to_string(), "alpha".to_string()]);
@@ -261,7 +268,8 @@ fn expands_packages_glob_to_package_yaml() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -334,7 +342,8 @@ fn package_json_wins_when_both_manifest_files_exist() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -363,7 +372,8 @@ fn always_includes_workspace_root() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -391,7 +401,8 @@ fn filters_node_modules() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -427,7 +438,8 @@ fn dedupes_overlapping_patterns() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -451,7 +463,8 @@ fn default_patterns_when_packages_omitted() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -482,7 +495,8 @@ fn negation_pattern_excludes_matching_projects() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -520,7 +534,8 @@ fn negation_pattern_with_leading_slash_is_noop() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -556,7 +571,8 @@ fn empty_patterns_array_enumerates_root_only() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -588,7 +604,8 @@ fn missing_pattern_directory_matches_nothing() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -676,7 +693,8 @@ fn discovers_projects_declared_above_the_workspace_root() {
     let mut names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -717,7 +735,8 @@ fn negation_pattern_excludes_a_project_above_the_workspace_root() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -764,7 +783,8 @@ fn pattern_climbing_past_the_filesystem_root_matches_nothing() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()
@@ -787,7 +807,9 @@ fn pattern_climbing_past_the_filesystem_root_matches_nothing() {
 fn discovers_a_project_whose_manifest_starts_with_a_utf8_bom() {
     let tmp = TempDir::new().unwrap();
     make_project(tmp.path(), ".", "root");
-    let dir = tmp.path().join("packages/utf8-bom-package");
+    let dir = tmp
+        .path()
+        .join("packages/utf8-bom-package");
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("package.json"), "\u{feff}{\"name\": \"bom\", \"version\": \"1.0.0\"}\n")
         .unwrap();
@@ -801,7 +823,8 @@ fn discovers_a_project_whose_manifest_starts_with_a_utf8_bom() {
     let names: Vec<String> = projects
         .iter()
         .map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .unwrap()

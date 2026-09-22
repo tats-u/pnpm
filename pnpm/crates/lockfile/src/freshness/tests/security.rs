@@ -15,7 +15,9 @@ fn resolved_version_outside_manifest_range_is_stale() {
         "        version: 3.13.8"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",

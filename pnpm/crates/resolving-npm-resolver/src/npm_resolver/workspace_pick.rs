@@ -50,7 +50,9 @@ pub(super) fn workspace_shadow_pick(
     result.package.latest = latest_allowed_by_policy(
         &picked.meta,
         opts.policy.published_by,
-        opts.policy.published_by_exclude.as_ref(),
+        opts.policy
+            .published_by_exclude
+            .as_ref(),
     )
     .map(str::to_string);
     Some(result)
@@ -74,7 +76,9 @@ pub(super) fn prefer_workspace_pick(
         && opts.policy.trust_policy != Some(TrustPolicy::NoDowngrade)
         && !opts.refresh.update_checksums
         && !opts.project.inject_workspace_packages
-        && !wanted_dependency.injected.unwrap_or(false);
+        && !wanted_dependency
+            .injected
+            .unwrap_or(false);
     if !eligible {
         return None;
     }
@@ -101,7 +105,10 @@ pub(super) fn wanted_spec(
     default_tag: &str,
     registry: &str,
 ) -> Option<RegistryPackageSpec> {
-    if let Some(bare) = wanted_dependency.bare_specifier.as_deref() {
+    if let Some(bare) = wanted_dependency
+        .bare_specifier
+        .as_deref()
+    {
         return parse_bare_specifier(
             bare,
             wanted_dependency.alias.as_deref(),
@@ -109,7 +116,8 @@ pub(super) fn wanted_spec(
             registry,
         );
     }
-    let alias = wanted_dependency.alias
+    let alias = wanted_dependency
+        .alias
         .as_deref()
         .filter(|alias| !alias.is_empty())?;
     Some(default_tag_spec(alias, default_tag))
@@ -132,9 +140,18 @@ pub(crate) fn no_matching_version(
 ) -> ResolveError {
     let dep = match wanted_dependency.alias.as_deref() {
         Some(alias) => {
-            format!("{alias}@{}", wanted_dependency.bare_specifier.as_deref().unwrap_or_default())
+            format!(
+                "{alias}@{}",
+                wanted_dependency
+                    .bare_specifier
+                    .as_deref()
+                    .unwrap_or_default()
+            )
         }
-        None => wanted_dependency.bare_specifier.clone().unwrap_or_default(),
+        None => wanted_dependency
+            .bare_specifier
+            .clone()
+            .unwrap_or_default(),
     };
     Box::new(NoMatchingVersionError::new(dep, redact_and_sanitize(registry), meta))
 }
@@ -165,8 +182,10 @@ pub(super) fn try_workspace_shadow(
     opts: &ResolveOptions,
 ) -> Option<ResolveResult> {
     let matching_name = workspace_packages.get(picked.name.as_str())?;
-    let hard_link =
-        opts.project.inject_workspace_packages || wanted_dependency.injected.unwrap_or(false);
+    let hard_link = opts.project.inject_workspace_packages
+        || wanted_dependency
+            .injected
+            .unwrap_or(false);
     let project_dir = opts.project.project_dir.as_path();
     let lockfile_dir = opts.project.lockfile_dir.as_path();
 
@@ -210,7 +229,10 @@ pub(super) fn workspace_fallback_options(opts: &ResolveOptions) -> ResolveFromWo
         lockfile_dir: opts.project.lockfile_dir.as_path(),
         registry: UNUSED,
         default_tag: UNUSED,
-        workspace_packages: opts.project.workspace_packages.as_deref(),
+        workspace_packages: opts
+            .project
+            .workspace_packages
+            .as_deref(),
         inject_workspace_packages: opts.project.inject_workspace_packages,
         saved_specifier: saved_specifier_options(opts),
     }
@@ -244,11 +266,16 @@ pub(super) fn workspace_packages_active<'o>(
     opts: &'o ResolveOptions,
     spec: &RegistryPackageSpec,
 ) -> Option<&'o std::sync::Arc<WorkspacePackages>> {
-    let can_keep_workspace_resolution = opts.refresh.current_pkg
+    let can_keep_workspace_resolution = opts
+        .refresh
+        .current_pkg
         .as_ref()
         .is_none_or(|current| matches!(current.resolution, LockfileResolution::Directory(_)));
     (spec.revision.is_none()
-        && opts.project.link_workspace_packages.enabled_at_depth(0)
+        && opts
+            .project
+            .link_workspace_packages
+            .enabled_at_depth(0)
         && (opts.refresh.update != UpdateBehavior::Patches || can_keep_workspace_resolution))
         .then_some(opts.project.workspace_packages.as_ref())
         .flatten()

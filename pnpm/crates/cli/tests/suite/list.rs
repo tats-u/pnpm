@@ -165,7 +165,9 @@ fn list_json_with_package_arg_omits_unsaved_dependencies() {
 
     let roots: Vec<Value> = serde_json::from_slice(&output.stdout).expect("parse list JSON");
     assert!(
-        roots[0].get("unsavedDependencies").is_none(),
+        roots[0]
+            .get("unsavedDependencies")
+            .is_none(),
         "a package-name filter must suppress extraneous deps:\n{}",
         String::from_utf8_lossy(&output.stdout),
     );
@@ -199,7 +201,9 @@ fn pacquet_in(dir: &Path, args: impl IntoIterator<Item = impl AsRef<std::ffi::Os
 }
 
 fn run_ok(dir: &Path, args: &[&str]) -> String {
-    let output = pacquet_in(dir, args).output().expect("run pacquet");
+    let output = pacquet_in(dir, args)
+        .output()
+        .expect("run pacquet");
     assert!(
         output.status.success(),
         "`pnpm {}` should succeed:\n{}",
@@ -539,8 +543,9 @@ function hasPeerA (context) {
     yaml.push_str("pnpmfile:\n  - .pnpmfile.cjs\n  - duplicate.cjs\n");
     fs::write(workspace.join("pnpm-workspace.yaml"), yaml).expect("configure pnpmfiles");
 
-    let output =
-        pacquet_in(&workspace, ["list", "--find-by=hasPeerA"]).output().expect("run pacquet list");
+    let output = pacquet_in(&workspace, ["list", "--find-by=hasPeerA"])
+        .output()
+        .expect("run pacquet list");
     assert!(!output.status.success(), "duplicate finder should fail");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("ERR_PNPM_DUPLICATE_FINDER"), "stderr: {stderr}");
@@ -595,16 +600,21 @@ fn list_returns_correct_paths_with_global_virtual_store() {
     let output = run_ok(&workspace, &["list", "--json", "--depth=Infinity"]);
     let parsed: Vec<Value> = serde_json::from_str(&output).expect("parse list JSON");
 
-    let pkg_path = parsed[0]["dependencies"][PKG]["path"].as_str().expect("pkg path");
+    let pkg_path = parsed[0]["dependencies"][PKG]["path"]
+        .as_str()
+        .expect("pkg path");
     let real = dunce::canonicalize(workspace.join("node_modules").join(PKG))
         .expect("resolve the symlink of the installed package");
     assert_eq!(Path::new(pkg_path), real.as_path());
 
-    let sub_dep_path =
-        parsed[0]["dependencies"][PKG]["dependencies"][DEP]["path"].as_str().expect("subdep path");
+    let sub_dep_path = parsed[0]["dependencies"][PKG]["dependencies"][DEP]["path"]
+        .as_str()
+        .expect("subdep path");
     assert!(Path::new(sub_dep_path).exists(), "subdep path should exist: {sub_dep_path}");
     assert!(
-        Path::new(sub_dep_path).join("package.json").exists(),
+        Path::new(sub_dep_path)
+            .join("package.json")
+            .exists(),
         "subdep package.json should exist: {sub_dep_path}",
     );
 }

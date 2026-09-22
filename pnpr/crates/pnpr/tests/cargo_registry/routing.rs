@@ -73,7 +73,11 @@ async fn search_hides_a_private_registry_from_an_anonymous_caller() {
     for url in ["/cargo/api/v1/crates?q=demo", "/cargo/api/v1/crates?browse=true"] {
         let tmp = TempDir::new().unwrap();
         let auth = AuthState::in_memory();
-        let token = auth.tokens.issue("alice").await.unwrap();
+        let token = auth
+            .tokens
+            .issue("alice")
+            .await
+            .unwrap();
         let app = router_with_auth(
             cargo_config(tmp.path().to_path_buf(), "http://upstream.invalid/", "$authenticated"),
             auth,
@@ -120,7 +124,11 @@ async fn search_hides_a_private_registry_from_an_anonymous_caller() {
 async fn crate_names_are_case_insensitive_in_the_index_path() {
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(
         cargo_config(tmp.path().to_path_buf(), "http://upstream.invalid/", "$all"),
         auth,
@@ -170,7 +178,11 @@ async fn crate_names_are_case_insensitive_in_the_index_path() {
 async fn private_hosted_registry_advertises_auth_required_and_masks_anonymous_reads() {
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(
         cargo_config(tmp.path().to_path_buf(), "http://upstream.invalid/", "$authenticated"),
         auth,
@@ -372,7 +384,11 @@ async fn a_download_that_fails_the_index_checksum_is_never_cached() {
         )
         .await
         .unwrap();
-    assert!(axum::body::to_bytes(response.into_body(), usize::MAX).await.is_err());
+    assert!(
+        axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .is_err()
+    );
     assert!(find_file(&tmp.path().join(".pnpr-cache"), "serde-1.0.0.crate").is_none());
 }
 
@@ -443,7 +459,9 @@ async fn upstream_sparse_index_rejects_invalid_utf8_before_serving_or_downloadin
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(body_bytes(response.into_body()).await, valid_index.as_bytes());
     let cached_index = find_file(&tmp.path().join(".pnpr-cache"), "package.json").unwrap();
-    tokio::fs::write(cached_index, [0xff]).await.unwrap();
+    tokio::fs::write(cached_index, [0xff])
+        .await
+        .unwrap();
     let response = app
         .oneshot(
             Request::get("/cargo/index/se/rd/serde")

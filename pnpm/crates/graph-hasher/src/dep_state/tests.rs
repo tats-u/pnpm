@@ -175,8 +175,12 @@ fn dep_graph_and_patch_concatenate_in_upstream_order() {
             include_dep_graph_hash: true,
         },
     );
-    let deps_pos = result.find(";deps=").expect("deps section present");
-    let patch_pos = result.find(";patch=").expect("patch section present");
+    let deps_pos = result
+        .find(";deps=")
+        .expect("deps section present");
+    let patch_pos = result
+        .find(";patch=")
+        .expect("patch section present");
     assert!(deps_pos < patch_pos, "deps must come before patch in {result:?}");
 }
 

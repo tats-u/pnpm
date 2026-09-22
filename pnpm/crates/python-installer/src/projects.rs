@@ -53,12 +53,13 @@ async fn select<Reporter: self::Reporter + 'static>(
         .iter()
         .flat_map(|membership| membership.members.iter().cloned())
         .collect();
-    let prepared_with = shared.prepare_metadata::<Reporter>(
-        &mut discovered,
-        &mut interpreters,
-        MetadataScope { needed: &workspace.reachable_from(&needed), memberships: &memberships },
-    )
-    .await?;
+    let prepared_with = shared
+        .prepare_metadata::<Reporter>(
+            &mut discovered,
+            &mut interpreters,
+            MetadataScope { needed: &workspace.reachable_from(&needed), memberships: &memberships },
+        )
+        .await?;
     workspace.update_manifests(&discovered);
     let mut selecting = Selecting {
         shared,
@@ -69,7 +70,11 @@ async fn select<Reporter: self::Reporter + 'static>(
     };
     let mut units = Vec::new();
     for membership in memberships {
-        units.push(selecting.unit::<Reporter>(membership).await?);
+        units.push(
+            selecting
+                .unit::<Reporter>(membership)
+                .await?,
+        );
     }
     Ok(units)
 }
@@ -94,9 +99,12 @@ impl Selecting<'_> {
         let config = self.shared.context.config;
         let Membership { root, members, shared } = membership;
         let manifests = self.manifests_of(members);
-        let interpreter = self.interpreter::<Reporter>(&root, &manifests).await?;
+        let interpreter = self
+            .interpreter::<Reporter>(&root, &manifests)
+            .await?;
         let environments = Environments::of(config, &interpreter)?;
-        self.workspace.for_resolution(config, &environments);
+        self.workspace
+            .for_resolution(config, &environments);
         let projects = Projects {
             local: Arc::from(self.local_projects(&manifests, &root)?),
             rules: self.rules(&root),
@@ -111,7 +119,10 @@ impl Selecting<'_> {
         members
             .into_iter()
             .map(|member| {
-                let manifest = self.manifests.get(&member).expect("a member was discovered");
+                let manifest = self
+                    .manifests
+                    .get(&member)
+                    .expect("a member was discovered");
                 (member, Arc::clone(manifest))
             })
             .collect()
@@ -126,14 +137,19 @@ impl Selecting<'_> {
             .iter()
             .map(|(root, manifest)| (root.as_path(), &**manifest))
             .collect::<Vec<_>>();
-        self.workspace.local_projects(&members, root)
+        self.workspace
+            .local_projects(&members, root)
     }
 
     /// The manifest whose overrides and constraints the unit resolves
     /// under: the workspace root's for a member, else the unit's own.
     fn rules(&self, root: &Path) -> Arc<manifest::Manifest> {
-        let manifest = self.manifests.get(root).expect("a unit root was discovered");
-        self.workspace.resolution_manifest(root, manifest)
+        let manifest = self
+            .manifests
+            .get(root)
+            .expect("a unit root was discovered");
+        self.workspace
+            .resolution_manifest(root, manifest)
     }
 
     fn members(&self, manifests: Vec<(PathBuf, Arc<manifest::Manifest>)>) -> Result<Vec<Member>> {
@@ -163,7 +179,9 @@ impl Selecting<'_> {
                 .iter()
                 .map(|(root, manifest)| (root.as_path(), &**manifest)),
         )?;
-        self.interpreters.select_accepting::<Reporter>(root, requires_python.as_ref()).await
+        self.interpreters
+            .select_accepting::<Reporter>(root, requires_python.as_ref())
+            .await
     }
 }
 
@@ -219,7 +237,11 @@ pub(super) struct Member {
 
 impl Member {
     pub(super) fn requires_python(&self) -> Option<&str> {
-        self.manifest.project.as_ref()?.requires_python.as_deref()
+        self.manifest
+            .project
+            .as_ref()?
+            .requires_python
+            .as_deref()
     }
 }
 
@@ -227,7 +249,9 @@ impl Member {
 /// declaration, or the range every member accepts.
 pub(super) fn requires_python_of(members: &[Member]) -> Result<Option<String>> {
     if let [member] = members {
-        return Ok(member.requires_python().map(str::to_string));
+        return Ok(member
+            .requires_python()
+            .map(str::to_string));
     }
     let combined = interpreter::requires_python_of(
         members
@@ -254,7 +278,9 @@ impl Requirements {
             selected: workspace.requirements(
                 root,
                 manifest,
-                requirements.selected(shared.asked.selection).to_vec(),
+                requirements
+                    .selected(shared.asked.selection)
+                    .to_vec(),
             )?,
             all: workspace.requirements(root, manifest, requirements.all)?,
         })
@@ -265,8 +291,16 @@ impl Requirements {
     pub(super) fn merged(members: &[Member]) -> Self {
         let mut merged = Self { all: Vec::new(), selected: Vec::new() };
         for member in members {
-            merged.all.extend(member.requirements.all.iter().cloned());
-            merged.selected.extend(member.requirements.selected.iter().cloned());
+            merged
+                .all
+                .extend(member.requirements.all.iter().cloned());
+            merged.selected.extend(
+                member
+                    .requirements
+                    .selected
+                    .iter()
+                    .cloned(),
+            );
         }
         merged
     }

@@ -147,7 +147,12 @@ fn apply_bumps_manifests_writes_changelogs_records_the_ledger_and_deletes_consum
         .collect();
     assert_eq!(keys, ["lib@1.1.0"]);
 
-    assert_eq!(read_change_intents(workspace.dir.path()).expect("intents read").len(), 0);
+    assert_eq!(
+        read_change_intents(workspace.dir.path())
+            .expect("intents read")
+            .len(),
+        0
+    );
 }
 
 #[test]
@@ -216,11 +221,20 @@ fn intent_files_consumed_only_by_lane_prereleases_survive_until_graduation() {
     )
     .expect("plan applies");
 
-    let changelog =
-        fs::read_to_string(workspace.projects[0].root_dir.join("CHANGELOG.md")).expect("read");
+    let changelog = fs::read_to_string(
+        workspace.projects[0]
+            .root_dir
+            .join("CHANGELOG.md"),
+    )
+    .expect("read");
     assert!(changelog.contains("## 2.1.0-alpha.0"));
     assert!(changelog.contains("## 2.1.0"));
-    assert_eq!(read_change_intents(workspace.dir.path()).expect("intents read").len(), 0);
+    assert_eq!(
+        read_change_intents(workspace.dir.path())
+            .expect("intents read")
+            .len(),
+        0
+    );
 }
 
 #[test]
@@ -249,7 +263,12 @@ fn a_none_only_intent_is_garbage_collected_by_a_run_with_an_empty_plan() {
         &HashSet::new(),
     )
     .expect("plan applies");
-    assert_eq!(read_change_intents(workspace.dir.path()).expect("intents read").len(), 0);
+    assert_eq!(
+        read_change_intents(workspace.dir.path())
+            .expect("intents read")
+            .len(),
+        0
+    );
 }
 
 #[test]
@@ -281,13 +300,23 @@ fn registry_storage_parks_the_section_and_defers_intent_gc() {
     )
     .expect("plan applies");
 
-    assert!(!workspace.projects[0].root_dir.join("CHANGELOG.md").exists());
+    assert!(
+        !workspace.projects[0]
+            .root_dir
+            .join("CHANGELOG.md")
+            .exists()
+    );
     let section = read_pending_changelog(workspace.dir.path(), "lib", "1.1.0")
         .expect("pending read")
         .expect("section is parked");
     assert!(section.contains("## 1.1.0"), "unexpected: {section}");
     assert!(section.contains("- Added a feature."), "unexpected: {section}");
-    assert_eq!(read_change_intents(workspace.dir.path()).expect("intents read").len(), 1);
+    assert_eq!(
+        read_change_intents(workspace.dir.path())
+            .expect("intents read")
+            .len(),
+        1
+    );
 }
 
 #[test]
@@ -339,7 +368,12 @@ fn registry_storage_collects_an_intent_and_its_section_once_confirmed() {
     apply_release_plan(&empty_plan, workspace.dir.path(), &released, &intents, None, &confirmed)
         .expect("plan applies");
 
-    assert_eq!(read_change_intents(workspace.dir.path()).expect("intents read").len(), 0);
+    assert_eq!(
+        read_change_intents(workspace.dir.path())
+            .expect("intents read")
+            .len(),
+        0
+    );
     assert!(
         read_pending_changelog(workspace.dir.path(), "lib", "1.1.0")
             .expect("pending read")
@@ -434,7 +468,12 @@ fn registry_storage_collects_a_dependency_only_release_section_when_confirmed() 
             .expect("pending read")
             .is_none(),
     );
-    assert_eq!(read_change_intents(workspace.dir.path()).expect("intents read").len(), 0);
+    assert_eq!(
+        read_change_intents(workspace.dir.path())
+            .expect("intents read")
+            .len(),
+        0
+    );
 }
 
 #[test]
@@ -490,7 +529,12 @@ fn registry_storage_keeps_an_intent_whose_release_is_not_confirmed() {
     )
     .expect("plan applies");
 
-    assert_eq!(read_change_intents(workspace.dir.path()).expect("intents read").len(), 1);
+    assert_eq!(
+        read_change_intents(workspace.dir.path())
+            .expect("intents read")
+            .len(),
+        1
+    );
     assert!(
         read_pending_changelog(workspace.dir.path(), "lib", "1.1.0")
             .expect("pending read")

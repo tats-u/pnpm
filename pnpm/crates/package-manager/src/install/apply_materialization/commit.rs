@@ -92,7 +92,10 @@ pub(super) fn prepare_committed_build_state(
     .map_err(InstallWithFreshLockfileError::AllowBuildsPolicy)
     .map_err(InstallError::WithFreshLockfile)?;
     let pending_builds = merge_pending_builds(
-        inputs.prior.layout.map_or(&[][..], |modules| modules.pending_builds.as_slice()),
+        inputs
+            .prior
+            .layout
+            .map_or(&[][..], |modules| modules.pending_builds.as_slice()),
         deferred_projects(
             inputs.tree.config,
             inputs.materialized.manifests,
@@ -217,7 +220,10 @@ pub(super) fn sweep_virtual_store(
     };
     crate::prune_virtual_store::prune_virtual_store(
         &prune_dir,
-        wanted.snapshots.iter().flat_map(|snapshots| snapshots.keys()),
+        wanted
+            .snapshots
+            .iter()
+            .flat_map(|snapshots| snapshots.keys()),
         install_skipped,
         config.virtual_store_dir_max_length as usize,
     )
@@ -296,7 +302,11 @@ pub(super) fn save_relinked_wanted_lockfile(
         && let Some(updated) = save.loaded_wanted_lockfile
     {
         updated
-            .save_to_path(&save.workspace_root.join(config.wanted_lockfile_name()))
+            .save_to_path(
+                &save
+                    .workspace_root
+                    .join(config.wanted_lockfile_name()),
+            )
             .map_err(InstallError::SaveWantedLockfile)?;
     }
     Ok(())
@@ -310,9 +320,13 @@ pub(super) fn retain_current_ignored_builds(
     let Some(previous_ignored) = previous.ignored_builds.as_ref() else { return };
     for dep_path in previous_ignored {
         if current_contains_dep_path(current, dep_path.as_str())
-            && allow_build_policy.check(dep_path.as_str()).is_none()
+            && allow_build_policy
+                .check(dep_path.as_str())
+                .is_none()
         {
-            next.ignored_builds.get_or_insert_default().insert(dep_path.clone());
+            next.ignored_builds
+                .get_or_insert_default()
+                .insert(dep_path.clone());
         }
     }
 }

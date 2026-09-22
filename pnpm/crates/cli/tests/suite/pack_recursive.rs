@@ -198,11 +198,16 @@ fn read_manifest_from_tarball(tarball: &Path) -> serde_json::Value {
     let bytes = fs::read(tarball).expect("read tarball");
     let decoder = flate2::read::GzDecoder::new(bytes.as_slice());
     let mut archive = tar::Archive::new(decoder);
-    for entry in archive.entries().expect("iterate tarball entries") {
+    for entry in archive
+        .entries()
+        .expect("iterate tarball entries")
+    {
         let mut entry = entry.expect("read tarball entry");
         if entry.path().expect("entry path") == Path::new("package/package.json") {
             let mut contents = String::new();
-            entry.read_to_string(&mut contents).expect("read manifest");
+            entry
+                .read_to_string(&mut contents)
+                .expect("read manifest");
             return serde_json::from_str(&contents).expect("parse manifest");
         }
     }

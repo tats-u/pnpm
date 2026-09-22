@@ -129,7 +129,10 @@ fn persist_age_excludes(
     settings_dir: &std::path::Path,
     publish_infos: &HashMap<String, Option<PackumentPublishInfo>>,
 ) -> miette::Result<Vec<String>> {
-    let Some(minimum_release_age) = state.config.resolved_minimum_release_age() else {
+    let Some(minimum_release_age) = state
+        .config
+        .resolved_minimum_release_age()
+    else {
         return Ok(Vec::new());
     };
     let added =
@@ -145,7 +148,8 @@ fn persist_age_excludes(
 /// ones a vulnerable range can be checked against.
 fn installed_packages(updated: &Lockfile) -> InstalledPackages {
     let mut installed = InstalledPackages { names: HashSet::new(), versions: HashMap::new() };
-    for key in updated.snapshots
+    for key in updated
+        .snapshots
         .iter()
         .flatten()
         .map(|(key, _)| key)
@@ -153,7 +157,8 @@ fn installed_packages(updated: &Lockfile) -> InstalledPackages {
         let name = key.name.to_string();
         installed.names.insert(name.clone());
         if let Some(version) = key.suffix.version_semver() {
-            installed.versions
+            installed
+                .versions
                 .entry(name)
                 .or_default()
                 .push(version.clone());
@@ -226,8 +231,9 @@ fn split_by_vulnerability(
     remaining: &mut Vec<u64>,
 ) {
     for (id, range) in entries {
-        let still_vulnerable =
-            versions.iter().any(|version| satisfies_including_prerelease(version, range));
+        let still_vulnerable = versions
+            .iter()
+            .any(|version| satisfies_including_prerelease(version, range));
         if still_vulnerable {
             remaining.push(*id);
         } else {
@@ -277,11 +283,19 @@ pub(crate) fn format_fix_with_update_output(
 
     if !fixed.is_empty() {
         lines.push("\nThe fixed vulnerabilities are:".to_string());
-        lines.extend(fixed.iter().map(|id| summarize(true, *id)));
+        lines.extend(
+            fixed
+                .iter()
+                .map(|id| summarize(true, *id)),
+        );
     }
     if !remaining.is_empty() {
         lines.push("\nThe remaining vulnerabilities are:".to_string());
-        lines.extend(remaining.iter().map(|id| summarize(false, *id)));
+        lines.extend(
+            remaining
+                .iter()
+                .map(|id| summarize(false, *id)),
+        );
     }
     lines.push(String::new());
     lines.join("\n")
@@ -337,7 +351,8 @@ pub(super) fn advisory_choices(
         if !seen.insert(key.clone()) {
             continue;
         }
-        let patched = advisory.patched_versions
+        let patched = advisory
+            .patched_versions
             .as_deref()
             .map(caret_range_for_patched)
             .unwrap_or_default();
@@ -406,7 +421,10 @@ fn update_resources(
             DependencyGroup::Dev,
             DependencyGroup::Optional,
         ],
-        supported_architectures: state.config.supported_architectures.clone(),
+        supported_architectures: state
+            .config
+            .supported_architectures
+            .clone(),
         resolution_observer: Some(fix_observer(
             &classification.vulnerabilities,
             age_excludes.to_vec(),

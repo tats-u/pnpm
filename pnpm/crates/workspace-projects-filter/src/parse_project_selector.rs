@@ -51,13 +51,8 @@ struct SelectorModifiers<'a> {
 }
 
 pub fn parse_project_selector(raw_selector: &str, prefix: &Path) -> ProjectSelector {
-    let SelectorModifiers {
-        raw,
-        exclude,
-        exclude_self,
-        include_dependencies,
-        include_dependents,
-    } = strip_selector_modifiers(raw_selector);
+    let SelectorModifiers { raw, exclude, exclude_self, include_dependencies, include_dependents } =
+        strip_selector_modifiers(raw_selector);
 
     match match_selector_pattern(raw) {
         Some(SelectorParts { name, brace_inner, bracket_inner }) => ProjectSelector {

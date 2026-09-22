@@ -40,7 +40,10 @@ pub async fn install_config_deps<Reporter: self::Reporter>(
     verify_env_lockfile(env_lockfile)?;
     let normalized = normalize_from_lockfile(env_lockfile, opts)?;
     let global_virtual_store_dir = opts.store.dir.links();
-    let config_modules_dir = opts.root_dir.join("node_modules").join(".pnpm-config");
+    let config_modules_dir = opts
+        .root_dir
+        .join("node_modules")
+        .join(".pnpm-config");
 
     let existing: Vec<String> = read_dir_names(&config_modules_dir)?;
 
@@ -95,7 +98,11 @@ async fn materialize_config_dep<Reporter: self::Reporter>(
     paths: &ConfigDepPaths,
     global_virtual_store_dir: &Path,
 ) -> Result<(), ConfigDepError> {
-    if !paths.pkg_dir_in_gvs.join("package.json").exists() {
+    if !paths
+        .pkg_dir_in_gvs
+        .join("package.json")
+        .exists()
+    {
         started.report::<Reporter>();
         materialize::<Reporter>(
             opts,
@@ -156,7 +163,8 @@ fn config_dep_paths(
     global_virtual_store_dir: &Path,
 ) -> ConfigDepPaths {
     let parent_full_pkg_id = full_pkg_id(name, &dep.version, &dep.integrity);
-    let subdep_ids: BTreeMap<String, String> = dep.optional_subdeps
+    let subdep_ids: BTreeMap<String, String> = dep
+        .optional_subdeps
         .iter()
         .map(|subdep| {
             (subdep.name.clone(), full_pkg_id(&subdep.name, &subdep.version, &subdep.integrity))

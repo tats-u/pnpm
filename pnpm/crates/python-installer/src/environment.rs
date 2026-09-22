@@ -167,7 +167,11 @@ pub(super) async fn resolve_via_pnpr(
     index: &str,
     requires_python: Option<String>,
 ) -> Result<Option<Lockfile>> {
-    let Some(pnpr_server) = config.pnpr_server.as_deref().filter(|_| !config.offline) else {
+    let Some(pnpr_server) = config
+        .pnpr_server
+        .as_deref()
+        .filter(|_| !config.offline)
+    else {
         return Ok(None);
     };
     let client = PnprClient::new(pnpr_server);
@@ -177,17 +181,18 @@ pub(super) async fn resolve_via_pnpr(
     {
         return Ok(None);
     }
-    let resolved = client.resolve_pypi(PypiResolveOptions {
-        requirements: requirements
-            .iter()
-            .map(ToString::to_string)
-            .collect(),
-        target: target.clone(),
-        index: index.to_string(),
-        requires_python,
-        authorization: config.auth_headers.for_url(pnpr_server),
-    })
-    .await;
+    let resolved = client
+        .resolve_pypi(PypiResolveOptions {
+            requirements: requirements
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
+            target: target.clone(),
+            index: index.to_string(),
+            requires_python,
+            authorization: config.auth_headers.for_url(pnpr_server),
+        })
+        .await;
     match resolved {
         // A server answers from an index and the metadata published
         // beside a wheel. What needs this machine instead — an explicit

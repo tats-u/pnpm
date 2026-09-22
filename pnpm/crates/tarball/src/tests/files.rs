@@ -17,10 +17,12 @@ use super::{
 async fn reuses_cached_cas_paths_when_index_entry_is_live() {
     let (store_dir, store_path) = tempdir_with_leaked_path();
 
-    let (pkg_json_path, pkg_json_hash) =
-        store_path.write_cas_file(b"{\"name\":\"fake\"}", false).unwrap();
-    let (bin_path, bin_hash) =
-        store_path.write_cas_file(b"#!/usr/bin/env node\nconsole.log('hi');\n", true).unwrap();
+    let (pkg_json_path, pkg_json_hash) = store_path
+        .write_cas_file(b"{\"name\":\"fake\"}", false)
+        .unwrap();
+    let (bin_path, bin_hash) = store_path
+        .write_cas_file(b"#!/usr/bin/env node\nconsole.log('hi');\n", true)
+        .unwrap();
 
     let pkg_integrity = integrity(
         "sha512-q/IXcMGuF8v7ZLf/JeYfE/pB4Wg1yxT6jXJz8JxRK7a4mJSXV1QKMXDPfZkvMHTZpYxWBDoJiXtptDWFnoCA2w==",
@@ -197,8 +199,9 @@ async fn reuses_prefetched_cas_paths_when_provided() {
 async fn prefetch_cas_paths_returns_hits_for_live_index_rows() {
     let (store_dir, store_path) = tempdir_with_leaked_path();
 
-    let (pkg_json_path, pkg_json_hash) =
-        store_path.write_cas_file(b"{\"name\":\"fake\"}", false).unwrap();
+    let (pkg_json_path, pkg_json_hash) = store_path
+        .write_cas_file(b"{\"name\":\"fake\"}", false)
+        .unwrap();
 
     let pkg_integrity = integrity(
         "sha512-q/IXcMGuF8v7ZLf/JeYfE/pB4Wg1yxT6jXJz8JxRK7a4mJSXV1QKMXDPfZkvMHTZpYxWBDoJiXtptDWFnoCA2w==",
@@ -238,10 +241,23 @@ async fn prefetch_cas_paths_returns_hits_for_live_index_rows() {
     )
     .await;
 
-    let map = prefetched.cas_paths.get(&index_key).expect("hit");
+    let map = prefetched
+        .cas_paths
+        .get(&index_key)
+        .expect("hit");
     assert_eq!(map.get("package.json"), Some(&pkg_json_path));
-    assert_eq!(prefetched.requires_build.get(&index_key), Some(&false));
-    assert_eq!(prefetched.requires_prepare.get(&index_key), Some(&true));
+    assert_eq!(
+        prefetched
+            .requires_build
+            .get(&index_key),
+        Some(&false)
+    );
+    assert_eq!(
+        prefetched
+            .requires_prepare
+            .get(&index_key),
+        Some(&true)
+    );
     drop(store_dir);
 }
 
@@ -250,7 +266,9 @@ async fn prefetch_cas_paths_recomputes_requires_build_for_legacy_rows() {
     let (store_dir, store_path) = tempdir_with_leaked_path();
 
     let manifest_bytes = br#"{"name":"fake","scripts":{"postinstall":"node build.js"}}"#;
-    let (pkg_json_path, pkg_json_hash) = store_path.write_cas_file(manifest_bytes, false).unwrap();
+    let (pkg_json_path, pkg_json_hash) = store_path
+        .write_cas_file(manifest_bytes, false)
+        .unwrap();
 
     let pkg_integrity = integrity(
         "sha512-q/IXcMGuF8v7ZLf/JeYfE/pB4Wg1yxT6jXJz8JxRK7a4mJSXV1QKMXDPfZkvMHTZpYxWBDoJiXtptDWFnoCA2w==",
@@ -290,9 +308,17 @@ async fn prefetch_cas_paths_recomputes_requires_build_for_legacy_rows() {
     )
     .await;
 
-    let map = prefetched.cas_paths.get(&index_key).expect("hit");
+    let map = prefetched
+        .cas_paths
+        .get(&index_key)
+        .expect("hit");
     assert_eq!(map.get("package.json"), Some(&pkg_json_path));
-    assert_eq!(prefetched.requires_build.get(&index_key), Some(&true));
+    assert_eq!(
+        prefetched
+            .requires_build
+            .get(&index_key),
+        Some(&true)
+    );
     drop(store_dir);
 }
 
@@ -348,7 +374,8 @@ async fn prefetch_cas_paths_skips_filesystem_checks_when_verify_disabled() {
     )
     .await;
 
-    let map = prefetched.cas_paths
+    let map = prefetched
+        .cas_paths
         .get(&index_key)
         .expect(
             "verify=false should trust the index row and surface the entry without checking disk",
@@ -407,17 +434,44 @@ async fn prefetch_cas_paths_deferred_check_drops_a_row_only_when_verified() {
     )
     .await;
 
-    assert!(prefetched.cas_paths.contains_key(&gone_key), "unchecked rows are returned");
+    assert!(
+        prefetched
+            .cas_paths
+            .contains_key(&gone_key),
+        "unchecked rows are returned"
+    );
     assert_eq!(prefetched.requires_build.get(&gone_key), Some(&false));
     assert_eq!(prefetched.pending_checks.len(), 2, "both rows still owe their files check");
 
     let failed = prefetched.verify_rows([gone_key.as_str()], store_path, &verified_files_cache);
     assert_eq!(failed, 1);
-    assert!(!prefetched.cas_paths.contains_key(&gone_key), "a verified missing blob drops the row");
-    assert!(!prefetched.requires_build.contains_key(&gone_key));
-    assert!(prefetched.cas_paths.contains_key(&unasked_key), "rows nobody asked about stay");
-    assert!(prefetched.pending_checks.contains_key(&unasked_key));
-    assert!(!prefetched.pending_checks.contains_key(&gone_key));
+    assert!(
+        !prefetched
+            .cas_paths
+            .contains_key(&gone_key),
+        "a verified missing blob drops the row"
+    );
+    assert!(
+        !prefetched
+            .requires_build
+            .contains_key(&gone_key)
+    );
+    assert!(
+        prefetched
+            .cas_paths
+            .contains_key(&unasked_key),
+        "rows nobody asked about stay"
+    );
+    assert!(
+        prefetched
+            .pending_checks
+            .contains_key(&unasked_key)
+    );
+    assert!(
+        !prefetched
+            .pending_checks
+            .contains_key(&gone_key)
+    );
     drop(store_dir);
 }
 
@@ -622,7 +676,9 @@ async fn raw_archive_projection_ignores_legacy_package_rows() {
     let (store_dir, store_path) = tempdir_with_leaked_path();
     store_path.init().unwrap();
     let legacy_contents = b"{}";
-    let (_, legacy_file_hash) = store_path.write_cas_file(legacy_contents, false).unwrap();
+    let (_, legacy_file_hash) = store_path
+        .write_cas_file(legacy_contents, false)
+        .unwrap();
     let legacy_key = store_index_key(&integrity.to_string(), package_id);
     StoreIndex::open_in(store_path)
         .unwrap()
@@ -688,7 +744,10 @@ async fn raw_archive_projection_ignores_legacy_package_rows() {
     assert_eq!(std::fs::read(&cas_paths["README.md"]).unwrap(), b"fresh raw artifact");
 
     drop(writer);
-    writer_task.await.expect("writer task").expect("writer flushed");
+    writer_task
+        .await
+        .expect("writer task")
+        .expect("writer flushed");
     let raw_key =
         store_index_cache_key(Some(&integrity), package_id, ArchiveStoreProjection::RawArchive)
             .unwrap();
@@ -706,7 +765,13 @@ async fn raw_archive_projection_ignores_legacy_package_rows() {
         .get(&raw_key)
         .unwrap()
         .expect("raw row is indexed separately");
-    assert_eq!(raw_entry.files.keys().collect::<Vec<_>>(), ["README.md"]);
+    assert_eq!(
+        raw_entry
+            .files
+            .keys()
+            .collect::<Vec<_>>(),
+        ["README.md"]
+    );
 
     drop((index, store_dir, local_dir));
 }

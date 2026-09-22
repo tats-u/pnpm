@@ -195,9 +195,15 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
         wanted_dependency: &WantedDependency,
         opts: &ResolveOptions,
     ) -> Result<Option<ResolveResult>, ResolveError> {
-        let default_tag = opts.version.default_tag.as_deref().unwrap_or("latest");
+        let default_tag = opts
+            .version
+            .default_tag
+            .as_deref()
+            .unwrap_or("latest");
 
-        if let Some(bare) = wanted_dependency.bare_specifier.as_deref()
+        if let Some(bare) = wanted_dependency
+            .bare_specifier
+            .as_deref()
             && bare.starts_with("workspace:")
         {
             return self.resolve_workspace_protocol(wanted_dependency, opts, bare, default_tag);
@@ -206,13 +212,18 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
         // `jsr:` resolves through the `@jsr` registry under the
         // `@jsr/<scope>__<name>` folded name, dispatched alongside the
         // plain npm path.
-        if let Some(bare) = wanted_dependency.bare_specifier.as_deref()
+        if let Some(bare) = wanted_dependency
+            .bare_specifier
+            .as_deref()
             && bare.starts_with("jsr:")
         {
-            return self.resolve_jsr_impl(wanted_dependency, opts, bare, default_tag).await;
+            return self
+                .resolve_jsr_impl(wanted_dependency, opts, bare, default_tag)
+                .await;
         }
 
-        self.resolve_registry_dependency(wanted_dependency, opts, default_tag).await
+        self.resolve_registry_dependency(wanted_dependency, opts, default_tag)
+            .await
     }
 
     async fn resolve_registry_dependency(
@@ -226,8 +237,13 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
         // `registries[@scope]` instead of the alias's own scope.
         let registry = pick_registry_for_package(
             &self.registries,
-            wanted_dependency.alias.as_deref().unwrap_or_default(),
-            wanted_dependency.bare_specifier.as_deref(),
+            wanted_dependency
+                .alias
+                .as_deref()
+                .unwrap_or_default(),
+            wanted_dependency
+                .bare_specifier
+                .as_deref(),
         );
 
         let Some(spec) = wanted_spec(wanted_dependency, default_tag, &registry) else {
@@ -235,7 +251,9 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
         };
         validate_revision_selector(&spec)?;
 
-        let optional = wanted_dependency.optional.unwrap_or(false);
+        let optional = wanted_dependency
+            .optional
+            .unwrap_or(false);
         let workspace_packages_active = workspace_packages_active(opts, &spec);
 
         if let Some(result) =
@@ -244,7 +262,10 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
             return Ok(Some(result));
         }
 
-        let picked = match self.pick_from_registry(&registry, &spec, opts, optional).await {
+        let picked = match self
+            .pick_from_registry(&registry, &spec, opts, optional)
+            .await
+        {
             Ok(RegistryPick::Picked(picked)) => picked,
             outcome => {
                 return workspace_fallback_for(
@@ -280,7 +301,8 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
         fail_if_trust_downgraded_for_pick(
             opts,
             picked,
-            self.cache_policy.ignore_missing_time_field,
+            self.cache_policy
+                .ignore_missing_time_field,
         )?;
 
         if let Some(result) =
@@ -332,15 +354,23 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
         }
         let registry = pick_registry_for_package(
             &self.registries,
-            wanted_dependency.alias.as_deref().unwrap_or_default(),
-            wanted_dependency.bare_specifier.as_deref(),
+            wanted_dependency
+                .alias
+                .as_deref()
+                .unwrap_or_default(),
+            wanted_dependency
+                .bare_specifier
+                .as_deref(),
         );
         let ws_opts = ResolveFromWorkspaceOptions {
             project_dir: opts.project.project_dir.as_path(),
             lockfile_dir: opts.project.lockfile_dir.as_path(),
             registry: &registry,
             default_tag,
-            workspace_packages: opts.project.workspace_packages.as_deref(),
+            workspace_packages: opts
+                .project
+                .workspace_packages
+                .as_deref(),
             inject_workspace_packages: opts.project.inject_workspace_packages,
             saved_specifier: saved_specifier_options(opts),
         };
@@ -374,10 +404,17 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
         };
         validate_revision_selector(&jsr_spec.spec)?;
 
-        let registry = self.registries.get("@jsr").map_or(DEFAULT_JSR_REGISTRY, String::as_str);
+        let registry = self
+            .registries
+            .get("@jsr")
+            .map_or(DEFAULT_JSR_REGISTRY, String::as_str);
 
-        let optional = wanted_dependency.optional.unwrap_or(false);
-        let picked = match self.pick_from_registry(registry, &jsr_spec.spec, opts, optional).await?
+        let optional = wanted_dependency
+            .optional
+            .unwrap_or(false);
+        let picked = match self
+            .pick_from_registry(registry, &jsr_spec.spec, opts, optional)
+            .await?
         {
             RegistryPick::Picked(picked) => picked,
             RegistryPick::NoMatchingVersion(meta) => {
@@ -415,10 +452,14 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
     ) -> Result<RegistryPick, ResolveError> {
         let overlay_selectors =
             crate::preferred_overlay::overlay_merged_selectors(opts, &spec.name);
-        let base_selectors = overlay_selectors
-            .as_ref()
-            .or_else(|| opts.version.preferred_versions.get(&spec.name));
-        let ctx = self.metadata.pick_context(&self.format, self.cache_policy);
+        let base_selectors = overlay_selectors.as_ref().or_else(|| {
+            opts.version
+                .preferred_versions
+                .get(&spec.name)
+        });
+        let ctx = self
+            .metadata
+            .pick_context(&self.format, self.cache_policy);
 
         let picked = pick_from_registry_with_guard(
             &ctx,
@@ -428,10 +469,16 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
                 preferred_version_selectors: base_selectors,
                 pick_lowest_version: opts.version.pick_lowest_version,
                 include_latest_tag: opts.refresh.update == UpdateBehavior::Latest,
-                package_version_guard: opts.policy.package_version_guard.as_ref(),
+                package_version_guard: opts
+                    .policy
+                    .package_version_guard
+                    .as_ref(),
                 policy: crate::PackagePickPolicy {
                     published_by: opts.policy.published_by,
-                    published_by_exclude: opts.policy.published_by_exclude.as_ref(),
+                    published_by_exclude: opts
+                        .policy
+                        .published_by_exclude
+                        .as_ref(),
                     trust_policy: opts.policy.trust_policy,
                 },
                 request: crate::MetadataPickRequest {
@@ -477,7 +524,10 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
         if !query.compatible {
             resolve_opts.refresh.update = UpdateBehavior::Latest;
         }
-        let result = match self.resolve_impl(&wanted, &resolve_opts).await {
+        let result = match self
+            .resolve_impl(&wanted, &resolve_opts)
+            .await
+        {
             Ok(result) => result,
             Err(err) if swallowed_as_no_latest(&err, opts) => {
                 return Ok(Some(LatestInfo { latest_manifest: None }));
@@ -487,7 +537,8 @@ impl<Cache: PackageMetaCache + 'static> NpmResolver<Cache> {
         let Some(result) = result else {
             return Ok(None);
         };
-        if result.policy_violation
+        if result
+            .policy_violation
             .as_ref()
             .is_some_and(|violation| violation.code == MINIMUM_RELEASE_AGE_VIOLATION_CODE)
         {
@@ -508,7 +559,9 @@ impl<Cache: PackageMetaCache> RegistryMetadataClient<Cache> {
     ) -> PickPackageContext<'a, Cache> {
         PickPackageContext {
             full_metadata: format.full_metadata,
-            needs_full_metadata_for: format.needs_full_metadata_for.as_deref(),
+            needs_full_metadata_for: format
+                .needs_full_metadata_for
+                .as_deref(),
             filter_metadata: format.filter_metadata,
             cache_policy,
             metadata: crate::MetadataRequestContext {

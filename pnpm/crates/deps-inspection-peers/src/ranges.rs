@@ -165,10 +165,10 @@ pub(super) fn normalize_version_str(version_raw: &str) -> String {
         .take(3)
         .map(|part| part.replace(['x', 'X', '*'], "0"))
         .collect();
-    if !numeric
-        .iter()
-        .all(|part| part.chars().all(|character| character.is_ascii_digit()))
-    {
+    if !numeric.iter().all(|part| {
+        part.chars()
+            .all(|character| character.is_ascii_digit())
+    }) {
         return version_raw.to_string();
     }
     let mut padded = numeric;

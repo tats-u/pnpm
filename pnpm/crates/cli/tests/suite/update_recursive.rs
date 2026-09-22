@@ -118,7 +118,12 @@ fn list_modules(project_dir: &Path) -> Vec<String> {
 /// Where a project's `node_modules/<name>` resolves to, following the
 /// symlink a workspace dependency is installed as.
 fn module_target(project_dir: &Path, name: &str) -> Option<std::path::PathBuf> {
-    dunce::canonicalize(project_dir.join("node_modules").join(name)).ok()
+    dunce::canonicalize(
+        project_dir
+            .join("node_modules")
+            .join(name),
+    )
+    .ok()
 }
 
 fn installed_version(project_dir: &Path, name: &str) -> Option<String> {
@@ -128,7 +133,9 @@ fn installed_version(project_dir: &Path, name: &str) -> Option<String> {
         .join("package.json");
     let contents = fs::read_to_string(manifest_path).ok()?;
     let value: Value = serde_json::from_str(&contents).ok()?;
-    value["version"].as_str().map(str::to_string)
+    value["version"]
+        .as_str()
+        .map(str::to_string)
 }
 
 /// Ports `recursive update`: a versioned selector reaches every project
@@ -152,9 +159,13 @@ fn recursive_update_only_reaches_projects_that_have_the_dependency() {
             ),
         ],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["-r", "update", &format!("{DEP}@100.1.0")]).assert().success();
+    pacquet(&workspace, ["-r", "update", &format!("{DEP}@100.1.0")])
+        .assert()
+        .success();
 
     assert_eq!(
         installed_version(&workspace.join("project-1"), DEP).as_deref(),
@@ -182,7 +193,9 @@ fn recursive_update_does_not_add_a_dependency_no_project_declares() {
             ("project-2", json!({ "name": "project-2", "version": "1.0.0" })),
         ],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["-r", "update", "--depth", "0", DEP])
         .output()
@@ -227,9 +240,13 @@ fn recursive_update_keeps_an_aliased_workspace_dependency() {
             ("project-2", json!({ "name": "project-2", "version": "1.0.0" })),
         ],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["-r", "update", "--depth", "0"]).assert().success();
+    pacquet(&workspace, ["-r", "update", "--depth", "0"])
+        .assert()
+        .success();
 
     let project_1 = workspace.join("project-1");
     eprintln!("project-1 node_modules: {:?}", list_modules(&project_1));
@@ -269,12 +286,16 @@ fn recursive_update_prod_dependencies_only() {
             ),
         ],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     anchor.set_dist_tag(FOO, "100.1.0", "latest");
     anchor.set_dist_tag(BAR, "100.1.0", "latest");
 
-    pacquet(&workspace, ["-r", "update", "--prod", "--no-optional"]).assert().success();
+    pacquet(&workspace, ["-r", "update", "--prod", "--no-optional"])
+        .assert()
+        .success();
 
     assert_eq!(
         lockfile_package_keys(&workspace),
@@ -298,7 +319,9 @@ fn recursive_update_prod_dependencies_only() {
 /// The rendered stdout+stderr of `pacquet` run in `workspace` with `args`,
 /// alongside its exit status.
 fn pacquet_output(workspace: &Path, args: &[&str]) -> (std::process::ExitStatus, String) {
-    let output = pacquet(workspace, args).output().expect("run pacquet");
+    let output = pacquet(workspace, args)
+        .output()
+        .expect("run pacquet");
     let rendered = format!(
         "{}{}",
         String::from_utf8_lossy(&output.stdout),
@@ -324,7 +347,9 @@ fn recursive_update_rejects_a_version_for_a_transitive_only_selector() {
             "dependencies": { PKG_WITH_DEP: "100.0.0" } }),
         )],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let (status, rendered) =
         pacquet_output(&workspace, &["-r", "update", &format!("{DEP}@100.1.0")]);
@@ -368,7 +393,9 @@ fn recursive_update_accepts_a_version_declared_by_any_project() {
             ),
         ],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let (status, rendered) =
         pacquet_output(&workspace, &["-r", "update", &format!("{DEP}@100.1.0")]);
@@ -402,7 +429,9 @@ fn recursive_update_allows_a_tag_for_a_transitive_only_selector() {
             "dependencies": { PKG_WITH_DEP: "100.0.0" } }),
         )],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let (status, rendered) =
         pacquet_output(&workspace, &["-r", "update", &format!("{DEP}@latest")]);
@@ -437,7 +466,9 @@ fn recursive_update_with_pattern() {
             ),
         ],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     anchor.set_dist_tag(DEP, "100.1.0", "latest");
     anchor.set_dist_tag(PEER_C, "2.0.0", "latest");
@@ -480,7 +511,9 @@ fn recursive_update_with_pattern_and_name_in_project() {
             ),
         ],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(
         &workspace,
@@ -540,13 +573,17 @@ fn recursive_update_latest_only_reaches_the_named_packages() {
             ),
         ],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     anchor.set_dist_tag(FOO, "100.1.0", "latest");
     anchor.set_dist_tag(BAR, "100.1.0", "latest");
     anchor.set_dist_tag(MULTI_VERSION_B, "3.1.0", "latest");
 
-    pacquet(&workspace, ["-r", "update", "--latest", MULTI_VERSION_B, FOO]).assert().success();
+    pacquet(&workspace, ["-r", "update", "--latest", MULTI_VERSION_B, FOO])
+        .assert()
+        .success();
 
     assert_eq!(
         lockfile_package_keys(&workspace),
@@ -576,7 +613,9 @@ fn recursive_update_depth_zero_leaves_an_indirect_selector_out_of_scope() {
             "dependencies": { PKG_WITH_DEP: "100.0.0", FOO: "100.0.0" } }),
         )],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let (status, rendered) = pacquet_output(
         &workspace,
@@ -617,12 +656,16 @@ fn recursive_update_latest_with_dedicated_lockfiles_only_touches_the_declaring_p
             ),
         ],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     anchor.set_dist_tag(FOO, "100.1.0", "latest");
     anchor.set_dist_tag(BAR, "100.1.0", "latest");
 
-    pacquet(&workspace, ["-r", "update", "--latest", FOO]).assert().success();
+    pacquet(&workspace, ["-r", "update", "--latest", FOO])
+        .assert()
+        .success();
 
     assert_eq!(
         lockfile_package_keys(&workspace.join("project-1")),
@@ -647,7 +690,9 @@ fn recursive_update_latest_reports_the_spec_ban_first() {
             "dependencies": { PKG_WITH_DEP: "100.0.0" } }),
         )],
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let (status, rendered) =
         pacquet_output(&workspace, &["-r", "update", "--latest", &format!("{DEP}@100.1.0")]);

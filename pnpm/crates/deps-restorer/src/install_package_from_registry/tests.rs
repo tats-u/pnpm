@@ -322,10 +322,16 @@ pub async fn should_install_package_from_pre_resolved_result() {
     )
     .await;
 
-    let name_ver = resolution.package.name_ver.as_ref().expect("npm resolver fills name_ver");
+    let name_ver = resolution
+        .package
+        .name_ver
+        .as_ref()
+        .expect("npm resolver fills name_ver");
     let real_name = name_ver.name.to_string();
     let virtual_store_name = format!("{}@{}", real_name.replace('/', "+"), name_ver.suffix);
-    let slot_dir = virtual_store_dir.path().join(&virtual_store_name);
+    let slot_dir = virtual_store_dir
+        .path()
+        .join(&virtual_store_name);
 
     InstallPackageFromRegistry {
         fetching: crate::RegistryFetchContext {
@@ -350,14 +356,18 @@ pub async fn should_install_package_from_pre_resolved_result() {
     .await
     .unwrap();
 
-    let virtual_store_path = slot_dir.join("node_modules").join(&real_name);
+    let virtual_store_path = slot_dir
+        .join("node_modules")
+        .join(&real_name);
     assert!(virtual_store_path.is_dir());
 
     // pacquet writes the symlink contents as a path relative to the
     // link's parent (matching upstream `symlink-dir`), so
     // canonicalize via the link itself rather than comparing
     // `read_link` output against the absolute store path.
-    let symlink_path = modules_dir.path().join("@pnpm.e2e/hello-world-js-bin");
+    let symlink_path = modules_dir
+        .path()
+        .join("@pnpm.e2e/hello-world-js-bin");
     assert_eq!(
         dunce::canonicalize(&symlink_path).expect("canonicalize symlink"),
         dunce::canonicalize(&virtual_store_path).expect("canonicalize virtual store path"),
@@ -413,10 +423,16 @@ async fn second_visit_skips_progress_emits_but_still_links() {
     )
     .await;
 
-    let name_ver = resolution.package.name_ver.as_ref().expect("npm resolver fills name_ver");
+    let name_ver = resolution
+        .package
+        .name_ver
+        .as_ref()
+        .expect("npm resolver fills name_ver");
     let real_name = name_ver.name.to_string();
     let virtual_store_name = format!("{}@{}", real_name.replace('/', "+"), name_ver.suffix);
-    let slot_dir = virtual_store_dir.path().join(&virtual_store_name);
+    let slot_dir = virtual_store_dir
+        .path()
+        .join(&virtual_store_name);
 
     // First edge: full path. Run, then clear events for the assertion
     // on the second edge.
@@ -483,7 +499,9 @@ async fn second_visit_skips_progress_emits_but_still_links() {
         .collect();
     assert!(kinds.is_empty(), "second visit must not emit progress events, got {kinds:?}");
 
-    let symlink_path = second_parent_dir.path().join("second-alias");
+    let symlink_path = second_parent_dir
+        .path()
+        .join("second-alias");
     assert!(symlink_path.exists() || symlink_path.is_symlink(), "per-parent symlink missing");
 
     drop((store_dir, modules_dir, second_parent_dir, virtual_store_dir, cache_dir, mock_instance));
@@ -537,10 +555,16 @@ async fn install_emits_progress_sequence() {
     )
     .await;
 
-    let name_ver = resolution.package.name_ver.as_ref().expect("npm resolver fills name_ver");
+    let name_ver = resolution
+        .package
+        .name_ver
+        .as_ref()
+        .expect("npm resolver fills name_ver");
     let real_name = name_ver.name.to_string();
     let virtual_store_name = format!("{}@{}", real_name.replace('/', "+"), name_ver.suffix);
-    let slot_dir = virtual_store_dir.path().join(&virtual_store_name);
+    let slot_dir = virtual_store_dir
+        .path()
+        .join(&virtual_store_name);
 
     InstallPackageFromRegistry {
         fetching: crate::RegistryFetchContext {
@@ -648,7 +672,9 @@ async fn install_returns_unsupported_resolution_when_name_ver_missing() {
         },
     };
 
-    let slot_dir = virtual_store_dir.path().join("bar@unused");
+    let slot_dir = virtual_store_dir
+        .path()
+        .join("bar@unused");
 
     let result = InstallPackageFromRegistry {
         fetching: crate::RegistryFetchContext {
@@ -735,7 +761,9 @@ async fn install_rejects_traversal_manifest_name() {
         },
     };
 
-    let slot_dir = virtual_store_dir.path().join("bar@1.0.0");
+    let slot_dir = virtual_store_dir
+        .path()
+        .join("bar@1.0.0");
 
     let result = InstallPackageFromRegistry {
         fetching: crate::RegistryFetchContext {

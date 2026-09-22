@@ -95,7 +95,8 @@ pub struct TaskRunExecutionSettings<'a> {
 }
 
 pub fn task_run_execution_settings(opts: &TaskRunExecutionSettings<'_>) -> Vec<String> {
-    let extra_bin_paths: Vec<String> = opts.extra_bin_paths
+    let extra_bin_paths: Vec<String> = opts
+        .extra_bin_paths
         .iter()
         .map(|path| path.to_string_lossy().into_owned())
         .collect();
@@ -146,7 +147,9 @@ impl TaskRunStateContext {
             })
             .collect();
         let invocation = invocation_hash(command, params, settings, tasks);
-        let state_dir = workspace_dir.join("node_modules").join(STATE_DIR);
+        let state_dir = workspace_dir
+            .join("node_modules")
+            .join(STATE_DIR);
         let latest_state_path = state_dir.join(LATEST_STATE_FILE);
         Self { state_dir, latest_state_path, invocation, keys_by_id, ids_by_key }
     }
@@ -206,19 +209,25 @@ impl TaskRunStateContext {
     }
 
     fn journal_path(&self, run: &str) -> PathBuf {
-        self.state_dir.join(format!("{}.{run}.jsonl", self.invocation))
+        self.state_dir
+            .join(format!("{}.{run}.jsonl", self.invocation))
     }
 
     fn published_path(&self, run: &str) -> PathBuf {
-        self.state_dir.join(format!("{}.{run}{PUBLISHED_SUFFIX}", self.invocation))
+        self.state_dir
+            .join(format!("{}.{run}{PUBLISHED_SUFFIX}", self.invocation))
     }
 
     fn finished_path(&self, run: &str) -> PathBuf {
-        self.state_dir.join(format!("{}.{run}{FINISHED_SUFFIX}", self.invocation))
+        self.state_dir
+            .join(format!("{}.{run}{FINISHED_SUFFIX}", self.invocation))
     }
 
     fn validate_state_directory(&self, create: bool) -> Result<bool, StateStorageError> {
-        let node_modules_dir = self.state_dir.parent().expect("task state directory has a parent");
+        let node_modules_dir = self
+            .state_dir
+            .parent()
+            .expect("task state directory has a parent");
         if !validate_real_directory(node_modules_dir, create)? {
             return Ok(false);
         }
@@ -246,7 +255,10 @@ impl TaskRunState {
         node: &TaskNode,
         workspace_dir: &Path,
     ) -> miette::Result<()> {
-        let mut writer = self.writer.lock().expect("task state lock is not poisoned");
+        let mut writer = self
+            .writer
+            .lock()
+            .expect("task state lock is not poisoned");
         if writer.file.is_none() {
             return Ok(());
         }
@@ -257,7 +269,10 @@ impl TaskRunState {
         let record = TaskRecord { run: writer.run.clone(), project: id.project, task: id.task };
         let line = serde_json::to_string(&record).expect("task record serializes");
         let result = writeln!(
-            writer.file.as_mut().expect("unfinished task state has an open file"),
+            writer
+                .file
+                .as_mut()
+                .expect("unfinished task state has an open file"),
             "{line}",
         );
         if let Err(error) = result {
@@ -277,7 +292,10 @@ impl TaskRunState {
     }
 
     pub fn finish(&self) -> miette::Result<()> {
-        let mut writer = self.writer.lock().expect("task state lock is not poisoned");
+        let mut writer = self
+            .writer
+            .lock()
+            .expect("task state lock is not poisoned");
         let Some(mut file) = writer.file.take() else {
             return Ok(());
         };
@@ -313,7 +331,9 @@ fn task_id(node: &TaskNode, workspace_dir: &Path) -> TaskId {
     let project = if relative.as_os_str().is_empty() {
         ".".to_string()
     } else {
-        relative.to_string_lossy().replace(std::path::MAIN_SEPARATOR, "/")
+        relative
+            .to_string_lossy()
+            .replace(std::path::MAIN_SEPARATOR, "/")
     };
     TaskId { project, task: node.task_name.clone() }
 }
@@ -325,12 +345,14 @@ fn task_identity(
     workspace_dir: &Path,
     script_commands: &impl Fn(&TaskNode, &str) -> Vec<String>,
 ) -> TaskIdentity {
-    let mut scripts: Vec<ScriptIdentity> = node.scripts
+    let mut scripts: Vec<ScriptIdentity> = node
+        .scripts
         .iter()
         .map(|name| ScriptIdentity { name: name.clone(), commands: script_commands(node, name) })
         .collect();
     scripts.sort_by(|left, right| left.name.cmp(&right.name));
-    let mut dependencies: Vec<TaskId> = node.dependencies
+    let mut dependencies: Vec<TaskId> = node
+        .dependencies
         .iter()
         .map(|dependency| task_id(&graph[dependency], workspace_dir))
         .collect();

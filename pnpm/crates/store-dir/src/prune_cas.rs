@@ -81,7 +81,8 @@ pub(crate) fn prune_cas(store_dir: &StoreDir) -> Result<PruneCasStats, PruneCasE
     let mut rows_to_delete = Vec::new();
     index.for_each_raw(|key, data| {
         let package = decode_package_files_index(&data).map_err(PruneCasError::StoreIndex)?;
-        if package.files
+        if package
+            .files
             .get("package.json")
             .is_some_and(|file| removed_hashes.contains(&file.digest))
         {
@@ -90,7 +91,9 @@ pub(crate) fn prune_cas(store_dir: &StoreDir) -> Result<PruneCasStats, PruneCasE
         Ok::<_, PruneCasError>(())
     })?;
     stats.packages = rows_to_delete.len();
-    index.delete_many(&rows_to_delete).map_err(PruneCasError::StoreIndex)?;
+    index
+        .delete_many(&rows_to_delete)
+        .map_err(PruneCasError::StoreIndex)?;
     Ok(stats)
 }
 
@@ -121,7 +124,11 @@ fn prune_shard(
         let shard = shard_name.to_string_lossy();
         let file = entry.file_name();
         let file = file.to_string_lossy();
-        removed_hashes.insert(format!("{shard}{}", file.strip_suffix("-exec").unwrap_or(&file)));
+        removed_hashes.insert(format!(
+            "{shard}{}",
+            file.strip_suffix("-exec")
+                .unwrap_or(&file)
+        ));
     }
     Ok(())
 }

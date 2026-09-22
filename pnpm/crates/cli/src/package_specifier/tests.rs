@@ -43,7 +43,12 @@ fn a_node_selector_keeps_the_allocation_the_command_line_gave_it() {
 
     let plan = PackageSpecifierPlan::parse([request]).unwrap();
 
-    assert_eq!(plan.node_packages[0].selector().as_ptr(), allocation);
+    assert_eq!(
+        plan.node_packages[0]
+            .selector()
+            .as_ptr(),
+        allocation
+    );
 }
 
 #[test]
@@ -178,8 +183,9 @@ fn rejects_purls_pnpm_cannot_add() {
         ("pkg:cargo/serde@*", "pkg:cargo/serde@* does not carry a valid Cargo version"),
         ("pkg:cargo/serde@1.0", "pkg:cargo/serde@1.0 does not carry a valid Cargo version"),
     ] {
-        let message_received =
-            PackageSpecifierPlan::parse([specifier.into()]).expect_err(specifier).to_string();
+        let message_received = PackageSpecifierPlan::parse([specifier.into()])
+            .expect_err(specifier)
+            .to_string();
         assert_eq!(message_received, message, "{specifier}");
     }
 }
@@ -199,7 +205,8 @@ fn a_purl_marks_the_request_it_becomes_as_a_package_to_install() {
     .unwrap();
 
     assert_eq!(node_selectors(&plan), ["node@22.0.0", "node@22.0.0", "lodash@4"]);
-    let may_name_a_tool: Vec<bool> = plan.node_packages
+    let may_name_a_tool: Vec<bool> = plan
+        .node_packages
         .iter()
         .map(AddRequest::may_name_a_tool)
         .collect();
@@ -238,8 +245,9 @@ fn rejects_a_purl_whose_components_would_rewrite_the_selector() {
             "pkg:pypi/requests@2.31.0%20%3B%20os_name%3D%3D%22nt%22 does not carry a valid PyPI version",
         ),
     ] {
-        let message_received =
-            PackageSpecifierPlan::parse([specifier.into()]).expect_err(specifier).to_string();
+        let message_received = PackageSpecifierPlan::parse([specifier.into()])
+            .expect_err(specifier)
+            .to_string();
         assert_eq!(message_received, message, "{specifier}");
     }
 }
@@ -250,7 +258,9 @@ fn rejects_a_purl_whose_components_would_rewrite_the_selector() {
 #[test]
 fn a_rejected_selector_is_redacted_and_sanitized_before_it_is_printed() {
     let message = |specifier: &str| {
-        PackageSpecifierPlan::parse([specifier.into()]).expect_err(specifier).to_string()
+        PackageSpecifierPlan::parse([specifier.into()])
+            .expect_err(specifier)
+            .to_string()
     };
 
     // Percent-encoding hides an authority from a check made on the raw

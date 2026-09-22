@@ -101,11 +101,12 @@ async fn fetch_verified_node_shasums_with_signature(
         });
     }
 
-    let body = String::from_utf8(shasums_bytes)
-        .map_err(|error| FetchVerifiedNodeShasumsError::InvalidUtf8 {
+    let body = String::from_utf8(shasums_bytes).map_err(|error| {
+        FetchVerifiedNodeShasumsError::InvalidUtf8 {
             url: shasums_url.to_string(),
             error: Arc::new(error),
-        })?;
+        }
+    })?;
     Ok((body, signature_bytes))
 }
 
@@ -292,8 +293,8 @@ async fn fetch_shasums_file_cached_inner(
     {
         return Ok(parse_shasums_file(&body));
     }
-    let body =
-        fetch_shasums_file_raw_with_auth(http_client, shasums_url, auth_headers, retry_opts).await?;
+    let body = fetch_shasums_file_raw_with_auth(http_client, shasums_url, auth_headers, retry_opts)
+        .await?;
     write_cached_shasums(cache_dir, ShasumsTrust::Unverified, shasums_url, body.as_bytes());
     Ok(parse_shasums_file(&body))
 }
@@ -370,8 +371,10 @@ async fn fetch_node_shasums_bytes(
             .await
             .map_err(|error| node_shasums_network_error(what, url, error))?;
         let status = response.status();
-        let body =
-            response.bytes().await.map_err(|error| node_shasums_network_error(what, url, error))?;
+        let body = response
+            .bytes()
+            .await
+            .map_err(|error| node_shasums_network_error(what, url, error))?;
         (status, body.to_vec())
     };
     if !status.is_success() {

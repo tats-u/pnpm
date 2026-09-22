@@ -68,7 +68,11 @@ fn lockfile_local_path_rejects_workspace_escape() {
 
     let err = validate_lockfile_local_path(&workspace.join("../outside"), workspace)
         .expect_err("parent traversal should be rejected");
-    assert!(err.to_string().contains("outside workspace"), "unexpected error: {err}");
+    assert!(
+        err.to_string()
+            .contains("outside workspace"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -132,8 +136,9 @@ fn convert_package_key_preserves_local_tarball_name() {
         lockfile_dir: &lockfile_dir,
         deployed_project_root: &deployed_project_root,
     };
-    let key: PackageKey =
-        "tar-pkg@file:vendor/tar-pkg-1.0.0.tgz".parse().expect("parse package key");
+    let key: PackageKey = "tar-pkg@file:vendor/tar-pkg-1.0.0.tgz"
+        .parse()
+        .expect("parse package key");
 
     let converted = convert_package_key(&key, &ctx).expect("convert package key");
 
@@ -147,7 +152,9 @@ fn convert_package_key_preserves_local_tarball_name() {
 #[test]
 fn create_file_url_key_prefers_workspace_project_name() {
     let tmp = tempfile::tempdir().expect("tempdir");
-    let project_root = tmp.path().join("workspace/packages/local-pkg");
+    let project_root = tmp
+        .path()
+        .join("workspace/packages/local-pkg");
     let resolved_path = project_root.join("../local-pkg");
     let mut projects_by_path = HashMap::new();
     projects_by_path.insert(
@@ -159,7 +166,9 @@ fn create_file_url_key_prefers_workspace_project_name() {
             declared_dependencies: HashSet::default(),
         },
     );
-    let lockfile_name = "lockfile-name".parse().expect("parse package name");
+    let lockfile_name = "lockfile-name"
+        .parse()
+        .expect("parse package name");
 
     let key = create_file_url_key(&resolved_path, "", &projects_by_path, Some(&lockfile_name))
         .expect("create file URL key");
@@ -212,7 +221,9 @@ fn write_deploy_files_replaces_lockfile_symlink() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let deploy_dir = tmp.path().join("deploy");
     std::fs::create_dir(&deploy_dir).expect("create deploy dir");
-    let outside = tmp.path().join("outside-lockfile-target");
+    let outside = tmp
+        .path()
+        .join("outside-lockfile-target");
     std::fs::write(&outside, "do not overwrite\n").expect("write outside target");
     let lockfile_path = deploy_dir.join(Lockfile::FILE_NAME);
     symlink(&outside, &lockfile_path).expect("seed lockfile symlink");
@@ -262,7 +273,10 @@ fn windows_case_variant_workspace_root_is_rejected_as_deploy_target() {
         true,
     )
     .expect_err("case-variant workspace root must be rejected");
-    assert!(err.to_string().contains("target is the workspace root"));
+    assert!(
+        err.to_string()
+            .contains("target is the workspace root")
+    );
 }
 
 #[test]

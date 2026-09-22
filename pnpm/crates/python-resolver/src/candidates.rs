@@ -167,7 +167,10 @@ fn read_file(file: IndexFile, page_url: &Url, name: &PackageName, target: &Targe
     // Asked before the tags, so a file this target is outside the
     // interpreter range of is reported as that rather than as one more
     // wheel for another machine.
-    if let Some(specifiers) = file.requires_python.as_deref().and_then(declared_range)
+    if let Some(specifiers) = file
+        .requires_python
+        .as_deref()
+        .and_then(declared_range)
         && !specifiers.contains(target.environment.python_full_version())
     {
         return Read::Excluded(published.version, Exclusion::OtherInterpreter);
@@ -175,7 +178,12 @@ fn read_file(file: IndexFile, page_url: &Url, name: &PackageName, target: &Targe
     let Some(rank) = published.rank else {
         return Read::Excluded(published.version, Exclusion::OtherTarget);
     };
-    let Some(url) = usable(&file.filename, page_url.join(&file.url).into_diagnostic()) else {
+    let Some(url) = usable(
+        &file.filename,
+        page_url
+            .join(&file.url)
+            .into_diagnostic(),
+    ) else {
         return Read::Ignored;
     };
     if usable(&file.filename, validate_url(&url)).is_none() {
@@ -226,8 +234,11 @@ fn published_file(
         let rank = wheel.rank(tags);
         return Ok(Some(PublishedFile { version: wheel.version, rank, source: false }));
     }
-    Ok(source_version(filename, name)?
-        .map(|version| PublishedFile { version, rank: Some(SOURCE_RANK), source: true }))
+    Ok(source_version(filename, name)?.map(|version| PublishedFile {
+        version,
+        rank: Some(SOURCE_RANK),
+        source: true,
+    }))
 }
 
 /// The release a source distribution of `name` carries, or `None` when
@@ -258,7 +269,11 @@ pub fn source_version(filename: &str, name: &PackageName) -> Result<Option<Versi
                 .as_ref()
                 == Some(name)
         })
-        .find_map(|(index, _)| stem[index + 1..].parse::<Version>().ok()))
+        .find_map(|(index, _)| {
+            stem[index + 1..]
+                .parse::<Version>()
+                .ok()
+        }))
 }
 
 /// What reading one index file produced, or `None` when the file is one
@@ -312,19 +327,19 @@ impl WheelFilename {
     /// none of the wheel's tags. A lower rank is a tag the target prefers.
     #[must_use]
     pub fn rank(&self, tags: &[String]) -> Option<usize> {
-        tags.iter()
-            .position(|tag| {
-                let accepted = tag.split('-').collect::<Vec<_>>();
-                accepted.len() == 3
-                    && self.tags
-                        .iter()
-                        .zip(accepted)
-                        .all(|(declared, accepted)| {
-                            declared
-                                .split('.')
-                                .any(|declared| declared == accepted)
-                        })
-            })
+        tags.iter().position(|tag| {
+            let accepted = tag.split('-').collect::<Vec<_>>();
+            accepted.len() == 3
+                && self
+                    .tags
+                    .iter()
+                    .zip(accepted)
+                    .all(|(declared, accepted)| {
+                        declared
+                            .split('.')
+                            .any(|declared| declared == accepted)
+                    })
+        })
     }
 }
 
@@ -356,15 +371,12 @@ pub fn validate_url(url: &Url) -> Result<()> {
 /// Preserves version constraints, extras, and markers. Direct URLs must use
 /// HTTP(S), git+HTTPS, git+SSH, or git+file; other schemes return an error.
 pub fn parse_requirement(requirement: &str) -> Result<Requirement> {
-    read_requirement(requirement)
-        .map_err(|refusal| match refusal {
-            Refusal::Unreadable(error) => error,
-            Refusal::Unsupported(requirement) => {
-                miette::miette!(
-                    "unsupported scheme in direct URL Python requirements: {requirement}"
-                )
-            }
-        })
+    read_requirement(requirement).map_err(|refusal| match refusal {
+        Refusal::Unreadable(error) => error,
+        Refusal::Unsupported(requirement) => {
+            miette::miette!("unsupported scheme in direct URL Python requirements: {requirement}")
+        }
+    })
 }
 
 /// Why pnpm cannot use a requirement, which decides whom it is a problem

@@ -110,7 +110,9 @@ fn make_registry_resolution() -> LockfileResolution {
 }
 
 fn make_resolve_result(name: &str, version: &str, manifest: serde_json::Value) -> ResolveResult {
-    let name_ver: PkgNameVer = format!("{name}@{version}").parse().expect("parse fake PkgNameVer");
+    let name_ver: PkgNameVer = format!("{name}@{version}")
+        .parse()
+        .expect("parse fake PkgNameVer");
     ResolveResult {
         id: (&name_ver).into(),
         resolution: make_registry_resolution(),
@@ -399,7 +401,9 @@ fn make_named_registry_node(
     tarball_url: &str,
 ) -> DependenciesGraphNode {
     let dep_path = DepPath::from(format!("{name}@{registry_name}:{version}"));
-    let name_ver: PkgNameVer = format!("{name}@{version}").parse().expect("parse PkgNameVer");
+    let name_ver: PkgNameVer = format!("{name}@{version}")
+        .parse()
+        .expect("parse PkgNameVer");
     let resolve_result = ResolveResult {
         id: PkgResolutionId::from(format!("{name}@{registry_name}:{version}")),
         resolution: LockfileResolution::Tarball(TarballResolution {

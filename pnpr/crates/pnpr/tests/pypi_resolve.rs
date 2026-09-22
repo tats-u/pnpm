@@ -64,7 +64,9 @@ fn wheel_of(dist_info: &str, metadata: &str) -> Vec<u8> {
             zip::write::SimpleFileOptions::default(),
         )
         .expect("start the metadata entry");
-    archive.write_all(metadata.as_bytes()).expect("write the metadata entry");
+    archive
+        .write_all(metadata.as_bytes())
+        .expect("write the metadata entry");
     archive
         .finish()
         .expect("finish the wheel")
@@ -97,7 +99,10 @@ fn resolve_request(index: &str, token: &str, requirements: &Value) -> Request<Bo
 /// Remove the cached document read from a URL ending in `suffix`, which
 /// is what its TTL passing would do to it.
 fn forget_cached_page(storage: &std::path::Path, suffix: &str) {
-    for entry in walkdir::WalkDir::new(storage).into_iter().filter_map(Result::ok) {
+    for entry in walkdir::WalkDir::new(storage)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
         if !entry.file_type().is_file() {
             continue;
         }
@@ -113,7 +118,9 @@ fn forget_cached_page(storage: &std::path::Path, suffix: &str) {
 }
 
 async fn frames(body: Body) -> Vec<Value> {
-    let bytes = to_bytes(body, usize::MAX).await.expect("read body");
+    let bytes = to_bytes(body, usize::MAX)
+        .await
+        .expect("read body");
     String::from_utf8_lossy(&bytes)
         .lines()
         .filter(|line| !line.is_empty())
@@ -178,12 +185,17 @@ async fn a_project_resolves_from_the_metadata_files_an_index_publishes() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -192,7 +204,9 @@ async fn a_project_resolves_from_the_metadata_files_an_index_publishes() {
         .unwrap();
     let lockfile = resolved_lockfile(response).await;
 
-    let packages = lockfile["packages"].as_array().expect("the lockfile names packages");
+    let packages = lockfile["packages"]
+        .as_array()
+        .expect("the lockfile names packages");
     let mut named = packages
         .iter()
         .map(|package| (package["name"].as_str().unwrap(), package["version"].as_str().unwrap()))
@@ -200,7 +214,9 @@ async fn a_project_resolves_from_the_metadata_files_an_index_publishes() {
     named.sort_unstable();
     assert_eq!(named, [("chained", "2.0.0"), ("demo", "1.0.0")]);
     assert_eq!(
-        packages[0]["wheels"][0]["url"].as_str().unwrap(),
+        packages[0]["wheels"][0]["url"]
+            .as_str()
+            .unwrap(),
         format!("{}/files/chained-2.0.0-py3-none-any.whl", index.url()),
         "a relative file URL resolves against the page it was read from",
     );
@@ -232,12 +248,17 @@ async fn a_wheel_is_read_when_the_index_publishes_no_metadata_file() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -275,12 +296,17 @@ async fn a_second_resolve_reads_the_cached_index() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
     let index_url = format!("{}/simple/", index.url());
 
@@ -325,12 +351,17 @@ async fn a_metadata_file_that_is_not_what_the_index_vouched_for_is_refused() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -373,12 +404,17 @@ async fn metadata_describing_another_distribution_is_refused() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -411,12 +447,17 @@ async fn a_project_page_that_is_not_one_is_not_cached() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
     let index_url = format!("{}/simple/", index.url());
 
@@ -459,12 +500,17 @@ async fn an_index_url_keeps_its_query_on_every_read() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -510,12 +556,17 @@ async fn cached_metadata_is_refused_once_the_index_publishes_another_digest() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
     let index_url = format!("{}/simple/", index.url());
 
@@ -587,12 +638,17 @@ async fn metadata_read_from_a_wheel_is_not_reused_for_the_wheel_that_replaces_it
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
     let index_url = format!("{}/simple/", index.url());
 
@@ -639,7 +695,8 @@ async fn metadata_read_from_a_wheel_is_not_reused_for_the_wheel_that_replaces_it
         .await;
 
     let locked = resolved_lockfile(
-        app.oneshot(resolve_request(&index_url, &token, &json!(["demo"]))).await
+        app.oneshot(resolve_request(&index_url, &token, &json!(["demo"])))
+            .await
             .unwrap(),
     )
     .await;
@@ -668,12 +725,17 @@ async fn an_unsatisfiable_project_is_reported_as_one() {
 
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -698,7 +760,11 @@ async fn an_off_allowlist_index_is_refused() {
     let index = mockito::Server::new_async().await;
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config_for(tmp.path().to_path_buf()), auth);
 
     let response = app
@@ -714,12 +780,17 @@ async fn a_requirement_naming_a_url_is_refused() {
     let index = mockito::Server::new_async().await;
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let mut config = config_for(tmp.path().to_path_buf());
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(index.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(index.url()), package: None });
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -732,7 +803,9 @@ async fn a_requirement_naming_a_url_is_refused() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-    let bytes = to_bytes(response.into_body(), usize::MAX).await.expect("read body");
+    let bytes = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("read body");
     assert!(
         String::from_utf8_lossy(&bytes).contains("direct URL"),
         "{}",

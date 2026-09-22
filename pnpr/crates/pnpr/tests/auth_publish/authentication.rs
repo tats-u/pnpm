@@ -176,7 +176,11 @@ async fn unpublish_policy_denies_publish_authorized_package_delete() {
             .status(),
         StatusCode::CREATED,
     );
-    assert!(storage.join("unpub-policy/package.json").exists());
+    assert!(
+        storage
+            .join("unpub-policy/package.json")
+            .exists()
+    );
 
     let request = Request::delete("/unpub-policy/-rev/anything")
         .header("Authorization", format!("Bearer {alice}"))
@@ -190,7 +194,11 @@ async fn unpublish_policy_denies_publish_authorized_package_delete() {
             .status(),
         StatusCode::FORBIDDEN,
     );
-    assert!(storage.join("unpub-policy/package.json").exists());
+    assert!(
+        storage
+            .join("unpub-policy/package.json")
+            .exists()
+    );
 
     let request = Request::delete("/unpub-policy/-rev/anything")
         .header("Authorization", format!("Bearer {admin}"))
@@ -235,7 +243,11 @@ async fn unpublish_policy_denies_publish_authorized_tarball_delete() {
             .status(),
         StatusCode::CREATED,
     );
-    assert!(storage.join("tarball-policy/tarball-policy-1.0.0.tgz").exists());
+    assert!(
+        storage
+            .join("tarball-policy/tarball-policy-1.0.0.tgz")
+            .exists()
+    );
 
     let request = Request::delete("/tarball-policy/-/tarball-policy-1.0.0.tgz/-rev/anything")
         .header("Authorization", format!("Bearer {alice}"))
@@ -249,7 +261,11 @@ async fn unpublish_policy_denies_publish_authorized_tarball_delete() {
             .status(),
         StatusCode::FORBIDDEN,
     );
-    assert!(storage.join("tarball-policy/tarball-policy-1.0.0.tgz").exists());
+    assert!(
+        storage
+            .join("tarball-policy/tarball-policy-1.0.0.tgz")
+            .exists()
+    );
 
     let request = Request::delete("/tarball-policy/-/tarball-policy-1.0.0.tgz/-rev/anything")
         .header("Authorization", format!("Bearer {admin}"))
@@ -263,5 +279,9 @@ async fn unpublish_policy_denies_publish_authorized_tarball_delete() {
             .status(),
         StatusCode::CREATED,
     );
-    assert!(!storage.join("tarball-policy/tarball-policy-1.0.0.tgz").exists());
+    assert!(
+        !storage
+            .join("tarball-policy/tarball-policy-1.0.0.tgz")
+            .exists()
+    );
 }

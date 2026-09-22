@@ -104,7 +104,8 @@ pub(super) async fn run_runtime(
     spawn: &DlxSpawn<'_>,
 ) -> miette::Result<()> {
     let executable =
-        Box::pin(materialize_runtime(state_dir, name.to_string(), version_spec.to_string())).await?;
+        Box::pin(materialize_runtime(state_dir, name.to_string(), version_spec.to_string()))
+            .await?;
     let bin_dirs: Vec<PathBuf> = executable
         .parent()
         .map(Path::to_path_buf)

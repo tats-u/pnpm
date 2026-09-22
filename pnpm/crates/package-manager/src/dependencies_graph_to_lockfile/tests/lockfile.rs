@@ -61,8 +61,17 @@ fn empty_deprecation_message_is_not_written_to_the_lockfile() {
     let lockfile = dependencies_graph_to_lockfile(single_importer_opts(
         &manifest, &graph, direct, true, false, None, None,
     ));
-    let package_key: PackageKey = "legacy@1.0.0".parse().expect("package key");
-    assert_eq!(lockfile.packages.as_ref().expect("packages")[&package_key].deprecated, None);
+    let package_key: PackageKey = "legacy@1.0.0"
+        .parse()
+        .expect("package key");
+    assert_eq!(
+        lockfile
+            .packages
+            .as_ref()
+            .expect("packages")[&package_key]
+            .deprecated,
+        None
+    );
 }
 #[test]
 fn generated_lockfile_preserves_libc_manifest_shape() {
@@ -95,7 +104,9 @@ fn generated_lockfile_preserves_libc_manifest_shape() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let yaml = lockfile.to_yaml_string().expect("serialize generated lockfile");
+    let yaml = lockfile
+        .to_yaml_string()
+        .expect("serialize generated lockfile");
     let expected = format!(
         "{}\n",
         text_block! {
@@ -182,7 +193,10 @@ fn dedupe_peers_round_trips_through_lockfile_settings() {
             scopes_by_importer: BTreeMap::new(),
         },
     });
-    let on_settings = on.settings.as_ref().expect("settings written");
+    let on_settings = on
+        .settings
+        .as_ref()
+        .expect("settings written");
     assert_eq!(on_settings.dedupe_peers, Some(true));
     let on_yaml = serde_saphyr::to_string(on_settings).unwrap();
     assert!(on_yaml.contains("dedupePeers: true"), "yaml: {on_yaml}");
@@ -224,7 +238,10 @@ fn dedupe_peers_round_trips_through_lockfile_settings() {
             scopes_by_importer: BTreeMap::new(),
         },
     });
-    let off_settings = off.settings.as_ref().expect("settings written");
+    let off_settings = off
+        .settings
+        .as_ref()
+        .expect("settings written");
     assert_eq!(off_settings.dedupe_peers, None);
     let off_yaml = serde_saphyr::to_string(off_settings).unwrap();
     assert!(!off_yaml.contains("dedupePeers"), "yaml: {off_yaml}");
@@ -325,15 +342,24 @@ fn patched_dependencies_flow_into_lockfile_and_empty_is_omitted() {
         "68ebc232025360cb3dcd3081f4067f4e9fc022ab6b6f71a3230e86c7a5b337d1".to_string(),
     )])));
     assert_eq!(
-        with_patch.patched_dependencies
+        with_patch
+            .patched_dependencies
             .as_ref()
             .and_then(|map| map.get("graceful-fs@4.2.11"))
             .map(String::as_str),
         Some("68ebc232025360cb3dcd3081f4067f4e9fc022ab6b6f71a3230e86c7a5b337d1"),
     );
 
-    assert!(build(Some(BTreeMap::new())).patched_dependencies.is_none());
-    assert!(build(None).patched_dependencies.is_none());
+    assert!(
+        build(Some(BTreeMap::new()))
+            .patched_dependencies
+            .is_none()
+    );
+    assert!(
+        build(None)
+            .patched_dependencies
+            .is_none()
+    );
 }
 #[test]
 fn snapshot_link_uses_lockfile_root_while_importer_link_uses_project_root() {
@@ -373,7 +399,10 @@ fn snapshot_link_uses_lockfile_root_while_importer_link_uses_project_root() {
         HashSet::default(),
     );
     consumer.dep_path = DepPath::from("consumer@1.0.0(peer@packages+peer)");
-    consumer.edges.resolved_peer_names.insert("peer".to_string());
+    consumer
+        .edges
+        .resolved_peer_names
+        .insert("peer".to_string());
 
     let mut graph = DependenciesGraph::default();
     for node in [shared, peer, wrapper, consumer] {
@@ -423,8 +452,14 @@ fn snapshot_link_uses_lockfile_root_while_importer_link_uses_project_root() {
         },
     });
 
-    let importer = lockfile.importers.get("apps/nested/app").expect("nested importer");
-    let importer_dependencies = importer.dependencies.as_ref().expect("importer dependencies");
+    let importer = lockfile
+        .importers
+        .get("apps/nested/app")
+        .expect("nested importer");
+    let importer_dependencies = importer
+        .dependencies
+        .as_ref()
+        .expect("importer dependencies");
     for name in ["shared", "peer"] {
         let dependency = importer_dependencies
             .get(&PkgName::parse(name).unwrap())
@@ -437,20 +472,30 @@ fn snapshot_link_uses_lockfile_root_while_importer_link_uses_project_root() {
         }
     }
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
     let wrapper_key: PackageKey = "wrapper@1.0.0".parse().unwrap();
-    let wrapper_dependencies = snapshots[&wrapper_key].dependencies.as_ref().unwrap();
+    let wrapper_dependencies = snapshots[&wrapper_key]
+        .dependencies
+        .as_ref()
+        .unwrap();
     assert_eq!(
         wrapper_dependencies.get(&PkgName::parse("shared").unwrap()),
         Some(&SnapshotDepRef::Link("packages/shared".to_string())),
     );
     let consumer_snapshot = snapshots
         .iter()
-        .find(|(key, _)| key.to_string().starts_with("consumer@1.0.0("))
+        .find(|(key, _)| {
+            key.to_string()
+                .starts_with("consumer@1.0.0(")
+        })
         .map(|(_, snapshot)| snapshot)
         .expect("consumer peer snapshot");
     assert_eq!(
-        consumer_snapshot.dependencies
+        consumer_snapshot
+            .dependencies
             .as_ref()
             .unwrap()
             .get(&PkgName::parse("peer").unwrap()),
@@ -529,23 +574,34 @@ fn multi_importer_workspace_writes_per_project_lockfile_entries() {
         },
     });
 
-    let a_snap = lockfile.importers.get("packages/a").expect("importer a");
-    let b_snap = lockfile.importers.get("packages/b").expect("importer b");
+    let a_snap = lockfile
+        .importers
+        .get("packages/a")
+        .expect("importer a");
+    let b_snap = lockfile
+        .importers
+        .get("packages/b")
+        .expect("importer b");
     let lodash_name = PkgName::parse("lodash").unwrap();
     assert!(
-        a_snap.dependencies
+        a_snap
+            .dependencies
             .as_ref()
             .unwrap()
             .contains_key(&lodash_name),
     );
     assert!(
-        b_snap.dependencies
+        b_snap
+            .dependencies
             .as_ref()
             .unwrap()
             .contains_key(&lodash_name),
     );
 
-    let packages = lockfile.packages.as_ref().expect("packages");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages");
     let lodash_key: PackageKey = "lodash@4.17.21".parse().unwrap();
     assert!(packages.contains_key(&lodash_key), "single shared snapshot");
     assert_eq!(packages.len(), 1, "shared dep deduped to one entry");
@@ -584,8 +640,13 @@ fn external_link_direct_dep_omitted_from_importer_when_exclude_links_from_lockfi
         &manifest, &graph, direct, false, true, None, None,
     ));
 
-    let importer = lockfile.root_project().expect("root importer");
-    let deps = importer.dependencies.as_ref().expect("dependencies map");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let deps = importer
+        .dependencies
+        .as_ref()
+        .expect("dependencies map");
     assert!(
         deps.contains_key(&PkgName::parse("is-positive").unwrap()),
         "non-link direct dep is still recorded",
@@ -594,13 +655,20 @@ fn external_link_direct_dep_omitted_from_importer_when_exclude_links_from_lockfi
         !deps.contains_key(&PkgName::parse("external-1").unwrap()),
         "link: direct dep is omitted from importer.dependencies",
     );
-    let specifiers = importer.specifiers.as_ref().expect("specifiers map");
+    let specifiers = importer
+        .specifiers
+        .as_ref()
+        .expect("specifiers map");
     assert!(
         !specifiers.contains_key("external-1"),
         "link: direct dep is omitted from importer.specifiers",
     );
     assert!(
-        lockfile.settings.as_ref().expect("settings block").exclude_links_from_lockfile,
+        lockfile
+            .settings
+            .as_ref()
+            .expect("settings block")
+            .exclude_links_from_lockfile,
         "the setting round-trips into the lockfile settings block",
     );
 }
@@ -623,8 +691,13 @@ fn workspace_link_direct_dep_kept_when_exclude_links_from_lockfile_true() {
         &manifest, &graph, direct, false, true, None, None,
     ));
 
-    let importer = lockfile.root_project().expect("root importer");
-    let deps = importer.dependencies.as_ref().expect("dependencies map");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
+    let deps = importer
+        .dependencies
+        .as_ref()
+        .expect("dependencies map");
     let shared = deps
         .get(&PkgName::parse("shared").unwrap())
         .expect("shared entry");

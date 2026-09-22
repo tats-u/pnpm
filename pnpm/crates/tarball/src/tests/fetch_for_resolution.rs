@@ -108,8 +108,15 @@ async fn pinned_resolution_read_reuses_a_settled_prefetch() {
         .await
         .expect("the read takes the bundled manifest from the settled slot");
 
-    let manifest = resolved.manifest.expect("bundled manifest");
-    assert_eq!(manifest.get("name").and_then(serde_json::Value::as_str), Some("@fastify/error"));
+    let manifest = resolved
+        .manifest
+        .expect("bundled manifest");
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("@fastify/error")
+    );
     mock.assert_async().await;
     drop(store_dir_keep);
 }
@@ -149,10 +156,20 @@ async fn pinned_resolution_read_parks_on_an_in_flight_prefetch() {
         .run::<SilentReporter>(Some(mem_cache))
         .await
         .expect("the read parks on the in-flight extraction");
-    ingest_task.await.expect("join ingest").expect("prefetch finishes");
+    ingest_task
+        .await
+        .expect("join ingest")
+        .expect("prefetch finishes");
 
-    let manifest = resolved.manifest.expect("bundled manifest");
-    assert_eq!(manifest.get("name").and_then(serde_json::Value::as_str), Some("@fastify/error"));
+    let manifest = resolved
+        .manifest
+        .expect("bundled manifest");
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("@fastify/error")
+    );
     mock.assert_async().await;
     drop(store_dir_keep);
 }
@@ -175,7 +192,9 @@ async fn pinned_resolution_read_recovers_manifest_from_a_files_only_slot() {
     let pkg_integrity = integrity(FASTIFY_ERROR_INTEGRITY);
     let mem_cache = MemCache::default();
 
-    let cas_file = store_dir_keep.path().join("package.json");
+    let cas_file = store_dir_keep
+        .path()
+        .join("package.json");
     std::fs::write(
         &cas_file,
         r#"{"name":"@fastify/error","version":"3.3.0","dependencies":{"foo":"1.0.0"},"description":"dropped"}"#,
@@ -193,9 +212,21 @@ async fn pinned_resolution_read_recovers_manifest_from_a_files_only_slot() {
         .await
         .expect("the read takes package.json from the files-only slot");
 
-    let manifest = resolved.manifest.expect("bundled manifest");
-    assert_eq!(manifest.get("name").and_then(serde_json::Value::as_str), Some("@fastify/error"));
-    assert_eq!(manifest.get("version").and_then(serde_json::Value::as_str), Some("3.3.0"));
+    let manifest = resolved
+        .manifest
+        .expect("bundled manifest");
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("@fastify/error")
+    );
+    assert_eq!(
+        manifest
+            .get("version")
+            .and_then(serde_json::Value::as_str),
+        Some("3.3.0")
+    );
     assert_eq!(manifest["dependencies"]["foo"].as_str(), Some("1.0.0"));
     assert_eq!(manifest.get("description"), None);
     mock.assert_async().await;
@@ -220,7 +251,9 @@ async fn files_only_slot_rejects_an_oversized_cached_package_json() {
     let pkg_integrity = integrity(FASTIFY_ERROR_INTEGRITY);
     let mem_cache = MemCache::default();
 
-    let cas_file = store_dir_keep.path().join("package.json");
+    let cas_file = store_dir_keep
+        .path()
+        .join("package.json");
     let file = std::fs::File::create(&cas_file).expect("create cas package.json");
     file.set_len(MAX_UNTRUSTED_PREALLOC_BYTES as u64 + 1)
         .expect("set oversized length");

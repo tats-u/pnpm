@@ -28,8 +28,12 @@ pub(super) fn register_publication(usage: &mut ArtifactUsage, publication: &str)
             reason: "shared artifact publication concurrency limit reached".to_string(),
         });
     }
-    usage.active_publications.insert(publication.to_string());
-    usage.active_publication_times.insert(publication.to_string(), registered_now());
+    usage
+        .active_publications
+        .insert(publication.to_string());
+    usage
+        .active_publication_times
+        .insert(publication.to_string(), registered_now());
     Ok(true)
 }
 
@@ -98,7 +102,8 @@ pub(super) fn expire_stranded_publications(usage: &mut ArtifactUsage) -> bool {
     let before = usage.active_publications.len();
     let times = std::mem::take(&mut usage.active_publication_times);
     let mut stamped = false;
-    usage.active_publication_times = usage.active_publications
+    usage.active_publication_times = usage
+        .active_publications
         .iter()
         .map(|publication| {
             let registered = times
@@ -111,12 +116,16 @@ pub(super) fn expire_stranded_publications(usage: &mut ArtifactUsage) -> bool {
             (publication.clone(), registered)
         })
         .collect();
-    usage.active_publications.retain(|publication| {
-        usage.active_publication_times[publication] > expiry
-    });
-    usage.active_publication_times.retain(|publication, _| {
-        usage.active_publications.contains(publication)
-    });
+    usage
+        .active_publications
+        .retain(|publication| usage.active_publication_times[publication] > expiry);
+    usage
+        .active_publication_times
+        .retain(|publication, _| {
+            usage
+                .active_publications
+                .contains(publication)
+        });
     stamped
         || usage.active_publications.len() != before
         || times.len() != usage.active_publication_times.len()

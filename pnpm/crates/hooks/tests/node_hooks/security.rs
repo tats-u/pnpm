@@ -19,7 +19,10 @@ module.exports = {
     )
     .expect("write pnpmfile");
     let hooks = pnpm_hooks::node_runtime::NodeJsHooks::new(pnpmfile_path);
-    let fetchers = hooks.get_custom_fetchers().await.expect("load fetchers");
+    let fetchers = hooks
+        .get_custom_fetchers()
+        .await
+        .expect("load fetchers");
 
     assert_eq!(fetchers.len(), 3);
     assert!(!fetchers[0].has_can_fetch());

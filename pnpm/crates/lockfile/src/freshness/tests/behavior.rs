@@ -22,7 +22,9 @@ fn matching_across_all_three_dep_fields_satisfies() {
         "        version: 2.3.3"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -52,7 +54,9 @@ fn dep_moves_between_fields_returns_dep_specifier_mismatch() {
         "        version: 5.1.6"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -74,10 +78,14 @@ fn dep_moves_between_fields_returns_dep_specifier_mismatch() {
 #[test]
 fn spec_diff_display_lists_added_removed_modified() {
     let mut diff = super::super::SpecDiff::default();
-    diff.added.insert("lodash".to_string(), "^4.0.0".to_string());
-    diff.added.insert("ramda".to_string(), "^0.30.0".to_string());
-    diff.removed.insert("underscore".to_string(), "^1.0.0".to_string());
-    diff.modified.insert("react".to_string(), ("^17.0.2".to_string(), "^18.0.0".to_string()));
+    diff.added
+        .insert("lodash".to_string(), "^4.0.0".to_string());
+    diff.added
+        .insert("ramda".to_string(), "^0.30.0".to_string());
+    diff.removed
+        .insert("underscore".to_string(), "^1.0.0".to_string());
+    diff.modified
+        .insert("react".to_string(), ("^17.0.2".to_string(), "^18.0.0".to_string()));
     let rendered = diff.to_string();
     assert!(rendered.contains("2 dependencies were added: "));
     assert!(rendered.contains("1 dependency was removed: underscore@^1.0.0"));
@@ -101,7 +109,9 @@ fn cross_field_swap_with_same_cardinalities_caught_by_per_field_check() {
         "        version: 5.1.6"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -121,10 +131,14 @@ fn cross_field_swap_with_same_cardinalities_caught_by_per_field_check() {
 #[test]
 fn spec_diff_display_lists_plural_removed_and_modified_with_separators() {
     let mut diff = super::super::SpecDiff::default();
-    diff.removed.insert("alpha".to_string(), "^1.0.0".to_string());
-    diff.removed.insert("beta".to_string(), "^2.0.0".to_string());
-    diff.modified.insert("gamma".to_string(), ("^3.0.0".to_string(), "^4.0.0".to_string()));
-    diff.modified.insert("delta".to_string(), ("^0.1.0".to_string(), "^0.2.0".to_string()));
+    diff.removed
+        .insert("alpha".to_string(), "^1.0.0".to_string());
+    diff.removed
+        .insert("beta".to_string(), "^2.0.0".to_string());
+    diff.modified
+        .insert("gamma".to_string(), ("^3.0.0".to_string(), "^4.0.0".to_string()));
+    diff.modified
+        .insert("delta".to_string(), ("^0.1.0".to_string(), "^0.2.0".to_string()));
     let rendered = diff.to_string();
     assert!(rendered.contains("2 dependencies were removed: "), "got: {rendered:?}");
     assert!(
@@ -138,7 +152,8 @@ fn spec_diff_display_lists_plural_removed_and_modified_with_separators() {
 #[test]
 fn spec_diff_display_uses_singular_for_count_of_one() {
     let mut diff = super::super::SpecDiff::default();
-    diff.added.insert("foo".to_string(), "^1.0.0".to_string());
+    diff.added
+        .insert("foo".to_string(), "^1.0.0".to_string());
     let rendered = diff.to_string();
     assert!(
         rendered.contains("1 dependency was added: "),
@@ -159,7 +174,9 @@ fn same_dep_in_prod_and_dev_counts_under_prod() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",

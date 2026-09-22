@@ -160,8 +160,10 @@ pub fn run_build_phase<Reporter: self::Reporter>(
     // (pnpm/pacquet#342). Resolves direct-over-hoisted precedence and
     // shims lifecycle-script-created bins that didn't exist at extract
     // time. Idempotent for unchanged shims. Runs after `buildModules`.
-    let modules_dir_basename: &OsStr =
-        config.modules_dir.file_name().unwrap_or_else(|| OsStr::new("node_modules"));
+    let modules_dir_basename: &OsStr = config
+        .modules_dir
+        .file_name()
+        .unwrap_or_else(|| OsStr::new("node_modules"));
     for (importer_id, importer_snapshot) in inputs.graph.importers {
         link_importer_top_level_bins(
             inputs,
@@ -191,11 +193,16 @@ fn build_or_defer<Reporter: self::Reporter>(
         && patches.is_none_or(HashMap::is_empty)
         && (!config.side_effects_cache_read() || inputs.cache.maps_by_snapshot.is_empty());
     let build_output = if can_defer_without_build_modules {
-        let newly_deferred = inputs.graph.materialized_snapshots
+        let newly_deferred = inputs
+            .graph
+            .materialized_snapshots
             .iter()
             .filter(|snapshot_key| !inputs.skipped.contains(snapshot_key))
             .filter_map(|snapshot_key| {
-                inputs.cache.requires_build_by_snapshot.get_key_value(snapshot_key)
+                inputs
+                    .cache
+                    .requires_build_by_snapshot
+                    .get_key_value(snapshot_key)
             });
         crate::BuildModulesOutput {
             ignored_builds: Vec::new(),
@@ -224,7 +231,9 @@ fn build_modules<'a>(
             maps_by_snapshot: Some(inputs.cache.maps_by_snapshot),
             engine_name: inputs.cache.engine_name,
             read: config.side_effects_cache_read()
-                || config.remote_side_effects_cache.is_some(),
+                || config
+                    .remote_side_effects_cache
+                    .is_some(),
             write: config.side_effects_cache_write(),
             publisher: shared_side_effects_publisher,
             store_dir: Some(&config.store_dir),
@@ -233,7 +242,9 @@ fn build_modules<'a>(
         },
         directories: crate::BuildLayout {
             layout: inputs.directories.layout,
-            pkg_roots_by_key: inputs.directories.hoisted_pkg_roots_by_key,
+            pkg_roots_by_key: inputs
+                .directories
+                .hoisted_pkg_roots_by_key,
             gather_ancestor_bin_paths: inputs.directories.is_hoisted,
             modules_dir: &config.modules_dir,
             lockfile_dir: inputs.directories.workspace_root,
@@ -271,7 +282,9 @@ fn link_importer_top_level_bins(
     // `<root>/node_modules/<alias>`, so only the root importer's `.bin`
     // sees `BinOrigin::Hoisted` candidates.
     let hoisted_names: &[String] = if importer_id == Lockfile::ROOT_IMPORTER_KEY {
-        inputs.directories.publicly_hoisted_for_post_build
+        inputs
+            .directories
+            .publicly_hoisted_for_post_build
     } else {
         &[]
     };
@@ -291,7 +304,11 @@ fn link_importer_top_level_bins(
     // dangling shims at a slot that was never extracted).
     let direct_names = direct_dep_names_for_importer(
         importer_snapshot,
-        inputs.graph.dependency_groups.iter().copied(),
+        inputs
+            .graph
+            .dependency_groups
+            .iter()
+            .copied(),
         inputs.skipped,
         false,
     );

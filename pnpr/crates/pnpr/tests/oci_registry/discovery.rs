@@ -36,14 +36,23 @@ async fn a_name_no_hosted_registry_claims_is_not_served() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-    assert_eq!(get(&app, "/v2/other/app/tags/list").await.status(), StatusCode::NOT_FOUND);
+    assert_eq!(
+        get(&app, "/v2/other/app/tags/list")
+            .await
+            .status(),
+        StatusCode::NOT_FOUND
+    );
 }
 
 #[tokio::test]
 async fn the_catalog_omits_repositories_the_caller_may_not_read() {
     let tmp = TempDir::new().unwrap();
     let mut config = oci_config(tmp.path().to_path_buf(), "$all");
-    let hosted = config.routing.hosted.get_mut("images").expect("the hosted image registry");
+    let hosted = config
+        .routing
+        .hosted
+        .get_mut("images")
+        .expect("the hosted image registry");
     // Reads are open by default, and `acme/secret` refines that to require a
     // caller. A listing must apply the same rule its fetches would.
     hosted.rules = PackageRules::new(

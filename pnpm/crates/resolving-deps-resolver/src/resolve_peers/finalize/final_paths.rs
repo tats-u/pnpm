@@ -15,7 +15,9 @@ impl Walker<'_> {
         let cyclic_peer_names = self.cyclic_peer_names();
         let mut final_dep_paths: HashMap<NodeId, DepPath> = HashMap::default();
         let mut visiting = HashSet::default();
-        let mut node_ids: Vec<NodeId> = self.nodes.external_peers
+        let mut node_ids: Vec<NodeId> = self
+            .nodes
+            .external_peers
             .keys()
             .cloned()
             .collect();
@@ -118,16 +120,25 @@ impl Walker<'_> {
             let pkg = &self.tree.packages[&tree_node.resolved_package_id];
             peer_id_pair(&pkg.result)
         };
-        if self.opts.dedupe_peers && self.tree.dependencies_tree.contains_key(peer_node_id) {
+        if self.opts.dedupe_peers
+            && self
+                .tree
+                .dependencies_tree
+                .contains_key(peer_node_id)
+        {
             return pair();
         }
-        if context.scc_of
+        if context
+            .scc_of
             .get(node_id)
             .is_some_and(|node_scc| context.scc_of.get(peer_node_id) == Some(node_scc))
         {
             return pair();
         }
-        if context.cyclic_peer_names.contains(peer_alias) {
+        if context
+            .cyclic_peer_names
+            .contains(peer_alias)
+        {
             return pair();
         }
         PeerId::DepPath(self.final_dep_path_for_node(
@@ -150,7 +161,8 @@ impl Walker<'_> {
         if !self.opts.scope.collect_paths_by_node_id {
             return HashMap::default();
         }
-        self.caches.node_dep_paths
+        self.caches
+            .node_dep_paths
             .keys()
             .map(|node_id| (node_id.clone(), self.final_dep_path_of(node_id, final_dep_paths)))
             .collect()
@@ -169,7 +181,10 @@ impl Walker<'_> {
             next_index: 0,
         };
         for name in graph.keys() {
-            if !tarjan.index_of.contains_key(name.as_str()) {
+            if !tarjan
+                .index_of
+                .contains_key(name.as_str())
+            {
                 tarjan.strongconnect(name);
             }
         }
@@ -228,16 +243,23 @@ impl Walker<'_> {
     /// in [`Self::final_peer_id`]: a cycle through a cache-hit
     /// occurrence is a cycle through its owner.
     pub(super) fn peer_sccs(&self) -> (Vec<Vec<NodeId>>, HashMap<NodeId, usize>) {
-        let mut participants: Vec<NodeId> = self.nodes.external_peers
+        let mut participants: Vec<NodeId> = self
+            .nodes
+            .external_peers
             .iter()
             .filter(|(_, peers)| !peers.is_empty())
-            .map(|(node_id, _)| self.cache_owner_node_id(node_id).clone())
+            .map(|(node_id, _)| {
+                self.cache_owner_node_id(node_id)
+                    .clone()
+            })
             .collect();
         participants.sort();
         participants.dedup();
         let participant_set: HashSet<NodeId> = participants.iter().cloned().collect();
         let neighbors = |node_id: &NodeId| -> Vec<NodeId> {
-            let mut out: Vec<NodeId> = self.nodes.external_peers
+            let mut out: Vec<NodeId> = self
+                .nodes
+                .external_peers
                 .get(node_id)
                 .into_iter()
                 .flat_map(|peers| peers.values())

@@ -21,10 +21,20 @@ fn tree(name: &str, version: &str, dependents: Vec<DependentNode>) -> Dependents
 }
 
 fn importer(name: &str, version: &str, dep_field: DepField) -> DependentNode {
+    importer_with_requires(name, version, dep_field, None)
+}
+
+fn importer_with_requires(
+    name: &str,
+    version: &str,
+    dep_field: DepField,
+    requires: Option<&str>,
+) -> DependentNode {
     DependentNode {
         name: name.to_string(),
         display_name: None,
         version: version.to_string(),
+        requires: requires.map(str::to_string),
         circular: false,
         peers_suffix_hash: None,
         deduped: false,
@@ -35,7 +45,17 @@ fn importer(name: &str, version: &str, dep_field: DepField) -> DependentNode {
 }
 
 fn package(name: &str, version: &str, dependents: Vec<DependentNode>) -> DependentNode {
+    package_with_requires(name, version, None, dependents)
+}
+
+fn package_with_requires(
+    name: &str,
+    version: &str,
+    requires: Option<&str>,
+    dependents: Vec<DependentNode>,
+) -> DependentNode {
     DependentNode {
+        requires: requires.map(str::to_string),
         dep_field: None,
         dependents: Some(dependents),
         ..importer(name, version, DepField::Dependencies)
@@ -48,12 +68,23 @@ fn deep_tree() -> Vec<DependentsTree> {
         "target",
         "1.0.0",
         vec![
-            package(
+            package_with_requires(
                 "mid-a",
                 "2.0.0",
-                vec![importer("root-project", "0.0.0", DepField::Dependencies)],
+                Some("^2.0.0"),
+                vec![importer_with_requires(
+                    "root-project",
+                    "0.0.0",
+                    DepField::Dependencies,
+                    Some("workspace:*"),
+                )],
             ),
-            importer("root-project", "0.0.0", DepField::DevDependencies),
+            importer_with_requires(
+                "root-project",
+                "0.0.0",
+                DepField::DevDependencies,
+                Some("1.0.0"),
+            ),
         ],
     )]
 }
@@ -184,6 +215,32 @@ fn renders_package_with_no_dependents_and_a_search_message() {
     assert_eq!(lines[1], "Found via license check");
 }
 
+#[test]
+fn renders_requires_in_tree_output() {
+    let results = vec![tree(
+        "target",
+        "1.0.0",
+        vec![package_with_requires(
+            "mid-a",
+            "2.0.0",
+            Some("^2.0.0"),
+            vec![importer_with_requires(
+                "root-project",
+                "0.0.0",
+                DepField::Dependencies,
+                Some("workspace:*"),
+            )],
+        )],
+    )];
+
+    let output = render_dependents_tree(&results, &opts(None));
+    assert!(output.contains("mid-a@2.0.0 (requires ^2.0.0)"), "output: {output}");
+    assert!(
+        output.contains("root-project@0.0.0 (dependencies) (requires workspace:*)"),
+        "output: {output}",
+    );
+}
+
 // Port of upstream's 'whySummary > single package, single version' (deps/inspection/list/test/renderDependentsTree.test.ts).
 #[test]
 fn why_summary_single_package_single_version() {
@@ -294,7 +351,9 @@ fn depth_truncates_dependents_in_json_output() {
     let trees = parsed.as_array().expect("JSON array");
     assert_eq!(trees.len(), 1);
     // Direct dependents (depth 0) should be present.
-    let dependents = trees[0]["dependents"].as_array().expect("dependents array");
+    let dependents = trees[0]["dependents"]
+        .as_array()
+        .expect("dependents array");
     assert_eq!(dependents.len(), 2);
     // mid-a should have its dependents stripped (depth 1 is beyond the limit).
     let mid_a = dependents
@@ -316,12 +375,16 @@ fn depth_truncates_dependents_in_json_output() {
 fn no_depth_option_preserves_full_dependents_in_json_output() {
     let parsed: Value = serde_json::from_str(&render_dependents_json(&deep_tree(), &opts(None)))
         .expect("valid JSON");
-    let dependents = parsed[0]["dependents"].as_array().expect("dependents array");
+    let dependents = parsed[0]["dependents"]
+        .as_array()
+        .expect("dependents array");
     let mid_a = dependents
         .iter()
         .find(|dep| dep["name"] == "mid-a")
         .expect("mid-a present");
-    let mid_a_dependents = mid_a["dependents"].as_array().expect("mid-a dependents array");
+    let mid_a_dependents = mid_a["dependents"]
+        .as_array()
+        .expect("mid-a dependents array");
     assert_eq!(mid_a_dependents.len(), 1);
     assert_eq!(mid_a_dependents[0]["name"], "root-project");
 }
@@ -354,7 +417,11 @@ fn includes_display_name_in_json_output() {
     // Nodes without displayName should not have the field.
     let importer_node = &parsed[0]["dependents"][0]["dependents"][0];
     dbg!(importer_node);
-    assert!(importer_node.get("displayName").is_none());
+    assert!(
+        importer_node
+            .get("displayName")
+            .is_none()
+    );
 }
 
 // Port of upstream's 'renderDependentsJson > does not include searchMessage when undefined' (deps/inspection/list/test/renderDependentsTree.test.ts).
@@ -368,6 +435,30 @@ fn does_not_include_search_message_when_undefined() {
     assert!(parsed[0].get("searchMessage").is_none());
 }
 
+#[test]
+fn includes_requires_in_json_output() {
+    let results = vec![tree(
+        "target",
+        "1.0.0",
+        vec![package_with_requires(
+            "mid-a",
+            "2.0.0",
+            Some("^2.0.0"),
+            vec![importer_with_requires(
+                "root-project",
+                "0.0.0",
+                DepField::Dependencies,
+                Some("workspace:*"),
+            )],
+        )],
+    )];
+
+    let parsed: Value =
+        serde_json::from_str(&render_dependents_json(&results, &opts(None))).expect("valid JSON");
+    assert_eq!(parsed[0]["dependents"][0]["requires"], "^2.0.0");
+    assert_eq!(parsed[0]["dependents"][0]["dependents"][0]["requires"], "workspace:*");
+}
+
 // Port of upstream's 'renderDependentsParseable > depth limits parseable output depth' (deps/inspection/list/test/renderDependentsTree.test.ts).
 #[test]
 fn depth_limits_parseable_output_depth() {
@@ -377,8 +468,8 @@ fn depth_limits_parseable_output_depth() {
     eprintln!("output:\n{output}");
     // With depth 1, mid-a cannot recurse further — it becomes a leaf.
     assert_eq!(lines.len(), 2);
-    assert!(lines.contains(&"mid-a@2.0.0 > target@1.0.0"));
-    assert!(lines.contains(&"root-project@0.0.0 > target@1.0.0"));
+    assert!(lines.contains(&"mid-a@2.0.0 > target@1.0.0 (by ^2.0.0)"));
+    assert!(lines.contains(&"root-project@0.0.0 > target@1.0.0 (by 1.0.0)"));
 }
 
 // Port of upstream's 'renderDependentsParseable > no depth option renders full paths in parseable output' (deps/inspection/list/test/renderDependentsTree.test.ts).
@@ -390,8 +481,12 @@ fn no_depth_option_renders_full_paths_in_parseable_output() {
     eprintln!("output:\n{output}");
     // Without depth limit, mid-a is expanded to root-project.
     assert_eq!(lines.len(), 2);
-    assert!(lines.contains(&"root-project@0.0.0 > mid-a@2.0.0 > target@1.0.0"));
-    assert!(lines.contains(&"root-project@0.0.0 > target@1.0.0"));
+    assert!(
+        lines.contains(
+            &"root-project@0.0.0 > mid-a@2.0.0 (by workspace:*) > target@1.0.0 (by ^2.0.0)",
+        ),
+    );
+    assert!(lines.contains(&"root-project@0.0.0 > target@1.0.0 (by 1.0.0)"));
 }
 
 // Port of upstream's 'renderDependentsParseable > uses displayName in parseable output' (deps/inspection/list/test/renderDependentsTree.test.ts).
@@ -404,17 +499,26 @@ fn uses_display_name_in_parseable_output() {
             "1.0.0",
             vec![DependentNode {
                 display_name: Some("other-component".to_string()),
-                ..package(
+                ..package_with_requires(
                     "bar",
                     "2.0.0",
-                    vec![importer("my-project", "0.0.0", DepField::Dependencies)],
+                    Some("^2.0.0"),
+                    vec![importer_with_requires(
+                        "my-project",
+                        "0.0.0",
+                        DepField::Dependencies,
+                        Some("workspace:*"),
+                    )],
                 )
             }],
         )
     }];
 
     let output = render_dependents_parseable(&results, &opts(None));
-    assert_eq!(output, "my-project@0.0.0 > other-component@2.0.0 > my-component@1.0.0");
+    assert_eq!(
+        output,
+        "my-project@0.0.0 > other-component@2.0.0 (by workspace:*) > my-component@1.0.0 (by ^2.0.0)",
+    );
 }
 
 // Port of upstream's 'renderDependentsParseable > renders parseable output with searchMessage result' (deps/inspection/list/test/renderDependentsTree.test.ts).

@@ -54,7 +54,9 @@ pub fn write_pending_changelog(
 pub fn list_pending_changelogs(
     workspace_dir: &Path,
 ) -> Result<Vec<(String, String)>, VersioningError> {
-    let dir = workspace_dir.join(CHANGES_DIR).join(PENDING_CHANGELOGS_DIR);
+    let dir = workspace_dir
+        .join(CHANGES_DIR)
+        .join(PENDING_CHANGELOGS_DIR);
     let entries = match fs::read_dir(&dir) {
         Ok(entries) => entries,
         Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Vec::new()),

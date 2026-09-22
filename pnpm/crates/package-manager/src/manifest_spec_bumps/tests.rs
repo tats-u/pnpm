@@ -20,7 +20,9 @@ fn lockfile(source: &str) -> Lockfile {
 
 fn specifier_of(group: Option<&ResolvedDependencyMap>, alias: &str) -> String {
     let alias = PkgName::parse(alias).expect("parse the alias");
-    group.expect("the group is declared")[&alias].specifier.clone()
+    group.expect("the group is declared")[&alias]
+        .specifier
+        .clone()
 }
 
 fn bumps(targets: &[(&str, DependencyGroup, &str)]) -> ManifestSpecBumps {
@@ -40,7 +42,9 @@ fn bump(declared: &str, version: &str) -> Option<String> {
 }
 
 fn bump_under(alias: &str, declared: &str, version: &str) -> Option<String> {
-    let version = version.parse::<ImporterDepVersion>().expect("parse the resolved version");
+    let version = version
+        .parse::<ImporterDepVersion>()
+        .expect("parse the resolved version");
     bumped_range(alias, declared, &version, RangeSpecStyle::Major)
 }
 
@@ -235,7 +239,10 @@ importers:
 
     let importer = &lockfile.importers["."];
     assert_eq!(specifier_of(importer.dev_dependencies.as_ref(), "node"), "runtime:^26.9.0");
-    let applied = bumps.applied.into_inner().expect("never poisoned");
+    let applied = bumps
+        .applied
+        .into_inner()
+        .expect("never poisoned");
     let expected = (DependencyGroup::Dev, "runtime:^26.9.0".to_string());
     assert_eq!(applied.manifests["."]["node"], expected);
 }
@@ -267,7 +274,10 @@ importers:
     let importer = &lockfile.importers["."];
     assert_eq!(specifier_of(importer.dev_dependencies.as_ref(), "foo"), "^2.1.0");
     assert_eq!(specifier_of(importer.dependencies.as_ref(), "foo"), "^1.0.0");
-    let applied = bumps.applied.into_inner().expect("never poisoned");
+    let applied = bumps
+        .applied
+        .into_inner()
+        .expect("never poisoned");
     let expected = (DependencyGroup::Dev, "^2.1.0".to_string());
     assert_eq!(applied.manifests["."]["foo"], expected);
 }
@@ -292,9 +302,18 @@ importers:
     let bumps = bumps(&[("foo", DependencyGroup::Prod, "catalog:")]);
     apply_manifest_spec_bumps(&mut lockfile, &bumps, None);
 
-    assert_eq!(specifier_of(lockfile.importers["."].dependencies.as_ref(), "foo"), "^1.0.0");
+    assert_eq!(
+        specifier_of(
+            lockfile.importers["."]
+                .dependencies
+                .as_ref(),
+            "foo"
+        ),
+        "^1.0.0"
+    );
     assert!(
-        bumps.applied
+        bumps
+            .applied
             .into_inner()
             .expect("never poisoned")
             .is_empty(),
@@ -345,13 +364,30 @@ importers:
 
     let unclaimed = bumps(&[("foo", DependencyGroup::Prod, "^100.0.0")]);
     apply_manifest_spec_bumps(&mut lockfile, &unclaimed, Some(&overridden));
-    assert_eq!(specifier_of(lockfile.importers["."].dependencies.as_ref(), "foo"), "^100.1.0");
+    assert_eq!(
+        specifier_of(
+            lockfile.importers["."]
+                .dependencies
+                .as_ref(),
+            "foo"
+        ),
+        "^100.1.0"
+    );
 
     let claimed = bumps(&[("foo", DependencyGroup::Dev, "^1.0.0")]);
     apply_manifest_spec_bumps(&mut lockfile, &claimed, Some(&overridden));
-    assert_eq!(specifier_of(lockfile.importers["."].dev_dependencies.as_ref(), "foo"), "^1.0.0");
+    assert_eq!(
+        specifier_of(
+            lockfile.importers["."]
+                .dev_dependencies
+                .as_ref(),
+            "foo"
+        ),
+        "^1.0.0"
+    );
     assert!(
-        claimed.applied
+        claimed
+            .applied
             .into_inner()
             .expect("never poisoned")
             .is_empty(),

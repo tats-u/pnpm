@@ -25,7 +25,11 @@ pub fn config_dir(
     if os == "windows"
         && let Some(local_app_data) = local_app_data
     {
-        return Some(Path::new(local_app_data).join(app_name).join("config"));
+        return Some(
+            Path::new(local_app_data)
+                .join(app_name)
+                .join("config"),
+        );
     }
     let home = home()?;
     Some(match os {

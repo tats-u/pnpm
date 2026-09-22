@@ -9,7 +9,9 @@ async fn calculate_pnpmfile_checksum_hashes_normalized_contents_when_hooks_expor
     std::fs::write(&pnpmfile_path, src).expect("write pnpmfile");
 
     let hooks = pnpm_hooks::node_runtime::NodeJsHooks::new(pnpmfile_path);
-    let checksum = hooks.calculate_pnpmfile_checksum().await;
+    let checksum = hooks
+        .calculate_pnpmfile_checksum()
+        .await;
 
     assert_eq!(checksum, Some(pnpm_crypto_hash::create_hash(src)));
 }
@@ -22,7 +24,12 @@ async fn calculate_pnpmfile_checksum_is_none_when_no_hooks_exported() {
 
     let hooks = pnpm_hooks::node_runtime::NodeJsHooks::new(pnpmfile_path);
 
-    assert_eq!(hooks.calculate_pnpmfile_checksum().await, None);
+    assert_eq!(
+        hooks
+            .calculate_pnpmfile_checksum()
+            .await,
+        None
+    );
 }
 
 /// No pnpmfile means no checksum, so a lockfile that records one is

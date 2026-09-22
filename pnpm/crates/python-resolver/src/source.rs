@@ -27,12 +27,12 @@ impl Source {
         let mut url: Url = source.parse().into_diagnostic()?;
         validate_url(&url)?;
         let sha256 = fragment(&url, "sha256")?.map(|digest| digest.to_ascii_lowercase());
-        if sha256
-            .as_ref()
-            .is_some_and(|digest| {
-                digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit())
-            })
-        {
+        if sha256.as_ref().is_some_and(|digest| {
+            digest.len() != 64
+                || !digest
+                    .bytes()
+                    .all(|byte| byte.is_ascii_hexdigit())
+        }) {
             bail!("invalid SHA-256 digest in Python source URL");
         }
         url.set_fragment(None);
@@ -75,7 +75,10 @@ fn parse_git(repository: &str) -> Result<LockedVcs> {
         bail!("invalid Python git revision {revision:?}");
     }
     url.set_path(path);
-    let commit_id = if revision.len() == 40 && revision.bytes().all(|byte| byte.is_ascii_hexdigit())
+    let commit_id = if revision.len() == 40
+        && revision
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
     {
         revision.to_ascii_lowercase()
     } else {

@@ -38,7 +38,8 @@ pub(crate) fn assert_loaded_current_lockfile_records(
 ) -> Result<(), &'static str> {
     match current {
         None => {
-            let any_deps = wanted.importers
+            let any_deps = wanted
+                .importers
                 .values()
                 .any(|snapshot| {
                     snapshot

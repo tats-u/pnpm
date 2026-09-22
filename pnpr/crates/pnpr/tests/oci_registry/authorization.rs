@@ -37,7 +37,11 @@ async fn reads_of_a_private_repository_are_kept_out_of_shared_caches() {
 async fn deletion_requires_read_access_even_with_a_permissive_unpublish_rule() {
     let tmp = TempDir::new().unwrap();
     let mut config = oci_config(tmp.path().to_path_buf(), "alice");
-    let hosted = config.routing.hosted.get_mut("images").unwrap();
+    let hosted = config
+        .routing
+        .hosted
+        .get_mut("images")
+        .unwrap();
     hosted.rules =
         std::mem::take(&mut hosted.rules).with_default_unpublish(AccessList::from_tokens(["$all"]));
     let app = router_with_auth(config, AuthState::in_memory());

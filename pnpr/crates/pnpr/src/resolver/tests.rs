@@ -51,17 +51,20 @@ fn deps(entries: &[(&str, &str)]) -> BTreeMap<String, String> {
 
 fn registry_config() -> RegistryConfig {
     RegistryConfig::proxy(
-        "127.0.0.1:7677".parse::<SocketAddr>().unwrap(),
+        "127.0.0.1:7677"
+            .parse::<SocketAddr>()
+            .unwrap(),
         PathBuf::from("/tmp/pnpr-resolver-cache-test"),
     )
 }
 
 fn public_registry_config(registry: &str) -> RegistryConfig {
     let mut config = registry_config();
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(registry.to_string()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(registry.to_string()), package: None });
     config
 }
 
@@ -97,10 +100,8 @@ fn upstream_with_access(registry: &str, access: &str) -> UpstreamConfig {
 
 fn upstream_with_token(registry: &str, access: &str, token: &'static str) -> UpstreamConfig {
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(
-        reqwest::header::AUTHORIZATION,
-        reqwest::header::HeaderValue::from_static(token),
-    );
+    headers
+        .insert(reqwest::header::AUTHORIZATION, reqwest::header::HeaderValue::from_static(token));
     let mut upstream = UpstreamConfig::with_defaults(registry.to_string(), headers);
     upstream.access = Some(AccessList::from_tokens([access]));
     upstream
@@ -137,7 +138,9 @@ fn set_local_hosted_rules(config: &mut RegistryConfig, pattern: &str, access: &s
         }],
         None,
     );
-    config.routing.hosted
+    config
+        .routing
+        .hosted
         .get_mut("local")
         .expect("proxy config has a local hosted registry")
         .rules = rules;
@@ -156,10 +159,8 @@ fn package_lockfile(name: &str, version: &str) -> Lockfile {
         }),
     );
     let mut dependencies = serde_json::Map::new();
-    dependencies.insert(
-        name.to_string(),
-        serde_json::json!({ "specifier": "^1.0.0", "version": version }),
-    );
+    dependencies
+        .insert(name.to_string(), serde_json::json!({ "specifier": "^1.0.0", "version": version }));
     serde_json::from_value(serde_json::json!({
         "lockfileVersion": "9.0",
         "importers": {

@@ -192,7 +192,10 @@ fn read_git_metadata_file(path: &Path) -> GitMetadata {
         // names something git would have to get past too.
         Err(_) => return GitMetadata::Refused,
     };
-    if !file.metadata().is_ok_and(|metadata| metadata.is_file()) {
+    if !file
+        .metadata()
+        .is_ok_and(|metadata| metadata.is_file())
+    {
         return GitMetadata::Refused;
     }
     // A bounded reader rather than a size check keeps the cap race-free:

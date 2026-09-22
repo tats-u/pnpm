@@ -354,12 +354,18 @@ where
     let with_bin = children_with_bins(snapshot, context.sets.has_bin);
     let self_metadata_key = slot_key.without_peer();
     let self_has_bin = declares_bin(context.sets.has_bin, &self_metadata_key);
-    let self_bundles = context.sets.bundling.contains(&self_metadata_key);
+    let self_bundles = context
+        .sets
+        .bundling
+        .contains(&self_metadata_key);
     if with_bin.is_empty() && !self_has_bin && !self_bundles {
         return Ok(());
     }
 
-    let modules_dir = context.layout.slot_dir(slot_key).join("node_modules");
+    let modules_dir = context
+        .layout
+        .slot_dir(slot_key)
+        .join("node_modules");
     let self_pkg_dir = slot_own_pkg_dir(&modules_dir, slot_key);
     let bins_dir = self_pkg_dir.join("node_modules/.bin");
 
@@ -414,7 +420,10 @@ fn push_child_bin_sources<Sys: FsReadFile>(
             // without touching the filesystem, so the shim `NODE_PATH`
             // derivation never has to `realpath`.
             pkg_dir_under(
-                &context.layout.slot_dir(&child_key).join("node_modules"),
+                &context
+                    .layout
+                    .slot_dir(&child_key)
+                    .join("node_modules"),
                 &child_key.name,
             ),
         )?;
@@ -438,10 +447,16 @@ fn children_with_bins<'a>(
     snapshot: &'a SnapshotEntry,
     has_bin_set: Option<&HashSet<PackageKey>>,
 ) -> Vec<(&'a PkgName, PackageKey, PackageKey)> {
-    snapshot.dependencies
+    snapshot
+        .dependencies
         .iter()
         .flatten()
-        .chain(snapshot.optional_dependencies.iter().flatten())
+        .chain(
+            snapshot
+                .optional_dependencies
+                .iter()
+                .flatten(),
+        )
         .filter_map(|(alias, dep_ref)| {
             let child_key = dep_ref.resolve(alias)?;
             let metadata_key = child_key.without_peer();

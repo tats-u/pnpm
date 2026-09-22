@@ -82,7 +82,8 @@ impl RuntimeArgs {
     pub async fn run<Reporter: self::Reporter + 'static>(self, state: State) -> miette::Result<()> {
         let request = self.set_request()?;
         let config = state.config;
-        let prefix = state.manifest
+        let prefix = state
+            .manifest
             .path()
             .parent()
             .expect("manifest path has a parent")
@@ -145,7 +146,8 @@ impl RuntimeArgs {
         if subcommand != "set" {
             return Err(RuntimeError::UnknownSubcommand { subcommand: subcommand.clone() });
         }
-        let runtime_name = self.params
+        let runtime_name = self
+            .params
             .get(1)
             .map(|name| name.trim())
             .filter(|name| !name.is_empty())
@@ -157,7 +159,10 @@ impl RuntimeArgs {
         if !is_runtime_alias(runtime_name) {
             return Err(RuntimeError::InvalidRuntimeName { name: runtime_name.to_string() });
         }
-        let version_spec = self.params.get(2).map_or("", |version| version.trim());
+        let version_spec = self
+            .params
+            .get(2)
+            .map_or("", |version| version.trim());
         // The version is interpolated into the same `<name>@runtime:<version>`
         // selector, which the global-add pipeline splits on commas. Reject a
         // comma so `runtime set node 22,evil -g` can't smuggle in a second

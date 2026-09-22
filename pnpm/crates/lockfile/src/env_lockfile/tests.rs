@@ -28,7 +28,8 @@ fn pkg_metadata(integrity_source: &[u8]) -> PackageMetadata {
 
 fn sample_env_lockfile() -> EnvLockfile {
     let mut env = EnvLockfile::create();
-    env.root_importer_mut().config_dependencies
+    env.root_importer_mut()
+        .config_dependencies
         .insert(
             "@pnpm.e2e/foo".to_string(),
             SpecifierAndResolution {
@@ -37,8 +38,10 @@ fn sample_env_lockfile() -> EnvLockfile {
             },
         );
     let key: PackageKey = "@pnpm.e2e/foo@100.0.0".parse().unwrap();
-    env.packages.insert(key.clone(), pkg_metadata(b"foo-tarball"));
-    env.snapshots.insert(key, SnapshotEntry::default());
+    env.packages
+        .insert(key.clone(), pkg_metadata(b"foo-tarball"));
+    env.snapshots
+        .insert(key, SnapshotEntry::default());
     env
 }
 
@@ -55,7 +58,9 @@ fn write_then_read_round_trips() {
     assert!(raw.contains("configDependencies:"));
     assert!(raw.contains("@pnpm.e2e/foo"));
 
-    let read_back = EnvLockfile::read(dir.path()).unwrap().expect("env document present");
+    let read_back = EnvLockfile::read(dir.path())
+        .unwrap()
+        .expect("env document present");
     assert_eq!(read_back, env);
 }
 
@@ -65,7 +70,9 @@ fn reads_non_numeric_lockfile_version() {
     let combined = "---\nlockfileVersion: env-1.0\nimporters:\n  .:\n    configDependencies:\n      typescript:\n        specifier: 5.0.0\n        version: 5.0.0\npackages: {}\nsnapshots: {}\n---\n";
     std::fs::write(dir.path().join(Lockfile::FILE_NAME), combined).unwrap();
 
-    let env = EnvLockfile::read(dir.path()).unwrap().expect("env document parses");
+    let env = EnvLockfile::read(dir.path())
+        .unwrap()
+        .expect("env document parses");
     assert_eq!(env.lockfile_version, "env-1.0");
     assert_eq!(
         env.importers[EnvLockfile::ROOT_IMPORTER_KEY].config_dependencies["typescript"].version,
@@ -79,10 +86,14 @@ fn reads_a_crlf_combined_lockfile() {
     let env = sample_env_lockfile();
     env.write(dir.path()).unwrap();
     let path = dir.path().join(Lockfile::FILE_NAME);
-    let crlf = std::fs::read_to_string(&path).unwrap().replace('\n', "\r\n");
+    let crlf = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace('\n', "\r\n");
     std::fs::write(&path, crlf).unwrap();
 
-    let read_back = EnvLockfile::read(dir.path()).unwrap().expect("env document present");
+    let read_back = EnvLockfile::read(dir.path())
+        .unwrap()
+        .expect("env document present");
     assert_eq!(read_back, env);
 }
 
@@ -92,14 +103,17 @@ fn write_preserves_existing_main_document() {
     let main = "lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      is-odd:\n        specifier: 1.0.0\n        version: 1.0.0\n";
     std::fs::write(dir.path().join(Lockfile::FILE_NAME), main).unwrap();
 
-    sample_env_lockfile().write(dir.path()).unwrap();
+    sample_env_lockfile()
+        .write(dir.path())
+        .unwrap();
 
     let raw = std::fs::read_to_string(dir.path().join(Lockfile::FILE_NAME)).unwrap();
     assert!(extract_env_document(&raw).is_some());
     assert!(raw.contains("is-odd:"), "main document content must survive the env write");
 
-    let loaded =
-        Lockfile::load_wanted_from_dir(dir.path()).unwrap().expect("main lockfile present");
+    let loaded = Lockfile::load_wanted_from_dir(dir.path())
+        .unwrap()
+        .expect("main lockfile present");
     assert!(loaded.root_project().is_some());
 }
 
@@ -115,7 +129,9 @@ fn read_symlinked_lockfile() {
     .unwrap();
     std::os::unix::fs::symlink(&real_lockfile, dir.path().join(Lockfile::FILE_NAME)).unwrap();
 
-    let env = EnvLockfile::read(dir.path()).unwrap().expect("env document parses");
+    let env = EnvLockfile::read(dir.path())
+        .unwrap()
+        .expect("env document parses");
 
     assert_eq!(env.lockfile_version, "9.0");
 }
@@ -134,7 +150,8 @@ fn write_accepts_symlinked_lockfile_when_unchanged() {
     let lockfile_path = dir.path().join(Lockfile::FILE_NAME);
     std::os::unix::fs::symlink(&real_lockfile, &lockfile_path).unwrap();
 
-    env.write(dir.path()).expect("an unchanged env document must not need a write");
+    env.write(dir.path())
+        .expect("an unchanged env document must not need a write");
 
     assert!(
         std::fs::symlink_metadata(&lockfile_path)
@@ -151,7 +168,9 @@ fn write_leaves_an_unchanged_crlf_lockfile_untouched() {
     let path = dir.path().join(Lockfile::FILE_NAME);
     let env = sample_env_lockfile();
     env.write(dir.path()).unwrap();
-    let crlf_content = std::fs::read_to_string(&path).unwrap().replace('\n', "\r\n");
+    let crlf_content = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace('\n', "\r\n");
     std::fs::write(&path, &crlf_content).unwrap();
     let mtime_before = std::fs::metadata(&path)
         .unwrap()
@@ -178,7 +197,9 @@ fn write_replaces_the_env_document_of_a_lockfile_carrying_a_bom() {
     let old_env_doc = "lockfileVersion: '9.0'\nimporters:\n  .:\n    configDependencies: {}\npackages: {}\nsnapshots: {}\n";
     std::fs::write(&path, format!("\u{feff}---\n{old_env_doc}\n---\n{main_doc}")).unwrap();
 
-    sample_env_lockfile().write(dir.path()).unwrap();
+    sample_env_lockfile()
+        .write(dir.path())
+        .unwrap();
 
     let raw = std::fs::read_to_string(&path).unwrap();
     assert!(raw.starts_with("---\n"), "the BOM must not survive into the written lockfile");
@@ -199,9 +220,16 @@ fn write_rejects_symlinked_lockfile_without_touching_target() {
     let lockfile_path = dir.path().join(Lockfile::FILE_NAME);
     std::os::unix::fs::symlink(&real_lockfile, &lockfile_path).unwrap();
 
-    let error = sample_env_lockfile().write(dir.path()).expect_err("symlinked lockfile must fail");
+    let error = sample_env_lockfile()
+        .write(dir.path())
+        .expect_err("symlinked lockfile must fail");
 
-    assert!(error.to_string().contains("symlinked lockfile"), "unexpected error: {error:?}");
+    assert!(
+        error
+            .to_string()
+            .contains("symlinked lockfile"),
+        "unexpected error: {error:?}"
+    );
     assert!(
         std::fs::symlink_metadata(&lockfile_path)
             .unwrap()
@@ -228,7 +256,9 @@ fn saving_main_lockfile_preserves_env_document() {
 
     // Load the typed main lockfile and re-save it — the install flow's
     // path — and confirm the env document survives.
-    let main = Lockfile::load_wanted_from_dir(dir.path()).unwrap().expect("main lockfile loads");
+    let main = Lockfile::load_wanted_from_dir(dir.path())
+        .unwrap()
+        .expect("main lockfile loads");
     main.save_to_path(&path).unwrap();
 
     let read_back = EnvLockfile::read(dir.path()).unwrap();
@@ -279,7 +309,9 @@ fn read_merges_a_conflicted_env_document() {
         .expect("env document");
 
     let mut env = env;
-    let config_deps = &env.root_importer_mut().config_dependencies;
+    let config_deps = &env
+        .root_importer_mut()
+        .config_dependencies;
     dbg!(config_deps);
     assert_eq!(config_deps.len(), 2, "both sides' config dependencies survive");
     assert_eq!(config_deps["ours-config"].version, "1.0.0");
@@ -296,14 +328,23 @@ fn saving_the_main_lockfile_merges_a_conflicted_env_document() {
     let path = dir.path().join(Lockfile::FILE_NAME);
     std::fs::write(&path, conflicted_env_lockfile()).unwrap();
 
-    let main = Lockfile::load_wanted_from_dir(dir.path()).unwrap().expect("main lockfile loads");
+    let main = Lockfile::load_wanted_from_dir(dir.path())
+        .unwrap()
+        .expect("main lockfile loads");
     main.save_to_path(&path).unwrap();
 
     let written = std::fs::read_to_string(&path).unwrap();
     eprintln!("WRITTEN:\n{written}");
     assert!(!written.contains("<<<<<<<"), "the env document's markers must not be copied forward");
-    let env = EnvLockfile::read(dir.path()).unwrap().expect("env document");
-    assert_eq!(env.importers[EnvLockfile::ROOT_IMPORTER_KEY].config_dependencies.len(), 2);
+    let env = EnvLockfile::read(dir.path())
+        .unwrap()
+        .expect("env document");
+    assert_eq!(
+        env.importers[EnvLockfile::ROOT_IMPORTER_KEY]
+            .config_dependencies
+            .len(),
+        2
+    );
 }
 
 #[test]
@@ -346,7 +387,12 @@ fn a_conflict_spanning_the_separator_recovers_the_main_document() {
     let merged = Lockfile::load_wanted_from_dir(dir.path())
         .expect("the whole-file split reaches the main document")
         .expect("main lockfile");
-    assert!(EnvLockfile::read(dir.path()).unwrap().is_none(), "no leading document to read");
+    assert!(
+        EnvLockfile::read(dir.path())
+            .unwrap()
+            .is_none(),
+        "no leading document to read"
+    );
 
     merged.save_to_path(&path).unwrap();
     let written = std::fs::read_to_string(&path).unwrap();
@@ -414,7 +460,12 @@ fn a_marker_in_an_env_document_comment_is_not_a_conflict() {
         Lockfile::load_wanted_detailed(dir.path(), &crate::WantedLockfileSelection::default())
             .expect("the main document parses");
     assert_eq!(loaded.merged_conflict_files, 0);
-    assert!(EnvLockfile::read(dir.path()).unwrap().is_some(), "the env document is fine");
+    assert!(
+        EnvLockfile::read(dir.path())
+            .unwrap()
+            .is_some(),
+        "the env document is fine"
+    );
 }
 
 /// Both documents conflicted, with the env document's two sides
@@ -462,7 +513,9 @@ fn a_write_refuses_an_env_document_whose_conflict_cannot_be_merged() {
         .expect("the main document merges")
         .expect("main lockfile");
 
-    let error = merged.save_to_path(&path).expect_err("the env document is still conflicted");
+    let error = merged
+        .save_to_path(&path)
+        .expect_err("the env document is still conflicted");
     eprintln!("ERROR: {error}");
     assert!(matches!(error, crate::SaveLockfileError::UnmergeableEnvDocument { .. }));
     assert_eq!(

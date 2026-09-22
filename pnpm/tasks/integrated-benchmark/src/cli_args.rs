@@ -146,11 +146,9 @@ impl FromStr for TargetSpec {
     type Err = String;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let (prefix, rev) = input
-            .split_once('@')
-            .ok_or_else(|| {
-                format!("target {input:?}: must be `pacquet@<rev>`, `pnpm@<rev>`, or `pnpr@<rev>`")
-            })?;
+        let (prefix, rev) = input.split_once('@').ok_or_else(|| {
+            format!("target {input:?}: must be `pacquet@<rev>`, `pnpm@<rev>`, or `pnpr@<rev>`")
+        })?;
         let kind = match prefix {
             "pacquet" => TargetKind::Pacquet,
             "pnpm" => TargetKind::Pnpm,
@@ -548,23 +546,25 @@ pub struct HyperfineOptions {
 
 impl HyperfineOptions {
     pub fn append_to(&self, hyperfine_command: &mut Command) {
-        let &HyperfineOptions {
-            show_output,
-            warmup,
-            min_runs,
-            max_runs,
-            runs,
-            ignore_failure,
-        } = self;
-        hyperfine_command.arg("--warmup").arg(warmup.to_string());
+        let &HyperfineOptions { show_output, warmup, min_runs, max_runs, runs, ignore_failure } =
+            self;
+        hyperfine_command
+            .arg("--warmup")
+            .arg(warmup.to_string());
         if let Some(min_runs) = min_runs {
-            hyperfine_command.arg("--min-runs").arg(min_runs.to_string());
+            hyperfine_command
+                .arg("--min-runs")
+                .arg(min_runs.to_string());
         }
         if let Some(max_runs) = max_runs {
-            hyperfine_command.arg("--max-runs").arg(max_runs.to_string());
+            hyperfine_command
+                .arg("--max-runs")
+                .arg(max_runs.to_string());
         }
         if let Some(runs) = runs {
-            hyperfine_command.arg("--runs").arg(runs.to_string());
+            hyperfine_command
+                .arg("--runs")
+                .arg(runs.to_string());
         }
         if show_output {
             hyperfine_command.arg("--show-output");

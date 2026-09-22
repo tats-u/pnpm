@@ -70,12 +70,14 @@ snapshots:
 
 fn fixture_env_lockfile() -> EnvLockfile {
     let mut env = EnvLockfile::create();
-    env.root_importer_mut().config_dependencies
+    env.root_importer_mut()
+        .config_dependencies
         .insert(
             "config-dep".to_string(),
             SpecifierAndResolution { specifier: "1.0.0".to_string(), version: "1.0.0".to_string() },
         );
-    env.snapshots.insert("config-dep@1.0.0".parse().unwrap(), SnapshotEntry::default());
+    env.snapshots
+        .insert("config-dep@1.0.0".parse().unwrap(), SnapshotEntry::default());
     env
 }
 
@@ -118,7 +120,12 @@ fn snapshot(deps: &[(&str, &str)], optional_deps: &[(&str, &str)]) -> SnapshotEn
         dependencies: (!deps.is_empty()).then(|| {
             deps.iter()
                 .map(|(name, version)| {
-                    ((*name).parse().unwrap(), (*version).parse::<SnapshotDepRef>().unwrap())
+                    (
+                        (*name).parse().unwrap(),
+                        (*version)
+                            .parse::<SnapshotDepRef>()
+                            .unwrap(),
+                    )
                 })
                 .collect()
         }),
@@ -126,7 +133,12 @@ fn snapshot(deps: &[(&str, &str)], optional_deps: &[(&str, &str)]) -> SnapshotEn
             optional_deps
                 .iter()
                 .map(|(name, version)| {
-                    ((*name).parse().unwrap(), (*version).parse::<SnapshotDepRef>().unwrap())
+                    (
+                        (*name).parse().unwrap(),
+                        (*version)
+                            .parse::<SnapshotDepRef>()
+                            .unwrap(),
+                    )
                 })
                 .collect()
         }),
@@ -388,7 +400,9 @@ fn text_report_separates_advisory_table_from_summary() {
 
     let output =
         render_text_report(&report, ConfigAuditLevel::Low, &AuditVulnerabilityCounts::default());
-    let summary_start = output.find("1 vulnerabilities found").unwrap();
+    let summary_start = output
+        .find("1 vulnerabilities found")
+        .unwrap();
     assert_eq!(output.as_bytes()[summary_start - 1], b'\n');
 }
 
@@ -668,13 +682,22 @@ async fn vulnerability_guard_rejects_only_vulnerable_versions() {
         )]),
     };
 
-    let rejected = guard.check("vulnerable", "1.5.0").await.expect("guard check");
+    let rejected = guard
+        .check("vulnerable", "1.5.0")
+        .await
+        .expect("guard check");
     assert!(matches!(rejected, PackageVersionGuardDecision::Reject { .. }));
 
-    let allowed_safe = guard.check("vulnerable", "2.0.0").await.expect("guard check");
+    let allowed_safe = guard
+        .check("vulnerable", "2.0.0")
+        .await
+        .expect("guard check");
     assert_eq!(allowed_safe, PackageVersionGuardDecision::Allow);
 
-    let allowed_other = guard.check("unrelated", "1.0.0").await.expect("guard check");
+    let allowed_other = guard
+        .check("unrelated", "1.0.0")
+        .await
+        .expect("guard check");
     assert_eq!(allowed_other, PackageVersionGuardDecision::Allow);
 
     // A package with no safe version in range keeps resolving; `--fix update`
@@ -683,7 +706,9 @@ async fn vulnerability_guard_rejects_only_vulnerable_versions() {
 }
 
 fn age_cutoff() -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z").expect("valid cutoff").with_timezone(&Utc)
+    DateTime::parse_from_rfc3339("2026-01-01T00:00:00Z")
+        .expect("valid cutoff")
+        .with_timezone(&Utc)
 }
 
 fn publish_times(
@@ -712,7 +737,11 @@ fn deprecate(
         .and_then(Option::as_mut)
         .expect("publish info for the package")
         .deprecated
-        .insert(version.parse().expect("valid deprecated version"));
+        .insert(
+            version
+                .parse()
+                .expect("valid deprecated version"),
+        );
 }
 
 mod dependency_paths;

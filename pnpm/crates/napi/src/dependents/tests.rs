@@ -85,7 +85,10 @@ fn reports_the_chain_from_the_importer_down_to_the_searched_package() {
     let dependents = &trees[0].dependents;
     assert_eq!(dependents.len(), 1);
     assert_eq!(dependents[0].name, "dep");
-    let via_dep = dependents[0].dependents.as_ref().expect("dep has a dependent of its own");
+    let via_dep = dependents[0]
+        .dependents
+        .as_ref()
+        .expect("dep has a dependent of its own");
     assert_eq!(via_dep.len(), 1);
     assert_eq!(via_dep[0].name, "root-project");
 }
@@ -134,7 +137,8 @@ fn manifest_fields_are_projected_onto_the_matched_package() {
     let trees = build_trees(&opts).unwrap();
 
     assert_eq!(
-        trees[0].manifest
+        trees[0]
+            .manifest
             .as_ref()
             .and_then(|manifest| manifest.get("componentId")),
         Some(&json!({ "scope": "acme.utils", "name": "nested" })),
@@ -196,7 +200,13 @@ fn an_over_deep_tree_is_rejected_instead_of_recursed_into() {
 
     let error = render_dependents(json!([node]), None).unwrap_err();
 
-    assert!(error.reason.contains("nests dependents more than"), "{}", error.reason);
+    assert!(
+        error
+            .reason
+            .contains("nests dependents more than"),
+        "{}",
+        error.reason
+    );
 }
 
 /// The boundary itself: a tree nested exactly as deep as the walk can go
@@ -221,5 +231,11 @@ fn an_unknown_render_format_is_rejected() {
     )
     .unwrap_err();
 
-    assert!(error.reason.contains("unknown dependents render format"), "{}", error.reason);
+    assert!(
+        error
+            .reason
+            .contains("unknown dependents render format"),
+        "{}",
+        error.reason
+    );
 }

@@ -97,20 +97,22 @@ impl GlobalInstallTarget<'_> {
         range_spec_style: RangeSpecStyle,
         supported_architectures: Option<SupportedArchitectures>,
     ) -> miette::Result<bool> {
-        let (install_dir, selectors) = self.prepare_update_candidate::<Reporter>(
-            pkg,
-            latest,
-            range_spec_style,
-            supported_architectures.clone(),
-        )
-        .await?;
+        let (install_dir, selectors) = self
+            .prepare_update_candidate::<Reporter>(
+                pkg,
+                latest,
+                range_spec_style,
+                supported_architectures.clone(),
+            )
+            .await?;
 
-        if self.discard_unchanged_update::<Reporter>(
-            pkg,
-            &install_dir,
-            supported_architectures.clone(),
-        )
-        .await?
+        if self
+            .discard_unchanged_update::<Reporter>(
+                pkg,
+                &install_dir,
+                supported_architectures.clone(),
+            )
+            .await?
         {
             return Ok(false);
         }
@@ -257,16 +259,16 @@ impl GlobalInstallTarget<'_> {
             install_dir,
             acquire_global_bin_lock(self.global_bin_dir),
         )?;
-        let bins_to_skip = self.check_activation_conflicts(install_dir, &pkgs, |existing| {
-            existing.hash == pkg.hash
-        })?;
+        let bins_to_skip = self
+            .check_activation_conflicts(install_dir, &pkgs, |existing| existing.hash == pkg.hash)?;
 
         let (group_to_replace, protected, retained_bin_names) = discard_install_dir_on_error(
             install_dir,
             (|| {
                 let group_to_replace = snapshot_global_package(pkg.clone())?;
                 let retained_bin_names = get_actual_bin_names::<CmdShimHost>(&pkgs, &bins_to_skip)?;
-                let bin_names_to_protect = group_to_replace.bin_names
+                let bin_names_to_protect = group_to_replace
+                    .bin_names
                     .iter()
                     .filter(|bin| !retained_bin_names.contains(*bin))
                     .cloned()

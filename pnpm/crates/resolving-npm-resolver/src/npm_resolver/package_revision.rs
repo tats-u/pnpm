@@ -12,7 +12,9 @@ pub(super) fn tarball_revision(
     integrity: Option<&Integrity>,
     registry: &str,
 ) -> Result<Option<TarballRevision>, ResolveError> {
-    let revision = picked.dist.revision
+    let revision = picked
+        .dist
+        .revision
         .as_ref()
         .map(|revision| {
             revision
@@ -85,7 +87,9 @@ pub(super) fn apply_revision_record<'a>(
 ) -> Result<Cow<'a, PackageVersion>, ResolveError> {
     let mut selected =
         serde_json::to_value(picked).map_err(|error| Box::new(error) as ResolveError)?;
-    let selected_object = selected.as_object_mut().expect("PackageVersion serializes as an object");
+    let selected_object = selected
+        .as_object_mut()
+        .expect("PackageVersion serializes as an object");
     for field in REVISION_MANIFEST_FIELDS {
         selected_object.remove(field);
     }
@@ -140,7 +144,10 @@ pub(super) fn package_revision_record<'a>(
     let matches: Vec<&serde_json::Value> = revisions
         .iter()
         .filter(|entry| {
-            entry.get("revision").and_then(serde_json::Value::as_u64) == Some(requested)
+            entry
+                .get("revision")
+                .and_then(serde_json::Value::as_u64)
+                == Some(requested)
         })
         .collect();
     if matches.is_empty() {
@@ -176,13 +183,12 @@ pub(super) fn validate_current_package_revision(
                 format!("current revision {raw_revision} is not a canonical positive safe integer"),
             )
         })?;
-    let record = package_revision_record(picked, revision, registry)?
-        .ok_or_else(|| {
-            malformed_revision_history(
-                picked,
-                format!("current revision {revision} has no history entry"),
-            )
-        })?;
+    let record = package_revision_record(picked, revision, registry)?.ok_or_else(|| {
+        malformed_revision_history(
+            picked,
+            format!("current revision {revision} has no history entry"),
+        )
+    })?;
     if picked.dist.integrity.as_ref() != Some(&record.integrity)
         || !same_registry_artifact_url(&picked.dist.tarball, record.tarball)
     {

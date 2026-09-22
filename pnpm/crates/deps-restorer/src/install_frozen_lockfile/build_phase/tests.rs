@@ -22,7 +22,9 @@ fn resolves_git_snapshot_patch_from_package_version() {
         key: "foo@1.0.0".to_string(),
     };
     let mut group = PatchGroup::default();
-    group.exact.insert("1.0.0".to_string(), patch.clone());
+    group
+        .exact
+        .insert("1.0.0".to_string(), patch.clone());
     let groups = PatchGroupRecord::from([("foo".to_string(), group)]);
     let key = "foo@git+file:///repo#0123456789012345678901234567890123456789(patch_hash=abc123)"
         .parse::<PackageKey>()
@@ -61,8 +63,12 @@ fn resolves_git_snapshot_patch_from_package_version() {
 
 #[tokio::test]
 async fn ignored_scripts_fast_path_defers_only_materialized_snapshots() {
-    let materialized = "materialized@1.0.0".parse::<PackageKey>().expect("parse package key");
-    let unrelated = "unrelated@1.0.0".parse::<PackageKey>().expect("parse package key");
+    let materialized = "materialized@1.0.0"
+        .parse::<PackageKey>()
+        .expect("parse package key");
+    let unrelated = "unrelated@1.0.0"
+        .parse::<PackageKey>()
+        .expect("parse package key");
     let requires_build_by_snapshot =
         HashMap::from([(materialized.clone(), true), (unrelated, true)]);
     let materialized_snapshots = [materialized.clone()];
@@ -121,5 +127,8 @@ async fn ignored_scripts_fast_path_defers_only_materialized_snapshots() {
 
     assert_eq!(output.deferred_builds, [materialized.to_string()]);
     drop(store_index_writer);
-    writer_task.await.expect("join writer task").expect("drain writer task");
+    writer_task
+        .await
+        .expect("join writer task")
+        .expect("drain writer task");
 }

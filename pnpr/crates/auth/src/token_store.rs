@@ -71,7 +71,9 @@ impl TokenStore {
 #[async_trait]
 impl TokenBackend for TokenStore {
     async fn issue(&self, username: &str) -> Result<String> {
-        let nonce = self.counter.fetch_add(1, Ordering::Relaxed);
+        let nonce = self
+            .counter
+            .fetch_add(1, Ordering::Relaxed);
         let raw = mint_token(&self.secret, nonce, username);
         let token_hash = sha256_hex(raw.as_bytes());
         let record = TokenRecord {
@@ -82,8 +84,13 @@ impl TokenBackend for TokenStore {
             cidr_whitelist: Vec::new(),
         };
         {
-            let mut inner = self.inner.lock().expect("TokenStore mutex poisoned");
-            inner.tokens.insert(token_hash.clone(), record.clone());
+            let mut inner = self
+                .inner
+                .lock()
+                .expect("TokenStore mutex poisoned");
+            inner
+                .tokens
+                .insert(token_hash.clone(), record.clone());
         }
         if let Some(path) = self.persist.clone() {
             let hash_for_db = token_hash.clone();
@@ -96,12 +103,18 @@ impl TokenBackend for TokenStore {
             match result {
                 Ok(Ok(())) => {}
                 Ok(Err(err)) => {
-                    let mut inner = self.inner.lock().expect("TokenStore mutex poisoned");
+                    let mut inner = self
+                        .inner
+                        .lock()
+                        .expect("TokenStore mutex poisoned");
                     inner.tokens.remove(&token_hash);
                     return Err(err);
                 }
                 Err(err) => {
-                    let mut inner = self.inner.lock().expect("TokenStore mutex poisoned");
+                    let mut inner = self
+                        .inner
+                        .lock()
+                        .expect("TokenStore mutex poisoned");
                     inner.tokens.remove(&token_hash);
                     return Err(err.into());
                 }
@@ -114,18 +127,31 @@ impl TokenBackend for TokenStore {
     /// at startup, so this never touches the database and never fails.
     async fn lookup(&self, raw: &str) -> Result<Option<String>> {
         let token_hash = sha256_hex(raw.as_bytes());
-        let inner = self.inner.lock().expect("TokenStore mutex poisoned");
-        Ok(inner.tokens.get(&token_hash).map(|record| record.username.clone()))
+        let inner = self
+            .inner
+            .lock()
+            .expect("TokenStore mutex poisoned");
+        Ok(inner
+            .tokens
+            .get(&token_hash)
+            .map(|record| record.username.clone()))
     }
 
     async fn find_by_key(&self, key: &str) -> Result<Option<TokenRecord>> {
-        let inner = self.inner.lock().expect("TokenStore mutex poisoned");
+        let inner = self
+            .inner
+            .lock()
+            .expect("TokenStore mutex poisoned");
         Ok(inner.tokens.get(key).cloned())
     }
 
     async fn list_for_user(&self, username: &str) -> Result<Vec<(String, TokenRecord)>> {
-        let inner = self.inner.lock().expect("TokenStore mutex poisoned");
-        Ok(inner.tokens
+        let inner = self
+            .inner
+            .lock()
+            .expect("TokenStore mutex poisoned");
+        Ok(inner
+            .tokens
             .iter()
             .filter(|(_, record)| record.username == username)
             .map(|(hash, record)| (hash.clone(), record.clone()))
@@ -138,7 +164,10 @@ impl TokenBackend for TokenStore {
     /// "revoked in memory but resurrected on restart" hole.
     async fn revoke_by_key(&self, key: &str) -> Result<Option<TokenRecord>> {
         let snapshot = {
-            let inner = self.inner.lock().expect("TokenStore mutex poisoned");
+            let inner = self
+                .inner
+                .lock()
+                .expect("TokenStore mutex poisoned");
             inner.tokens.get(key).cloned()
         };
         let Some(record) = snapshot else {
@@ -154,7 +183,10 @@ impl TokenBackend for TokenStore {
             .await??;
         }
         {
-            let mut inner = self.inner.lock().expect("TokenStore mutex poisoned");
+            let mut inner = self
+                .inner
+                .lock()
+                .expect("TokenStore mutex poisoned");
             inner.tokens.remove(key);
         }
         Ok(Some(record))
@@ -205,8 +237,8 @@ pub(super) fn load_all_tokens(conn: &Connection) -> Result<HashMap<String, Token
         let last_used_at: i64 = row.get(3)?;
         let readonly: i64 = row.get(4)?;
         let cidr_json: String = row.get(5)?;
-        let cidr_whitelist: Vec<String> = serde_json::from_str(&cidr_json)
-            .map_err(|err| RegistryError::Internal {
+        let cidr_whitelist: Vec<String> =
+            serde_json::from_str(&cidr_json).map_err(|err| RegistryError::Internal {
                 reason: format!("token {hash} has an unreadable cidr_whitelist: {err}"),
             })?;
         out.insert(
@@ -292,5 +324,7 @@ pub(super) fn hex_encode(bytes: &[u8]) -> String {
 }
 
 pub(super) fn unix_seconds() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |duration| duration.as_secs())
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_secs())
 }

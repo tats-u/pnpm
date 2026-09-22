@@ -110,7 +110,9 @@ fn unsafe_importer_keys_error_before_filesystem_writes() {
         // an assertion there would be flaky for reasons unrelated to
         // the importer-id validator.
         assert!(
-            !workspace_root.join("node_modules").exists(),
+            !workspace_root
+                .join("node_modules")
+                .exists(),
             "no node_modules should be created under workspace_root for {importer_id:?}",
         );
         drop(dir);

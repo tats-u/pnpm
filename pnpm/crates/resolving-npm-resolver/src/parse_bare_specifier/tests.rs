@@ -193,7 +193,11 @@ fn tarball_url_under_registry_is_parsed() {
     assert_eq!(spec.name, "foo");
     assert_eq!(spec.fetch_spec, "1.0.0");
     assert_eq!(spec.spec_type, RegistryPackageSpecType::Version);
-    assert_eq!(spec.normalized_bare_specifier.as_deref(), Some(url));
+    assert_eq!(
+        spec.normalized_bare_specifier
+            .as_deref(),
+        Some(url)
+    );
 }
 
 #[test]

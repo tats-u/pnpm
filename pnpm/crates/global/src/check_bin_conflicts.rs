@@ -81,7 +81,9 @@ pub fn check_global_bin_conflicts(
         if should_skip(&existing_pkg) {
             continue;
         }
-        let modules_dir = existing_pkg.install_dir.join("node_modules");
+        let modules_dir = existing_pkg
+            .install_dir
+            .join("node_modules");
         for (alias, _) in &existing_pkg.dependencies {
             check_installed_dep(alias, &modules_dir.join(alias), &installed, &mut bins_to_skip)?;
         }
@@ -94,7 +96,8 @@ pub fn check_global_bin_conflicts(
 fn bins_by_owner(new_pkgs: &[PackageBinSource]) -> HashMap<String, Vec<String>> {
     let mut new_bin_owners: HashMap<String, Vec<String>> = HashMap::new();
     for pkg in new_pkgs {
-        let pkg_name = pkg.manifest
+        let pkg_name = pkg
+            .manifest
             .get("name")
             .and_then(Value::as_str)
             .unwrap_or("")
@@ -130,7 +133,10 @@ fn check_installed_dep(
         .unwrap_or("")
         .to_string();
     for bin in get_bins_from_package_manifest::<Host>(&manifest, dep_dir) {
-        if !installed.conflicting.contains(&bin.name) {
+        if !installed
+            .conflicting
+            .contains(&bin.name)
+        {
             continue;
         }
         match bin_ownership(&bin.name, &manifest_name, installed) {
@@ -166,8 +172,9 @@ fn bin_ownership(
     manifest_name: &str,
     installed: &InstalledBins<'_>,
 ) -> BinOwnership {
-    let new_owns =
-        installed.new_bin_owners[bin_name].iter().any(|owner| pkg_owns_bin(bin_name, owner));
+    let new_owns = installed.new_bin_owners[bin_name]
+        .iter()
+        .any(|owner| pkg_owns_bin(bin_name, owner));
     let existing_owns = pkg_owns_bin(bin_name, manifest_name);
     match (new_owns, existing_owns) {
         (true, false) => BinOwnership::NewPackage,

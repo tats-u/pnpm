@@ -215,7 +215,9 @@ impl PerRegistryTls {
     /// override.
     #[must_use]
     pub fn pick_for_url(&self, url: &str) -> Option<&str> {
-        self.by_uri.pick_for_url(url).map(|(key, _)| key)
+        self.by_uri
+            .pick_for_url(url)
+            .map(|(key, _)| key)
     }
 
     /// Borrow the inner [`RegistryTls`] for a nerf-darted key. Returns
@@ -250,7 +252,8 @@ impl<Value> PerRegistryMap<Value> {
     }
 
     pub(crate) fn pick_value_for_url(&self, url: &str) -> Option<&Value> {
-        self.pick_for_url(url).map(|(_, value)| value)
+        self.pick_for_url(url)
+            .map(|(_, value)| value)
     }
 
     /// Step numbers below index the chain documented on
@@ -313,7 +316,8 @@ impl<Value> PerRegistryMap<Value> {
         &self,
         mut map_value: impl FnMut(&Value) -> Result<Mapped, MapError>,
     ) -> Result<PerRegistryMap<Mapped>, MapError> {
-        let by_uri = self.by_uri
+        let by_uri = self
+            .by_uri
             .iter()
             .map(|(key, value)| Ok((key.clone(), map_value(value)?)))
             .collect::<Result<_, MapError>>()?;
@@ -338,8 +342,12 @@ fn strip_port(url: &str) -> String {
     let (authority, path_tail) = split_authority(rest);
     // Skip past any `user[:pw]@` userinfo. The port-bearing colon is
     // the one in the host segment, not in the userinfo.
-    let host_segment = authority.rsplit_once('@').map_or(authority, |(_, h)| h);
-    let userinfo = authority.strip_suffix(host_segment).unwrap_or("");
+    let host_segment = authority
+        .rsplit_once('@')
+        .map_or(authority, |(_, h)| h);
+    let userinfo = authority
+        .strip_suffix(host_segment)
+        .unwrap_or("");
     let Some(idx) = port_colon_index(host_segment) else {
         return url.to_string();
     };

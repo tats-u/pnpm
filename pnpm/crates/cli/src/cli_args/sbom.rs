@@ -212,7 +212,9 @@ fn confined_importer_dir(lockfile_dir: &Path, importer_id: &str) -> Option<PathB
     }
     let lockfile_root = std::fs::canonicalize(lockfile_dir).ok()?;
     let importer_dir = std::fs::canonicalize(importer_root_dir(lockfile_dir, importer_id)).ok()?;
-    importer_dir.starts_with(&lockfile_root).then_some(importer_dir)
+    importer_dir
+        .starts_with(&lockfile_root)
+        .then_some(importer_dir)
 }
 
 impl SbomArgs {
@@ -223,7 +225,8 @@ impl SbomArgs {
         let include = self.include_filter(state.config.optional);
         let authors = self.author_list();
 
-        let lockfile = state.lockfile
+        let lockfile = state
+            .lockfile
             .get()
             .map_err(|err| miette::Report::new(err).wrap_err("load the lockfile"))?;
         let all_importer_ids = sorted_importer_ids(lockfile);
@@ -262,7 +265,8 @@ impl SbomArgs {
     }
 
     fn author_list(&self) -> Vec<String> {
-        self.document.authors
+        self.document
+            .authors
             .as_deref()
             .map(|csv| {
                 csv.split(',')
@@ -277,7 +281,8 @@ impl SbomArgs {
     /// placeholder and several importers to fill it.
     fn splits_output(&self, importer_ids: &[String]) -> bool {
         self.split
-            || (self.out
+            || (self
+                .out
                 .as_ref()
                 .is_some_and(|o| o.contains("%s"))
                 && importer_ids.len() > 1)
@@ -421,7 +426,9 @@ impl SbomArgs {
 fn sbom_output_path(out_template: &str, result: &SbomResult) -> String {
     let sanitized_name = sanitize_path_segment(&sanitize_package_name(&result.root_name));
     let sanitized_ver = sanitize_path_segment(&result.root_version);
-    out_template.replace("%s", &sanitized_name).replace("%v", &sanitized_ver)
+    out_template
+        .replace("%s", &sanitized_name)
+        .replace("%v", &sanitized_ver)
 }
 
 fn write_sbom_file(file_path: &str, output: &str) -> miette::Result<()> {

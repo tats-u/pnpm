@@ -157,8 +157,12 @@ async fn run_keeps_patch_file_still_used_by_remaining_entries() {
     let tmp = tempfile::tempdir().expect("temp dir");
     std::fs::write(tmp.path().join("package.json"), "{}").expect("write package.json");
     let patch_file = tmp.path().join("patches/shared.patch");
-    std::fs::create_dir_all(patch_file.parent().expect("patch parent"))
-        .expect("create patches dir");
+    std::fs::create_dir_all(
+        patch_file
+            .parent()
+            .expect("patch parent"),
+    )
+    .expect("create patches dir");
     std::fs::write(&patch_file, "shared patch").expect("write shared patch");
 
     let mut config = pnpm_config::Config::new();
@@ -298,7 +302,9 @@ fn remove_empty_patch_dirs_removes_empty_dirs_and_ignores_missing_dirs() {
         PatchRemovalTarget {
             patch: "missing".to_string(),
             parent_dir: missing,
-            target_path: tmp.path().join("patches/missing/pkg.patch"),
+            target_path: tmp
+                .path()
+                .join("patches/missing/pkg.patch"),
             target_exists: false,
         },
     ])

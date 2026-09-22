@@ -47,8 +47,11 @@ pub(super) fn build_tarball(
         let path_in_archive = Path::new("package").join(relative);
         append_file(&mut tar, &path_in_archive, &content, mode);
     }
-    let gzip = tar.into_inner().expect("finish tar archive");
-    gzip.finish().expect("finish gzip archive")
+    let gzip = tar
+        .into_inner()
+        .expect("finish tar archive");
+    gzip.finish()
+        .expect("finish gzip archive")
 }
 
 pub(super) const INJECTED_LICENSE: &str = include_str!("../../../../LICENSE");
@@ -92,7 +95,9 @@ pub(super) fn bundled_node_modules(root: &Path, manifest: &Value) -> Vec<(PathBu
                 .path()
                 .strip_prefix(&dep_dir)
                 .expect("bundled dependency entry under dep dir");
-            let archive = Path::new("node_modules").join(&dep).join(relative);
+            let archive = Path::new("node_modules")
+                .join(&dep)
+                .join(relative);
             let content = fs::read(entry.path()).expect("read bundled dependency file");
             let mode =
                 file_mode(root, entry.path(), &content).expect("bundled dependency file mode");
@@ -161,19 +166,25 @@ pub(super) fn append_file<Writer: Write>(
     header.set_size(content.len() as u64);
     header.set_mode(mode);
     header.set_cksum();
-    tar.append_data(&mut header, path_in_archive, content).expect("append fixture file");
+    tar.append_data(&mut header, path_in_archive, content)
+        .expect("append fixture file");
 }
 
 pub(super) fn file_mode(root: &Path, source: &Path, content: &[u8]) -> io::Result<u32> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mode = fs::metadata(source)?.permissions().mode() & 0o777;
+        let mode = fs::metadata(source)?
+            .permissions()
+            .mode()
+            & 0o777;
         if mode & 0o111 != 0 {
             return Ok(mode);
         }
     }
-    let relative = source.strip_prefix(root).expect("fixture source under root");
+    let relative = source
+        .strip_prefix(root)
+        .expect("fixture source under root");
     if content.starts_with(b"#!")
         || relative
             .components()

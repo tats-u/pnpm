@@ -37,14 +37,13 @@ pub(super) fn version_from_git(
         ));
     };
 
-    Version::parse(raw_version)
-        .map_err(|_| {
-            invalid_version_from_git(
-                cwd,
-                tag_version_prefix,
-                format!("tag is not a valid version: {tag:?}"),
-            )
-        })
+    Version::parse(raw_version).map_err(|_| {
+        invalid_version_from_git(
+            cwd,
+            tag_version_prefix,
+            format!("tag is not a valid version: {tag:?}"),
+        )
+    })
 }
 
 /// Run a git command in `cwd`, failing with the command line and git's stderr
@@ -58,7 +57,9 @@ impl VersionArgs {
     /// Stage the bumped manifest and record the bump as a commit plus an
     /// annotated (or signed) tag, mirroring the TypeScript `commitAndTag`.
     pub(super) fn commit_and_tag(&self, change: &VersionChange, cwd: &Path) -> miette::Result<()> {
-        let message = self.git.message
+        let message = self
+            .git
+            .message
             .as_deref()
             .unwrap_or("%s")
             .replace("%s", &change.new_version);
@@ -66,7 +67,10 @@ impl VersionArgs {
 
         let Ok(relative) = change.manifest_path.strip_prefix(cwd) else {
             return Err(VersionError::InvalidManifestPath {
-                path: change.manifest_path.display().to_string(),
+                path: change
+                    .manifest_path
+                    .display()
+                    .to_string(),
             }
             .into());
         };
@@ -97,11 +101,9 @@ impl VersionArgs {
 }
 
 fn git_output(cwd: &Path, args: &[&str]) -> Result<pnpm_publish::CommandOutput, VersionError> {
-    let output = <Host as RunCommand>::run("git", args, Some(cwd))
-        .map_err(|err| VersionError::GitCommandFailed {
-            args: args.join(" "),
-            stderr: err.to_string(),
-        })?;
+    let output = <Host as RunCommand>::run("git", args, Some(cwd)).map_err(|err| {
+        VersionError::GitCommandFailed { args: args.join(" "), stderr: err.to_string() }
+    })?;
     if !output.success {
         return Err(VersionError::GitCommandFailed {
             args: args.join(" "),

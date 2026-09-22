@@ -52,7 +52,9 @@ fn snapshot_with_link(alias: &str, target: &str) -> SnapshotEntry {
     let mut dependencies = HashMap::new();
     dependencies.insert(
         alias.parse::<PkgName>().unwrap(),
-        format!("link:{target}").parse::<SnapshotDepRef>().unwrap(),
+        format!("link:{target}")
+            .parse::<SnapshotDepRef>()
+            .unwrap(),
     );
     SnapshotEntry { dependencies: Some(dependencies), ..SnapshotEntry::default() }
 }
@@ -164,7 +166,10 @@ fn cyclic_snapshots() -> (HashMap<PackageKey, SnapshotEntry>, HashMap<PackageKey
     let packages = snapshots
         .keys()
         .map(|snapshot_key| {
-            let lead = snapshot_key.name.to_string().to_uppercase();
+            let lead = snapshot_key
+                .name
+                .to_string()
+                .to_uppercase();
             (snapshot_key.clone(), registry_metadata(&lead))
         })
         .collect();
@@ -196,7 +201,9 @@ fn registry_metadata(lead: &str) -> PackageMetadata {
     let integrity = format!("sha512-{lead}{}", "A".repeat(91));
     PackageMetadata {
         resolution: LockfileResolution::Registry(RegistryResolution {
-            integrity: integrity.parse().expect("parse integrity"),
+            integrity: integrity
+                .parse()
+                .expect("parse integrity"),
             revision: None,
         }),
         version: None,

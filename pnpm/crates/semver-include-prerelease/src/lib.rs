@@ -53,7 +53,8 @@ impl IncludePrereleaseRange {
         // answers with the endpoint test — and answers it without the
         // single-version ranges the prerelease path has to build.
         if !version.is_prerelease() {
-            return self.alternatives
+            return self
+                .alternatives
                 .iter()
                 .any(|alternative| {
                     alternative
@@ -137,7 +138,10 @@ fn glue_operators_to_versions(alternative: &str) -> String {
     while let Some(char) = chars.next() {
         glued.push(char);
         if matches!(char, '<' | '>' | '=' | '~' | '^') {
-            while chars.peek().is_some_and(char::is_ascii_whitespace) {
+            while chars
+                .peek()
+                .is_some_and(char::is_ascii_whitespace)
+            {
                 chars.next();
             }
         }
@@ -156,13 +160,10 @@ fn omits_a_component(token: &str) -> bool {
         .unwrap_or_default();
     let mut components = core.split('.');
     let named = [components.next(), components.next(), components.next()];
-    named
-        .into_iter()
-        .any(|component| {
-            component.is_none_or(|component| {
-                component.is_empty() || matches!(component, "x" | "X" | "*")
-            })
-        })
+    named.into_iter().any(|component| {
+        component
+            .is_none_or(|component| component.is_empty() || matches!(component, "x" | "X" | "*"))
+    })
 }
 
 /// npm reads a `<` bound whose version omits a component as excluding

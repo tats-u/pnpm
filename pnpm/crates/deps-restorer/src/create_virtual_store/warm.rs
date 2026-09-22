@@ -79,16 +79,18 @@ pub(super) fn cached_git_prepare_allowed(
         Some(true) => return Ok(!key.ends_with("\tnot-built")),
         None => {}
     }
-    if !prefetch.requires_prepare.contains_key(key) {
+    if !prefetch
+        .requires_prepare
+        .contains_key(key)
+    {
         return Ok(false);
     }
     let allow_build = |dep_path: &str| allow_build_policy.check(dep_path);
-    resolve_package_build_permission(&allow_build, &package_id, &manifest)
-        .map_err(|error| {
-            CreateVirtualStoreError::InstallPackageBySnapshot(
-                InstallPackageBySnapshotError::GitFetch(GitFetcherError::Prepare(error)),
-            )
-        })?;
+    resolve_package_build_permission(&allow_build, &package_id, &manifest).map_err(|error| {
+        CreateVirtualStoreError::InstallPackageBySnapshot(InstallPackageBySnapshotError::GitFetch(
+            GitFetcherError::Prepare(error),
+        ))
+    })?;
     Ok(true)
 }
 /// The prefetched manifest, or the one the warm slot's `package.json` holds.
@@ -103,7 +105,9 @@ pub(super) fn cached_git_manifest<'a>(
     }
     let package_json = cas_paths.get("package.json")?;
     let contents = fs::read_to_string(package_json).ok()?;
-    parse_manifest(&contents).ok().map(Cow::Owned)
+    parse_manifest(&contents)
+        .ok()
+        .map(Cow::Owned)
 }
 pub(super) fn is_git_hosted_resolution(resolution: &LockfileResolution) -> bool {
     match resolution {
@@ -233,7 +237,10 @@ pub(super) fn emit_hoisted_warm_progress<Reporter: self::Reporter>(
         emit_warm_snapshot_progress::<Reporter>(
             &snapshot_key.pkg_id(),
             batch.template.import.requester,
-            batch.template.progress_reported.contains(*cache_key),
+            batch
+                .template
+                .progress_reported
+                .contains(*cache_key),
         );
     }
 }

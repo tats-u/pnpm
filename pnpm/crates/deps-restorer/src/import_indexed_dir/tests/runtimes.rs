@@ -122,7 +122,11 @@ fn node_modules_collision_in_file_map_merges() {
 
     assert_eq!(fs::read(target.join("node_modules/existing/keep.js")).unwrap(), b"survivor");
     assert_eq!(fs::read(target.join("node_modules/foo/index.js")).unwrap(), b"shipped-nm");
-    assert!(!target.join("node_modules/foo/stale.js").exists());
+    assert!(
+        !target
+            .join("node_modules/foo/stale.js")
+            .exists()
+    );
 }
 /// Data-loss regression: if `remove_dir_all(dir_path)` fails *after*
 /// the preserved `node_modules/` has been moved into the staging
@@ -180,7 +184,9 @@ fn remove_dir_all_failure_restores_preserved_node_modules() {
     // The rescue path must have moved `stage/node_modules/` back onto
     // `target/node_modules/` before the cleanup rimrafed staging.
     assert!(
-        target.join("node_modules/inner/sentinel").exists(),
+        target
+            .join("node_modules/inner/sentinel")
+            .exists(),
         "preserved node_modules/ must survive the failed swap",
     );
     assert_eq!(
@@ -189,7 +195,9 @@ fn remove_dir_all_failure_restores_preserved_node_modules() {
         "preserved node_modules/ contents must be intact",
     );
     assert!(
-        !target.join("node_modules/inner/bundled.js").exists(),
+        !target
+            .join("node_modules/inner/bundled.js")
+            .exists(),
         "a failed swap must restore the conflicting dependency tree",
     );
     // No staging directory left behind anywhere under the outer

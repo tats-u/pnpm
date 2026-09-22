@@ -175,7 +175,8 @@ impl Resolve for NativeDnsResolver {
     fn resolve(&self, name: Name) -> Resolving {
         let host = name.as_str().to_owned();
         Box::pin(async move {
-            tokio::net::lookup_host((host, 0)).await
+            tokio::net::lookup_host((host, 0))
+                .await
                 .map(|addrs| Box::new(addrs) as Addrs)
                 .map_err(|error| Box::new(error) as Box<dyn std::error::Error + Send + Sync>)
         })
@@ -284,6 +285,10 @@ fn build_scheme_proxy(
 /// rayon pool sizing, see `crates/cli/src/lib.rs`).
 pub fn default_network_concurrency() -> usize {
     let available_parallelism = std::thread::available_parallelism().map_or(1, NonZeroUsize::get);
-    let max_workers = available_parallelism.saturating_sub(1).max(1);
-    max_workers.saturating_mul(3).clamp(64, 96)
+    let max_workers = available_parallelism
+        .saturating_sub(1)
+        .max(1);
+    max_workers
+        .saturating_mul(3)
+        .clamp(64, 96)
 }

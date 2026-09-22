@@ -57,7 +57,8 @@ fn lockfile_entry(workspace: &Path, alias: &str) -> Option<(String, String)> {
     let lockfile: Lockfile = serde_saphyr::from_str(&text)
         .unwrap_or_else(|error| panic!("parse pnpm-lock.yaml: {error}\n{text}"));
     let alias: PkgName = alias.parse().expect("parse alias");
-    let entry = lockfile.importers
+    let entry = lockfile
+        .importers
         .get(Lockfile::ROOT_IMPORTER_KEY)?
         .dependencies
         .as_ref()?
@@ -72,7 +73,9 @@ fn install_records_a_plain_jsr_dependency() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, r#"{ "@pnpm-e2e/bar": "jsr:1.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     assert_eq!(
         lockfile_entry(&workspace, "@pnpm-e2e/bar"),
@@ -88,8 +91,12 @@ fn update_latest_bumps_a_jsr_dependency() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, r#"{ "@pnpm-e2e/bar": "jsr:1.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "@pnpm-e2e/bar").as_deref(), Some("jsr:2.0.0"));
     assert_eq!(
@@ -108,13 +115,19 @@ fn install_records_an_aliased_jsr_dependency() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, r#"{ "bar-from-jsr": "jsr:@pnpm-e2e/bar@1.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     assert_eq!(
         lockfile_entry(&workspace, "bar-from-jsr"),
         Some(("jsr:@pnpm-e2e/bar@1.0.0".to_string(), "@jsr/pnpm-e2e__bar@1.0.0".to_string())),
     );
-    assert!(workspace.join("node_modules/bar-from-jsr/package.json").exists());
+    assert!(
+        workspace
+            .join("node_modules/bar-from-jsr/package.json")
+            .exists()
+    );
 
     drop((root, anchor));
 }
@@ -125,8 +138,12 @@ fn update_latest_bumps_an_aliased_jsr_dependency() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, r#"{ "bar-from-jsr": "jsr:@pnpm-e2e/bar@1.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "bar-from-jsr").as_deref(), Some("jsr:@pnpm-e2e/bar@2.0.0"));
     assert_eq!(
@@ -148,9 +165,13 @@ fn update_with_a_requested_version_keeps_the_jsr_prefix_and_operator() {
         &workspace,
         r#"{ "@pnpm-e2e/bar": "jsr:^1.0.0", "bar-from-jsr": "jsr:@pnpm-e2e/bar@~1.0.0" }"#,
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "@pnpm-e2e/bar@2.0.0", "bar-from-jsr@2.0.0"]).assert().success();
+    pacquet(&workspace, ["update", "@pnpm-e2e/bar@2.0.0", "bar-from-jsr@2.0.0"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "@pnpm-e2e/bar").as_deref(), Some("jsr:^2.0.0"));
     assert_eq!(dep_spec(&workspace, "bar-from-jsr").as_deref(), Some("jsr:@pnpm-e2e/bar@~2.0.0"));
@@ -162,7 +183,9 @@ fn update_with_a_requested_version_keeps_the_jsr_prefix_and_operator() {
         lockfile_entry(&workspace, "bar-from-jsr"),
         Some(("jsr:@pnpm-e2e/bar@~2.0.0".to_string(), "@jsr/pnpm-e2e__bar@2.0.0".to_string())),
     );
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -174,16 +197,22 @@ fn update_with_a_requested_version_keeps_a_jsr_entry_without_a_range_on_jsr() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, r#"{ "bar-from-jsr": "jsr:@pnpm-e2e/bar" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "bar-from-jsr@1.1.0"]).assert().success();
+    pacquet(&workspace, ["update", "bar-from-jsr@1.1.0"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "bar-from-jsr").as_deref(), Some("jsr:@pnpm-e2e/bar@1.1.0"));
     assert_eq!(
         lockfile_entry(&workspace, "bar-from-jsr"),
         Some(("jsr:@pnpm-e2e/bar@1.1.0".to_string(), "@jsr/pnpm-e2e__bar@1.1.0".to_string())),
     );
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -194,17 +223,23 @@ fn update_bumps_a_jsr_range_within_its_operator() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, r#"{ "@pnpm-e2e/bar": "jsr:1.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     write_manifest(&workspace, r#"{ "@pnpm-e2e/bar": "jsr:^1.0.0" }"#);
 
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "@pnpm-e2e/bar").as_deref(), Some("jsr:^1.1.0"));
     assert_eq!(
         lockfile_entry(&workspace, "@pnpm-e2e/bar"),
         Some(("jsr:^1.1.0".to_string(), "@jsr/pnpm-e2e__bar@1.1.0".to_string())),
     );
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -225,14 +260,18 @@ fn update_jsr_alias_selector_targets_the_aliased_package() {
         &workspace,
         r#"{ "bar-from-jsr": "jsr:@pnpm-e2e/bar@^1.0.0", "@jsr/pnpm-e2e__bar": "1.0.0" }"#,
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     assert_eq!(
         lockfile_entry(&workspace, "bar-from-jsr"),
         Some(("jsr:@pnpm-e2e/bar@^1.0.0".to_string(), "@jsr/pnpm-e2e__bar@1.0.0".to_string())),
     );
     write_manifest(&workspace, r#"{ "bar-from-jsr": "jsr:@pnpm-e2e/bar@^1.0.0" }"#);
 
-    pacquet(&workspace, ["update", "bar-from-jsr@jsr:@pnpm-e2e/bar@^1.0.0"]).assert().success();
+    pacquet(&workspace, ["update", "bar-from-jsr@jsr:@pnpm-e2e/bar@^1.0.0"])
+        .assert()
+        .success();
 
     assert_eq!(
         lockfile_entry(&workspace, "bar-from-jsr"),

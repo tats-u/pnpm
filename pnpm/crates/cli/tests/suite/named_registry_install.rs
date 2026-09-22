@@ -51,7 +51,8 @@ fn lockfile_entry(workspace: &Path, alias: &str) -> Option<(String, String)> {
     let lockfile: Lockfile = serde_saphyr::from_str(&text)
         .unwrap_or_else(|error| panic!("parse pnpm-lock.yaml: {error}\n{text}"));
     let alias: PkgName = alias.parse().expect("parse alias");
-    let entry = lockfile.importers
+    let entry = lockfile
+        .importers
         .get(Lockfile::ROOT_IMPORTER_KEY)?
         .dependencies
         .as_ref()?
@@ -64,7 +65,9 @@ fn install_records_a_plain_named_registry_dependency() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, r#"{ "@pnpm.e2e/foo": "work:1.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     assert_eq!(
         lockfile_entry(&workspace, "@pnpm.e2e/foo"),
@@ -85,9 +88,13 @@ fn frozen_install_replays_a_registry_qualified_lockfile() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, r#"{ "@pnpm.e2e/foo": "work:1.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
     assert_eq!(
         lockfile_entry(&workspace, "@pnpm.e2e/foo"),
         Some(("work:1.0.0".to_string(), "work:1.0.0".to_string())),
@@ -104,13 +111,19 @@ fn install_records_an_aliased_named_registry_dependency() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, r#"{ "foo-from-work": "work:@pnpm.e2e/foo@1.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     assert_eq!(
         lockfile_entry(&workspace, "foo-from-work"),
         Some(("work:@pnpm.e2e/foo@1.0.0".to_string(), "@pnpm.e2e/foo@work:1.0.0".to_string())),
     );
-    assert!(workspace.join("node_modules/foo-from-work/package.json").exists());
+    assert!(
+        workspace
+            .join("node_modules/foo-from-work/package.json")
+            .exists()
+    );
 
     drop((root, anchor));
 }

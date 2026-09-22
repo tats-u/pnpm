@@ -142,8 +142,16 @@ fn installs_node_runtime_from_the_rc_channel() {
         .with_arg("install")
         .assert()
         .success();
-    assert!(workspace.join("node_modules/node/package.json").exists());
-    assert!(fs::read_to_string(workspace.join("pnpm-lock.yaml")).unwrap().contains(version));
+    assert!(
+        workspace
+            .join("node_modules/node/package.json")
+            .exists()
+    );
+    assert!(
+        fs::read_to_string(workspace.join("pnpm-lock.yaml"))
+            .unwrap()
+            .contains(version)
+    );
 }
 
 #[test]
@@ -169,7 +177,11 @@ fn installs_node_runtime_from_an_authenticated_mirror() {
         .with_arg("install")
         .assert()
         .success();
-    assert!(workspace.join("node_modules/node/package.json").exists());
+    assert!(
+        workspace
+            .join("node_modules/node/package.json")
+            .exists()
+    );
 }
 
 /// The registry mock knows no package named "node", so resolving the alias
@@ -305,7 +317,9 @@ fn fresh_install_with_no_runtime_resolves_but_does_not_fetch_the_runtime() {
         "the resolved runtime stays in the lockfile:\n{lockfile}",
     );
     assert!(
-        !workspace.join("node_modules/node").exists(),
+        !workspace
+            .join("node_modules/node")
+            .exists(),
         "the runtime must not be materialized under --no-runtime",
     );
     let bin_dir = workspace.join("node_modules/.bin");
@@ -318,7 +332,11 @@ fn fresh_install_with_no_runtime_resolves_but_does_not_fetch_the_runtime() {
         .with_arg("install")
         .assert()
         .success();
-    assert!(!workspace.join("node_modules/node").exists());
+    assert!(
+        !workspace
+            .join("node_modules/node")
+            .exists()
+    );
     assert!(!archive.matched(), "the runtime archive must never be downloaded");
 }
 
@@ -571,7 +589,9 @@ fn assert_runtime_missing_offline(name: &'static str, version: &'static str) {
         .failure();
     let stderr = String::from_utf8_lossy(&output.get_output().stderr);
     assert!(
-        stderr.to_ascii_lowercase().contains(name),
+        stderr
+            .to_ascii_lowercase()
+            .contains(name),
         "stderr did not identify the missing {name} runtime:\n{stderr}",
     );
 }
@@ -687,10 +707,8 @@ fn write_runtime_lockfile_for_group(
     for fixture in fixtures {
         let version = format!("runtime:{}", fixture.version);
         let key = format!("{}@{version}", fixture.name);
-        importer_dependencies.insert(
-            fixture.name.to_string(),
-            json!({ "specifier": version, "version": version }),
-        );
+        importer_dependencies
+            .insert(fixture.name.to_string(), json!({ "specifier": version, "version": version }));
         packages.insert(
             key.clone(),
             json!({
@@ -789,7 +807,8 @@ fn append_tar(tar: &mut tar::Builder<Vec<u8>>, path: &str, body: &[u8], mode: u3
     let mut header = tar::Header::new_gnu();
     header.set_size(body.len() as u64);
     header.set_mode(mode);
-    tar.append_data(&mut header, path, body).unwrap();
+    tar.append_data(&mut header, path, body)
+        .unwrap();
 }
 
 fn build_zip(name: &str, target_os: &str, prefix: Option<&str>, node_extras: bool) -> Vec<u8> {
@@ -805,7 +824,9 @@ fn build_zip(name: &str, target_os: &str, prefix: Option<&str>, node_extras: boo
         writer
             .start_file(path(runtime_bin_path(name, target_os).as_str()), options)
             .unwrap();
-        writer.write_all(b"runtime fixture").unwrap();
+        writer
+            .write_all(b"runtime fixture")
+            .unwrap();
         if node_extras {
             for relative in [
                 "node_modules/npm/package.json",
@@ -866,7 +887,9 @@ fn mock_node_releases(
     for version in versions {
         let archive_name = node_archive_name(version, host_platform(), host_arch());
         let archive = if host_platform() == "win32" {
-            let prefix = archive_name.strip_suffix(".zip").unwrap();
+            let prefix = archive_name
+                .strip_suffix(".zip")
+                .unwrap();
             build_zip("node", "win32", Some(prefix), true)
         } else {
             build_tarball("node", version, true)
@@ -893,5 +916,7 @@ fn mock_node_releases(
 }
 
 fn command(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").unwrap().with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .unwrap()
+        .with_current_dir(workspace)
 }

@@ -28,7 +28,9 @@ pub struct OutdatedGitHubAction {
 
 #[must_use]
 pub fn is_selector(selector: &str) -> bool {
-    let pattern = selector.strip_prefix('!').unwrap_or(selector);
+    let pattern = selector
+        .strip_prefix('!')
+        .unwrap_or(selector);
     !pattern.starts_with('@') && pattern.contains('/')
 }
 
@@ -155,7 +157,12 @@ fn plan_is_outdated(plan: &PlannedUpdate, latest: bool) -> bool {
     let target = update_target(plan, latest);
     plan.current.version <= target.version
         && (plan.action.ref_ != target.commit
-            || plan.action.source.comment_version.as_deref() != Some(&target.tag))
+            || plan
+                .action
+                .source
+                .comment_version
+                .as_deref()
+                != Some(&target.tag))
 }
 
 /// The version this update moves to: the newest release under `latest`,
@@ -170,7 +177,8 @@ async fn create_plan<Reporter: self::Reporter, Runner: GitCommandRunner + Sync>(
     server_url: &str,
     runner: &Runner,
 ) -> miette::Result<Vec<PlannedUpdate>> {
-    let actions = discover(root).await?
+    let actions = discover(root)
+        .await?
         .into_iter()
         .filter(|action| {
             matcher.is_none_or(|matcher| {
@@ -232,18 +240,16 @@ fn plan_action_update(
     versions: &[RepoVersion],
 ) -> miette::Result<Option<PlannedUpdate>> {
     let Some(current) = find_current(&action, versions) else { return Ok(None) };
-    let wanted_range = SemverRange::parse(format!("^{}", current.version))
-        .map_err(|error| {
-            miette::miette!(
-                "Failed to create a compatible GitHub Action range for {}: {error}",
-                current.version,
-            )
-        })?;
+    let wanted_range = SemverRange::parse(format!("^{}", current.version)).map_err(|error| {
+        miette::miette!(
+            "Failed to create a compatible GitHub Action range for {}: {error}",
+            current.version,
+        )
+    })?;
     let candidates = versions
         .iter()
         .filter(|candidate| {
-            !current.version.pre_release.is_empty()
-                || candidate.version.pre_release.is_empty()
+            !current.version.pre_release.is_empty() || candidate.version.pre_release.is_empty()
         })
         .collect::<Vec<_>>();
     let Some(latest) = candidates.last() else { return Ok(None) };
@@ -301,12 +307,15 @@ fn find_current(action: &ActionReference, versions: &[RepoVersion]) -> Option<Re
             .find(|candidate| candidate.version == version)
             .cloned();
     }
-    if let Ok(major) = action.ref_.trim_start_matches('v').parse::<u64>() {
+    if let Ok(major) = action
+        .ref_
+        .trim_start_matches('v')
+        .parse::<u64>()
+    {
         return versions
             .iter()
             .rfind(|candidate| {
-                candidate.version.major == major
-                    && candidate.version.pre_release.is_empty()
+                candidate.version.major == major && candidate.version.pre_release.is_empty()
             })
             .cloned();
     }
@@ -324,18 +333,25 @@ fn render_target_ref(target: &RepoVersion) -> String {
 }
 
 fn is_sha(value: &str) -> bool {
-    value.len() == 40 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+    value.len() == 40
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn render_target_value(action: &ActionReference, target: &RepoVersion) -> String {
     let old_reference = format!("{}@{}", action.name, action.ref_);
     let new_reference = format!("{}@{}", action.name, render_target_ref(target));
-    action.source.replace_reference(&old_reference, &new_reference, &target.tag)
+    action
+        .source
+        .replace_reference(&old_reference, &new_reference, &target.tag)
 }
 
 impl WorkflowValue {
     fn replace_reference(&self, old_reference: &str, new_reference: &str, tag: &str) -> String {
-        let mut value = self.original_value.replacen(old_reference, new_reference, 1);
+        let mut value = self
+            .original_value
+            .replacen(old_reference, new_reference, 1);
         if let Some(comment_version) = &self.comment_version {
             value = value.replacen(comment_version, tag, 1);
         } else if let Some(comment) = value.find(" #") {

@@ -30,13 +30,8 @@ fn project_with_lifecycle_scripts() -> serde_json::Value {
 
 #[test]
 fn runs_project_lifecycle_scripts_in_order() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(workspace.join("package.json"), project_with_lifecycle_scripts().to_string())
@@ -63,13 +58,8 @@ fn runs_project_lifecycle_scripts_in_order() {
 /// truncated value makes them reject the install.
 #[test]
 fn stamps_the_configured_user_agent_on_install_scripts_run_and_exec() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // The body as a bare JS expression, so it can be passed either
@@ -128,13 +118,8 @@ fn stamps_the_configured_user_agent_on_install_scripts_run_and_exec() {
 
 #[test]
 fn runs_project_lifecycle_scripts_on_frozen_install() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(workspace.join("package.json"), project_with_lifecycle_scripts().to_string())
@@ -144,7 +129,12 @@ fn runs_project_lifecycle_scripts_on_frozen_install() {
         .with_arg("install")
         .assert()
         .success();
-    assert!(workspace.join("pnpm-lock.yaml").exists(), "first install should write a lockfile");
+    assert!(
+        workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "first install should write a lockfile"
+    );
     fs::remove_file(workspace.join("order.txt")).expect("clear order.txt between installs");
 
     Command::cargo_bin("pnpm")
@@ -167,13 +157,8 @@ fn runs_project_lifecycle_scripts_on_frozen_install() {
 
 #[test]
 fn failing_project_script_fails_the_install() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // `exit 1` is shell-agnostic — a non-zero exit in both `sh -c`
@@ -201,13 +186,8 @@ fn failing_project_script_fails_the_install() {
 /// matches its directory.
 #[test]
 fn runs_scripts_when_project_name_differs_from_directory() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -237,13 +217,8 @@ fn runs_scripts_when_project_name_differs_from_directory() {
 /// `INIT_CWD` is set to the lockfile directory for project scripts.
 #[test]
 fn project_script_sees_init_cwd() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -277,13 +252,8 @@ fn project_script_sees_init_cwd() {
 /// lifecycle scripts.
 #[test]
 fn update_config_extra_env_reaches_lifecycle_scripts() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -319,13 +289,8 @@ fn update_config_extra_env_reaches_lifecycle_scripts() {
 /// which must be the lockfile dir, not the hook's bogus value.
 #[test]
 fn update_config_extra_env_cannot_override_reserved_stamps() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -364,13 +329,8 @@ fn update_config_extra_env_cannot_override_reserved_stamps() {
 /// executed after a named install.
 #[test]
 fn add_does_not_run_project_lifecycle_scripts() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -406,13 +366,8 @@ fn add_does_not_run_project_lifecycle_scripts() {
 /// scripts under `ignoreScripts`.
 #[test]
 fn ignore_scripts_skips_project_lifecycle_scripts() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(workspace.join("package.json"), project_with_lifecycle_scripts().to_string())
@@ -437,13 +392,8 @@ fn ignore_scripts_skips_project_lifecycle_scripts() {
 /// unlike a bare `pacquet update`.
 #[test]
 fn latest_update_without_selectors_does_not_run_project_lifecycle_scripts() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -511,13 +461,8 @@ mod dev_preinstall {
 
     #[test]
     fn runs_before_the_projects_own_lifecycle_scripts() {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         fs::write(workspace.join("package.json"), project_with_dev_preinstall().to_string())
@@ -537,13 +482,8 @@ mod dev_preinstall {
 
     #[test]
     fn runs_on_a_frozen_install() {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         fs::write(workspace.join("package.json"), project_with_dev_preinstall().to_string())
@@ -571,13 +511,8 @@ mod dev_preinstall {
 
     #[test]
     fn is_skipped_under_ignore_scripts() {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         fs::write(workspace.join("package.json"), project_with_dev_preinstall().to_string())
@@ -602,13 +537,8 @@ mod dev_preinstall {
     /// would run once on each side of it.
     #[test]
     fn is_skipped_when_the_delegating_cli_already_ran_it() {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         fs::write(workspace.join("package.json"), project_with_dev_preinstall().to_string())
@@ -632,13 +562,8 @@ mod dev_preinstall {
     /// bug this marker exists to avoid.
     #[test]
     fn an_empty_delegation_marker_does_not_suppress_it() {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         fs::write(workspace.join("package.json"), project_with_dev_preinstall().to_string())
@@ -662,13 +587,8 @@ mod dev_preinstall {
     /// `--lockfile-only` imply `ignoreScripts`.
     #[test]
     fn is_skipped_by_lockfile_only() {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         fs::write(workspace.join("package.json"), project_with_dev_preinstall().to_string())
@@ -694,13 +614,8 @@ mod dev_preinstall {
     /// that isn't there.
     #[test]
     fn prepares_a_workspace_bin_before_it_is_linked() {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         let yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -756,13 +671,8 @@ mod dev_preinstall {
     /// member that defines one is ignored.
     #[test]
     fn runs_only_for_the_workspace_root() {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         let yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -780,7 +690,9 @@ mod dev_preinstall {
         };
         fs::write(workspace.join("package.json"), manifest_with_hook("root"))
             .expect("write the root package.json");
-        let member_dir = workspace.join("packages").join("member");
+        let member_dir = workspace
+            .join("packages")
+            .join("member");
         fs::create_dir_all(&member_dir).expect("create the member dir");
         fs::write(member_dir.join("package.json"), manifest_with_hook("member"))
             .expect("write the member package.json");

@@ -74,7 +74,9 @@ impl ProjectConfig {
             // workspace pinned it, and a global virtual store is
             // store-anchored and follows nothing.
             if !config.enable_global_virtual_store
-                && !config.explicit_settings.contains_key("virtualStoreDir")
+                && !config
+                    .explicit_settings
+                    .contains_key("virtualStoreDir")
             {
                 config.virtual_store_dir = config.modules_dir.join(".pnpm");
             }

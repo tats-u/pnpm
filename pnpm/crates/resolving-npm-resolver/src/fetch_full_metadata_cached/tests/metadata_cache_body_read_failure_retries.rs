@@ -35,7 +35,9 @@ async fn body_read_failure_retries_and_writes_mirror() {
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("body read retries");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("body read retries");
     assert_eq!(pkg.name, "acme");
     first.assert_async().await;
     second.assert_async().await;
@@ -54,8 +56,9 @@ async fn body_read_failure_retries_and_writes_mirror() {
         .expect(1)
         .create_async()
         .await;
-    let cached_pkg =
-        fetch_full_metadata_cached("acme", &opts).await.expect("mirror body readable after retry");
+    let cached_pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("mirror body readable after retry");
     assert_eq!(cached_pkg.name, "acme");
     not_modified.assert_async().await;
 }

@@ -20,8 +20,16 @@ async fn caches_supported_and_unsupported_ecosystems_across_clients() {
     let (first_python, second_python) = tokio::join!(first_python, second_python);
     assert!(dbg!(first_python.unwrap()));
     assert!(dbg!(second_python.unwrap()));
-    assert!(!dbg!(server_resolves(&first, &url, CARGO_ECOSYSTEM).await.unwrap()));
-    assert!(!dbg!(server_resolves(&second, &url, CARGO_ECOSYSTEM).await.unwrap()));
+    assert!(!dbg!(
+        server_resolves(&first, &url, CARGO_ECOSYSTEM)
+            .await
+            .unwrap()
+    ));
+    assert!(!dbg!(
+        server_resolves(&second, &url, CARGO_ECOSYSTEM)
+            .await
+            .unwrap()
+    ));
     handshake.assert_async().await;
 }
 

@@ -36,7 +36,10 @@ async fn get_custom_resolvers_reports_per_resolver_capabilities() {
     let hooks =
         pnpm_hooks::node_runtime::NodeJsHooks::new(write_custom_resolvers_pnpmfile(tmp.path()));
 
-    let resolvers = hooks.get_custom_resolvers().await.expect("load resolvers");
+    let resolvers = hooks
+        .get_custom_resolvers()
+        .await
+        .expect("load resolvers");
 
     assert_eq!(resolvers.len(), 2);
     assert!(resolvers[0].has_can_resolve());
@@ -56,7 +59,10 @@ Object.assign(module.exports, {
 });",
     );
 
-    let resolvers = hooks.get_custom_resolvers().await.expect("load resolvers");
+    let resolvers = hooks
+        .get_custom_resolvers()
+        .await
+        .expect("load resolvers");
 
     assert_eq!(resolvers.len(), 1);
     dbg!(resolvers[0].has_can_resolve());
@@ -69,7 +75,10 @@ async fn get_custom_fetchers_reports_per_fetcher_capabilities() {
     let hooks =
         pnpm_hooks::node_runtime::NodeJsHooks::new(write_custom_fetchers_pnpmfile(tmp.path()));
 
-    let fetchers = hooks.get_custom_fetchers().await.expect("load fetchers");
+    let fetchers = hooks
+        .get_custom_fetchers()
+        .await
+        .expect("load fetchers");
 
     assert_eq!(fetchers.len(), 2);
     assert!(fetchers[0].has_can_fetch());

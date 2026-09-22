@@ -54,7 +54,9 @@ pub(crate) fn virtual_store_dir_for_key(
 /// Only reached for packages that both pass the build-allow policy and
 /// have a cache entry — a handful per install, not the whole tree.
 pub(crate) fn slot_carries_overlay(pkg_dir: &Path, overlay: &HashMap<String, PathBuf>) -> bool {
-    !pkg_dir.join(NEEDS_BUILD_MARKER).exists()
+    !pkg_dir
+        .join(NEEDS_BUILD_MARKER)
+        .exists()
         && pkg_dir.is_dir()
         && overlay
             .keys()
@@ -238,7 +240,9 @@ pub(crate) fn bin_dirs_in_all_parent_dirs(pkg_root: &Path, lockfile_dir: &Path) 
     let mut bin_dirs: Vec<PathBuf> = Vec::new();
     let mut dir: PathBuf = pkg_root.to_path_buf();
     loop {
-        let parent = dir.parent().unwrap_or_else(|| Path::new(""));
+        let parent = dir
+            .parent()
+            .unwrap_or_else(|| Path::new(""));
         let parent_starts_with_at = parent
             .to_str()
             .and_then(|text| text.chars().next())
@@ -251,7 +255,11 @@ pub(crate) fn bin_dirs_in_all_parent_dirs(pkg_root: &Path, lockfile_dir: &Path) 
             break;
         }
     }
-    bin_dirs.push(lockfile_dir.join("node_modules").join(".bin"));
+    bin_dirs.push(
+        lockfile_dir
+            .join("node_modules")
+            .join(".bin"),
+    );
     bin_dirs
 }
 

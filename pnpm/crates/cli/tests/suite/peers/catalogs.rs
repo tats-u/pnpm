@@ -17,13 +17,8 @@ fn catalog_peer_of_an_injected_workspace_package_is_resolved() {
 
 #[test]
 fn ignored_workspace_does_not_require_workspace_catalogs_for_peer_inspection() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("pnpm-workspace.yaml"),
@@ -73,13 +68,8 @@ fn ignored_workspace_does_not_require_workspace_catalogs_for_peer_inspection() {
 
 #[test]
 fn standalone_install_does_not_require_catalogs_for_linked_peers() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::remove_file(workspace.join("pnpm-workspace.yaml"))
         .expect("remove the mock registry's workspace manifest");
@@ -122,13 +112,8 @@ fn standalone_install_does_not_require_catalogs_for_linked_peers() {
 
 #[test]
 fn workspace_without_catalogs_does_not_reject_an_injected_catalog_peer() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("pnpm-workspace.yaml"),
@@ -180,13 +165,8 @@ fn workspace_without_catalogs_does_not_reject_an_injected_catalog_peer() {
 }
 
 fn assert_catalog_peer_of_workspace_package_is_resolved(injected: bool) {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("pnpm-workspace.yaml"),

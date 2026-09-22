@@ -20,7 +20,10 @@ pub(super) async fn put_login(
     Path(path): Path<UserPath>,
     body: axum::body::Bytes,
 ) -> Response {
-    match path.user.strip_prefix("org.couchdb.user:") {
+    match path
+        .user
+        .strip_prefix("org.couchdb.user:")
+    {
         Some(name) => add_user(&state, name, &body).await,
         None => not_found(),
     }
@@ -101,17 +104,33 @@ pub(super) async fn add_user(state: &AppState, name: &str, body: &[u8]) -> Respo
         }
         .into_response();
     }
-    let Some(password) = body.get("password").and_then(Value::as_str) else {
-        return RegistryError::BadRequest { reason: "missing password".to_string() }.into_response(
-        );
+    let Some(password) = body
+        .get("password")
+        .and_then(Value::as_str)
+    else {
+        return RegistryError::BadRequest { reason: "missing password".to_string() }
+            .into_response();
     };
 
-    let (outcome, username) =
-        match state.inner.identity.auth.users.add_or_login(name, password).await {
-            Ok(o) => o,
-            Err(err) => return err.into_response(),
-        };
-    let token = match state.inner.identity.auth.tokens.issue(&username).await {
+    let (outcome, username) = match state
+        .inner
+        .identity
+        .auth
+        .users
+        .add_or_login(name, password)
+        .await
+    {
+        Ok(o) => o,
+        Err(err) => return err.into_response(),
+    };
+    let token = match state
+        .inner
+        .identity
+        .auth
+        .tokens
+        .issue(&username)
+        .await
+    {
         Ok(t) => t,
         Err(err) => return err.into_response(),
     };
@@ -177,7 +196,14 @@ pub(super) async fn list_tokens(state: &AppState, identity: &Identity) -> Respon
         Ok(username) => username,
         Err(err) => return err.into_response(),
     };
-    let tokens = match state.inner.identity.auth.tokens.list_for_user(&username).await {
+    let tokens = match state
+        .inner
+        .identity
+        .auth
+        .tokens
+        .list_for_user(&username)
+        .await
+    {
         Ok(tokens) => tokens,
         Err(err) => return err.into_response(),
     };
@@ -202,14 +228,28 @@ pub(super) async fn revoke_token_by_key(
         Ok(username) => username,
         Err(err) => return err.into_response(),
     };
-    match state.inner.identity.auth.tokens.find_by_key(key).await {
+    match state
+        .inner
+        .identity
+        .auth
+        .tokens
+        .find_by_key(key)
+        .await
+    {
         Ok(Some(record)) if record.username != username => RegistryError::Forbidden {
             user: username,
             action: "revoke",
             resource: "this token".to_string(),
         }
         .into_response(),
-        Ok(Some(_)) => match state.inner.identity.auth.tokens.revoke_by_key(key).await {
+        Ok(Some(_)) => match state
+            .inner
+            .identity
+            .auth
+            .tokens
+            .revoke_by_key(key)
+            .await
+        {
             Ok(Some(_)) => json_response(StatusCode::OK, &json!({ "ok": "token revoked" })),
             Ok(None) => not_found(),
             Err(err) => err.into_response(),
@@ -229,9 +269,18 @@ pub(super) async fn logout(state: &AppState, identity: &Identity, raw_token: &st
         Ok(username) => username,
         Err(err) => return err.into_response(),
     };
-    match state.inner.identity.oidc.session(raw_token) {
+    match state
+        .inner
+        .identity
+        .oidc
+        .session(raw_token)
+    {
         Ok(Some(owner)) if owner == username => {
-            state.inner.identity.oidc.revoke_session(raw_token);
+            state
+                .inner
+                .identity
+                .oidc
+                .revoke_session(raw_token);
             return json_response(StatusCode::OK, &json!({ "ok": true }));
         }
         Ok(Some(_)) => {
@@ -245,7 +294,14 @@ pub(super) async fn logout(state: &AppState, identity: &Identity, raw_token: &st
         Err(err) => return err.into_response(),
         Ok(None) => {}
     }
-    let target_owner = match state.inner.identity.auth.tokens.lookup(raw_token).await {
+    let target_owner = match state
+        .inner
+        .identity
+        .auth
+        .tokens
+        .lookup(raw_token)
+        .await
+    {
         Ok(Some(owner)) => owner,
         Ok(None) => return not_found(),
         Err(err) => return err.into_response(),
@@ -258,7 +314,14 @@ pub(super) async fn logout(state: &AppState, identity: &Identity, raw_token: &st
         }
         .into_response();
     }
-    match state.inner.identity.auth.tokens.revoke_by_raw(raw_token).await {
+    match state
+        .inner
+        .identity
+        .auth
+        .tokens
+        .revoke_by_raw(raw_token)
+        .await
+    {
         Ok(Some(_)) => json_response(StatusCode::OK, &json!({ "ok": true })),
         Ok(None) => not_found(),
         Err(err) => err.into_response(),

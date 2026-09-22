@@ -74,8 +74,10 @@ pub fn check_deps_status_before_run(
     }
 
     let projects_to_check = drift.projects_to_check(modified);
-    let filesystem_now =
-        check.is_workspace_install.then(|| filesystem_now_ms(check.workspace_root)).flatten();
+    let filesystem_now = check
+        .is_workspace_install
+        .then(|| filesystem_now_ms(check.workspace_root))
+        .flatten();
     // The TypeScript run/exec handler does not forward `dedupePeers`
     // into `checkDepsStatus`, so its pre-run lockfile check uses the
     // false default even when the workspace setting is true.
@@ -124,13 +126,7 @@ fn first_lockfile_or_setting_drift(
     let &OptimisticRepeatInstallCheck {
         config,
         catalogs,
-        layout:
-            crate::RepeatInstallLayout {
-                node_linker,
-                included,
-                supported_architectures,
-                ..
-            },
+        layout: crate::RepeatInstallLayout { node_linker, included, supported_architectures, .. },
         ..
     } = check;
     if let Some(reason) = lockfile_conflict_drift(check, state.last_validated_timestamp) {
@@ -182,7 +178,9 @@ fn first_workspace_drift(
         ));
     }
     if !is_workspace_install
-        && !workspace_root.join(config.wanted_lockfile_name()).exists()
+        && !workspace_root
+            .join(config.wanted_lockfile_name())
+            .exists()
         && !current_lockfile_file_has_content(&config.virtual_store_dir)
     {
         return Some(format!("Cannot find a lockfile in {}", workspace_root.display()));
@@ -245,13 +243,7 @@ fn record_content_check_state(
         config,
         project_manifests,
         catalogs,
-        layout:
-            crate::RepeatInstallLayout {
-                node_linker,
-                included,
-                supported_architectures,
-                ..
-            },
+        layout: crate::RepeatInstallLayout { node_linker, included, supported_architectures, .. },
         ..
     } = check;
     let mut new_state = crate::install::build_workspace_state::<Host>(
@@ -322,8 +314,14 @@ pub(crate) fn config_dependencies_drifted(config: &Config, state: &WorkspaceStat
         return false;
     }
     let empty = std::collections::BTreeMap::new();
-    config.config_dependencies.as_ref().unwrap_or(&empty)
-        != state.config_dependencies.as_ref().unwrap_or(&empty)
+    config
+        .config_dependencies
+        .as_ref()
+        .unwrap_or(&empty)
+        != state
+            .config_dependencies
+            .as_ref()
+            .unwrap_or(&empty)
 }
 
 fn lockfile_conflict_drift(

@@ -70,7 +70,9 @@ pub(super) fn flatten_ecosystem_group(
         match &mut registry {
             RegistryFile::Hosted(hosted) => {
                 set_group_ecosystem(&name, &mut hosted.ecosystem, ecosystem)?;
-                hosted.org.get_or_insert_with(|| format!("{ecosystem}~{name}"));
+                hosted
+                    .org
+                    .get_or_insert_with(|| format!("{ecosystem}~{name}"));
             }
             RegistryFile::Upstream(upstream) => {
                 set_group_ecosystem(&name, &mut upstream.ecosystem, ecosystem)?;
@@ -111,12 +113,15 @@ pub(super) fn build_registries(
     // at `/~<name>/`. No declared patterns ⇒ it serves every name.
     for name in upstreams.keys() {
         validate_registry_name(name)?;
-        builder.graph.insert(name.clone(), Registry::Upstream { patterns: Vec::new() });
+        builder
+            .graph
+            .insert(name.clone(), Registry::Upstream { patterns: Vec::new() });
     }
     for (name, file) in registry_files {
         builder.add(name, file, upstreams, resolve_upstreams)?;
     }
-    let registries = builder.ecosystems
+    let registries = builder
+        .ecosystems
         .iter()
         .filter(|(_, ecosystem)| **ecosystem != Ecosystem::Npm)
         .fold(Registries::new(builder.graph, default_registry), |registries, (name, ecosystem)| {
@@ -124,7 +129,9 @@ pub(super) fn build_registries(
         });
     let defaults = addressed_defaults(defaults, &registries);
     let registries = registries.with_defaults(defaults);
-    registries.validate().map_err(|err| registry_err(&err))?;
+    registries
+        .validate()
+        .map_err(|err| registry_err(&err))?;
     Ok((builder.hosted, registries))
 }
 
@@ -179,20 +186,25 @@ impl RegistryGraphBuilder {
                 let (config, ecosystem, patterns) =
                     build_hosted_entry(&name, registry, &self.hosted)?;
                 self.hosted.insert(name.clone(), config);
-                self.ecosystems.insert(name.clone(), ecosystem);
-                self.graph.insert(name, Registry::Hosted { patterns });
+                self.ecosystems
+                    .insert(name.clone(), ecosystem);
+                self.graph
+                    .insert(name, Registry::Hosted { patterns });
             }
             RegistryFile::Upstream(upstream) => {
                 let (resolved, ecosystem, patterns) =
                     build_upstream_entry(&name, *upstream, resolve_upstreams)?;
-                self.ecosystems.insert(name.clone(), ecosystem);
+                self.ecosystems
+                    .insert(name.clone(), ecosystem);
                 if let Some(resolved) = resolved {
                     upstreams.insert(name.clone(), resolved);
                 }
-                self.graph.insert(name, Registry::Upstream { patterns });
+                self.graph
+                    .insert(name, Registry::Upstream { patterns });
             }
             RegistryFile::Router(router) => {
-                self.graph.insert(name, Registry::Router { sources: router.sources });
+                self.graph
+                    .insert(name, Registry::Router { sources: router.sources });
             }
         }
         Ok(())

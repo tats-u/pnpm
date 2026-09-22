@@ -49,7 +49,9 @@ pub fn is_camel_case(name: &str) -> bool {
 /// each word, and join with `-`.
 #[must_use]
 pub fn to_kebab_case(name: &str) -> String {
-    words(name).join("-").to_ascii_lowercase()
+    words(name)
+        .join("-")
+        .to_ascii_lowercase()
 }
 
 /// Convert `name` to camelCase, matching the `camelcase` npm package for the

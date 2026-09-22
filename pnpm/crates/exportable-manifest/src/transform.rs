@@ -42,7 +42,10 @@ pub fn transform(manifest: &mut Map<String, Value>) -> Result<(), TransformError
 /// including a non-string — passes.
 fn transform_required_fields(manifest: &Map<String, Value>) -> Result<(), TransformError> {
     for field in ["name", "version"] {
-        if !manifest.get(field).is_some_and(is_truthy) {
+        if !manifest
+            .get(field)
+            .is_some_and(is_truthy)
+        {
             return Err(TransformError::MissingRequiredField { field });
         }
     }

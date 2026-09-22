@@ -22,7 +22,11 @@ pub(super) fn seed_bumps(
 ) {
     let selected = |dir: &String| selection.is_none_or(|selected| selected.contains(dir));
 
-    for (dir, pending) in intents.pending_by_dir.iter().filter(|(dir, _)| selected(dir)) {
+    for (dir, pending) in intents
+        .pending_by_dir
+        .iter()
+        .filter(|(dir, _)| selected(dir))
+    {
         if let Some(direct) = max_bump_type(
             pending
                 .iter()
@@ -34,9 +38,16 @@ pub(super) fn seed_bumps(
 
     // A package that left its lane releases the accumulated stable version
     // even when no new intents are pending.
-    let graduated = intents.lane_consumed_by_dir
+    let graduated = intents
+        .lane_consumed_by_dir
         .iter()
-        .filter(|(dir, _)| selected(dir) && !ctx.workspace.lanes_by_dir.contains_key(*dir));
+        .filter(|(dir, _)| {
+            selected(dir)
+                && !ctx
+                    .workspace
+                    .lanes_by_dir
+                    .contains_key(*dir)
+        });
     for (dir, lane_consumed) in graduated {
         if let Some(bump) = max_bump_type(
             lane_consumed
@@ -64,7 +75,10 @@ pub(super) fn compute_versions(
             compute_new_version(
                 participant.current_version,
                 pkg_state.bump_type,
-                ctx.workspace.lanes_by_dir.get(dir).map(String::as_str),
+                ctx.workspace
+                    .lanes_by_dir
+                    .get(dir)
+                    .map(String::as_str),
                 cumulative(dir, pkg_state.bump_type),
                 ctx.opts.unpublished_dirs.contains(dir),
             ),
@@ -95,7 +109,8 @@ pub(super) fn cumulative_bump(
     dir: &str,
     planned: ReleaseBumpType,
 ) -> ReleaseBumpType {
-    intents.lane_consumed_by_dir
+    intents
+        .lane_consumed_by_dir
         .get(dir)
         .into_iter()
         .flatten()
@@ -127,11 +142,11 @@ pub(super) fn propagate_bumps(
     }
 
     for group in &ctx.workspace.fixed_groups {
-        let Some(group_bump) = max_bump_type_of(
-            group
-                .iter()
-                .filter_map(|dir| state.get(dir).map(|entry| entry.bump_type)),
-        ) else {
+        let Some(group_bump) = max_bump_type_of(group.iter().filter_map(|dir| {
+            state
+                .get(dir)
+                .map(|entry| entry.bump_type)
+        })) else {
             continue;
         };
         for dir in group {
@@ -211,14 +226,16 @@ pub(super) fn planned_releases(
                 dir: dir.clone(),
                 root_dir: participant.root_dir.to_path_buf(),
                 intents: changelog_intents(ctx, intents, dir),
-                dependency_updates: pkg_state.dependency_updates
+                dependency_updates: pkg_state
+                    .dependency_updates
                     .iter()
                     .map(|(dep_name, new_version)| DependencyUpdate {
                         name: dep_name.clone(),
                         new_version: new_version.clone(),
                     })
                     .collect(),
-                causes: pkg_state.causes
+                causes: pkg_state
+                    .causes
                     .iter()
                     .copied()
                     .collect(),
@@ -248,7 +265,8 @@ fn changelog_intents(
     intents: &PlanIntents<'_>,
     dir: &str,
 ) -> Vec<ChangeIntent> {
-    let mut consumed: Vec<ChangeIntent> = intents.pending_by_dir
+    let mut consumed: Vec<ChangeIntent> = intents
+        .pending_by_dir
         .get(dir)
         .map(|intents| {
             intents
@@ -257,10 +275,17 @@ fn changelog_intents(
                 .collect()
         })
         .unwrap_or_default();
-    if !ctx.workspace.lanes_by_dir.contains_key(dir)
+    if !ctx
+        .workspace
+        .lanes_by_dir
+        .contains_key(dir)
         && let Some(lane_consumed) = intents.lane_consumed_by_dir.get(dir)
     {
-        consumed.extend(lane_consumed.iter().map(|&intent| intent.clone()));
+        consumed.extend(
+            lane_consumed
+                .iter()
+                .map(|&intent| intent.clone()),
+        );
     }
     consumed
 }
@@ -318,8 +343,12 @@ pub(super) fn collect_pending_intents<'i>(
     let mut pending = BTreeMap::new();
     let empty = PackageConsumption::default();
     for dir in ctx.workspace.participants.keys() {
-        let consumed = ctx.consumption.get(dir).unwrap_or(&empty);
-        let pkg_intents: Vec<&ChangeIntent> = ctx.intents
+        let consumed = ctx
+            .consumption
+            .get(dir)
+            .unwrap_or(&empty);
+        let pkg_intents: Vec<&ChangeIntent> = ctx
+            .intents
             .iter()
             .filter(|intent| {
                 ctx.intent_bump_for(intent, dir)
@@ -349,12 +378,15 @@ pub(super) fn collect_lane_consumed_intents<'i>(
         if consumed.prerelease_only_ids.is_empty() {
             continue;
         }
-        let pkg_intents: Vec<&ChangeIntent> = ctx.intents
+        let pkg_intents: Vec<&ChangeIntent> = ctx
+            .intents
             .iter()
             .filter(|intent| {
                 ctx.intent_bump_for(intent, dir)
                     .is_some_and(|bump| bump != IntentBumpType::None)
-                    && consumed.prerelease_only_ids.contains(&intent.id)
+                    && consumed
+                        .prerelease_only_ids
+                        .contains(&intent.id)
             })
             .collect();
         if !pkg_intents.is_empty() {

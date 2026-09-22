@@ -75,10 +75,15 @@ pub(super) fn current_history_violation(
     if current_revision == 0 {
         return None;
     }
-    let current_history: Vec<_> = artifact.revisions
+    let current_history: Vec<_> = artifact
+        .revisions
         .iter()
         .filter(|candidate| {
-            candidate.revision.as_ref().and_then(JsonValue::as_u64) == Some(current_revision)
+            candidate
+                .revision
+                .as_ref()
+                .and_then(JsonValue::as_u64)
+                == Some(current_revision)
         })
         .collect();
     let consistent = current_history.len() == 1
@@ -113,10 +118,15 @@ pub(super) fn select_revision<'a>(
     current_revision: u64,
     integrity: &ssri::Integrity,
 ) -> Result<&'a RegistryArtifact, ResolutionVerification> {
-    let historical: Vec<_> = artifact.revisions
+    let historical: Vec<_> = artifact
+        .revisions
         .iter()
         .filter(|candidate| {
-            candidate.revision.as_ref().and_then(JsonValue::as_u64) == Some(requested)
+            candidate
+                .revision
+                .as_ref()
+                .and_then(JsonValue::as_u64)
+                == Some(requested)
         })
         .collect();
     if historical.len() > 1 {
@@ -148,8 +158,12 @@ pub(super) fn select_revision<'a>(
 
 pub(super) fn lockfile_revision(resolution: &LockfileResolution) -> Option<u64> {
     match resolution {
-        LockfileResolution::Registry(registry) => registry.revision.map(TarballRevision::get),
-        LockfileResolution::Tarball(tarball) => tarball.revision.map(TarballRevision::get),
+        LockfileResolution::Registry(registry) => registry
+            .revision
+            .map(TarballRevision::get),
+        LockfileResolution::Tarball(tarball) => tarball
+            .revision
+            .map(TarballRevision::get),
         _ => None,
     }
 }

@@ -189,13 +189,11 @@ pub fn colors_enabled(is_terminal: bool) -> bool {
 }
 
 fn cwd() -> String {
-    CWD.get()
-        .cloned()
-        .unwrap_or_else(|| {
-            std::env::current_dir()
-                .map(|path| path.to_string_lossy().into_owned())
-                .unwrap_or_default()
-        })
+    CWD.get().cloned().unwrap_or_else(|| {
+        std::env::current_dir()
+            .map(|path| path.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    })
 }
 
 /// `--reporter=default`: renders pnpm-style visual output to stdout, or to
@@ -207,7 +205,9 @@ impl Reporter for DefaultReporter {
         if progress::is_suppressed(event) {
             return;
         }
-        let mut sink = SINK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut sink = SINK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if let LogEvent::Prompt(log) = event {
             sink.on_prompt(log.action);
             return;
@@ -363,7 +363,11 @@ impl Sink {
         // elapsed. State is already folded, so the next non-coalesceable
         // event (stats, summary, importing-done, the footer) renders the
         // latest counts.
-        if coalesceable && self.last_write.is_some_and(|last| last.elapsed() < self.throttle) {
+        if coalesceable
+            && self
+                .last_write
+                .is_some_and(|last| last.elapsed() < self.throttle)
+        {
             return;
         }
         let wrote = self.write_output(output, out);
@@ -390,7 +394,9 @@ impl Sink {
                 if !frame.ends_with('\n') {
                     frame.push('\n');
                 }
-                let lines: Vec<&str> = frame[..frame.len() - 1].split('\n').collect();
+                let lines: Vec<&str> = frame[..frame.len() - 1]
+                    .split('\n')
+                    .collect();
                 self.refresh_terminal_size();
                 // `\r` resets the column in case an external process left the
                 // cursor mid-line; `\x1b[K` erases trailing characters on the
@@ -401,7 +407,8 @@ impl Sink {
                 self.commit_overflow(&lines);
                 let visible =
                     &frame[frame_offset_of_line(&frame, &lines, self.viewport.committed_lines)..];
-                self.diff.update_into(visible, &mut self.frame_buf);
+                self.diff
+                    .update_into(visible, &mut self.frame_buf);
                 self.frame_buf.push_str("\x1b[K\x1b[0J");
                 let _ = out.write_all(self.frame_buf.as_bytes());
             }
@@ -453,25 +460,35 @@ impl Sink {
             .iter()
             .map(|line| rendered_rows(line, self.viewport.columns))
             .sum();
-        let (first_visible, frame_rows) = self.viewport.first_visible_line(lines, max_rows);
+        let (first_visible, frame_rows) = self
+            .viewport
+            .first_visible_line(lines, max_rows);
         // A frame taller than the terminal has scrolled its own top away —
         // whether because a line outgrew the screen or because the window shrank
         // under it — so no cursor move reaches back into it, and growing the
         // window again does not bring it back. Start afresh below instead,
         // reprinting rather than revising, and leave the commit for the next
         // frame, whose layout is one this differ laid out itself.
-        let cannot_revise = self.viewport.rendered_frame_outgrew_terminal
+        let cannot_revise = self
+            .viewport
+            .rendered_frame_outgrew_terminal
             || self.viewport.rendered_frame_rows > max_rows;
         if cannot_revise || first_visible == self.viewport.committed_lines {
             self.viewport.rendered_frame_rows = uncommitted_rows;
-            self.viewport.rendered_frame_outgrew_terminal = uncommitted_rows > max_rows;
-            if cannot_revise || self.viewport.rendered_frame_outgrew_terminal {
+            self.viewport
+                .rendered_frame_outgrew_terminal = uncommitted_rows > max_rows;
+            if cannot_revise
+                || self
+                    .viewport
+                    .rendered_frame_outgrew_terminal
+            {
                 self.diff = diff::Diff::new(self.viewport.columns);
             }
             return;
         }
         self.viewport.rendered_frame_rows = frame_rows;
-        self.viewport.rendered_frame_outgrew_terminal = false;
+        self.viewport
+            .rendered_frame_outgrew_terminal = false;
         // Shrinking the frame to just the overflow leaves those lines untouched
         // where they already are, erases the rest of the frame below them, and
         // parks the cursor on the next line — where the restarted differ picks
@@ -479,7 +496,8 @@ impl Sink {
         let handover =
             format!("{}\n", lines[self.viewport.committed_lines..first_visible].join("\n"));
         let mut buf = std::mem::take(&mut self.frame_buf);
-        self.diff.update_into(&handover, &mut buf);
+        self.diff
+            .update_into(&handover, &mut buf);
         self.frame_buf = buf;
         self.diff = diff::Diff::new(self.viewport.columns);
         self.viewport.committed_lines = first_visible;
@@ -494,13 +512,21 @@ fn reporter_options(append_only: bool) -> state::ReporterOptions {
             .copied()
             .unwrap_or(MaxLogLevel::Info),
         lifecycle: crate::state::LifecycleOptions {
-            stream_output: STREAM_LIFECYCLE_OUTPUT.get().is_some_and(|value| *value),
-            aggregate_output: AGGREGATE_OUTPUT.get().is_some_and(|value| *value),
-            hide_prefix: HIDE_LIFECYCLE_PREFIX.get().is_some_and(|value| *value),
+            stream_output: STREAM_LIFECYCLE_OUTPUT
+                .get()
+                .is_some_and(|value| *value),
+            aggregate_output: AGGREGATE_OUTPUT
+                .get()
+                .is_some_and(|value| *value),
+            hide_prefix: HIDE_LIFECYCLE_PREFIX
+                .get()
+                .is_some_and(|value| *value),
             ..Default::default()
         },
         progress: crate::state::ProgressOptions {
-            hide_added_pkgs: HIDE_ADDED_PKGS_PROGRESS.get().is_some_and(|value| *value),
+            hide_added_pkgs: HIDE_ADDED_PKGS_PROGRESS
+                .get()
+                .is_some_and(|value| *value),
             ..Default::default()
         },
         scope: crate::state::ScopeOptions {
@@ -508,8 +534,12 @@ fn reporter_options(append_only: bool) -> state::ReporterOptions {
                 .get()
                 .copied()
                 .unwrap_or(SummaryScope::CurrentPrefix),
-            reports_scope: REPORTS_SCOPE.get().is_some_and(|value| *value),
-            recursive: IS_RECURSIVE.get().is_some_and(|value| *value),
+            reports_scope: REPORTS_SCOPE
+                .get()
+                .is_some_and(|value| *value),
+            recursive: IS_RECURSIVE
+                .get()
+                .is_some_and(|value| *value),
         },
         ..state::ReporterOptions::default()
     }
@@ -543,7 +573,9 @@ fn rendered_rows(line: &str, width: usize) -> usize {
     if width == 0 {
         return 1;
     }
-    visible_width(line).div_ceil(width).max(1)
+    visible_width(line)
+        .div_ceil(width)
+        .max(1)
 }
 
 #[cfg(test)]

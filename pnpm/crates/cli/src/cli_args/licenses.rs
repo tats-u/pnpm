@@ -153,7 +153,10 @@ impl LicensesArgs {
     ) -> miette::Result<()> {
         check_licenses_subcommand(self.params.first().map(String::as_str))?;
 
-        let lockfile_dir = config.workspace_dir.as_deref().unwrap_or(dir);
+        let lockfile_dir = config
+            .workspace_dir
+            .as_deref()
+            .unwrap_or(dir);
         let lockfile = Lockfile::load_wanted_from_dir(lockfile_dir).into_diagnostic()?;
         let Some(lockfile) = lockfile else {
             if self.json {
@@ -164,7 +167,9 @@ impl LicensesArgs {
 
         let importer_ids = licensed_importer_ids(&lockfile, config, dir, lockfile_dir, recursive)?;
 
-        let include = self.dependency_options.include(config.optional);
+        let include = self
+            .dependency_options
+            .include(config.optional);
         let belongs_to = collect_dependencies(
             &lockfile,
             importer_ids,
@@ -207,10 +212,13 @@ fn lockfile_layout(
 ) -> miette::Result<pnpm_deps_restorer::VirtualStoreLayout> {
     let allow_build_policy = AllowBuildPolicy::from_config(config).into_diagnostic()?;
     let project_manifest = safe_read_package_json_from_dir(dir).into_diagnostic()?;
-    let manifest_node_version =
-        project_manifest.as_ref().and_then(node_version_from_engines_runtime);
-    let effective_node_version =
-        config.node_version.as_deref().or(manifest_node_version.as_deref());
+    let manifest_node_version = project_manifest
+        .as_ref()
+        .and_then(node_version_from_engines_runtime);
+    let effective_node_version = config
+        .node_version
+        .as_deref()
+        .or(manifest_node_version.as_deref());
     let layout = virtual_store_layout_for_lockfile(
         config,
         effective_node_version,
@@ -267,12 +275,16 @@ fn licensed_importer_ids(
     recursive: bool,
 ) -> miette::Result<Vec<String>> {
     if !recursive {
-        return Ok(lockfile.importers
+        return Ok(lockfile
+            .importers
             .keys()
             .cloned()
             .collect());
     }
-    let workspace_root = config.workspace_dir.as_deref().unwrap_or(dir);
+    let workspace_root = config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(dir);
     let (projects, _) = discover_workspace_projects(workspace_root, config)?;
     let selection = select_recursive_projects(&projects, config, dir, AutoExcludeRoot::Disabled)?;
     Ok(selected_importer_ids(&selection, lockfile_dir))
@@ -293,7 +305,9 @@ async fn group_by_license(
         let details = read_license_details(&pkg_dir, &name).await;
         let path_str = pkg_dir.to_string_lossy().to_string();
 
-        let license_group = results_by_license.entry(details.license.clone()).or_default();
+        let license_group = results_by_license
+            .entry(details.license.clone())
+            .or_default();
         let info = license_group
             .entry(name.clone())
             .or_insert_with(|| LicenseInfo {
@@ -391,7 +405,13 @@ async fn read_license_details(pkg_dir: &std::path::Path, name: &str) -> LicenseD
         };
     };
     let license = match extract_license(&manifest) {
-        Some(license) if !license.to_ascii_lowercase().contains("see license") => license,
+        Some(license)
+            if !license
+                .to_ascii_lowercase()
+                .contains("see license") =>
+        {
+            license
+        }
         manifest_license => license_resolver::resolve_license_from_dir(manifest_license, pkg_dir)
             .await
             .unwrap_or_else(|| "Unknown".to_string()),

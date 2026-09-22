@@ -211,7 +211,8 @@ fn parse_stage_ids(params: &[String]) -> Result<Vec<String>, StageError> {
 }
 
 async fn approval_items(context: &StageContext) -> miette::Result<Vec<StageApprovalItem>> {
-    Ok(fetch_stage_items(context, None).await?
+    Ok(fetch_stage_items(context, None)
+        .await?
         .iter()
         .filter_map(StageApprovalItem::from_value)
         .collect())

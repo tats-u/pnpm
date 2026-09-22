@@ -186,13 +186,23 @@ impl DistTagArgs {
     pub async fn run(self, config: &Config) -> miette::Result<Option<String>> {
         let context = self.context(config)?;
         let Some(subcommand) = self.params.first().map(String::as_str) else {
-            return dist_tag_ls(&context, &[]).await.map(Some);
+            return dist_tag_ls(&context, &[])
+                .await
+                .map(Some);
         };
         match subcommand {
-            "add" => dist_tag_add(&context, &self.params[1..]).await.map(Some),
-            "rm" => dist_tag_rm(&context, &self.params[1..]).await.map(Some),
-            "ls" | "list" => dist_tag_ls(&context, &self.params[1..]).await.map(Some),
-            _ => dist_tag_ls(&context, &self.params).await.map(Some),
+            "add" => dist_tag_add(&context, &self.params[1..])
+                .await
+                .map(Some),
+            "rm" => dist_tag_rm(&context, &self.params[1..])
+                .await
+                .map(Some),
+            "ls" | "list" => dist_tag_ls(&context, &self.params[1..])
+                .await
+                .map(Some),
+            _ => dist_tag_ls(&context, &self.params)
+                .await
+                .map(Some),
         }
     }
 
@@ -220,7 +230,9 @@ impl DistTagArgs {
 }
 
 async fn dist_tag_ls(context: &DistTagContext<'_>, params: &[String]) -> miette::Result<String> {
-    let package_name = params.first().ok_or(DistTagError::LsPackageRequired)?;
+    let package_name = params
+        .first()
+        .ok_or(DistTagError::LsPackageRequired)?;
     let package_name = package_name_for_url(package_name)?;
     let registry_url = registry_for_package(context, &package_name);
     let auth_header = auth_header_for_registry(context, &registry_url, &package_name);
@@ -234,13 +246,17 @@ async fn dist_tag_ls(context: &DistTagContext<'_>, params: &[String]) -> miette:
 }
 
 async fn dist_tag_add(context: &DistTagContext<'_>, params: &[String]) -> miette::Result<String> {
-    let spec = params.first().ok_or(DistTagError::AddSpecRequired)?;
+    let spec = params
+        .first()
+        .ok_or(DistTagError::AddSpecRequired)?;
     let PackageSpec { name: package_name, version } = parse_package_spec(spec)?;
     let raw_version = version.ok_or(DistTagError::AddVersionRequired)?;
     let Some(version) = normalize_exact_semver(&raw_version) else {
         return Err(DistTagError::AddInvalidVersion { version: raw_version }.into());
     };
-    let tag = params.get(1).map_or("latest", String::as_str);
+    let tag = params
+        .get(1)
+        .map_or("latest", String::as_str);
     let registry_url = registry_for_package(context, &package_name);
     let auth_header = auth_header_for_registry(context, &registry_url, &package_name);
     let auth_type = if context.otp.is_some() { AuthType::Legacy } else { AuthType::Web };
@@ -297,9 +313,12 @@ async fn dist_tag_rm(context: &DistTagContext<'_>, params: &[String]) -> miette:
 
 fn parse_package_spec(spec: &str) -> Result<PackageSpec, DistTagError> {
     let parsed = parse_wanted_dependency(spec);
-    let name =
-        parsed.alias.ok_or_else(|| DistTagError::InvalidPackageSpec { spec: spec.to_string() })?;
-    let version = parsed.bare_specifier.filter(|version| !version.is_empty());
+    let name = parsed
+        .alias
+        .ok_or_else(|| DistTagError::InvalidPackageSpec { spec: spec.to_string() })?;
+    let version = parsed
+        .bare_specifier
+        .filter(|version| !version.is_empty());
     Ok(PackageSpec { name, version })
 }
 

@@ -25,15 +25,23 @@ fn built(versions: &[&str], triple: &str) -> Vec<String> {
 }
 
 fn requires(specifiers: &str) -> pep440_rs::VersionSpecifiers {
-    specifiers.parse().expect("requires-python fixture")
+    specifiers
+        .parse()
+        .expect("requires-python fixture")
 }
 
 #[tokio::test]
 async fn release_tag_cache_obeys_its_freshness_window() {
     let cache = tempfile::NamedTempFile::new().expect("release tag cache");
-    tokio::fs::write(cache.path(), r#"["20260101"]"#).await.expect("write release tag cache");
+    tokio::fs::write(cache.path(), r#"["20260101"]"#)
+        .await
+        .expect("write release tag cache");
 
-    assert!(read_cached_release_tags(cache.path(), std::time::Duration::ZERO).await.is_none());
+    assert!(
+        read_cached_release_tags(cache.path(), std::time::Duration::ZERO)
+            .await
+            .is_none()
+    );
     assert_eq!(
         read_cached_release_tags(cache.path(), std::time::Duration::from_mins(1)).await,
         Some(vec!["20260101".to_string()]),
@@ -173,7 +181,9 @@ async fn an_exact_patch_pin_reads_the_release_that_published_it() {
     let cache = tempfile::tempdir().expect("cache directory");
     let mut config = Config::new();
     config.cache_dir = cache.path().to_path_buf();
-    let exact: pep440_rs::Version = "3.13.13".parse().expect("version fixture");
+    let exact: pep440_rs::Version = "3.13.13"
+        .parse()
+        .expect("version fixture");
 
     for _ in 0..2 {
         let releases = Releases::read_from(
@@ -226,7 +236,9 @@ async fn a_cached_tag_list_refreshes_after_a_historical_miss() {
     let cache = tempfile::tempdir().expect("cache directory");
     let mut config = Config::new();
     config.cache_dir = cache.path().to_path_buf();
-    let exact: pep440_rs::Version = "3.13.13".parse().expect("version fixture");
+    let exact: pep440_rs::Version = "3.13.13"
+        .parse()
+        .expect("version fixture");
 
     let releases = Releases::read_from(
         &config,
@@ -311,7 +323,9 @@ async fn historical_manifests_honor_the_configured_retry_policy() {
     config.fetch_retries = 2;
     config.fetch_retry_mintimeout = 0;
     config.fetch_retry_maxtimeout = 0;
-    let exact: pep440_rs::Version = "3.13.13".parse().expect("version fixture");
+    let exact: pep440_rs::Version = "3.13.13"
+        .parse()
+        .expect("version fixture");
 
     let result = Releases::read_from(
         &config,
@@ -320,7 +334,9 @@ async fn historical_manifests_honor_the_configured_retry_policy() {
         Some(&exact),
     )
     .await;
-    result.err().expect("permanent failures exhaust the configured retry budget");
+    result
+        .err()
+        .expect("permanent failures exhaust the configured retry budget");
 
     latest.assert_async().await;
     tags.assert_async().await;
@@ -371,7 +387,9 @@ async fn an_exact_patch_pin_checks_neighboring_releases_for_this_machine() {
         .create_async()
         .await;
     let config = Config::new();
-    let exact: pep440_rs::Version = "3.13.13".parse().expect("version fixture");
+    let exact: pep440_rs::Version = "3.13.13"
+        .parse()
+        .expect("version fixture");
 
     let releases = Releases::read_from(
         &config,
@@ -444,7 +462,9 @@ async fn other_machines_do_not_choose_the_historical_search_direction() {
         .create_async()
         .await;
     let config = Config::new();
-    let exact: pep440_rs::Version = "3.13.13".parse().expect("version fixture");
+    let exact: pep440_rs::Version = "3.13.13"
+        .parse()
+        .expect("version fixture");
 
     let releases = Releases::read_from(
         &config,
@@ -518,7 +538,9 @@ async fn a_release_without_this_machine_does_not_end_the_historical_search() {
         .create_async()
         .await;
     let config = Config::new();
-    let exact: pep440_rs::Version = "3.13.13".parse().expect("version fixture");
+    let exact: pep440_rs::Version = "3.13.13"
+        .parse()
+        .expect("version fixture");
 
     let releases = Releases::read_from(
         &config,
@@ -603,7 +625,9 @@ async fn exhausting_the_host_gap_budget_is_not_reported_as_absence() {
     let cache = tempfile::tempdir().expect("cache directory");
     let mut config = Config::new();
     config.cache_dir = cache.path().to_path_buf();
-    let exact: pep440_rs::Version = "3.13.13".parse().expect("version fixture");
+    let exact: pep440_rs::Version = "3.13.13"
+        .parse()
+        .expect("version fixture");
 
     let result = Releases::read_from(
         &config,
@@ -645,7 +669,9 @@ async fn a_mirror_does_not_require_the_upstream_release_list() {
         Tool::Python,
         ToolSettings { mirror: Some(server.url()), ..ToolSettings::default() },
     );
-    let exact: pep440_rs::Version = "3.13.13".parse().expect("version fixture");
+    let exact: pep440_rs::Version = "3.13.13"
+        .parse()
+        .expect("version fixture");
 
     let releases = Releases::read_from(
         &config,

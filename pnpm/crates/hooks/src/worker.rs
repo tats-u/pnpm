@@ -146,8 +146,16 @@ impl NodeWorker {
             .spawn()
             .map_err(|err| exec_err(err.to_string()))?;
 
-        let stdin = Arc::new(Mutex::new(child.stdin.take().expect("worker stdin is piped")));
-        let stdout = child.stdout.take().expect("worker stdout is piped");
+        let stdin = Arc::new(Mutex::new(
+            child
+                .stdin
+                .take()
+                .expect("worker stdin is piped"),
+        ));
+        let stdout = child
+            .stdout
+            .take()
+            .expect("worker stdout is piped");
 
         let pending: PendingMap = Arc::new(StdMutex::new(HashMap::new()));
         spawn_stdout_reader(stdout, Arc::clone(&pending), Arc::clone(&stdin));
@@ -169,7 +177,8 @@ impl NodeWorker {
 
     /// Run `hook` with `payload`, forwarding any `context.log(...)` to `log`.
     pub async fn call(&self, hook: &str, payload: Value, log: LogFn) -> Result<Value, HookError> {
-        self.request(hook, serde_json::json!({ "hook": hook, "payload": payload }), log).await
+        self.request(hook, serde_json::json!({ "hook": hook, "payload": payload }), log)
+            .await
     }
 
     /// Call the `beforePacking` hook with `(manifest, dir, context)`.
@@ -243,12 +252,9 @@ impl NodeWorker {
     /// implement, mirroring pnpm's optional-method checks
     /// (`if (!customResolver.canResolve || !customResolver.resolve) continue`).
     pub async fn get_resolver_capabilities(&self) -> Result<Vec<ResolverCapabilities>, HookError> {
-        let value = self.request(
-            "resolvers",
-            serde_json::json!({ "target": "resolvers" }),
-            Arc::new(|_| {}),
-        )
-        .await?;
+        let value = self
+            .request("resolvers", serde_json::json!({ "target": "resolvers" }), Arc::new(|_| {}))
+            .await?;
         serde_json::from_value(value).map_err(|err| self.exec_err(err.to_string()))
     }
 
@@ -280,16 +286,16 @@ impl NodeWorker {
     /// Get the capabilities of every custom fetcher exported by the
     /// pnpmfile's `fetchers` array, in array order.
     pub async fn get_fetcher_capabilities(&self) -> Result<Vec<FetcherCapabilities>, HookError> {
-        let value =
-            self.request("fetchers", serde_json::json!({ "target": "fetchers" }), Arc::new(|_| {}))
-                .await?;
+        let value = self
+            .request("fetchers", serde_json::json!({ "target": "fetchers" }), Arc::new(|_| {}))
+            .await?;
         serde_json::from_value(value).map_err(|err| self.exec_err(err.to_string()))
     }
 
     pub async fn get_finder_names(&self) -> Result<Vec<String>, HookError> {
-        let value =
-            self.request("finders", serde_json::json!({ "target": "finders" }), Arc::new(|_| {}))
-                .await?;
+        let value = self
+            .request("finders", serde_json::json!({ "target": "finders" }), Arc::new(|_| {}))
+            .await?;
         serde_json::from_value(value).map_err(|err| self.exec_err(err.to_string()))
     }
 
@@ -314,7 +320,8 @@ impl NodeWorker {
     /// first, so a request's timeout window covers only the time the
     /// worker had it, not the time its caller's fan-out spent queued.
     async fn request(&self, label: &str, body: Value, log: LogFn) -> Result<Value, HookError> {
-        self.request_with_callbacks(label, body, log, None).await
+        self.request_with_callbacks(label, body, log, None)
+            .await
     }
 
     async fn request_with_callbacks(
@@ -324,9 +331,15 @@ impl NodeWorker {
         log: LogFn,
         callbacks: Option<FetcherCallbackSender>,
     ) -> Result<Value, HookError> {
-        let _in_flight = self.in_flight.acquire().await.expect("the semaphore is never closed");
+        let _in_flight = self
+            .in_flight
+            .acquire()
+            .await
+            .expect("the semaphore is never closed");
 
-        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        let id = self
+            .next_id
+            .fetch_add(1, Ordering::Relaxed);
         let (done, rx) = oneshot::channel();
         let callback_timeout = label == "fetch" && callbacks.is_some();
         self.pending
@@ -336,7 +349,8 @@ impl NodeWorker {
         let _pending_guard = PendingEntryGuard { pending: Arc::clone(&self.pending), id };
 
         body["id"] = serde_json::json!(id);
-        let mut line = serde_json::to_string(&body).map_err(|err| self.exec_err(err.to_string()))?;
+        let mut line =
+            serde_json::to_string(&body).map_err(|err| self.exec_err(err.to_string()))?;
         line.push('\n');
         {
             let mut stdin = self.stdin.lock().await;
@@ -351,7 +365,8 @@ impl NodeWorker {
         }
 
         let request_timeout = if callback_timeout {
-            self.request_timeout.max(CALLBACK_FETCH_TIMEOUT)
+            self.request_timeout
+                .max(CALLBACK_FETCH_TIMEOUT)
         } else {
             self.request_timeout
         };
@@ -377,16 +392,26 @@ fn spawn_stdout_reader(stdout: ChildStdout, pending: PendingMap, stdin: Arc<Mute
             dispatch_line(&pending, &stdin, &line);
         }
         for (_, request) in pending.lock().unwrap().drain() {
-            let _ = request.done.send(Err("pnpmfile worker exited".to_string()));
+            let _ = request
+                .done
+                .send(Err("pnpmfile worker exited".to_string()));
         }
     });
 }
 
 fn dispatch_line(pending: &PendingMap, stdin: &Arc<Mutex<ChildStdin>>, line: &str) {
     let Ok(message) = serde_json::from_str::<Value>(line) else { return };
-    let Some(id) = message.get("id").and_then(Value::as_u64) else { return };
+    let Some(id) = message
+        .get("id")
+        .and_then(Value::as_u64)
+    else {
+        return;
+    };
 
-    if let Some(log) = message.get("log").and_then(Value::as_str) {
+    if let Some(log) = message
+        .get("log")
+        .and_then(Value::as_str)
+    {
         let log_fn = pending
             .lock()
             .unwrap()
@@ -404,7 +429,10 @@ fn dispatch_line(pending: &PendingMap, stdin: &Arc<Mutex<ChildStdin>>, line: &st
     }
 
     let Some(entry) = pending.lock().unwrap().remove(&id) else { return };
-    let result = match message.get("err").and_then(Value::as_str) {
+    let result = match message
+        .get("err")
+        .and_then(Value::as_str)
+    {
         Some(err) => Err(err.to_string()),
         None => Ok(message
             .get("ok")
@@ -422,7 +450,12 @@ fn dispatch_callback(
     id: u64,
     callback: &Value,
 ) {
-    let Some(callback_id) = callback.get("id").and_then(Value::as_u64) else { return };
+    let Some(callback_id) = callback
+        .get("id")
+        .and_then(Value::as_u64)
+    else {
+        return;
+    };
     let Some(method) = callback.get("method").cloned() else { return };
     let Ok(method) = serde_json::from_value(method) else { return };
     let resolution = callback
@@ -470,7 +503,11 @@ async fn write_worker_line(stdin: &Mutex<ChildStdin>, reply: &Value) {
     let Ok(mut line) = serde_json::to_string(reply) else { return };
     line.push('\n');
     let mut stdin = stdin.lock().await;
-    if stdin.write_all(line.as_bytes()).await.is_ok() {
+    if stdin
+        .write_all(line.as_bytes())
+        .await
+        .is_ok()
+    {
         let _ = stdin.flush().await;
     }
 }

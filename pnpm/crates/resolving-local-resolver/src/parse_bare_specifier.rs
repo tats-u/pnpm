@@ -183,7 +183,11 @@ fn fetched_and_normalized(spec: &str, project_dir: &Path, protocol: &str) -> (Pa
     if is_absolute_specifier(spec) {
         return (fetched, format!("{protocol}{spec}"));
     }
-    let relative = forward_slashes(relative_path(project_dir, &fetched).display().to_string());
+    let relative = forward_slashes(
+        relative_path(project_dir, &fetched)
+            .display()
+            .to_string(),
+    );
     (fetched, format!("{protocol}{relative}"))
 }
 
@@ -211,7 +215,11 @@ fn normalize_relative_or_absolute(
     if opts.preserve_absolute_paths && is_absolute_specifier(original_spec) {
         return forward_slashes(from_path.display().to_string());
     }
-    forward_slashes(relative_path(relative_to, from_path).display().to_string())
+    forward_slashes(
+        relative_path(relative_to, from_path)
+            .display()
+            .to_string(),
+    )
 }
 
 fn forward_slashes(input: String) -> String {
@@ -249,9 +257,8 @@ pub fn local_tarball_path(bare: &str, project_dir: &Path) -> Option<PathBuf> {
     } else {
         parse_local_path(&wanted, project_dir, project_dir, ParseOptions::default())
     }?;
-    (matches!(spec.kind, LocalSpecKind::File) && spec.fetch_spec.is_file()).then_some(
-        spec.fetch_spec,
-    )
+    (matches!(spec.kind, LocalSpecKind::File) && spec.fetch_spec.is_file())
+        .then_some(spec.fetch_spec)
 }
 
 fn contains_path_sep(bare: &str) -> bool {

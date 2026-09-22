@@ -100,7 +100,13 @@ fn acquire_slot(
     if held_groups(inherited).any(|held| held == group) {
         return Ok(SlotOutcome::Ungated);
     }
-    let pool = SlotPool { dir: config.state_dir.join("run-slots").join(group), limit };
+    let pool = SlotPool {
+        dir: config
+            .state_dir
+            .join("run-slots")
+            .join(group),
+        limit,
+    };
     let on_wait = || {
         let holders = pool.holders();
         emit(&LogEvent::Global(GlobalLog {
@@ -129,8 +135,13 @@ fn acquire_slot(
 /// The group the task named `script` is in, with its limit, when both
 /// are configured and the limit is positive.
 fn limited_group<'a>(config: &'a Config, script: &str) -> Option<(&'a str, u32)> {
-    let group = config.tasks.get(script)?.concurrency_group.as_deref()?;
-    let limit = config.concurrency_groups
+    let group = config
+        .tasks
+        .get(script)?
+        .concurrency_group
+        .as_deref()?;
+    let limit = config
+        .concurrency_groups
         .get(group)
         .copied()
         .filter(|limit| *limit > 0)?;

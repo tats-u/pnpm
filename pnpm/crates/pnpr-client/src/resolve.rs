@@ -67,7 +67,8 @@ fn permitted_importers(opts: &ResolveProjectsOptions) -> HashSet<String> {
         .iter()
         .map(|project| project.dir.clone())
         .chain(
-            opts.reuse.lockfile
+            opts.reuse
+                .lockfile
                 .iter()
                 .flat_map(|lockfile| lockfile.importers.keys().cloned()),
         )
@@ -126,7 +127,8 @@ fn assert_requested_importers(
     lockfile: &Lockfile,
     permitted: &HashSet<String>,
 ) -> Result<(), PnprClientError> {
-    let Some(unexpected) = lockfile.importers
+    let Some(unexpected) = lockfile
+        .importers
         .keys()
         .find(|importer| !permitted.contains(*importer))
     else {
@@ -138,10 +140,13 @@ fn assert_requested_importers(
 }
 
 fn has_project_transforms(opts: &ResolveProjectsOptions) -> bool {
-    opts.transforms.patched_dependencies
+    opts.transforms
+        .patched_dependencies
         .as_ref()
         .is_some_and(|patches| !patches.is_empty())
-        || opts.transforms.package_extensions
+        || opts
+            .transforms
+            .package_extensions
             .as_ref()
             .is_some_and(|extensions| !extensions.is_empty())
 }
@@ -154,7 +159,9 @@ fn assert_transform_metadata(
     lockfile: &Lockfile,
     opts: &ResolveProjectsOptions,
 ) -> Result<(), PnprClientError> {
-    if let Some(expected) = opts.transforms.patched_dependencies
+    if let Some(expected) = opts
+        .transforms
+        .patched_dependencies
         .as_ref()
         .filter(|patches| !patches.is_empty())
         && !equal_patch_hashes(lockfile.patched_dependencies.as_ref(), expected)
@@ -164,7 +171,9 @@ fn assert_transform_metadata(
         ));
     }
 
-    if let Some(package_extensions) = opts.transforms.package_extensions
+    if let Some(package_extensions) = opts
+        .transforms
+        .package_extensions
         .as_ref()
         .filter(|extensions| !extensions.is_empty())
     {
@@ -172,7 +181,11 @@ fn assert_transform_metadata(
             .map_err(|err| PnprClientError::Protocol(err.to_string()))?;
         let expected = hash_object_nullable_with_prefix(&value)
             .expect("a non-empty packageExtensions map has a checksum");
-        if lockfile.package_extensions_checksum.as_deref() != Some(expected.as_str()) {
+        if lockfile
+            .package_extensions_checksum
+            .as_deref()
+            != Some(expected.as_str())
+        {
             return Err(PnprClientError::Protocol(
                 "/-/pnpr/v0/resolve returned packageExtensionsChecksum that does not match the request; the server may not support project transforms".to_string(),
             ));
@@ -244,7 +257,8 @@ impl PnprClient {
         &self,
         opts: ResolveProjectsOptions,
     ) -> Result<ResolveOutcome, PnprClientError> {
-        self.resolve_projects_streaming(opts, |_| {}).await
+        self.resolve_projects_streaming(opts, |_| {})
+            .await
     }
 
     /// Resolve a single project, invoking `on_package` once per resolved
@@ -257,7 +271,8 @@ impl PnprClient {
         opts: ResolveOptions,
         on_package: impl FnMut(ResolvedPackage),
     ) -> Result<ResolveOutcome, PnprClientError> {
-        self.resolve_projects_streaming(opts.into(), on_package).await
+        self.resolve_projects_streaming(opts.into(), on_package)
+            .await
     }
 
     /// Resolve workspace projects, invoking `on_package` once per resolved
@@ -283,7 +298,8 @@ impl PnprClient {
         // downstream by the lockfile merge, not a way to inject dependencies.
         let permitted_importers = permitted_importers(&opts);
         let project_transforms_requested = has_project_transforms(&opts);
-        let mut post = self.http
+        let mut post = self
+            .http
             .post(format!("{}-/pnpr/v0/resolve", self.base_url))
             .json(&resolve_request_body(&opts));
         if let Some(authorization) = opts.routing.authorization.as_deref() {
@@ -292,7 +308,10 @@ impl PnprClient {
         let response = post.send().await?;
         if !response.status().is_success() {
             let status = response.status();
-            let body = response.text().await.unwrap_or_default();
+            let body = response
+                .text()
+                .await
+                .unwrap_or_default();
             return Err(PnprClientError::Server(format!(
                 "/-/pnpr/v0/resolve returned {status}: {body}",
             )));

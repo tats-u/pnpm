@@ -92,20 +92,18 @@ impl HostDetection {
     pub async fn resolve(self) -> Option<InstallabilityHost> {
         match self {
             HostDetection::Resolved(host) => host,
-            HostDetection::Pending {
-                task,
-                engine_strict,
-                supported_architectures,
-            } => task.await.unwrap_or_else(|error| {
-                tracing::warn!(
-                    target: "pacquet::install",
-                    ?error,
-                    "host detection task failed; falling back to the synthetic host",
-                );
-                let mut host = synthetic_installability_host(engine_strict);
-                host.supported_architectures = supported_architectures;
-                Some(host)
-            }),
+            HostDetection::Pending { task, engine_strict, supported_architectures } => {
+                task.await.unwrap_or_else(|error| {
+                    tracing::warn!(
+                        target: "pacquet::install",
+                        ?error,
+                        "host detection task failed; falling back to the synthetic host",
+                    );
+                    let mut host = synthetic_installability_host(engine_strict);
+                    host.supported_architectures = supported_architectures;
+                    Some(host)
+                })
+            }
         }
     }
 }
@@ -360,9 +358,13 @@ pub async fn resolve_engine_name(
             (engine_name_from_host(host_node), None)
         }
         Some(HostNode { detected: false, .. }) => (None, None),
-        None if enable_global_virtual_store => {
-            (tokio::task::spawn_blocking(probe_engine_name).await.ok().flatten(), None)
-        }
+        None if enable_global_virtual_store => (
+            tokio::task::spawn_blocking(probe_engine_name)
+                .await
+                .ok()
+                .flatten(),
+            None,
+        ),
         None => (None, Some(DeferredEngineName::spawn())),
     }
 }

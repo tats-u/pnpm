@@ -99,7 +99,9 @@ pub(super) fn osv_hides_version(
     package_name: &str,
     version_or_tag: &str,
 ) -> bool {
-    state.inner.osv_index
+    state
+        .inner
+        .osv_index
         .as_ref()
         .is_some_and(|osv_index| {
             let resolved = resolve_version_or_tag(packument, version_or_tag);
@@ -144,7 +146,13 @@ pub(super) enum RegistrySource {
 /// address a `/~<name>/`. There is no legacy hosted-then-proxy path: a
 /// path-less request resolves through the registry graph or it does not resolve.
 pub(super) fn default_registry_target(state: &AppState, ecosystem: Ecosystem) -> Option<String> {
-    state.inner.config.routing.registries.default_for(ecosystem).map(str::to_string)
+    state
+        .inner
+        .config
+        .routing
+        .registries
+        .default_for(ecosystem)
+        .map(str::to_string)
 }
 
 /// Resolve an npm request; see [`resolve_ecosystem_source`].
@@ -164,15 +172,19 @@ pub(super) fn resolve_ecosystem_source(
     ecosystem: Ecosystem,
     package: &str,
 ) -> RegistrySource {
-    match state.inner.config.routing.registries.resolve(registry, ecosystem, package) {
-        Resolved::Concrete {
-            registry,
-            kind: ConcreteKind::Upstream,
-        } => RegistrySource::Upstream(registry.to_string()),
-        Resolved::Concrete {
-            registry,
-            kind: ConcreteKind::Hosted,
-        } => RegistrySource::Hosted(registry.to_string()),
+    match state
+        .inner
+        .config
+        .routing
+        .registries
+        .resolve(registry, ecosystem, package)
+    {
+        Resolved::Concrete { registry, kind: ConcreteKind::Upstream } => {
+            RegistrySource::Upstream(registry.to_string())
+        }
+        Resolved::Concrete { registry, kind: ConcreteKind::Hosted } => {
+            RegistrySource::Hosted(registry.to_string())
+        }
         // An unclaimed name is definitive — never a fall-through to another
         // origin, and never a storage or upstream consultation.
         Resolved::Unclaimed => RegistrySource::Unclaimed,
@@ -196,10 +208,18 @@ pub(super) fn resolves_to_private_source(
     package: &str,
 ) -> bool {
     match resolve_ecosystem_source(state, registry, ecosystem, package) {
-        RegistrySource::Hosted(source) => state.inner.config.routing.hosted
+        RegistrySource::Hosted(source) => state
+            .inner
+            .config
+            .routing
+            .hosted
             .get(&source)
             .is_some_and(|hosted| {
-                !hosted.rules.for_package(package).access.allows(&Identity::Anonymous)
+                !hosted
+                    .rules
+                    .for_package(package)
+                    .access
+                    .allows(&Identity::Anonymous)
             }),
         // A private upstream (registry-level `access:`) is caller-gated for
         // *every* name — unlike a hosted registry, its registry-level gate is
@@ -209,11 +229,19 @@ pub(super) fn resolves_to_private_source(
         // alone already means the response varies by caller. A public
         // upstream can still gate individual names through a per-package
         // `access` rule.
-        RegistrySource::Upstream(source) => state.inner.config.routing.upstreams
+        RegistrySource::Upstream(source) => state
+            .inner
+            .config
+            .routing
+            .upstreams
             .get(&source)
             .is_some_and(|upstream| {
                 upstream.access.is_some()
-                    || !upstream.rules.for_package(package).access.allows(&Identity::Anonymous)
+                    || !upstream
+                        .rules
+                        .for_package(package)
+                        .access
+                        .allows(&Identity::Anonymous)
             }),
         RegistrySource::Unclaimed | RegistrySource::NotFound => false,
     }
@@ -334,7 +362,13 @@ pub(super) fn hosted_gate(
     source: &str,
     package: &str,
 ) -> HostedGate {
-    let Some(hosted) = state.inner.config.routing.hosted.get(source) else {
+    let Some(hosted) = state
+        .inner
+        .config
+        .routing
+        .hosted
+        .get(source)
+    else {
         return HostedGate::MaskNotFound;
     };
     let effective = hosted.rules.for_package(package);
@@ -346,7 +380,12 @@ pub(super) fn hosted_gate(
     // caller to the registry itself. When the default denies them too, the
     // mask below wins — an explicit rule on a blanket-private registry must
     // not become an existence probe.
-    if effective.access_is_explicit && hosted.rules.default_access().allows(identity) {
+    if effective.access_is_explicit
+        && hosted
+            .rules
+            .default_access()
+            .allows(identity)
+    {
         return HostedGate::Denied(match identity {
             Identity::Anonymous => {
                 RegistryError::Unauthenticated { resource: format!("package {package:?}") }
@@ -390,7 +429,13 @@ pub(super) async fn serve_hosted_packument(
     };
     // A hosted org has no upstream fallback: a package it does not host is a
     // definitive not-found. Reads come from the org's own storage namespace.
-    match state.inner.storage.for_hosted(&org).read_hosted_document(name).await {
+    match state
+        .inner
+        .storage
+        .for_hosted(&org)
+        .read_hosted_document(name)
+        .await
+    {
         Ok(Some(bytes)) => match packument_response(
             name,
             &bytes,
@@ -425,7 +470,13 @@ pub(super) async fn serve_hosted_tarball(
     if let Err(err) = ensure_osv_allowed(state, name, &name_version) {
         return err.into_response();
     }
-    match state.inner.storage.for_hosted(&org).open_hosted_blob(name, &filename).await {
+    match state
+        .inner
+        .storage
+        .for_hosted(&org)
+        .open_hosted_blob(name, &filename)
+        .await
+    {
         Ok(Some((body, len))) => tarball_response(body, len),
         Ok(None) => not_found(),
         Err(err) => {

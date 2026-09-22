@@ -132,7 +132,10 @@ pub(super) fn metadata_registry<'a>(
     let Some((registry_name, _)) = key.suffix.registry_qualified() else {
         return (sources.registry, sources.lockfile_include_tarball_url);
     };
-    match sources.registries_by_prefix.get(registry_name) {
+    match sources
+        .registries_by_prefix
+        .get(registry_name)
+    {
         Some(named_registry) => (named_registry.as_str(), sources.lockfile_include_tarball_url),
         None => (sources.registry, true),
     }
@@ -146,10 +149,14 @@ pub(super) fn carry_previous_deprecation(
     sources: &PackageMetadataSources<'_>,
 ) {
     if metadata.deprecated.is_none()
-        && let Some(previous) = sources.previous_packages.and_then(|prev| prev.get(key))
+        && let Some(previous) = sources
+            .previous_packages
+            .and_then(|prev| prev.get(key))
         && previous.resolution == metadata.resolution
     {
-        metadata.deprecated.clone_from(&previous.deprecated);
+        metadata
+            .deprecated
+            .clone_from(&previous.deprecated);
     }
 }
 /// Build the per-`(name, version)` [`PackageMetadata`] block for the
@@ -165,17 +172,23 @@ pub(super) fn build_package_metadata(
     metadata_key: &PackageKey,
     lockfile_form: LockfileFormOptions<'_>,
 ) -> Result<PackageMetadata, LockfileFormError> {
-    let manifest = node.resolve_result.package.manifest.as_deref();
+    let manifest = node
+        .resolve_result
+        .package
+        .manifest
+        .as_deref();
     let (peer_dependencies, peer_dependencies_meta) = build_peer_dep_blocks(node);
     let resolution_version = match metadata_key.suffix.registry_qualified() {
         Some((_, version)) => version.to_string(),
-        None => metadata_key.suffix.version().to_string(),
+        None => metadata_key
+            .suffix
+            .version()
+            .to_string(),
     };
-    let resolution = node.resolve_result.resolution.to_lockfile_form(
-        &metadata_key.name.to_string(),
-        &resolution_version,
-        lockfile_form,
-    )?;
+    let resolution = node
+        .resolve_result
+        .resolution
+        .to_lockfile_form(&metadata_key.name.to_string(), &resolution_version, lockfile_form)?;
     Ok(PackageMetadata {
         version: explicit_version(node, metadata_key, &resolution, manifest),
         resolution,
@@ -239,7 +252,10 @@ pub(super) fn explicit_version(
     manifest: Option<&Value>,
 ) -> Option<String> {
     (node.dep_path.as_str().contains(':')
-        && metadata_key.suffix.registry_qualified().is_none()
+        && metadata_key
+            .suffix
+            .registry_qualified()
+            .is_none()
         && !matches!(resolution, LockfileResolution::Directory(_)))
     .then(|| {
         manifest
@@ -353,7 +369,9 @@ pub(super) fn build_snapshot_entry(
     }
 
     let transitive: Vec<String> = {
-        let mut list: Vec<String> = node.edges.transitive_peer_dependencies
+        let mut list: Vec<String> = node
+            .edges
+            .transitive_peer_dependencies
             .iter()
             .cloned()
             .collect();
@@ -388,7 +406,9 @@ pub(super) fn snapshot_dep_ref(
     if let Some(target) = dep_path_str.strip_prefix("link:") {
         return Some(SnapshotDepRef::Link(target.to_string()));
     }
-    let real_name = graph.get(child_dep_path).and_then(|n| real_name(&n.resolve_result));
+    let real_name = graph
+        .get(child_dep_path)
+        .and_then(|n| real_name(&n.resolve_result));
     if let Some(real) = real_name.as_deref() {
         let prefix = format!("{real}@");
         if alias == real
@@ -398,7 +418,9 @@ pub(super) fn snapshot_dep_ref(
             return Some(SnapshotDepRef::Plain(parsed));
         }
     }
-    let key = dep_path_str.parse::<PkgNameVerPeer>().ok()?;
+    let key = dep_path_str
+        .parse::<PkgNameVerPeer>()
+        .ok()?;
     if let Some(ver) = self_aliased_file_ver(alias, &key) {
         return Some(SnapshotDepRef::Plain(ver.clone()));
     }

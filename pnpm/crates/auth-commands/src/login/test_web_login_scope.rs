@@ -38,8 +38,9 @@ async fn should_persist_a_scoped_auth_token_and_scope_registry_mapping() {
 
     let mut options = opts(&registry, config_dir);
     options.scope = Some("my-org");
-    let result =
-        login::<FakeHost, RecordingReporter>(&client(), options).await.expect("scoped login");
+    let result = login::<FakeHost, RecordingReporter>(&client(), options)
+        .await
+        .expect("scoped login");
 
     assert_eq!(result, format!("Logged in on {registry}/"));
     let writes = login_writes();
@@ -76,8 +77,9 @@ async fn should_persist_scoped_auth_tokens_under_path_registries() {
 
     let mut options = opts(&registry, config_dir);
     options.scope = Some("@team");
-    let result =
-        login::<FakeHost, RecordingReporter>(&client(), options).await.expect("path-scoped login");
+    let result = login::<FakeHost, RecordingReporter>(&client(), options)
+        .await
+        .expect("path-scoped login");
 
     assert_eq!(result, format!("Logged in on {registry}"));
     let document = written_document(&login_writes());
@@ -108,7 +110,9 @@ async fn should_accept_scope_with_a_leading_at_and_not_double_prefix() {
 
     let mut options = opts(&registry, config_dir);
     options.scope = Some("@my-org");
-    login::<FakeHost, RecordingReporter>(&client(), options).await.expect("scoped login");
+    login::<FakeHost, RecordingReporter>(&client(), options)
+        .await
+        .expect("scoped login");
 
     let document = written_document(&login_writes());
     let normalized = format!("{registry}/");
@@ -166,7 +170,9 @@ async fn should_treat_a_bare_at_scope_as_no_scope() {
 
     let mut options = opts(&registry, config_dir);
     options.scope = Some("@");
-    login::<FakeHost, RecordingReporter>(&client(), options).await.expect("login");
+    login::<FakeHost, RecordingReporter>(&client(), options)
+        .await
+        .expect("login");
 
     let document = written_document(&login_writes());
     assert_eq!(document["_auth"][format!("{registry}/")], json!({ "@": { "authToken": "tok" } }));

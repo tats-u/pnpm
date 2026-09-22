@@ -18,12 +18,19 @@ async fn an_upstream_resolves_a_private_package() {
     let client = PnprClient::new(pnpr_url);
 
     let opts = options(registry.url(), &pnpr_auth, deps([("@pnpm.e2e/needs-auth", "1.0.0")]));
-    let outcome = client.resolve(opts).await.expect("the upstream should resolve it");
-    let packages = outcome.lockfile.packages.as_ref().expect("lockfile has packages");
+    let outcome = client
+        .resolve(opts)
+        .await
+        .expect("the upstream should resolve it");
+    let packages = outcome
+        .lockfile
+        .packages
+        .as_ref()
+        .expect("lockfile has packages");
     assert!(
-        packages
-            .keys()
-            .any(|key| key.to_string().starts_with("@pnpm.e2e/needs-auth@1.0.0")),
+        packages.keys().any(|key| key
+            .to_string()
+            .starts_with("@pnpm.e2e/needs-auth@1.0.0")),
         "lockfile should contain the authed package, got: {:?}",
         packages
             .keys()

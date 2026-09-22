@@ -26,12 +26,16 @@ use std::{
 pub fn merge_lockfile_changes(ours: &Lockfile, theirs: &Lockfile) -> Lockfile {
     Lockfile {
         lockfile_version: newer_version(ours.lockfile_version, theirs.lockfile_version),
-        pnpmfile_checksum: ours.pnpmfile_checksum
+        pnpmfile_checksum: ours
+            .pnpmfile_checksum
             .clone()
             .or_else(|| theirs.pnpmfile_checksum.clone()),
         ignored_optional_dependencies: union_of_lists(
-            ours.ignored_optional_dependencies.as_deref(),
-            theirs.ignored_optional_dependencies.as_deref(),
+            ours.ignored_optional_dependencies
+                .as_deref(),
+            theirs
+                .ignored_optional_dependencies
+                .as_deref(),
         ),
         importers: merge_importers(&ours.importers, &theirs.importers),
         packages: merge_maps(ours.packages.as_ref(), theirs.packages.as_ref(), spread),
@@ -81,10 +85,14 @@ fn merge_env_importers(
                 ),
                 package_manager_dependencies: merge_optional_specifier_map(
                     our_importer.and_then(|importer| {
-                        importer.package_manager_dependencies.as_ref()
+                        importer
+                            .package_manager_dependencies
+                            .as_ref()
                     }),
                     their_importer.and_then(|importer| {
-                        importer.package_manager_dependencies.as_ref()
+                        importer
+                            .package_manager_dependencies
+                            .as_ref()
                     }),
                 ),
             },
@@ -272,9 +280,7 @@ fn merge_importers(
                 specifiers: None,
                 dependencies: group(|importer| importer.dependencies.as_ref()),
                 dev_dependencies: group(|importer| importer.dev_dependencies.as_ref()),
-                optional_dependencies: group(|importer| {
-                    importer.optional_dependencies.as_ref()
-                }),
+                optional_dependencies: group(|importer| importer.optional_dependencies.as_ref()),
                 dependencies_meta: None,
                 publish_directory: None,
                 link_directory: None,

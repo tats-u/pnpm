@@ -10,7 +10,9 @@ use futures_util::StreamExt as _;
 #[test]
 fn resolve_budget_bounds_combined_scanned_and_serialized_bytes() {
     let empty_response_size =
-        serde_json::to_vec(&ResolveArtifactsResponse { artifacts: Vec::new() }).unwrap().len();
+        serde_json::to_vec(&ResolveArtifactsResponse { artifacts: Vec::new() })
+            .unwrap()
+            .len();
     let mut scan_budget = ResolveBudget { used_bytes: 0 };
     scan_budget
         .add_scan(MAX_RESOLVE_RESPONSE_SIZE as u64)
@@ -29,13 +31,21 @@ fn resolve_budget_bounds_combined_scanned_and_serialized_bytes() {
         }],
     };
     let mut response_budget = ResolveBudget { used_bytes: MAX_RESOLVE_RESPONSE_SIZE };
-    assert!(response_budget.add_response(&artifact, false).is_err());
+    assert!(
+        response_budget
+            .add_response(&artifact, false)
+            .is_err()
+    );
 
     let mut combined_budget = ResolveBudget { used_bytes: empty_response_size };
     combined_budget
         .add_scan((MAX_RESOLVE_RESPONSE_SIZE - empty_response_size) as u64)
         .unwrap();
-    assert!(combined_budget.add_response(&artifact, false).is_err());
+    assert!(
+        combined_budget
+            .add_response(&artifact, false)
+            .is_err()
+    );
 }
 
 #[tokio::test]
@@ -50,7 +60,9 @@ async fn concurrent_duplicate_publications_are_charged_once() {
     // One marker between them: whichever claims the scope first, the other
     // recognises it rather than writing a second.
     let expected = b"shared addon".len() as u64
-        + serde_json::to_vec(&request.envelope).unwrap().len() as u64
+        + serde_json::to_vec(&request.envelope)
+            .unwrap()
+            .len() as u64
         + request.envelope.digest().unwrap().len() as u64;
 
     let first_publish = first.publish("acme", request.clone());
@@ -96,7 +108,10 @@ async fn committed_blob_writes_without_an_envelope_are_reclaimed() {
     let store = SharedArtifactStore::new(&config, scratch.path()).unwrap();
     let request =
         publication_with_blob("dependency-side-effects:v1:deps=abc", "ci/ambiguous-commit");
-    store.publish("acme", request).await.unwrap_err();
+    store
+        .publish("acme", request)
+        .await
+        .unwrap_err();
 
     let usage_path = ObjectPath::from(".pnpr-artifacts/v0/quota.json");
     let usage: ArtifactUsage = serde_json::from_slice(
@@ -111,7 +126,8 @@ async fn committed_blob_writes_without_an_envelope_are_reclaimed() {
     .unwrap();
     assert_eq!(usage.global_bytes, 0);
     assert_eq!(
-        usage.owner_bytes
+        usage
+            .owner_bytes
             .values()
             .copied()
             .sum::<u64>(),
@@ -121,7 +137,11 @@ async fn committed_blob_writes_without_an_envelope_are_reclaimed() {
     let mut physical_bytes = 0_u64;
     while let Some(object) = objects.next().await {
         let object = object.unwrap();
-        if !object.location.as_ref().ends_with("/quota.json") {
+        if !object
+            .location
+            .as_ref()
+            .ends_with("/quota.json")
+        {
             physical_bytes += object.size;
         }
     }
@@ -138,8 +158,14 @@ async fn reclamation_waits_for_publications_on_other_replicas() {
     let second = SharedArtifactStore::new(&config, scratch.path()).unwrap();
     let first_publication = artifact_operation_id().unwrap();
     let second_publication = artifact_operation_id().unwrap();
-    first.begin_publication(&first_publication).await.unwrap();
-    second.begin_publication(&second_publication).await.unwrap();
+    first
+        .begin_publication(&first_publication)
+        .await
+        .unwrap();
+    second
+        .begin_publication(&second_publication)
+        .await
+        .unwrap();
 
     let owner = owner_key("acme", &OwnerScope::organization("acme")).unwrap();
     let orphan = ObjectPath::from(format!(".pnpr-artifacts/v0/{owner}/blobs/orphan"));
@@ -147,14 +173,29 @@ async fn reclamation_waits_for_publications_on_other_replicas() {
         .put(&orphan, PutPayload::from_static(b"orphan"))
         .await
         .unwrap();
-    first.reserve_quota(&owner, 6).await.unwrap();
+    first
+        .reserve_quota(&owner, 6)
+        .await
+        .unwrap();
 
-    first.finish_publication(&first_publication, true).await.unwrap();
-    first.try_reclaim_unreferenced_blobs().await.unwrap();
+    first
+        .finish_publication(&first_publication, true)
+        .await
+        .unwrap();
+    first
+        .try_reclaim_unreferenced_blobs()
+        .await
+        .unwrap();
     assert!(backend.head(&orphan).await.is_ok());
 
-    second.finish_publication(&second_publication, false).await.unwrap();
-    second.try_reclaim_unreferenced_blobs().await.unwrap();
+    second
+        .finish_publication(&second_publication, false)
+        .await
+        .unwrap();
+    second
+        .try_reclaim_unreferenced_blobs()
+        .await
+        .unwrap();
     assert!(matches!(backend.head(&orphan).await, Err(object_store::Error::NotFound { .. })));
     let usage_path = ObjectPath::from(".pnpr-artifacts/v0/quota.json");
     let usage: ArtifactUsage = serde_json::from_slice(
@@ -182,19 +223,34 @@ async fn reclamation_preserves_blobs_referenced_by_committed_envelopes() {
     let store = SharedArtifactStore::new(&config, scratch.path()).unwrap();
     let request = publication_with_blob("dependency-side-effects:v1:deps=abc", "ci/referenced");
     let integrity = request.blobs[0].integrity.clone();
-    store.publish("acme", request).await.unwrap();
+    store
+        .publish("acme", request)
+        .await
+        .unwrap();
 
     let publication = artifact_operation_id().unwrap();
-    store.begin_publication(&publication).await.unwrap();
+    store
+        .begin_publication(&publication)
+        .await
+        .unwrap();
     let owner = owner_key("acme", &OwnerScope::organization("acme")).unwrap();
     let orphan = ObjectPath::from(format!(".pnpr-artifacts/v0/{owner}/blobs/orphan"));
     backend
         .put(&orphan, PutPayload::from_static(b"orphan"))
         .await
         .unwrap();
-    store.reserve_quota(&owner, 6).await.unwrap();
-    store.finish_publication(&publication, true).await.unwrap();
-    store.try_reclaim_unreferenced_blobs().await.unwrap();
+    store
+        .reserve_quota(&owner, 6)
+        .await
+        .unwrap();
+    store
+        .finish_publication(&publication, true)
+        .await
+        .unwrap();
+    store
+        .try_reclaim_unreferenced_blobs()
+        .await
+        .unwrap();
 
     assert!(matches!(backend.head(&orphan).await, Err(object_store::Error::NotFound { .. })));
     let blob = store
@@ -227,7 +283,10 @@ async fn an_entry_crowded_with_overlapping_artifacts_refuses_publication() {
     let universal = publication("ci/universal");
     let tags = ["pnpm:v1:linux-x64-node22-glibc2.17"];
     let tagged = publication_tagged("ci/tagged", &tags);
-    let (payload, _) = universal.envelope.decode_payload().unwrap();
+    let (payload, _) = universal
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&universal.key, &payload.subject);
     for (name, request) in [("a".repeat(64), &universal), ("b".repeat(64), &tagged)] {
@@ -243,7 +302,10 @@ async fn an_entry_crowded_with_overlapping_artifacts_refuses_publication() {
     // Each holds the scope it reaches, so only looking at its own would report
     // both as already published.
     for republished in [publication("ci/universal"), publication_tagged("ci/tagged", &tags)] {
-        let error = store.publish("acme", republished).await.unwrap_err();
+        let error = store
+            .publish("acme", republished)
+            .await
+            .unwrap_err();
         assert!(
             matches!(error, RegistryError::ArtifactAlreadyPublished { .. }),
             "republishing into a crowded entry is refused, got {error:?}",
@@ -301,7 +363,10 @@ async fn a_publication_that_never_finished_stops_holding_reclamation_shut() {
     };
     let owner = super::super::owner_key("acme", &OwnerScope::organization("acme")).unwrap();
     let marker = format!("{owner}/entries/{entry}/scopes/linux-x64-node22");
-    store.create_object(&marker, b"an artifact nobody stored".to_vec()).await.unwrap();
+    store
+        .create_object(&marker, b"an artifact nobody stored".to_vec())
+        .await
+        .unwrap();
     store
         .create_object(
             ".locks/usage.json",
@@ -317,7 +382,10 @@ async fn a_publication_that_never_finished_stops_holding_reclamation_shut() {
         .await
         .unwrap();
 
-    store.try_reclaim_unreferenced_blobs().await.unwrap();
+    store
+        .try_reclaim_unreferenced_blobs()
+        .await
+        .unwrap();
 
     assert!(
         store
@@ -386,8 +454,16 @@ async fn a_publication_registered_without_a_time_is_stamped_rather_than_written_
         "the stamp has to be written down",
     );
 
-    assert!(usage.active_publications.contains("a-publication-in-flight"));
-    assert!(usage.active_publication_times.contains_key("a-publication-in-flight"));
+    assert!(
+        usage
+            .active_publications
+            .contains("a-publication-in-flight")
+    );
+    assert!(
+        usage
+            .active_publication_times
+            .contains_key("a-publication-in-flight")
+    );
 }
 
 /// Registering again is what makes the recovery's reads mean anything. A
@@ -419,7 +495,9 @@ async fn a_publication_that_cannot_register_again_does_not_leave_its_artifact() 
     let scratch = TempDir::new().unwrap();
     let store = SharedArtifactStore::new(&config, scratch.path()).unwrap();
     let prepared = super::super::PreparedPublication {
-        started: Instant::now().checked_sub(super::super::ACTIVE_PUBLICATION_EXPIRY).unwrap(),
+        started: Instant::now()
+            .checked_sub(super::super::ACTIVE_PUBLICATION_EXPIRY)
+            .unwrap(),
         ..prepared
     };
     let mut reclamation_needed = false;
@@ -464,7 +542,10 @@ async fn a_publication_still_working_says_so() {
         .await
         .unwrap();
 
-    store.renew_publication(&publication).await.unwrap();
+    store
+        .renew_publication(&publication)
+        .await
+        .unwrap();
 
     let mut usage: ArtifactUsage = serde_json::from_slice(
         &store
@@ -478,7 +559,11 @@ async fn a_publication_still_working_says_so() {
         !super::super::expire_stranded_publications(&mut usage),
         "a registration that has just spoken is not written off",
     );
-    assert!(usage.active_publications.contains(&publication));
+    assert!(
+        usage
+            .active_publications
+            .contains(&publication)
+    );
 }
 
 /// A retried publication of the identical envelope is not an attempt to replace

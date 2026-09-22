@@ -39,11 +39,20 @@ impl RawCreds {
     /// merging a lower-priority source under a higher one: the higher
     /// source's already-set fields win, the lower fills the gaps.
     pub(super) fn fill_from(&mut self, lower: RawCreds) {
-        self.auth_token = self.auth_token.take().or(lower.auth_token);
-        self.auth_pair_base64 = self.auth_pair_base64.take().or(lower.auth_pair_base64);
+        self.auth_token = self
+            .auth_token
+            .take()
+            .or(lower.auth_token);
+        self.auth_pair_base64 = self
+            .auth_pair_base64
+            .take()
+            .or(lower.auth_pair_base64);
         self.username = self.username.take().or(lower.username);
         self.password = self.password.take().or(lower.password);
-        self.token_helper = self.token_helper.take().or(lower.token_helper);
+        self.token_helper = self
+            .token_helper
+            .take()
+            .or(lower.token_helper);
     }
 }
 
@@ -70,7 +79,8 @@ impl AuthTables {
         raw: &RawCreds,
     ) -> Result<(), LoadWorkspaceYamlError> {
         if let Some(token) = default_scope_token(&scope, raw) {
-            self.auth_tokens.insert(uri.to_owned(), token);
+            self.auth_tokens
+                .insert(uri.to_owned(), token);
         }
         let creds = RegistryCreds::from_raw(raw)?;
         if let Some(command) = creds.token_helper.clone() {
@@ -132,7 +142,8 @@ impl RegistryCreds {
     /// see [`parse_token_helper_field`].
     fn from_raw(raw: &RawCreds) -> Result<Self, LoadWorkspaceYamlError> {
         Ok(Self {
-            auth_token: raw.auth_token
+            auth_token: raw
+                .auth_token
                 .clone()
                 .filter(|token| !token.is_empty()),
             basic_auth: decode_basic_auth(raw),
@@ -147,7 +158,8 @@ impl RegistryCreds {
 /// password as written, since that is what the header carries. `None` when
 /// `raw` names no complete pair or `_auth` does not decode.
 fn decode_basic_auth(raw: &RawCreds) -> Option<BasicAuth> {
-    if let Some(pair) = raw.auth_pair_base64
+    if let Some(pair) = raw
+        .auth_pair_base64
         .as_deref()
         .filter(|pair| !pair.is_empty())
     {
@@ -155,10 +167,12 @@ fn decode_basic_auth(raw: &RawCreds) -> Option<BasicAuth> {
         let (username, password) = decoded.split_once(':')?;
         return Some(BasicAuth { username: username.to_owned(), password: password.to_owned() });
     }
-    let username = raw.username
+    let username = raw
+        .username
         .clone()
         .filter(|username| !username.is_empty())?;
-    let password_b64 = raw.password
+    let password_b64 = raw
+        .password
         .as_ref()
         .filter(|password| !password.is_empty())?;
     let password = base64_decode(password_b64).unwrap_or_else(|| password_b64.clone());
@@ -177,7 +191,9 @@ fn pinned_registry(declared: &str) -> String {
 /// The raw `_authToken` of a default-scope credential, kept alongside the
 /// baked header for `pnpm logout`.
 fn default_scope_token(scope: &str, raw: &RawCreds) -> Option<String> {
-    (scope == DEFAULT_REGISTRY_SCOPE).then(|| raw.auth_token.clone()).flatten()
+    (scope == DEFAULT_REGISTRY_SCOPE)
+        .then(|| raw.auth_token.clone())
+        .flatten()
 }
 
 /// Record a per-registry value in the default-scope map or in the
@@ -232,7 +248,8 @@ fn creds_to_header(creds: &RawCreds) -> Result<Option<String>, LoadWorkspaceYaml
     }
     // An empty `_auth` names no credential — the shape an unresolved
     // `${VAR}` leaves behind — and pnpm skips it rather than failing.
-    if let Some(pair) = creds.auth_pair_base64
+    if let Some(pair) = creds
+        .auth_pair_base64
         .as_deref()
         .filter(|pair| !pair.is_empty())
     {
@@ -376,7 +393,9 @@ impl NpmrcAuth {
         let names = unscoped.join(", ");
         let raw_values = self.take_unscoped_raw_values(&unscoped, &creds);
 
-        let declared_registry = self.routes.default
+        let declared_registry = self
+            .routes
+            .default
             .as_deref()
             .filter(|registry| !registry.is_empty())
             .unwrap_or_default()
@@ -429,7 +448,11 @@ impl NpmrcAuth {
                 .fill_from(creds);
         }
         if cert.is_some() || private_key.is_some() {
-            let entry = self.tls.by_uri.entry(uri.to_owned()).or_default();
+            let entry = self
+                .tls
+                .by_uri
+                .entry(uri.to_owned())
+                .or_default();
             entry.cert = entry.cert.take().or(cert);
             entry.key = entry.key.take().or(private_key);
         }
@@ -451,7 +474,9 @@ impl NpmrcAuth {
                 self.raw_ini_config
                     .remove(*key)
                     .or_else(|| {
-                        (*key == "tokenHelper").then(|| creds.token_helper.clone()).flatten()
+                        (*key == "tokenHelper")
+                            .then(|| creds.token_helper.clone())
+                            .flatten()
                     })
                     .map(|value| (*key, value))
             })

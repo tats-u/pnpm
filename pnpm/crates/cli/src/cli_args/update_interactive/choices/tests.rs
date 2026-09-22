@@ -40,7 +40,8 @@ fn pkg(
 
 /// The package each selectable row of a group updates, in order.
 fn values(group: &ChoiceGroup) -> Vec<&str> {
-    group.rows
+    group
+        .rows
         .iter()
         .filter_map(|row| row.value.as_deref())
         .collect()
@@ -48,7 +49,8 @@ fn values(group: &ChoiceGroup) -> Vec<&str> {
 
 /// The terminal column each selectable row's `❯` starts at, in order.
 fn arrow_offsets(group: &ChoiceGroup) -> Vec<usize> {
-    group.rows
+    group
+        .rows
         .iter()
         .skip(1)
         .map(|row| {
@@ -174,8 +176,18 @@ fn a_long_version_keeps_the_row_on_one_line() {
     let row = &groups[0].rows[1];
     assert_eq!(row.value.as_deref(), Some("@typescript/native-preview"));
     assert!(!row.label.contains('\n'), "row wrapped: {}", row.label);
-    assert!(row.label.contains("7.0.0-dev.20251209.1"), "current missing: {}", row.label);
-    assert!(row.label.contains("7.0.0-dev.20251214.1"), "target missing: {}", row.label);
+    assert!(
+        row.label
+            .contains("7.0.0-dev.20251209.1"),
+        "current missing: {}",
+        row.label
+    );
+    assert!(
+        row.label
+            .contains("7.0.0-dev.20251214.1"),
+        "target missing: {}",
+        row.label
+    );
 }
 
 /// Columns are padded to a common width, so the `❯` of every row in a
@@ -331,7 +343,12 @@ fn control_characters_in_registry_metadata_are_stripped() {
     let row = &groups[0].rows[1];
     assert!(!row.label.contains('\u{1b}'), "escape survived: {:?}", row.label);
     assert!(!row.label.contains('\n'), "newline survived: {:?}", row.label);
-    assert!(row.label.contains("https://example.test/"), "url lost: {:?}", row.label);
+    assert!(
+        row.label
+            .contains("https://example.test/"),
+        "url lost: {:?}",
+        row.label
+    );
 }
 
 /// Inside a workspace the list gains a `Workspace` column naming the
@@ -347,7 +364,11 @@ fn a_workspace_run_names_the_project_each_row_came_from() {
 
     let groups = update_choices(&packages.iter().collect::<Vec<_>>(), true);
 
-    assert!(groups[0].rows[0].label.contains("Workspace"));
+    assert!(
+        groups[0].rows[0]
+            .label
+            .contains("Workspace")
+    );
     assert!(groups[0].rows[1].label.contains("app"), "{}", groups[0].rows[1].label);
     assert!(groups[0].rows[2].label.contains("lib"), "{}", groups[0].rows[2].label);
 }
@@ -362,7 +383,11 @@ fn a_single_project_run_has_no_workspace_column() {
 
     let groups = update_choices(&packages.iter().collect::<Vec<_>>(), false);
 
-    assert!(!groups[0].rows[0].label.contains("Workspace"));
+    assert!(
+        !groups[0].rows[0]
+            .label
+            .contains("Workspace")
+    );
     assert!(!groups[0].rows[1].label.contains("solo"), "{}", groups[0].rows[1].label);
 }
 
@@ -380,7 +405,13 @@ fn a_collapsed_row_names_every_project_it_covers() {
     let groups = update_choices(&packages.iter().collect::<Vec<_>>(), true);
 
     assert_eq!(values(&groups[0]), vec!["foo"]);
-    assert!(groups[0].rows[1].label.contains("web, tooling"), "{}", groups[0].rows[1].label);
+    assert!(
+        groups[0].rows[1]
+            .label
+            .contains("web, tooling"),
+        "{}",
+        groups[0].rows[1].label
+    );
 }
 
 /// A project appearing twice for one dependency is named once.
@@ -394,5 +425,11 @@ fn a_repeated_project_is_named_once() {
 
     let groups = update_choices(&packages.iter().collect::<Vec<_>>(), true);
 
-    assert!(!groups[0].rows[1].label.contains("web, web"), "{}", groups[0].rows[1].label);
+    assert!(
+        !groups[0].rows[1]
+            .label
+            .contains("web, web"),
+        "{}",
+        groups[0].rows[1].label
+    );
 }

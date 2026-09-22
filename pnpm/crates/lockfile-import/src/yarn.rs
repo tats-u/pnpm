@@ -60,9 +60,10 @@ pub fn collect_yarn_lockfile_versions(
 /// Yarn berry stamps every lockfile it writes with a `__metadata` block.
 /// The TypeScript CLI looks for the same marker anywhere in the file.
 fn is_berry(contents: &str) -> bool {
-    contents
-        .lines()
-        .any(|line| line.trim_start().starts_with(METADATA_KEY))
+    contents.lines().any(|line| {
+        line.trim_start()
+            .starts_with(METADATA_KEY)
+    })
 }
 
 fn collect_berry_versions(
@@ -71,7 +72,9 @@ fn collect_berry_versions(
 ) -> Result<(), YarnSyntaxError> {
     let document: yaml_serde::Value =
         yaml_serde::from_str(contents).map_err(|source| YarnSyntaxError::Yaml { source })?;
-    let entries = document.as_mapping().ok_or(YarnSyntaxError::BerryRootNotAMapping)?;
+    let entries = document
+        .as_mapping()
+        .ok_or(YarnSyntaxError::BerryRootNotAMapping)?;
 
     for (key, entry) in entries {
         let Some(key) = key.as_str() else {
@@ -83,7 +86,10 @@ fn collect_berry_versions(
         let entry = entry
             .as_mapping()
             .ok_or_else(|| YarnSyntaxError::BerryEntryNotAMapping { entry: key.to_string() })?;
-        let Some(version) = entry.get("version").and_then(scalar_as_str) else {
+        let Some(version) = entry
+            .get("version")
+            .and_then(scalar_as_str)
+        else {
             continue;
         };
         for name in descriptor_package_names(key) {
@@ -218,12 +224,11 @@ fn split_key_and_value(content: &str) -> Option<(&str, &str)> {
 /// `@`, which keeps a scope's leading `@` and drops yarn berry's
 /// protocol along with the range (`minimatch@npm:^3.0.4`).
 fn descriptor_package_names(key: &str) -> impl Iterator<Item = &str> {
-    key.split(',')
-        .filter_map(|descriptor| {
-            let descriptor = descriptor.trim().trim_matches(QUOTES);
-            let name = &descriptor[..descriptor.rfind('@')?];
-            (!name.is_empty()).then_some(name)
-        })
+    key.split(',').filter_map(|descriptor| {
+        let descriptor = descriptor.trim().trim_matches(QUOTES);
+        let name = &descriptor[..descriptor.rfind('@')?];
+        (!name.is_empty()).then_some(name)
+    })
 }
 
 #[cfg(test)]

@@ -366,7 +366,9 @@ fn drop_lost_versions_removes_only_the_lost_versions() {
 
     drop_lost_versions(&mut journaled, &lost);
 
-    let versions = journaled["versions"].as_object().unwrap();
+    let versions = journaled["versions"]
+        .as_object()
+        .unwrap();
     assert!(!versions.contains_key("1.0.0"));
     assert!(versions.contains_key("2.0.0"));
     assert!(versions.contains_key("3.0.0"));

@@ -86,7 +86,10 @@ impl LockedVcs {
             bail!("unsupported Python lockfile VCS kind {:?}, expected git", self.kind);
         }
         if self.commit_id.len() != 40
-            || !self.commit_id.bytes().all(|byte| byte.is_ascii_hexdigit())
+            || !self
+                .commit_id
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit())
         {
             bail!(
                 "Python git lockfile source requires a full commit hash, received {:?}",
@@ -210,7 +213,11 @@ impl Lockfile {
             .collect::<Result<Vec<_>>>()?;
         let markers = environments
             .iter()
-            .map(|marker| marker.parse::<MarkerTree>().into_diagnostic())
+            .map(|marker| {
+                marker
+                    .parse::<MarkerTree>()
+                    .into_diagnostic()
+            })
             .collect::<Result<Vec<_>>>()?;
         for ((environment, marker), written) in solved
             .iter()
@@ -272,7 +279,8 @@ impl Lockfile {
         }
         for package in self.selected_packages(&target.environment)? {
             let candidate = package.source(target)?;
-            if packages.candidates
+            if packages
+                .candidates
                 .insert(
                     package.name.clone(),
                     BTreeMap::from([(package.version.clone(), candidate)]),
@@ -320,7 +328,9 @@ fn merge_packages(solved: &[Solved], markers: &[MarkerTree]) -> Result<Vec<Locke
         .map(|((name, version, _), entry)| LockedPackage {
             name,
             version,
-            marker: (entry.marker != scope).then(|| entry.marker.try_to_string()).flatten(),
+            marker: (entry.marker != scope)
+                .then(|| entry.marker.try_to_string())
+                .flatten(),
             wheels: entry.wheels.into_values().collect(),
             sdist: entry.sdist,
             directory: entry.directory,
@@ -356,7 +366,8 @@ impl Merged {
             // build, but which one that is can differ between targets
             // when the files declare different interpreter ranges. One
             // entry cannot pin both.
-            if self.sdist
+            if self
+                .sdist
                 .as_ref()
                 .is_some_and(|pinned| pinned != sdist)
             {
@@ -364,10 +375,12 @@ impl Merged {
             }
             self.sdist = Some(sdist.clone());
         } else {
-            let wheel = environment.wheels
+            let wheel = environment
+                .wheels
                 .get(name)
                 .ok_or_else(|| miette::miette!("solved Python package {name} pins no wheel"))?;
-            self.wheels.insert(wheel.name.clone(), wheel.clone());
+            self.wheels
+                .insert(wheel.name.clone(), wheel.clone());
         }
         Ok(())
     }
@@ -409,7 +422,8 @@ fn check_one_version_per_environment(packages: &[LockedPackage]) -> Result<()> {
 }
 
 fn marker_tree(package: &LockedPackage) -> Result<MarkerTree> {
-    package.marker
+    package
+        .marker
         .as_deref()
         .map_or(Ok(MarkerTree::TRUE), |marker| marker.parse().into_diagnostic())
 }

@@ -276,7 +276,9 @@ importers:
     // And they render as one row naming both.
     let groups = super::choices::update_choices(&choices.iter().collect::<Vec<_>>(), true);
     assert!(
-        groups[0].rows[1].label.contains("packages-a, packages-b"),
+        groups[0].rows[1]
+            .label
+            .contains("packages-a, packages-b"),
         "{}",
         groups[0].rows[1].label,
     );
@@ -526,7 +528,9 @@ static SCRIPT: Mutex<PromptScript> =
     Mutex::new(PromptScript { answers: VecDeque::new(), seen: Vec::new() });
 
 fn script() -> std::sync::MutexGuard<'static, PromptScript> {
-    SCRIPT.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    SCRIPT
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 static SCRIPT_LOCK: Mutex<()> = Mutex::new(());
@@ -544,7 +548,9 @@ struct ScriptedPrompts {
 
 /// Claim the scripted prompt, with nothing answered and nothing seen.
 fn scripted_prompts() -> ScriptedPrompts {
-    let claim = SCRIPT_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let claim = SCRIPT_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let mut script = script();
     script.answers.clear();
     script.seen.clear();
@@ -560,13 +566,16 @@ impl ScriptedPrompts {
             .iter()
             .map(|package| (*package).to_string())
             .collect();
-        self.claimed().answers
+        self.claimed()
+            .answers
             .push_back(ScriptedAnswer::Check(answer));
     }
 
     /// Leave the next prompt with Ctrl-C.
     fn cancel_next(&self) {
-        self.claimed().answers.push_back(ScriptedAnswer::Cancel);
+        self.claimed()
+            .answers
+            .push_back(ScriptedAnswer::Cancel);
     }
 
     /// Take the prompts shown since the last call.
@@ -575,13 +584,16 @@ impl ScriptedPrompts {
     }
 
     fn claimed(&self) -> std::sync::MutexGuard<'static, PromptScript> {
-        self.script.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+        self.script
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 }
 
 pub(super) fn answer_prompt(message: &str, rows: &[PromptRow]) -> Option<Vec<usize>> {
     let mut script = script();
-    let answer = script.answers
+    let answer = script
+        .answers
         .pop_front()
         .unwrap_or_else(|| panic!("the test scripted no answer for the prompt {message:?}"));
     script.seen.push(SeenPrompt {
@@ -610,11 +622,14 @@ pub(super) fn answer_prompt(message: &str, rows: &[PromptRow]) -> Option<Vec<usi
 /// versions are read back out of the padded label; how that table is laid
 /// out is pinned by the `choices` ports.
 fn offered(prompt: &SeenPrompt) -> Vec<(String, String, String)> {
-    prompt.rows
+    prompt
+        .rows
         .iter()
         .filter_map(|(label, value)| {
             let package = value.as_ref()?;
-            let columns = label.split_whitespace().collect::<Vec<_>>();
+            let columns = label
+                .split_whitespace()
+                .collect::<Vec<_>>();
             let arrow = columns
                 .iter()
                 .position(|column| *column == "❯")?;
@@ -626,7 +641,8 @@ fn offered(prompt: &SeenPrompt) -> Vec<(String, String, String)> {
 /// The group headings a prompt showed, in order: the separators drawn
 /// as `── heading ──`.
 fn headings(prompt: &SeenPrompt) -> Vec<String> {
-    prompt.rows
+    prompt
+        .rows
         .iter()
         .filter(|(_, value)| value.is_none())
         .filter_map(|(label, _)| {
@@ -689,14 +705,16 @@ impl UpdateFixture {
     /// next one resolves against the move — the same pairing as
     /// `AddMockedRegistry::set_dist_tag`.
     fn set_dist_tag(&self, package: &str, version: &str, tag: &str) {
-        self.registry.set_dist_tag(package, version, tag);
+        self.registry
+            .set_dist_tag(package, version, tag);
         if self.cache_dir.exists() {
             fs::remove_dir_all(&self.cache_dir).expect("drop the cached registry metadata");
         }
     }
 
     async fn update(&self, args: &[&str]) {
-        self.update_reporting::<SilentReporter>(args).await;
+        self.update_reporting::<SilentReporter>(args)
+            .await;
     }
 
     async fn update_reporting<Reporter: self::Reporter>(&self, args: &[&str]) {
@@ -712,7 +730,10 @@ impl UpdateFixture {
         parsed.prompt = UpdatePrompt::Scripted;
         let state = crate::State::init(self.project.join("package.json"), self.config, false)
             .expect("initialize the state");
-        parsed.run::<Reporter>(state).await.expect("run pacquet update");
+        parsed
+            .run::<Reporter>(state)
+            .await
+            .expect("run pacquet update");
     }
 
     /// The `packages:` keys of the lockfile the last run wrote.
@@ -720,7 +741,8 @@ impl UpdateFixture {
         let text = fs::read_to_string(self.project.join("pnpm-lock.yaml"))
             .expect("read the wanted lockfile");
         let lockfile: Lockfile = serde_saphyr::from_str(&text).expect("parse the wanted lockfile");
-        let mut keys = lockfile.packages
+        let mut keys = lockfile
+            .packages
             .into_iter()
             .flatten()
             .map(|(key, _)| key.to_string())
@@ -743,7 +765,9 @@ async fn interactively_update() {
 
     let scripted = scripted_prompts();
     scripted.answer_next(&[MULTI_A]);
-    fixture.update(&["update", "--interactive"]).await;
+    fixture
+        .update(&["update", "--interactive"])
+        .await;
 
     let prompts = scripted.seen();
     assert_eq!(prompts.len(), 1);
@@ -762,7 +786,9 @@ async fn interactively_update() {
     );
 
     scripted.answer_next(&[MULTI_A]);
-    fixture.update(&["update", "--interactive", "--latest"]).await;
+    fixture
+        .update(&["update", "--interactive", "--latest"])
+        .await;
 
     let prompts = scripted.seen();
     assert_eq!(prompts.len(), 1);
@@ -794,7 +820,9 @@ async fn interactively_update_skips_ignored_dependencies() {
 
     let scripted = scripted_prompts();
     scripted.answer_next(&[MULTI_C]);
-    fixture.update(&["update", "--interactive"]).await;
+    fixture
+        .update(&["update", "--interactive"])
+        .await;
 
     let prompts = scripted.seen();
     assert_eq!(prompts.len(), 1);
@@ -832,7 +860,9 @@ async fn interactive_update_leaves_without_an_error_when_the_prompt_is_canceled(
 
     let scripted = scripted_prompts();
     scripted.cancel_next();
-    fixture.update_reporting::<RecordingReporter>(&["update", "--interactive"]).await;
+    fixture
+        .update_reporting::<RecordingReporter>(&["update", "--interactive"])
+        .await;
 
     assert_eq!(scripted.seen().len(), 1);
     assert_eq!(fixture.lockfile_packages(), [format!("{MULTI_A}@1.0.0")]);

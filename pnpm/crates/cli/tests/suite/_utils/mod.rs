@@ -38,12 +38,19 @@ pub fn pacquet_in(workspace: &Path) -> Command {
 pub fn wait_for_child(child: &mut Child) -> ExitStatus {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
-        if let Some(status) = child.try_wait().expect("read child status") {
+        if let Some(status) = child
+            .try_wait()
+            .expect("read child status")
+        {
             return status;
         }
         if Instant::now() >= deadline {
-            child.kill().expect("stop stalled child");
-            child.wait().expect("reap stalled child");
+            child
+                .kill()
+                .expect("stop stalled child");
+            child
+                .wait()
+                .expect("reap stalled child");
             panic!("child did not finish before the deadline");
         }
         thread::sleep(Duration::from_millis(10));
@@ -57,12 +64,19 @@ pub fn wait_for_child_output(child: &mut Child, path: &Path, expected: &str) {
         if output.contains(expected) {
             return;
         }
-        if let Some(status) = child.try_wait().expect("read child status") {
+        if let Some(status) = child
+            .try_wait()
+            .expect("read child status")
+        {
             panic!("child exited with {status} before writing {expected:?}:\n{output}");
         }
         if Instant::now() >= deadline {
-            child.kill().expect("stop stalled child");
-            child.wait().expect("reap stalled child");
+            child
+                .kill()
+                .expect("stop stalled child");
+            child
+                .wait()
+                .expect("reap stalled child");
             panic!("child did not write {expected:?} before the deadline:\n{output}");
         }
         thread::sleep(Duration::from_millis(10));
@@ -185,7 +199,8 @@ pub fn append_workspace_yaml_key(workspace: &Path, key: &str, value: impl std::f
 /// upstream tests read as `lockfile.packages['<name>@<version>']`.
 #[must_use]
 pub fn lockfile_package_keys(dir: &Path) -> Vec<String> {
-    let mut keys = read_lockfile(&dir.join("pnpm-lock.yaml")).packages
+    let mut keys = read_lockfile(&dir.join("pnpm-lock.yaml"))
+        .packages
         .into_iter()
         .flatten()
         .map(|(key, _)| key.to_string())
@@ -238,7 +253,8 @@ pub fn index_file_contents(store_dir: &Path) -> BTreeMap<String, BTreeMap<String
             .get(&key)
             .expect("read index row")
             .expect("row disappeared");
-        let files = row.files
+        let files = row
+            .files
             .into_iter()
             .map(|(filename, mut info)| {
                 info.checked_at = None;
@@ -290,7 +306,9 @@ impl WorkspaceFixture {
     }
 
     pub fn append_workspace_yaml(&self, text: &str) {
-        let path = self.workspace.join("pnpm-workspace.yaml");
+        let path = self
+            .workspace
+            .join("pnpm-workspace.yaml");
         let mut yaml = fs::read_to_string(&path).expect("read pnpm-workspace.yaml");
         if !yaml.ends_with('\n') {
             yaml.push('\n');
@@ -304,7 +322,10 @@ impl WorkspaceFixture {
     }
 
     pub fn project(&self, dir: &str, name: &str, deps: ManifestDeps<'_>) -> PathBuf {
-        let project = self.workspace.join("packages").join(dir);
+        let project = self
+            .workspace
+            .join("packages")
+            .join(dir);
         write_project_manifest(&project, name, deps);
         project
     }
@@ -349,7 +370,11 @@ impl WorkspaceFixture {
 
     #[must_use]
     pub fn current(&self) -> Lockfile {
-        read_lockfile(&self.workspace.join("node_modules/.pnpm/lock.yaml"))
+        read_lockfile(
+            &self
+                .workspace
+                .join("node_modules/.pnpm/lock.yaml"),
+        )
     }
 
     #[must_use]
@@ -369,14 +394,18 @@ impl WorkspaceFixture {
 
     #[must_use]
     pub fn state(&self) -> WorkspaceState {
-        let path = self.workspace.join("node_modules/.pnpm-workspace-state-v1.json");
+        let path = self
+            .workspace
+            .join("node_modules/.pnpm-workspace-state-v1.json");
         serde_json::from_str(&fs::read_to_string(path).expect("read workspace state"))
             .expect("parse workspace state")
     }
 
     #[must_use]
     pub fn package_map(&self) -> Value {
-        let path = self.workspace.join("node_modules/.package-map.json");
+        let path = self
+            .workspace
+            .join("node_modules/.package-map.json");
         serde_json::from_str(&fs::read_to_string(path).expect("read package map"))
             .expect("parse package map")
     }
@@ -445,7 +474,9 @@ pub fn write_manifest_value(project: &Path, manifest: &Value) {
 
 pub fn set_dependency(project: &Path, group: &str, name: &str, spec: &str) {
     let mut manifest = read_manifest(project);
-    let object = manifest.as_object_mut().expect("manifest is an object");
+    let object = manifest
+        .as_object_mut()
+        .expect("manifest is an object");
     let dependencies = object
         .entry(group)
         .or_insert_with(|| json!({}));
@@ -502,7 +533,10 @@ pub fn repin_snapshot_dependency(
     new_ref: &str,
 ) {
     let mut lockfile = read_lockfile(lockfile_path);
-    let snapshots = lockfile.snapshots.as_mut().expect("lockfile has snapshots");
+    let snapshots = lockfile
+        .snapshots
+        .as_mut()
+        .expect("lockfile has snapshots");
     let key = snapshots
         .keys()
         .find(|key| key.to_string() == snapshot_key)
@@ -514,10 +548,16 @@ pub fn repin_snapshot_dependency(
         .dependencies
         .as_mut()
         .expect("snapshot has dependencies")
-        .get_mut(&dependency.parse().expect("parse the dependency name"))
+        .get_mut(
+            &dependency
+                .parse()
+                .expect("parse the dependency name"),
+        )
         .unwrap_or_else(|| panic!("snapshot {snapshot_key} does not pin {dependency}"));
     *pin = serde_saphyr::from_str(new_ref).expect("parse the new dependency ref");
-    lockfile.save_to_path(lockfile_path).expect("write the rewritten lockfile");
+    lockfile
+        .save_to_path(lockfile_path)
+        .expect("write the rewritten lockfile");
 }
 
 /// A package script that creates `relative_path` as an empty file: the
@@ -597,37 +637,49 @@ pub fn ndjson_records(output: &Output) -> Vec<Value> {
 /// emits when it is entered with an up-to-date lockfile.
 #[must_use]
 pub fn has_up_to_date_log(records: &[Value]) -> bool {
-    records
-        .iter()
-        .any(|record| {
-            record.get("name").and_then(Value::as_str) == Some("pnpm")
-                && record.get("level").and_then(Value::as_str) == Some("info")
-                && record.get("message").and_then(Value::as_str)
-                    == Some("Lockfile is up to date, resolution step is skipped")
-        })
+    records.iter().any(|record| {
+        record
+            .get("name")
+            .and_then(Value::as_str)
+            == Some("pnpm")
+            && record
+                .get("level")
+                .and_then(Value::as_str)
+                == Some("info")
+            && record
+                .get("message")
+                .and_then(Value::as_str)
+                == Some("Lockfile is up to date, resolution step is skipped")
+    })
 }
 
 #[must_use]
 pub fn importer<'a>(lockfile: &'a Lockfile, id: &str) -> &'a ProjectSnapshot {
-    lockfile.importers
+    lockfile
+        .importers
         .get(id)
         .unwrap_or_else(|| panic!("missing importer {id:?}: {:?}", lockfile.importers.keys()))
 }
 
 #[must_use]
 pub fn importer_version(lockfile: &Lockfile, id: &str, name: &str) -> String {
-    let name: PkgName = name.parse().expect("parse package name");
+    let name: PkgName = name
+        .parse()
+        .expect("parse package name");
     let snapshot = importer(lockfile, id);
-    snapshot.dependencies
+    snapshot
+        .dependencies
         .as_ref()
         .and_then(|dependencies| dependencies.get(&name))
         .or_else(|| {
-            snapshot.dev_dependencies
+            snapshot
+                .dev_dependencies
                 .as_ref()
                 .and_then(|dependencies| dependencies.get(&name))
         })
         .or_else(|| {
-            snapshot.optional_dependencies
+            snapshot
+                .optional_dependencies
                 .as_ref()
                 .and_then(|dependencies| dependencies.get(&name))
         })
@@ -638,8 +690,11 @@ pub fn importer_version(lockfile: &Lockfile, id: &str, name: &str) -> String {
 
 #[must_use]
 pub fn importer_specifier(lockfile: &Lockfile, id: &str, name: &str) -> String {
-    let name: PkgName = name.parse().expect("parse package name");
-    importer(lockfile, id).dependencies
+    let name: PkgName = name
+        .parse()
+        .expect("parse package name");
+    importer(lockfile, id)
+        .dependencies
         .as_ref()
         .and_then(|dependencies| dependencies.get(&name))
         .unwrap_or_else(|| panic!("missing dependency {name} in importer {id}"))
@@ -649,7 +704,8 @@ pub fn importer_specifier(lockfile: &Lockfile, id: &str, name: &str) -> String {
 
 #[must_use]
 pub fn importer_ids(lockfile: &Lockfile) -> BTreeSet<String> {
-    lockfile.importers
+    lockfile
+        .importers
         .keys()
         .cloned()
         .collect()
@@ -657,7 +713,8 @@ pub fn importer_ids(lockfile: &Lockfile) -> BTreeSet<String> {
 
 #[must_use]
 pub fn snapshot_entries(lockfile: &Lockfile, name: &str) -> Vec<(String, SnapshotEntry)> {
-    lockfile.snapshots
+    lockfile
+        .snapshots
         .as_ref()
         .into_iter()
         .flatten()
@@ -671,16 +728,14 @@ pub fn snapshot_entries(lockfile: &Lockfile, name: &str) -> Vec<(String, Snapsho
 
 #[must_use]
 pub fn has_snapshot(lockfile: &Lockfile, name: &str, version: &str) -> bool {
-    lockfile.snapshots
+    lockfile
+        .snapshots
         .as_ref()
         .is_some_and(|snapshots| {
-            snapshots
-                .keys()
-                .any(|key| {
-                    let key = key.to_string();
-                    key == format!("{name}@{version}")
-                        || key.starts_with(&format!("{name}@{version}("))
-                })
+            snapshots.keys().any(|key| {
+                let key = key.to_string();
+                key == format!("{name}@{version}") || key.starts_with(&format!("{name}@{version}("))
+            })
         })
 }
 
@@ -714,7 +769,9 @@ pub fn importer_has_group_dependency(
     group: &str,
     dependency: &str,
 ) -> bool {
-    let name: PkgName = dependency.parse().expect("parse package name");
+    let name: PkgName = dependency
+        .parse()
+        .expect("parse package name");
     let importer = importer(lockfile, id);
     match group {
         "dependencies" => importer.dependencies.as_ref(),

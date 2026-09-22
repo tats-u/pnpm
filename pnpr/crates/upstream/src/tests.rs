@@ -34,7 +34,8 @@ fn upstream(url: String, headers: HeaderMap) -> Upstream {
 /// Fixed "current time" for abbreviation tests so the `time`-map
 /// coarsening (which buckets entries by age) is deterministic.
 fn now() -> DateTime<Utc> {
-    Utc.with_ymd_and_hms(2024, 3, 20, 12, 0, 0).unwrap()
+    Utc.with_ymd_and_hms(2024, 3, 20, 12, 0, 0)
+        .unwrap()
 }
 
 /// Build a header map carrying a bearer `Authorization` plus one
@@ -71,7 +72,9 @@ fn breaking_upstream(url: String, max_fails: u32) -> Upstream {
 }
 
 async fn assert_redirect_timeout(delay_body: bool) {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move {
         let mut request = [0u8; 4096];
@@ -83,18 +86,26 @@ async fn assert_redirect_timeout(delay_body: bool) {
         let (mut second, _) = listener.accept().await.unwrap();
         assert!(second.read(&mut request).await.unwrap() > 0);
         if delay_body {
-            second.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\n").await.unwrap();
+            second
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\n")
+                .await
+                .unwrap();
         }
         tokio::time::sleep(Duration::from_millis(450)).await;
         if !delay_body {
-            second.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\n").await.unwrap();
+            second
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\n")
+                .await
+                .unwrap();
         }
         second.write_all(b"body").await.unwrap();
     });
     let mut config = UpstreamConfig::with_defaults(url.clone(), HeaderMap::new());
     config.requests.timeout = Duration::from_millis(600);
     let upstream = Upstream::new("test", &config);
-    let result = upstream.fetch_artifact_response(&url).await;
+    let result = upstream
+        .fetch_artifact_response(&url)
+        .await;
     if delay_body {
         let FetchOutcome::Ok(response) = result.unwrap() else {
             panic!("expected artifact response")

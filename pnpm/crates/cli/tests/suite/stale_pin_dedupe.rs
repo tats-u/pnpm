@@ -12,7 +12,9 @@ use pnpm_testing_utils::{
 use std::{fs, path::Path, process::Command};
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn write_manifest(path: &Path, dep_of_version: &str) {

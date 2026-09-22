@@ -28,7 +28,9 @@ fn select(graph: &ProjectGraph<()>, names: &[&str]) -> ProjectGraph<()> {
         .iter()
         .map(|name| {
             let dir = PathBuf::from(name);
-            let node = graph.get(&dir).expect("selected project is in the graph");
+            let node = graph
+                .get(&dir)
+                .expect("selected project is in the graph");
             (dir, ProjectGraphNode { package: (), dependencies: node.dependencies.clone() })
         })
         .collect()

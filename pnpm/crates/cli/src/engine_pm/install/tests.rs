@@ -54,7 +54,9 @@ fn cache_hit_relinks_legacy_wrapper_native_binary() {
 #[test]
 fn package_manager_engine_config_uses_global_store() {
     let root = tempfile::TempDir::new().expect("tmp dir");
-    let project_store_root = root.path().join("repo-controlled-store");
+    let project_store_root = root
+        .path()
+        .join("repo-controlled-store");
     let global_pkg_dir = root
         .path()
         .join("pnpm-home")
@@ -75,7 +77,10 @@ fn package_manager_engine_config_uses_global_store() {
         .join("v11");
     assert_eq!(engine_config.store_dir.root(), expected_store_root.as_path());
     assert!(
-        !engine_config.store_dir.root().starts_with(&project_store_root),
+        !engine_config
+            .store_dir
+            .root()
+            .starts_with(&project_store_root),
         "engine store must not use project store at {}",
         project_store_root.display(),
     );
@@ -95,7 +100,11 @@ fn slot_resolution_follows_the_wrapper_symlink_into_the_store() {
     let installed_pkg_dir = package_dir(&slot, "@pnpm/exe");
     fs::create_dir_all(&installed_pkg_dir).expect("create the store package dir");
     let link = package_dir(&install_dir, "@pnpm/exe");
-    fs::create_dir_all(link.parent().expect("the wrapper scope dir")).expect("create scope dir");
+    fs::create_dir_all(
+        link.parent()
+            .expect("the wrapper scope dir"),
+    )
+    .expect("create scope dir");
     pnpm_fs::force_symlink_dir(&installed_pkg_dir, &link).expect("link the wrapper");
 
     let resolved = resolve_slot(&install_dir, "@pnpm/exe").expect("resolve the slot");

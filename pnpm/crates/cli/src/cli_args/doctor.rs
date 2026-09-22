@@ -140,10 +140,9 @@ impl DoctorArgs {
 
         let report = DoctorReport { checks };
         let output = if self.json {
-            serde_json::to_string_pretty(&report)
-                .map_err(|error| {
-                    miette::miette!("Failed to render the doctor report as JSON: {error}")
-                })?
+            serde_json::to_string_pretty(&report).map_err(|error| {
+                miette::miette!("Failed to render the doctor report as JSON: {error}")
+            })?
         } else {
             render_report(&report)
         };
@@ -156,7 +155,10 @@ impl DoctorArgs {
             return CheckResult::pass(title, "skipped (--offline)");
         }
         let started = Instant::now();
-        match (PingArgs { registry: None }).run(config).await {
+        match (PingArgs { registry: None })
+            .run(config)
+            .await
+        {
             Ok(_) => CheckResult::pass(
                 title,
                 format!("{} ({}ms)", config.registry, started.elapsed().as_millis()),
@@ -233,7 +235,10 @@ fn check_global_bin_dir(config: &Config) -> CheckResult {
     };
     let path_dirs: Vec<PathBuf> = std::env::split_paths(&path_var).collect();
 
-    let Some(bin_dir) = candidates.iter().find(|dir| dir_is_in_path(dir, &path_dirs)) else {
+    let Some(bin_dir) = candidates
+        .iter()
+        .find(|dir| dir_is_in_path(dir, &path_dirs))
+    else {
         return CheckResult::warn(
             title,
             format!("{} is not in PATH", first.display()),
@@ -252,15 +257,13 @@ fn check_global_bin_dir(config: &Config) -> CheckResult {
 
 fn dir_is_in_path(dir: &Path, path_dirs: &[PathBuf]) -> bool {
     let canonical = dir.canonicalize();
-    path_dirs
-        .iter()
-        .any(|entry| {
-            entry == dir
-                || match (&canonical, entry.canonicalize()) {
-                    (Ok(dir), Ok(entry)) => dir == &entry,
-                    _ => false,
-                }
-        })
+    path_dirs.iter().any(|entry| {
+        entry == dir
+            || match (&canonical, entry.canonicalize()) {
+                (Ok(dir), Ok(entry)) => dir == &entry,
+                _ => false,
+            }
+    })
 }
 
 fn check_writable_dir(title: &str, dir: &Path) -> CheckResult {
@@ -396,7 +399,10 @@ fn run_install_smoke_test(base: &Path) -> Result<(), String> {
             if reason.is_empty() { String::new() } else { format!(": {reason}") },
         ));
     }
-    if !consumer.join("node_modules/pnpm-doctor-fixture/package.json").exists() {
+    if !consumer
+        .join("node_modules/pnpm-doctor-fixture/package.json")
+        .exists()
+    {
         return Err("install reported success but the dependency was not linked".to_owned());
     }
     Ok(())
@@ -417,7 +423,8 @@ fn can_write_to_dir(dir: &Path) -> bool {
 }
 
 fn render_report(report: &DoctorReport) -> String {
-    let mut lines: Vec<String> = report.checks
+    let mut lines: Vec<String> = report
+        .checks
         .iter()
         .map(|check| {
             let mut line = format!("{} {}", status_mark(check.status), check.title);
@@ -436,11 +443,13 @@ fn render_report(report: &DoctorReport) -> String {
         })
         .collect();
 
-    let failed = report.checks
+    let failed = report
+        .checks
         .iter()
         .filter(|check| check.status == CheckStatus::Fail)
         .count();
-    let warned = report.checks
+    let warned = report
+        .checks
         .iter()
         .filter(|check| check.status == CheckStatus::Warn)
         .count();

@@ -39,7 +39,8 @@ pub(super) fn prior_unbuilt_builds(
     if let Some(modules) = modules_manifest {
         unbuilt.extend(modules.pending_builds.iter().cloned());
         unbuilt.extend(
-            modules.ignored_builds
+            modules
+                .ignored_builds
                 .iter()
                 .flatten()
                 .map(|dep_path| dep_path.as_str().to_string()),
@@ -56,10 +57,8 @@ pub(super) fn anchored_project_manifests<'a>(
     project_manifests
         .iter()
         .filter(|(project_dir, _)| {
-            project_anchor_ids.contains(&pnpm_workspace::importer_id_from_root_dir(
-                workspace_root,
-                project_dir,
-            ))
+            project_anchor_ids
+                .contains(&pnpm_workspace::importer_id_from_root_dir(workspace_root, project_dir))
         })
         .cloned()
         .collect()
@@ -124,7 +123,9 @@ pub(super) async fn settle_frozen_verification<'install, Reporter: self::Reporte
     }
     match verification_override {
         Some(verification_override) => {
-            verification_override.await.map_err(map_frozen_lockfile_error)?;
+            verification_override
+                .await
+                .map_err(map_frozen_lockfile_error)?;
         }
         None => {
             verify_lockfile_eagerly::<Reporter>(
@@ -167,7 +168,8 @@ pub(super) fn initial_materialization_ids(
 ) -> HashSet<String> {
     match requested_importer_ids {
         Some(selected) if !matches!(node_linker, NodeLinker::Hoisted) => selected.clone(),
-        _ => lockfile.importers
+        _ => lockfile
+            .importers
             .keys()
             .cloned()
             .collect(),

@@ -130,7 +130,12 @@ async fn ci_publishes_and_developers_read_but_cannot_publish() {
     assert_eq!(read.status(), StatusCode::OK);
     assert_eq!(read.headers()[header::CACHE_CONTROL], "private, no-store");
     assert_eq!(read.headers()[header::VARY], "Authorization");
-    assert_eq!(to_bytes(read.into_body(), 100).await.unwrap(), "compiled");
+    assert_eq!(
+        to_bytes(read.into_body(), 100)
+            .await
+            .unwrap(),
+        "compiled"
+    );
     let head = developer
         .clone()
         .oneshot(request(Method::HEAD, ENTRY, Body::empty()))
@@ -138,7 +143,13 @@ async fn ci_publishes_and_developers_read_but_cannot_publish() {
         .unwrap();
     assert_eq!(head.status(), StatusCode::OK);
     assert_eq!(head.headers()[header::CONTENT_LENGTH], "8");
-    assert_eq!(to_bytes(head.into_body(), 100).await.unwrap().len(), 0);
+    assert_eq!(
+        to_bytes(head.into_body(), 100)
+            .await
+            .unwrap()
+            .len(),
+        0
+    );
     let denied = developer
         .oneshot(request(Method::PUT, ENTRY, Body::from("poison")))
         .await
@@ -155,7 +166,12 @@ async fn ci_publishes_and_developers_read_but_cannot_publish() {
         .oneshot(request(Method::GET, ENTRY, Body::empty()))
         .await
         .unwrap();
-    assert_eq!(to_bytes(read.into_body(), 100).await.unwrap(), "compiled");
+    assert_eq!(
+        to_bytes(read.into_body(), 100)
+            .await
+            .unwrap(),
+        "compiled"
+    );
     let other = ci
         .oneshot(request(Method::GET, &ENTRY.replace("/acme/", "/other/"), Body::empty()))
         .await
@@ -196,7 +212,10 @@ async fn unauthorized_or_readonly_publishers_are_rejected_before_reading_bodies(
     revoked
         .headers_mut()
         .insert(header::AUTHORIZATION, "Bearer revoked".parse().unwrap());
-    let response = app(config, "ci", false).oneshot(revoked).await.unwrap();
+    let response = app(config, "ci", false)
+        .oneshot(revoked)
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
 
@@ -204,7 +223,11 @@ async fn unauthorized_or_readonly_publishers_are_rejected_before_reading_bodies(
 async fn disabled_artifacts_and_undeclared_caches_are_not_served() {
     let directory = TempDir::new().unwrap();
     let mut config = config(&directory);
-    config.features.artifacts.compiler_caches.clear();
+    config
+        .features
+        .artifacts
+        .compiler_caches
+        .clear();
     assert_eq!(
         app(config.clone(), "ci", false)
             .oneshot(request(Method::GET, ENTRY, Body::empty()))

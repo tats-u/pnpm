@@ -27,7 +27,13 @@ pub(in super::super) async fn warm_children_resolutions<Chain>(
     // manifest hook (packageExtensions / overrides) is idempotent and
     // cache-deduped, indistinguishable from a first-caller win in the
     // pre-existing concurrent-miss race.
-    if ctx.workspace.hooks.manifests.pnpmfile_hook.is_some() {
+    if ctx
+        .workspace
+        .hooks
+        .manifests
+        .pnpmfile_hook
+        .is_some()
+    {
         return;
     }
     let NodeSeed::Pending(pending) = seed else { return };

@@ -143,7 +143,9 @@ pub struct OutdatedQuery<'a> {
 /// The matcher for `updateConfig.ignoreDependencies`, or [`None`] when
 /// nothing is ignored.
 pub(crate) fn ignored_dependencies_matcher(config: &Config) -> Option<Matcher> {
-    config.update_config.ignore_dependencies
+    config
+        .update_config
+        .ignore_dependencies
         .as_deref()
         .filter(|patterns| !patterns.is_empty())
         .map(create_matcher)
@@ -222,14 +224,19 @@ pub(crate) async fn collect_outdated_for_importer_in_run(
     // `Promise.all` fan-out. Concurrency is bounded by the HTTP client's
     // per-registry limit (`network_concurrency`), so this does not flood
     // the registry. Dependencies without a lockfile pin are dropped here.
-    let fetches = query.include_direct
+    let fetches = query
+        .include_direct
         .iter()
         .flat_map(move |&group| {
             manifest
                 .dependencies([group])
                 .filter_map(move |(alias, bare_specifier)| {
-                    if query.match_names.is_some_and(|matcher| !matcher.matches(alias))
-                        || query.ignore_names.is_some_and(|matcher| matcher.matches(alias))
+                    if query
+                        .match_names
+                        .is_some_and(|matcher| !matcher.matches(alias))
+                        || query
+                            .ignore_names
+                            .is_some_and(|matcher| matcher.matches(alias))
                     {
                         return None;
                     }
@@ -239,7 +246,8 @@ pub(crate) async fn collect_outdated_for_importer_in_run(
         })
         .map(|candidate| outdated_dependency(run, query, workspace, candidate));
 
-    let fetched = futures_util::future::join_all(fetches).await
+    let fetched = futures_util::future::join_all(fetches)
+        .await
         .into_iter()
         .collect::<miette::Result<Vec<_>>>()?;
     Ok(fetched.into_iter().flatten().collect())
@@ -323,7 +331,11 @@ pub(super) fn current_versions_from_importer(
         return map;
     };
     for (name, spec) in importer.dependencies_by_groups(include_direct.iter().copied()) {
-        if let Some(version) = spec.version.ver_peer().and_then(|ver| ver.version_semver()) {
+        if let Some(version) = spec
+            .version
+            .ver_peer()
+            .and_then(|ver| ver.version_semver())
+        {
             map.insert(name.to_string(), version.clone());
         }
     }

@@ -58,7 +58,8 @@ fn auth_token_from_response(
     registry: &str,
 ) -> Result<String, AuthTokenError> {
     if !response.ok {
-        let message = response.body
+        let message = response
+            .body
             .pipe_as_ref(serde_json::from_str::<Value>)
             .ok()
             .and_then(|json| {
@@ -71,11 +72,15 @@ fn auth_token_from_response(
         return Err(AuthTokenError::Exchange { message, http_status: response.status });
     }
 
-    let json = response.body
+    let json = response
+        .body
         .pipe_as_ref(serde_json::from_str::<Value>)
         .map_err(|source| AuthTokenError::JsonInterrupted { source: source.to_string() })?;
 
-    match json.get("token").and_then(Value::as_str) {
+    match json
+        .get("token")
+        .and_then(Value::as_str)
+    {
         Some(token) => Ok(token.to_owned()),
         None => Err(AuthTokenError::MalformedJson {
             package_name: package_name.to_owned(),

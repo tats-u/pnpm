@@ -27,11 +27,13 @@ pub(super) fn relocated_state(
         rebase(Path::new(path), recorded_root, workspace_root)
             .map(|rebased| rebased.to_string_lossy().into_owned())
     };
-    let projects = state.projects
+    let projects = state
+        .projects
         .iter()
         .map(|(dir, entry)| Some((rebase_onto_root(dir)?, entry.clone())))
         .collect::<Option<_>>()?;
-    let pnpmfiles = state.pnpmfiles
+    let pnpmfiles = state
+        .pnpmfiles
         .iter()
         .map(|path| rebase_onto_root(path).unwrap_or_else(|| path.clone()))
         .collect();
@@ -46,7 +48,11 @@ pub(crate) fn recorded_elsewhere(
 ) -> bool {
     !project_manifests
         .iter()
-        .any(|(root_dir, _)| state.projects.contains_key(root_dir.to_string_lossy().as_ref()))
+        .any(|(root_dir, _)| {
+            state
+                .projects
+                .contains_key(root_dir.to_string_lossy().as_ref())
+        })
 }
 
 /// The unique old root reproducing every current workspace-relative project
@@ -57,7 +63,9 @@ fn recorded_root<'a>(
     project_manifests: &[(PathBuf, &PackageManifest)],
 ) -> Option<&'a Path> {
     let relative_projects = relative_project_dirs(
-        project_manifests.iter().map(|(dir, _)| dir.as_path()),
+        project_manifests
+            .iter()
+            .map(|(dir, _)| dir.as_path()),
         workspace_root,
     )?;
     if relative_projects.len() != project_manifests.len()
@@ -70,7 +78,8 @@ fn recorded_root<'a>(
     let anchor = relative_projects
         .iter()
         .max_by_key(|dir| dir.components().count())?;
-    let mut candidates = state.projects
+    let mut candidates = state
+        .projects
         .keys()
         .map(Path::new)
         .filter(|dir| dir.ends_with(anchor))
@@ -191,7 +200,8 @@ fn validated_moved_lockfile<'a>(
         .ok_or("the moved tree's store or virtual store does not resolve from where it is")?;
     let current = Lockfile::load_current_from_virtual_store_dir(&config.virtual_store_dir)
         .map_err(|_| "the current lockfile cannot be loaded")?;
-    let wanted = check.lockfile
+    let wanted = check
+        .lockfile
         .get()
         .map_err(|_| "the wanted lockfile cannot be read or parsed")?
         .ok_or("a moved tree has no wanted lockfile to compare against")?;

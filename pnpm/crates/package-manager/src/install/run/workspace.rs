@@ -37,7 +37,9 @@ impl<'a> WorkspaceDirs<'a> {
     //
     // [bunyan]: <https://github.com/trentm/node-bunyan>
     fn find(install: InstallView<'a>) -> Result<Self, InstallError> {
-        let manifest_dir = install.context.manifest
+        let manifest_dir = install
+            .context
+            .manifest
             .path()
             .parent()
             .expect("manifest path always has a parent dir");
@@ -90,11 +92,18 @@ impl ImporterSelection {
     ) -> Self {
         let real_importer_ids = importer_ids(
             workspace_root,
-            project_manifests.iter().map(|(project_dir, _)| project_dir.as_path()),
+            project_manifests
+                .iter()
+                .map(|(project_dir, _)| project_dir.as_path()),
         );
         let filtered_install = selection.is_some_and(|selection| {
-            importer_ids(workspace_root, selection.selected_dirs.iter().map(PathBuf::as_path))
-                != real_importer_ids
+            importer_ids(
+                workspace_root,
+                selection
+                    .selected_dirs
+                    .iter()
+                    .map(PathBuf::as_path),
+            ) != real_importer_ids
         });
         Self {
             requested_importer_ids: filtered_install
@@ -103,7 +112,10 @@ impl ImporterSelection {
                 .map(|selection| {
                     importer_ids(
                         workspace_root,
-                        selection.install_dirs.iter().map(PathBuf::as_path),
+                        selection
+                            .install_dirs
+                            .iter()
+                            .map(PathBuf::as_path),
                     )
                 }),
             real_importer_ids,
@@ -129,7 +141,10 @@ impl<'a> InstallWorkspace<'a> {
         let workspace_manifest = dirs.read_manifest()?;
         let catalog_context_present = catalog_context_present(
             install.context.config,
-            owned.projects.catalogs_override.as_ref(),
+            owned
+                .projects
+                .catalogs_override
+                .as_ref(),
             dirs.workspace_dir.as_ref(),
         );
         let catalogs = resolve_install_catalogs(
@@ -149,13 +164,19 @@ impl<'a> InstallWorkspace<'a> {
         // An embedder that supplies its importers in memory
         // (`workspace_projects_override`) bypasses the on-disk walk
         // entirely; the override's `Vec` is used verbatim.
-        let workspace_projects_are_overridden = owned.projects
+        let workspace_projects_are_overridden = owned
+            .projects
             .workspace_projects_override
             .is_some();
         let loaded_workspace_projects = discovered_workspace_projects(
             options.selection.is_some(),
-            owned.projects.workspace_projects_override.take(),
-            dirs.workspace_dir.as_deref().unwrap_or(&dirs.workspace_root),
+            owned
+                .projects
+                .workspace_projects_override
+                .take(),
+            dirs.workspace_dir
+                .as_deref()
+                .unwrap_or(&dirs.workspace_root),
             workspace_manifest.as_ref(),
         )?;
         report_discovered_scope::<Reporter>(
@@ -173,7 +194,10 @@ impl<'a> InstallWorkspace<'a> {
             // reporter envelopes, so a lossy conversion is acceptable —
             // the rest of the install path uses the same pattern for
             // paths threaded into log events.
-            prefix: dirs.workspace_root.to_string_lossy().into_owned(),
+            prefix: dirs
+                .workspace_root
+                .to_string_lossy()
+                .into_owned(),
             workspace_manifest,
             catalog_context_present,
             catalogs,
@@ -189,8 +213,15 @@ fn workspace_packages_for_install<'s>(
     loaded_workspace_projects: Option<&'s [pnpm_workspace::Project]>,
     options: &InstallRunOptions<'s, '_>,
 ) -> Option<pnpm_resolving_resolver_base::WorkspacePackages> {
-    (install.context.config.exclude_links_from_lockfile
-        && install.context.config.link_workspace_packages.enabled_at_depth(0))
+    (install
+        .context
+        .config
+        .exclude_links_from_lockfile
+        && install
+            .context
+            .config
+            .link_workspace_packages
+            .enabled_at_depth(0))
     .then(|| {
         build_workspace_packages_map(workspace_projects(
             loaded_workspace_projects,
@@ -207,7 +238,8 @@ pub(super) fn report_discovered_scope<Reporter: self::Reporter>(
     dirs: &WorkspaceDirs,
     loaded_workspace_projects: Option<&[pnpm_workspace::Project]>,
 ) {
-    let workspace_projects = options.selection
+    let workspace_projects = options
+        .selection
         .as_ref()
         .map_or_else(|| loaded_workspace_projects, |selection| Some(selection.all_projects));
     if options.selection.is_none() {
@@ -326,16 +358,21 @@ impl<'w> InstallScope<'w> {
                 layout: crate::RepeatInstallLayout {
                     node_linker: install.execution.node_linker,
                     included: mode.included,
-                    supported_architectures: owned.projects
+                    supported_architectures: owned
+                        .projects
                         .supported_architectures
                         .as_ref(),
                 },
-                manifest_freshness: install.lockfile_policy.manifest_freshness,
+                manifest_freshness: install
+                    .lockfile_policy
+                    .manifest_freshness,
             },
             mutation: install.execution.mutation,
             update_seed_policy: &owned.resolution.update_seed_policy,
             frozen_lockfile: install.lockfile_policy.frozen,
-            disable_optimistic_repeat_install: install.lockfile_policy.disable_optimistic_repeat,
+            disable_optimistic_repeat_install: install
+                .lockfile_policy
+                .disable_optimistic_repeat,
             effective_node_version: mode.effective_node_version.as_deref(),
             prefix: &workspace.prefix,
         })
@@ -428,7 +465,8 @@ pub(super) fn install_project_manifests<'a>(
             // Dedicated per-project lockfiles record a single "." importer per
             // project; sibling projects only feed the `workspace:` resolver,
             // never the importer list.
-            scope.config
+            scope
+                .config
                 .shares_one_lockfile()
                 .then_some(scope.workspace_projects)
                 .flatten(),

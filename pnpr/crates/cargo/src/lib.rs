@@ -215,7 +215,9 @@ impl CrateDocument {
                 .filter_map(|entry| semver::Version::parse(&entry.vers).ok())
                 .max()
         };
-        highest(false).or_else(|| highest(true)).map(|version| version.to_string())
+        highest(false)
+            .or_else(|| highest(true))
+            .map(|version| version.to_string())
     }
 
     /// This crate as one row of a search response.

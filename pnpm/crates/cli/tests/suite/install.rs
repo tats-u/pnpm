@@ -22,13 +22,8 @@ use std::{
 
 #[test]
 fn package_lock_false_disables_the_pnpm_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -51,21 +46,24 @@ fn package_lock_false_disables_the_pnpm_lockfile() {
         .assert()
         .success();
 
-    assert!(workspace.join("node_modules/is-positive/package.json").exists());
-    assert!(!workspace.join("pnpm-lock.yaml").exists());
+    assert!(
+        workspace
+            .join("node_modules/is-positive/package.json")
+            .exists()
+    );
+    assert!(
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn should_install_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -91,8 +89,16 @@ fn should_install_dependencies() {
     assert!(virtual_path.exists());
 
     eprintln!("Make sure it installs direct dependencies");
-    assert!(!workspace.join("node_modules/@pnpm.e2e/hello-world-js-bin").exists());
-    assert!(workspace.join("node_modules/.pnpm/@pnpm.e2e+hello-world-js-bin@1.0.0").exists());
+    assert!(
+        !workspace
+            .join("node_modules/@pnpm.e2e/hello-world-js-bin")
+            .exists()
+    );
+    assert!(
+        workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+hello-world-js-bin@1.0.0")
+            .exists()
+    );
 
     eprintln!("Snapshot");
     let workspace_folders = get_all_folders(&workspace);
@@ -123,13 +129,8 @@ fn store_files_outside_links(store_dir: &Path) -> Vec<String> {
 /// `ERR_PNPM_INVALID_DEPENDENCY_NAME`.
 #[test]
 fn install_rejects_a_traversal_dependency_name_in_the_manifest() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -173,13 +174,8 @@ fn install_rejects_a_traversal_dependency_name_in_the_manifest() {
 
 #[test]
 fn should_install_exec_files() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -250,13 +246,8 @@ fn should_install_exec_files() {
 
 #[test]
 fn should_install_index_files() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -291,13 +282,8 @@ fn should_install_index_files() {
 /// prefix made every progress / stats line render with `.   |   `.
 #[test]
 fn install_emits_canonical_prefix_in_ndjson_events() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -337,7 +323,9 @@ fn install_emits_canonical_prefix_in_ndjson_events() {
     );
 
     let expected = dunce::canonicalize(&workspace).expect("canonicalize workspace");
-    let expected = expected.to_str().expect("workspace path is UTF-8");
+    let expected = expected
+        .to_str()
+        .expect("workspace path is UTF-8");
     for prefix in &prefixes {
         assert_eq!(
             prefix, expected,
@@ -350,13 +338,8 @@ fn install_emits_canonical_prefix_in_ndjson_events() {
 
 #[test]
 fn should_install_circular_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -374,22 +357,29 @@ fn should_install_circular_dependencies() {
         .assert()
         .success();
 
-    assert!(workspace.join("./node_modules/@pnpm.e2e/circular-deps-1-of-2").exists());
-    assert!(workspace.join("./node_modules/.pnpm/@pnpm.e2e+circular-deps-1-of-2@1.0.2").exists());
-    assert!(workspace.join("./node_modules/.pnpm/@pnpm.e2e+circular-deps-2-of-2@1.0.2").exists());
+    assert!(
+        workspace
+            .join("./node_modules/@pnpm.e2e/circular-deps-1-of-2")
+            .exists()
+    );
+    assert!(
+        workspace
+            .join("./node_modules/.pnpm/@pnpm.e2e+circular-deps-1-of-2@1.0.2")
+            .exists()
+    );
+    assert!(
+        workspace
+            .join("./node_modules/.pnpm/@pnpm.e2e+circular-deps-2-of-2@1.0.2")
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn install_reports_a_deprecation_without_the_notice_and_keeps_the_metadata_on_reuse() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -455,13 +445,8 @@ fn install_reports_a_deprecation_without_the_notice_and_keeps_the_metadata_on_re
 /// version, not the literal `catalog:` string.
 #[test]
 fn install_resolves_catalog_protocol() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Appending catalog to pnpm-workspace.yaml...");
@@ -500,13 +485,8 @@ fn install_resolves_catalog_protocol() {
 /// rather than the chain's `ERR_PNPM_SPEC_NOT_SUPPORTED_BY_ANY_RESOLVER`.
 #[test]
 fn install_surfaces_catalog_misconfiguration() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json with a catalog: dep but no matching catalog entry...");
@@ -548,13 +528,8 @@ fn install_surfaces_catalog_misconfiguration() {
 /// rest, the way the TypeScript CLI does.
 #[test]
 fn install_reports_a_missing_version_as_no_matching_version() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json that asks for a version nobody published...");
@@ -595,13 +570,8 @@ fn install_reports_a_missing_version_as_no_matching_version() {
 /// hint — not a bare HTTP-client message (pnpm/pnpm#13319).
 #[test]
 fn install_reports_an_unknown_package_as_fetch_404() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json that depends on a package nobody published...");
@@ -644,13 +614,8 @@ fn install_reports_an_unknown_package_as_fetch_404() {
     reason = "test fixture; the value is embedded whole into a serde_json::json! object"
 )]
 fn install_with_peer_alias_deps(dependencies: serde_json::Value) -> String {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -751,13 +716,8 @@ fn set_dir_modes(path: &std::path::Path, mode: u32) {
 /// because it bypasses the platform checks.
 #[test]
 fn force_defeats_the_up_to_date_fast_path() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -795,13 +755,8 @@ fn force_defeats_the_up_to_date_fast_path() {
 /// why pnpm records `trustPolicy*` in the workspace state.
 #[test]
 fn trust_policy_change_defeats_the_up_to_date_fast_path() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -893,7 +848,10 @@ fn read_package_hook_applied(workspace: &Path) -> bool {
         .packages
         .expect("packages")
         .keys()
-        .any(|key| key.to_string().starts_with("is-positive@"))
+        .any(|key| {
+            key.to_string()
+                .starts_with("is-positive@")
+        })
 }
 
 mod peers;

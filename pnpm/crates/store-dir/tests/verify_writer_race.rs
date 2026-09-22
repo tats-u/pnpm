@@ -130,7 +130,9 @@ fn verify_does_not_unlink_file_while_writer_holds_cas_lock() {
     // writers; with Option C, `verify_file` acquires the same lock
     // before considering a delete.
     let lock = pnpm_fs::cas_write_lock(&target);
-    let guard = lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let guard = lock
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
 
     // Use a channel to synchronize lock-release with the verifier so
     // we can assert the file's state at a known point.
@@ -148,11 +150,14 @@ fn verify_does_not_unlink_file_while_writer_holds_cas_lock() {
         let pkg_index = make_index("LICENSE", &verify_content);
         let cache = VerifiedFilesCache::new();
         let result = check_pkg_files_integrity(&verify_store, pkg_index, &cache);
-        *result_slot_writer.lock().expect("result mutex") =
-            Some((target_for_verifier.exists(), result.passed).0);
+        *result_slot_writer
+            .lock()
+            .expect("result mutex") = Some((target_for_verifier.exists(), result.passed).0);
     });
 
-    verifier_started_rx.recv().expect("verifier started");
+    verifier_started_rx
+        .recv()
+        .expect("verifier started");
 
     // Sleep to give the verifier time to either:
     //   - (pre-fix) charge ahead, stat the partial file, unlink it
@@ -174,7 +179,9 @@ fn verify_does_not_unlink_file_while_writer_holds_cas_lock() {
     fs::write(&target, &expected_content).expect("commit full content");
     drop(guard);
 
-    verifier.join().expect("verifier thread should not panic");
+    verifier
+        .join()
+        .expect("verifier thread should not panic");
     let file_exists_after_verify = target.exists();
 
     // The killer assertion. Without Option C the verifier doesn't

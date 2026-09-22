@@ -102,15 +102,26 @@ fn patch_target_from_state_reports_installed_name_version_mismatch() {
     let err = patch_target_from_state(&state, "foo", "2.0.0", &lockfile)
         .expect_err("missing selected version");
 
-    assert!(err.to_string().contains("did you forget to install foo@2.0.0"), "{err}");
+    assert!(
+        err.to_string()
+            .contains("did you forget to install foo@2.0.0"),
+        "{err}"
+    );
 }
 
 #[test]
 fn patch_target_from_state_uses_persisted_package_key_for_same_version_candidates() {
     let git_tarball_url = "https://codeload.github.com/foo/foo/tar.gz/0123456789abcdef";
-    let git_package_key = format!("foo@{git_tarball_url}").parse::<PackageKey>().unwrap();
+    let git_package_key = format!("foo@{git_tarball_url}")
+        .parse::<PackageKey>()
+        .unwrap();
     let lockfile = lockfile_with_package_entries(vec![
-        ("foo@1.0.0".parse::<PackageKey>().unwrap(), registry_metadata()),
+        (
+            "foo@1.0.0"
+                .parse::<PackageKey>()
+                .unwrap(),
+            registry_metadata(),
+        ),
         (git_package_key.clone(), git_tarball_metadata("1.0.0", git_tarball_url)),
     ]);
     let state = EditDirState {

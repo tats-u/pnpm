@@ -64,11 +64,13 @@ impl Frame {
     }
 
     pub(super) fn render(&self) -> String {
-        let non_fixed: Vec<&str> = self.blocks
+        let non_fixed: Vec<&str> = self
+            .blocks
             .iter()
             .filter_map(|b| b.as_deref())
             .collect();
-        let fixed: Vec<&str> = self.fixed_blocks
+        let fixed: Vec<&str> = self
+            .fixed_blocks
             .iter()
             .filter_map(|b| b.as_deref())
             .collect();

@@ -57,7 +57,9 @@ pub(super) async fn serve_authorized_upstream_tarball(
     if let Err(err) = screen_parsed_version(state, name, parsed_version) {
         return err.into_response();
     }
-    let ttl = upstream.maxage().unwrap_or(state.inner.config.http.packument_ttl);
+    let ttl = upstream
+        .maxage()
+        .unwrap_or(state.inner.config.http.packument_ttl);
     // Serve a cached hit before touching the packument: a cached entry was
     // bound to a declared version and verified against `dist.integrity` when
     // it was written, and the client re-verifies what it receives, so no
@@ -194,12 +196,7 @@ pub(super) async fn fetch_upstream_tarball(
     upstream: &Upstream,
     tarball: UpstreamTarball<'_>,
 ) -> Response {
-    let UpstreamTarball {
-        namespace,
-        name,
-        filename,
-        integrity,
-    } = tarball;
+    let UpstreamTarball { namespace, name, filename, integrity } = tarball;
     let fetched = timed(
         "tarball:upstream_fetch",
         name.as_str(),
@@ -211,7 +208,12 @@ pub(super) async fn fetch_upstream_tarball(
         Ok(FetchOutcome::NotFound) => return not_found(),
         Err(err) => return err.into_response(),
     };
-    let write = match state.inner.storage.open_upstream_blob_tmp(namespace, name, filename).await {
+    let write = match state
+        .inner
+        .storage
+        .open_upstream_blob_tmp(namespace, name, filename)
+        .await
+    {
         Ok(write) => write,
         Err(err) => return err.into_response(),
     };
@@ -259,7 +261,10 @@ pub(super) async fn cached_upstream_tarball(
     match timed(
         "tarball:cache_read",
         name.as_str(),
-        state.inner.storage.open_upstream_blob(namespace, name, filename),
+        state
+            .inner
+            .storage
+            .open_upstream_blob(namespace, name, filename),
     )
     .await
     {

@@ -36,7 +36,9 @@ fn unix_symlink_contents_are_relative_to_link_parent() {
     let contents = fs::read_link(&link).expect("read_link the symlink we just wrote");
     assert_eq!(
         contents,
-        std::path::PathBuf::from("..").join("packages").join("pkg-a"),
+        std::path::PathBuf::from("..")
+            .join("packages")
+            .join("pkg-a"),
         "symlink contents must be the relative path from link parent to target",
     );
     assert!(link.exists(), "symlink must resolve to an existing directory");
@@ -405,7 +407,11 @@ fn windows_concurrent_junction_creation_reuses_one_link() {
                 .collect();
             handles
                 .into_iter()
-                .map(|handle| handle.join().expect("junction worker panicked"))
+                .map(|handle| {
+                    handle
+                        .join()
+                        .expect("junction worker panicked")
+                })
                 .collect::<Vec<_>>()
         });
 
@@ -562,7 +568,9 @@ fn force_symlink_dir_reuses_relative_link_across_parents() {
     {
         let contents = fs::read_link(&link).expect("read link");
         assert!(
-            contents.to_string_lossy().contains(".."),
+            contents
+                .to_string_lossy()
+                .contains(".."),
             "link contents should be relative with parent segments: {contents:?}",
         );
     }

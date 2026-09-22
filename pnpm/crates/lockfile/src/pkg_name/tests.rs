@@ -77,7 +77,9 @@ fn to_string() {
 fn serialize() {
     fn case(input: PkgName, output: &'static str) {
         eprintln!("CASE: {input:?}");
-        let received = input.pipe_ref(serde_saphyr::to_string).unwrap();
+        let received = input
+            .pipe_ref(serde_saphyr::to_string)
+            .unwrap();
         assert_eq!(received, output);
     }
 

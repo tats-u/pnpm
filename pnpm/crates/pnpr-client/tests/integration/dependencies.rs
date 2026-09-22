@@ -12,12 +12,19 @@ async fn forwards_optional_dependencies() {
     let mut opts = options(registry.url(), &pnpr_auth, BTreeMap::new());
     opts.optional_dependencies = deps([("@foo/no-deps", "1.0.0")]);
 
-    let outcome = client.resolve(opts).await.expect("install should succeed");
-    let packages = outcome.lockfile.packages.as_ref().expect("lockfile has packages");
+    let outcome = client
+        .resolve(opts)
+        .await
+        .expect("install should succeed");
+    let packages = outcome
+        .lockfile
+        .packages
+        .as_ref()
+        .expect("lockfile has packages");
     assert!(
-        packages
-            .keys()
-            .any(|key| key.to_string().starts_with("@foo/no-deps@1.0.0")),
+        packages.keys().any(|key| key
+            .to_string()
+            .starts_with("@foo/no-deps@1.0.0")),
         "the optional dependency should be resolved into the lockfile, got: {:?}",
         packages
             .keys()

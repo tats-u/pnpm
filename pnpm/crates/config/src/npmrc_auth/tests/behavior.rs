@@ -30,14 +30,20 @@ fn parses_scoped_registry_and_applies() {
     );
 
     assert_eq!(
-        auth.routes.scoped.get("@private").map(String::as_str),
+        auth.routes
+            .scoped
+            .get("@private")
+            .map(String::as_str),
         Some("https://private.example/npm/"),
     );
 
     let mut config = Config::new();
     auth.apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config.registries_by_scope.get("@private").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@private")
+            .map(String::as_str),
         Some("https://private.example/npm/"),
     );
 }
@@ -87,7 +93,10 @@ fn top_level_username_password_keys_to_default_registry_basic_header() {
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(&ini, Path::new("")).apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config.auth_headers.for_url("https://registry.npmjs.org/").as_deref(),
+        config
+            .auth_headers
+            .for_url("https://registry.npmjs.org/")
+            .as_deref(),
         Some(format!("Basic {}", base64_encode("bob:hunter2")).as_str()),
     );
 }
@@ -97,7 +106,12 @@ fn lone_per_registry_password_produces_no_header() {
     let ini = format!("//reg.com/:_password={}\n", base64_encode("solo"));
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(&ini, Path::new("")).apply_to::<NoEnv>(&mut config);
-    assert_eq!(config.auth_headers.for_url("https://reg.com/"), None);
+    assert_eq!(
+        config
+            .auth_headers
+            .for_url("https://reg.com/"),
+        None
+    );
 }
 
 #[test]
@@ -118,7 +132,10 @@ fn invalid_base64_password_falls_back_to_raw_value() {
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(ini, Path::new("")).apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config.auth_headers.for_url("https://reg.com/").as_deref(),
+        config
+            .auth_headers
+            .for_url("https://reg.com/")
+            .as_deref(),
         Some(format!("Basic {}", base64_encode("alice:raw*pw")).as_str()),
     );
 }
@@ -307,11 +324,15 @@ fn parses_inline_ca_from_ini() {
 #[test]
 fn parses_strict_ssl_true_and_false() {
     assert_eq!(
-        NpmrcAuth::from_ini::<NoEnv>("strict-ssl=true\n", Path::new("")).tls.strict_ssl,
+        NpmrcAuth::from_ini::<NoEnv>("strict-ssl=true\n", Path::new(""))
+            .tls
+            .strict_ssl,
         Some(true),
     );
     assert_eq!(
-        NpmrcAuth::from_ini::<NoEnv>("strict-ssl=false\n", Path::new("")).tls.strict_ssl,
+        NpmrcAuth::from_ini::<NoEnv>("strict-ssl=false\n", Path::new(""))
+            .tls
+            .strict_ssl,
         Some(false),
     );
 }
@@ -395,7 +416,11 @@ fn parses_scoped_inline_ca() {
         "//reg.example.com/:ca=-----BEGIN CERTIFICATE-----\\nMIIB-----END CERTIFICATE-----\n",
         Path::new(""),
     );
-    let entry = auth.tls.by_uri.get("//reg.example.com/").expect("entry present");
+    let entry = auth
+        .tls
+        .by_uri
+        .get("//reg.example.com/")
+        .expect("entry present");
     let ca = entry.ca.as_deref().expect("ca set");
     assert!(ca.contains('\n'), r"expected `\n` → newline expansion: {ca:?}");
     assert!(ca.contains("BEGIN CERTIFICATE"), "expected PEM header: {ca:?}");

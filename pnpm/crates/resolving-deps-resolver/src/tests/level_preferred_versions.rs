@@ -22,8 +22,13 @@ impl Resolver for OverlayRecordingResolver {
         opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         let name = wanted.alias.clone().unwrap_or_default();
-        let range = wanted.bare_specifier.clone().unwrap_or_default();
-        let overlay_view: Vec<String> = opts.version.preferred_versions_overlay
+        let range = wanted
+            .bare_specifier
+            .clone()
+            .unwrap_or_default();
+        let overlay_view: Vec<String> = opts
+            .version
+            .preferred_versions_overlay
             .as_ref()
             .map(|overlay| {
                 overlay

@@ -22,7 +22,9 @@ pub(super) fn python_index(config: &pnpm_config::Config) -> Result<Index> {
         .unwrap_or(&routes[0])
         .0
         .clone();
-    let auth = (*config.auth_headers).clone().with_secure_transport();
+    let auth = (*config.auth_headers)
+        .clone()
+        .with_secure_transport();
     Ok(Index { url, routes, auth })
 }
 
@@ -31,7 +33,11 @@ impl Index {
         self.routes
             .iter()
             .find(|(_, route)| !route.is_default() && route.matches(name))
-            .or_else(|| self.routes.iter().find(|(_, route)| route.is_default()))
+            .or_else(|| {
+                self.routes
+                    .iter()
+                    .find(|(_, route)| route.is_default())
+            })
             .map(|(url, _)| url)
             .ok_or_else(|| UnclaimedPackage { name: name.to_string() }.into())
     }
@@ -48,7 +54,8 @@ impl Index {
     }
 
     pub(super) fn cache_key(&self, url: &url::Url) -> String {
-        let key = self.auth
+        let key = self
+            .auth
             .for_secure_url(url.as_str())
             .map_or_else(|| url.to_string(), |header| format!("{url}\0{header}"));
         pnpm_crypto_hash::create_hex_hash(&key)
@@ -87,12 +94,16 @@ impl PythonPrepare<'_> {
         rules: &manifest::Manifest,
     ) -> Result<()> {
         let config = self.context.config;
-        packages.overrides = config.python.overrides
+        packages.overrides = config
+            .python
+            .overrides
             .iter()
             .chain(&rules.tool.uv.overrides)
             .map(|requirement| parse_rule(requirement))
             .collect::<Result<_>>()?;
-        packages.constraints = config.python.constraints
+        packages.constraints = config
+            .python
+            .constraints
             .iter()
             .chain(&rules.tool.uv.constraints)
             .map(|requirement| parse_rule(requirement))

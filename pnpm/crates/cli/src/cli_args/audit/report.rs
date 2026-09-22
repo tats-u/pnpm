@@ -203,10 +203,18 @@ pub(crate) fn bulk_response_to_audit_report(
     for (module_name, package_advisories) in bulk {
         let by_version = audit_path_index.get(&module_name);
         for raw in package_advisories {
-            let Some(id) = raw.id.as_ref().and_then(serde_json::Value::as_u64) else {
+            let Some(id) = raw
+                .id
+                .as_ref()
+                .and_then(serde_json::Value::as_u64)
+            else {
                 continue;
             };
-            let Some(severity) = raw.severity.as_deref().and_then(parse_audit_level) else {
+            let Some(severity) = raw
+                .severity
+                .as_deref()
+                .and_then(parse_audit_level)
+            else {
                 continue;
             };
             let findings = build_findings(&raw.vulnerable_versions, by_version);
@@ -282,7 +290,9 @@ pub(crate) fn normalize_advisory(
         patched_versions: infer_patched_versions(&raw.vulnerable_versions),
         patched_versions_unpublished: None,
         severity,
-        cwe: raw.cwe.map_or_else(String::new, Cwe::into_string),
+        cwe: raw
+            .cwe
+            .map_or_else(String::new, Cwe::into_string),
         github_advisory_id: derive_github_advisory_id(&url),
         url,
     }

@@ -220,7 +220,12 @@ impl ConfigOverrides {
                 }
                 ConfigToken::WellFormed { key, value } => overrides.set(key, value),
                 ConfigToken::BooleanFollows(key) => {
-                    overrides.set(key, following(key).as_deref().unwrap_or("true"));
+                    overrides.set(
+                        key,
+                        following(key)
+                            .as_deref()
+                            .unwrap_or("true"),
+                    );
                 }
                 // A flag whose value is missing — because it ends argv, or
                 // because the token after it is one the setting does not
@@ -245,7 +250,8 @@ impl ConfigOverrides {
         self.set_layout_option(key, value);
         self.set_install_execution_option(key, value);
         if let Some(scope) = scoped_registry_key(key) {
-            self.registries.insert(scope.to_owned(), normalize_registry_url(value));
+            self.registries
+                .insert(scope.to_owned(), normalize_registry_url(value));
         }
     }
 
@@ -357,7 +363,9 @@ impl ConfigOverrides {
             "minimum-release-age-exclude" => {
                 // nopt collects a repeated key it has no type for into a list,
                 // and pnpm re-parses the `--config.` tokens without any types.
-                self.minimum_release_age_exclude.get_or_insert_default().push(value.to_string());
+                self.minimum_release_age_exclude
+                    .get_or_insert_default()
+                    .push(value.to_string());
             }
             "minimum-release-age-ignore-missing-time" => {
                 self.minimum_release_age_ignore_missing_time = parse_bool(value);
@@ -378,7 +386,9 @@ impl ConfigOverrides {
                 self.trust_policy = parse_enum(value);
             }
             "trust-policy-exclude" => {
-                self.trust_policy_exclude.get_or_insert_default().push(value.to_string());
+                self.trust_policy_exclude
+                    .get_or_insert_default()
+                    .push(value.to_string());
             }
             "trust-policy-ignore-after" => {
                 self.trust_policy_ignore_after = value.parse().ok();
@@ -393,7 +403,9 @@ impl ConfigOverrides {
                 self.global_dir = Some(value.to_string());
             }
             "hoist-pattern" => {
-                self.hoist_pattern.get_or_insert_default().push(value.to_string());
+                self.hoist_pattern
+                    .get_or_insert_default()
+                    .push(value.to_string());
             }
             "modules-dir" => {
                 self.modules_dir = Some(value.to_string());
@@ -402,7 +414,9 @@ impl ConfigOverrides {
                 self.node_linker = parse_enum(value);
             }
             "public-hoist-pattern" => {
-                self.public_hoist_pattern.get_or_insert_default().push(value.to_string());
+                self.public_hoist_pattern
+                    .get_or_insert_default()
+                    .push(value.to_string());
             }
             "virtual-store-dir" => {
                 self.virtual_store_dir = Some(value.to_string());

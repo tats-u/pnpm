@@ -39,7 +39,11 @@ async fn cold_batch_reuses_in_flight_prefetch_from_mem_cache() {
     mem_cache.insert(
         package_mem_cache_key(
             &tarball_url,
-            Some(&DUMMY_SHA512.parse().expect("parse integrity")),
+            Some(
+                &DUMMY_SHA512
+                    .parse()
+                    .expect("parse integrity"),
+            ),
             false,
         ),
         Arc::new(tokio::sync::RwLock::new(CacheValue::Available(CachedTarball::from_files(
@@ -132,7 +136,11 @@ async fn without_mem_cache_skips_coordination_and_downloads() {
     mem_cache.insert(
         package_mem_cache_key(
             "https://registry.test/foo/-/foo-1.0.0.tgz",
-            Some(&DUMMY_SHA512.parse().expect("parse integrity")),
+            Some(
+                &DUMMY_SHA512
+                    .parse()
+                    .expect("parse integrity"),
+            ),
             false,
         ),
         Arc::new(tokio::sync::RwLock::new(CacheValue::Available(CachedTarball::from_files(

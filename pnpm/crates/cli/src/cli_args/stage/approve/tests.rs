@@ -135,7 +135,11 @@ fn stage_ids_are_validated_as_uuids() {
         "2b8f1c14-4a0d-4a4a-9a2e-6c5a2f0a1b33".to_owned(),
     ];
     assert_eq!(parse_stage_ids(&params).unwrap(), params[1..]);
-    assert!(parse_stage_ids(&["approve".to_owned()]).unwrap().is_empty());
+    assert!(
+        parse_stage_ids(&["approve".to_owned()])
+            .unwrap()
+            .is_empty()
+    );
     assert!(matches!(
         parse_stage_ids(&["approve".to_owned(), "not-a-uuid".to_owned()]),
         Err(StageError::InvalidStageId),

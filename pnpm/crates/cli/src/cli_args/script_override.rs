@@ -48,7 +48,8 @@ pub(crate) fn resolve(
     }
     let dir = ctx.locations.dir;
     if declares_script(safe_read_project_manifest_only(dir)?.as_ref(), command_name) {
-        ctx.builtin_replaced_by_script.store(true, Ordering::Relaxed);
+        ctx.builtin_replaced_by_script
+            .store(true, Ordering::Relaxed);
         return Ok(Some(RunArgs {
             script: RunArgs::script(command_name, script_args),
             if_present: false,

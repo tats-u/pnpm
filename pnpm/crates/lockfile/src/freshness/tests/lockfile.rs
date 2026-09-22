@@ -44,7 +44,9 @@ fn importer_empty_dev_dependencies_equivalent_to_absent() {
         "    devDependencies: {}"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile.root_project().expect("root importer present");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -70,7 +72,9 @@ fn ignored_optional_dev_only_lockfile_entry_kept() {
         "        version: 1.0.0"
     })
     .expect("parse lockfile");
-    let importer = lockfile.root_project().expect("root importer");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",

@@ -18,7 +18,9 @@ pub struct HoistedDirCloneCache<'a> {
 
 impl fmt::Debug for HoistedDirCloneCache<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.debug_struct("HoistedDirCloneCache").finish_non_exhaustive()
+        formatter
+            .debug_struct("HoistedDirCloneCache")
+            .finish_non_exhaustive()
     }
 }
 
@@ -72,7 +74,14 @@ impl<'a> HoistedDirCloneCache<'a> {
         if node.present || node.package.patch.is_some() || node.package.has_bundled_dependencies {
             return false;
         }
-        let Ok(key) = node.package.dep_path.as_str().parse::<PackageKey>() else { return false };
+        let Ok(key) = node
+            .package
+            .dep_path
+            .as_str()
+            .parse::<PackageKey>()
+        else {
+            return false;
+        };
         if !self.snapshots.contains(&key) || ships_bundled_modules(cas_paths) {
             return false;
         }
@@ -97,12 +106,10 @@ impl<'a> HoistedDirCloneCache<'a> {
 /// packages the walker places inside it (`keep_modules_dir`) — which a
 /// clone of the canonical slot cannot reproduce.
 fn ships_bundled_modules(cas_paths: &HashMap<String, PathBuf>) -> bool {
-    cas_paths
-        .keys()
-        .any(|path| {
-            path.split('/')
-                .any(|part| part == "node_modules")
-        })
+    cas_paths.keys().any(|path| {
+        path.split('/')
+            .any(|part| part == "node_modules")
+    })
 }
 
 #[cfg(test)]

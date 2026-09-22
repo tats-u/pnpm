@@ -29,7 +29,13 @@ async fn hosted_revision_refs_roundtrip_in_the_org_namespace() {
     let digest = "A".repeat(86);
     let ref_id = "b".repeat(64);
 
-    assert_eq!(storage.read_hosted_revision_refs(&digest).await.unwrap(), Vec::<Vec<u8>>::new());
+    assert_eq!(
+        storage
+            .read_hosted_revision_refs(&digest)
+            .await
+            .unwrap(),
+        Vec::<Vec<u8>>::new()
+    );
     storage
         .write_hosted_revision_ref(
             &digest,
@@ -40,11 +46,17 @@ async fn hosted_revision_refs_roundtrip_in_the_org_namespace() {
         .await
         .unwrap();
     assert_eq!(
-        storage.read_hosted_revision_refs(&digest).await.unwrap(),
+        storage
+            .read_hosted_revision_refs(&digest)
+            .await
+            .unwrap(),
         vec![br#"{"package":"foo","version":"1.0.0"}"#.to_vec()],
     );
     assert_eq!(
-        storage_in(&tmp).read_hosted_revision_refs(&digest).await.unwrap(),
+        storage_in(&tmp)
+            .read_hosted_revision_refs(&digest)
+            .await
+            .unwrap(),
         Vec::<Vec<u8>>::new(),
     );
 }
@@ -55,10 +67,13 @@ async fn hosted_revision_ref_paths_reject_noncanonical_segments() {
     let storage = storage_in(&tmp);
     let digest = "A".repeat(86);
 
-    let invalid_digest = storage.read_hosted_revision_refs("../escape").await;
+    let invalid_digest = storage
+        .read_hosted_revision_refs("../escape")
+        .await;
     assert!(invalid_digest.is_err());
-    let invalid_ref =
-        storage.write_hosted_revision_ref(&digest, "../escape", "owner-a", b"{}").await;
+    let invalid_ref = storage
+        .write_hosted_revision_ref(&digest, "../escape", "owner-a", b"{}")
+        .await;
     assert!(invalid_ref.is_err());
 }
 
@@ -96,9 +111,16 @@ async fn hosted_revision_ref_writes_enforce_the_read_bound() {
         .path()
         .join("storage/.revisions/sha512")
         .join(&digest);
-    fs::write(stray_dir.join("not-a-reference.json"), b"stray").await.unwrap();
-    fs::write(stray_dir.join("interrupted.tmp"), b"stray").await.unwrap();
-    let refs = storage.read_hosted_revision_refs(&digest).await.unwrap();
+    fs::write(stray_dir.join("not-a-reference.json"), b"stray")
+        .await
+        .unwrap();
+    fs::write(stray_dir.join("interrupted.tmp"), b"stray")
+        .await
+        .unwrap();
+    let refs = storage
+        .read_hosted_revision_refs(&digest)
+        .await
+        .unwrap();
     assert_eq!(refs.len(), MAX_HOSTED_REVISION_REFS);
     assert!(refs.iter().all(|bytes| bytes == b"{}"));
 }
@@ -113,7 +135,8 @@ async fn concurrent_hosted_revision_ref_writes_cannot_exceed_the_limit() {
         let storage = storage.clone();
         let digest = digest.clone();
         writes.push(tokio::spawn(async move {
-            storage.write_hosted_revision_ref(&digest, &format!("{index:064x}"), "owner-a", b"{}")
+            storage
+                .write_hosted_revision_ref(&digest, &format!("{index:064x}"), "owner-a", b"{}")
                 .await
         }));
     }
@@ -146,10 +169,17 @@ async fn hosted_blob_under_non_directory_package_path_is_an_error() {
     let storage = storage_in(&tmp);
     let name = pkg("foo");
     let storage_root = tmp.path().join("storage");
-    fs::create_dir_all(&storage_root).await.unwrap();
-    fs::write(storage_root.join("foo"), b"not a directory").await.unwrap();
+    fs::create_dir_all(&storage_root)
+        .await
+        .unwrap();
+    fs::write(storage_root.join("foo"), b"not a directory")
+        .await
+        .unwrap();
 
-    let Err(err) = storage.open_hosted_blob(&name, "foo-1.0.0.tgz").await else {
+    let Err(err) = storage
+        .open_hosted_blob(&name, "foo-1.0.0.tgz")
+        .await
+    else {
         panic!("expected hosted blob open to fail");
     };
     match err {
@@ -162,9 +192,15 @@ async fn hosted_blob_under_non_directory_package_path_is_an_error() {
 async fn temp_file_creation_retries_existing_candidate_without_overwriting() {
     let tmp = TempDir::new().unwrap();
     let final_path = tmp.path().join("foo-1.0.0.tgz");
-    let occupied = tmp.path().join("foo-1.0.0.tgz.tmp.occupied");
-    let retry = tmp.path().join("foo-1.0.0.tgz.tmp.retry");
-    fs::write(&occupied, b"occupied").await.unwrap();
+    let occupied = tmp
+        .path()
+        .join("foo-1.0.0.tgz.tmp.occupied");
+    let retry = tmp
+        .path()
+        .join("foo-1.0.0.tgz.tmp.retry");
+    fs::write(&occupied, b"occupied")
+        .await
+        .unwrap();
 
     let mut first = true;
     let (mut file, path) = create_tmp_file_with(&final_path, |_| {
@@ -190,9 +226,15 @@ async fn temp_file_creation_does_not_follow_symlink_candidate() {
     let tmp = TempDir::new().unwrap();
     let final_path = tmp.path().join("foo-1.0.0.tgz");
     let victim = tmp.path().join("victim");
-    let symlink_path = tmp.path().join("foo-1.0.0.tgz.tmp.symlink");
-    let retry = tmp.path().join("foo-1.0.0.tgz.tmp.retry");
-    fs::write(&victim, b"victim").await.unwrap();
+    let symlink_path = tmp
+        .path()
+        .join("foo-1.0.0.tgz.tmp.symlink");
+    let retry = tmp
+        .path()
+        .join("foo-1.0.0.tgz.tmp.retry");
+    fs::write(&victim, b"victim")
+        .await
+        .unwrap();
     symlink(&victim, &symlink_path).unwrap();
 
     let mut first = true;
@@ -220,14 +262,25 @@ async fn temp_file_creation_does_not_follow_symlink_candidate() {
 #[tokio::test]
 async fn failed_blob_finalize_removes_tmp_file() {
     let tmp = TempDir::new().unwrap();
-    let tmp_path = tmp.path().join("foo-1.0.0.tgz.tmp.test");
+    let tmp_path = tmp
+        .path()
+        .join("foo-1.0.0.tgz.tmp.test");
     let final_path = tmp.path().join("foo-1.0.0.tgz");
-    fs::create_dir(&final_path).await.unwrap();
-    fs::write(final_path.join("block-rename"), b"occupied").await.unwrap();
+    fs::create_dir(&final_path)
+        .await
+        .unwrap();
+    fs::write(final_path.join("block-rename"), b"occupied")
+        .await
+        .unwrap();
 
-    let file = fs::File::create(&tmp_path).await.unwrap();
+    let file = fs::File::create(&tmp_path)
+        .await
+        .unwrap();
     let mut write = BlobWrite { file: Some(file), tmp_path: Some(tmp_path.clone()), final_path };
-    write.write_all(b"tarball").await.unwrap();
+    write
+        .write_all(b"tarball")
+        .await
+        .unwrap();
 
     assert!(write.finalize().await.is_err());
     assert!(!tmp_path.exists(), "failed finalization must remove its temporary file");
@@ -238,13 +291,36 @@ async fn package_index_migrates_nested_legacy_documents_and_ignores_removed_ones
     let tmp = TempDir::new().unwrap();
     let storage = storage_in(&tmp);
     let root = tmp.path().join("storage");
-    fs::create_dir_all(root.join("acme/app/tool")).await.unwrap();
-    fs::write(root.join("acme/app/package.json"), b"{}").await.unwrap();
-    fs::write(root.join("acme/app/tool/package.json"), b"{}").await.unwrap();
-    storage.rebuild_package_index().await.unwrap();
-    assert_eq!(storage.hosted_package_names().await.unwrap(), ["acme/app", "acme/app/tool"]);
-    fs::remove_file(root.join("acme/app/package.json")).await.unwrap();
-    assert_eq!(storage.hosted_package_names().await.unwrap(), ["acme/app/tool"]);
+    fs::create_dir_all(root.join("acme/app/tool"))
+        .await
+        .unwrap();
+    fs::write(root.join("acme/app/package.json"), b"{}")
+        .await
+        .unwrap();
+    fs::write(root.join("acme/app/tool/package.json"), b"{}")
+        .await
+        .unwrap();
+    storage
+        .rebuild_package_index()
+        .await
+        .unwrap();
+    assert_eq!(
+        storage
+            .hosted_package_names()
+            .await
+            .unwrap(),
+        ["acme/app", "acme/app/tool"]
+    );
+    fs::remove_file(root.join("acme/app/package.json"))
+        .await
+        .unwrap();
+    assert_eq!(
+        storage
+            .hosted_package_names()
+            .await
+            .unwrap(),
+        ["acme/app/tool"]
+    );
 }
 
 #[tokio::test]
@@ -256,12 +332,28 @@ async fn package_index_removes_deleted_and_failed_package_entries() {
         .update_hosted_document_with_retry(&name, 1, |_| Ok(Some(b"{}".to_vec())))
         .await
         .unwrap();
-    let index = tmp.path().join("storage/.package-index/@scope");
+    let index = tmp
+        .path()
+        .join("storage/.package-index/@scope");
     assert!(index.exists());
-    storage.remove_package(&name).await.unwrap();
+    storage
+        .remove_package(&name)
+        .await
+        .unwrap();
     assert!(!index.exists());
-    fs::create_dir_all(tmp.path().join("storage/@scope/app/package.json")).await.unwrap();
-    assert!(storage.hosted.write_document_if_current(&name, b"{}", None).await.is_err());
+    fs::create_dir_all(
+        tmp.path()
+            .join("storage/@scope/app/package.json"),
+    )
+    .await
+    .unwrap();
+    assert!(
+        storage
+            .hosted
+            .write_document_if_current(&name, b"{}", None)
+            .await
+            .is_err()
+    );
     assert!(!index.exists());
 }
 
@@ -272,7 +364,10 @@ async fn a_staged_record_is_replaced_only_while_it_is_unchanged() {
     let tmp = TempDir::new().unwrap();
     let storage = storage_in(&tmp);
     let stage_id = "11111111-2222-3333-4444-555555555555";
-    storage.create_staged_meta(stage_id, br#"{"id":"stage"}"#).await.unwrap();
+    storage
+        .create_staged_meta(stage_id, br#"{"id":"stage"}"#)
+        .await
+        .unwrap();
 
     let first = storage
         .replace_staged_meta_if_current(stage_id, br#"{"id":"stage"}"#, br#"{"id":"stage","a":1}"#)
@@ -294,7 +389,12 @@ async fn a_staged_record_is_replaced_only_while_it_is_unchanged() {
         Some(&br#"{"id":"stage","a":1}"#[..]),
     );
 
-    assert!(storage.remove_staged(stage_id).await.unwrap());
+    assert!(
+        storage
+            .remove_staged(stage_id)
+            .await
+            .unwrap()
+    );
     let removed = storage
         .replace_staged_meta_if_current(
             stage_id,

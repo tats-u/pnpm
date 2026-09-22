@@ -49,7 +49,11 @@ struct FailsThenRecordsNothing {
 
 impl HostedDocuments for FailsThenRecordsNothing {
     fn merge(&self, _merge: DocumentMerge<'_>) -> Result<Option<Vec<u8>>> {
-        if self.merges.fetch_add(1, Ordering::Relaxed) == 0 {
+        if self
+            .merges
+            .fetch_add(1, Ordering::Relaxed)
+            == 0
+        {
             return Err(RegistryError::Internal { reason: "merge failed".to_string() });
         }
         Ok(None)
@@ -68,12 +72,20 @@ struct WritesOneThenFails {
 impl HostedDocuments for WritesOneThenFails {
     fn merge(&self, merge: DocumentMerge<'_>) -> Result<Option<Vec<u8>>> {
         if merge.name.as_str() == self.fails {
-            if self.failed.fetch_add(1, Ordering::Relaxed) == 0 {
+            if self
+                .failed
+                .fetch_add(1, Ordering::Relaxed)
+                == 0
+            {
                 return Err(RegistryError::Internal { reason: "merge failed".to_string() });
             }
             return Ok(None);
         }
-        if self.written.fetch_add(1, Ordering::Relaxed) == 0 {
+        if self
+            .written
+            .fetch_add(1, Ordering::Relaxed)
+            == 0
+        {
             return Ok(Some(merge.journaled.to_vec()));
         }
         Ok(None)
@@ -88,7 +100,9 @@ struct AlwaysFails {
 
 impl HostedDocuments for AlwaysFails {
     fn merge(&self, _merge: DocumentMerge<'_>) -> Result<Option<Vec<u8>>> {
-        let attempt = self.merges.fetch_add(1, Ordering::Relaxed);
+        let attempt = self
+            .merges
+            .fetch_add(1, Ordering::Relaxed);
         Err(RegistryError::Internal { reason: format!("merge failed on attempt {attempt}") })
     }
 }
@@ -119,7 +133,9 @@ fn npm_publish<'publish>(
 async fn cleanup_keeps_a_lost_tmp_blob_when_journal_removal_is_not_durable() {
     let tmp = tempdir().unwrap();
     let tmp_path = tmp.path().join("conflicted.tmp");
-    fs::write(&tmp_path, b"loser").await.unwrap();
+    fs::write(&tmp_path, b"loser")
+        .await
+        .unwrap();
 
     cleanup_lost_tmp_paths(&[tmp_path.as_path()], false).await;
 
@@ -130,7 +146,9 @@ async fn cleanup_keeps_a_lost_tmp_blob_when_journal_removal_is_not_durable() {
 async fn cleanup_removes_a_lost_tmp_blob_when_journal_removal_is_durable() {
     let tmp = tempdir().unwrap();
     let tmp_path = tmp.path().join("conflicted.tmp");
-    fs::write(&tmp_path, b"loser").await.unwrap();
+    fs::write(&tmp_path, b"loser")
+        .await
+        .unwrap();
 
     cleanup_lost_tmp_paths(&[tmp_path.as_path()], true).await;
 
@@ -177,7 +195,13 @@ async fn commit_persists_revision_references() {
         .await
         .unwrap();
 
-    assert_eq!(storage.read_hosted_revision_refs(&digest).await.unwrap(), vec![record.clone()]);
+    assert_eq!(
+        storage
+            .read_hosted_revision_refs(&digest)
+            .await
+            .unwrap(),
+        vec![record.clone()]
+    );
     assert_eq!(
         storage
             .write_hosted_revision_ref(&digest, &"a".repeat(64), "later-owner", &record)
@@ -315,15 +339,22 @@ async fn commit_only_removes_transaction_owned_references_for_a_dropped_version(
         .commit_hosted_revision_ref(&previously_owned_digest, &ref_id, "previous-owner")
         .await
         .unwrap();
-    txn.apply(&storage, &NpmDocuments, &mut ApplyProgress::default()).await
+    txn.apply(&storage, &NpmDocuments, &mut ApplyProgress::default())
+        .await
         .unwrap();
 
     assert_eq!(
-        storage.read_hosted_revision_refs(&transaction_owned_digest).await.unwrap(),
+        storage
+            .read_hosted_revision_refs(&transaction_owned_digest)
+            .await
+            .unwrap(),
         Vec::<Vec<u8>>::new(),
     );
     assert_eq!(
-        storage.read_hosted_revision_refs(&previously_owned_digest).await.unwrap(),
+        storage
+            .read_hosted_revision_refs(&previously_owned_digest)
+            .await
+            .unwrap(),
         vec![record],
     );
     let hosted = storage
@@ -351,12 +382,28 @@ async fn applying_preserves_a_blob_conflict_across_a_later_package_failure() {
         CanonicalPackageName::parse("later-pkg", pnpr_package_name::Ecosystem::Npm).unwrap();
     let filename = "conflicted-pkg-1.0.0.tgz";
 
-    let winner = storage.reserve_hosted_blob(&conflicted_name, filename).await.unwrap();
-    fs::write(&winner.tmp_path, b"winner").await.unwrap();
-    assert_eq!(storage.finalize_blob_slot(winner).await.unwrap(), BlobFinalize::Written);
+    let winner = storage
+        .reserve_hosted_blob(&conflicted_name, filename)
+        .await
+        .unwrap();
+    fs::write(&winner.tmp_path, b"winner")
+        .await
+        .unwrap();
+    assert_eq!(
+        storage
+            .finalize_blob_slot(winner)
+            .await
+            .unwrap(),
+        BlobFinalize::Written
+    );
 
-    let loser = storage.reserve_hosted_blob(&conflicted_name, filename).await.unwrap();
-    fs::write(&loser.tmp_path, b"loser").await.unwrap();
+    let loser = storage
+        .reserve_hosted_blob(&conflicted_name, filename)
+        .await
+        .unwrap();
+    fs::write(&loser.tmp_path, b"loser")
+        .await
+        .unwrap();
     let loser_tmp_path = loser.tmp_path.clone();
     let conflicted_slots = [loser];
     let conflicted_packument = serde_json::to_vec(&json!({
@@ -401,7 +448,9 @@ async fn applying_preserves_a_blob_conflict_across_a_later_package_failure() {
             .unwrap_err(),
     );
     assert!(
-        fs::try_exists(&loser_tmp_path).await.unwrap(),
+        fs::try_exists(&loser_tmp_path)
+            .await
+            .unwrap(),
         "충돌한 임시 tarball은 트랜잭션 재시도를 위해 남아 있어야 합니다",
     );
     assert!(
@@ -409,15 +458,20 @@ async fn applying_preserves_a_blob_conflict_across_a_later_package_failure() {
         "뒤 패키지가 실패하면 journal이 재시도를 위해 남아 있어야 합니다",
     );
 
-    let manifest: Manifest =
-        serde_json::from_slice(&fs::read(txn_dir.join(MANIFEST_FILE)).await.unwrap()).unwrap();
+    let manifest: Manifest = serde_json::from_slice(
+        &fs::read(txn_dir.join(MANIFEST_FILE))
+            .await
+            .unwrap(),
+    )
+    .unwrap();
     let later_packument = json!({
         "name": "later-pkg",
         "versions": {
             "2.0.0": { "version": "2.0.0" },
         },
     });
-    let later = manifest.packages
+    let later = manifest
+        .packages
         .iter()
         .find(|package| package.name == later_name.as_str())
         .unwrap();
@@ -449,7 +503,9 @@ async fn applying_preserves_a_blob_conflict_across_a_later_package_failure() {
     assert_eq!(later_hosted["versions"]["2.0.0"]["version"], "2.0.0");
     #[cfg(unix)]
     assert!(
-        !fs::try_exists(&loser_tmp_path).await.unwrap(),
+        !fs::try_exists(&loser_tmp_path)
+            .await
+            .unwrap(),
         "내구성 있는 journal 삭제 뒤에는 충돌한 임시 tarball을 정리해야 합니다",
     );
     assert!(
@@ -620,15 +676,22 @@ async fn recovery_applies_a_journal_with_the_alias_manifest_keys() {
         Storage::new(&HostedStoreConfig::Fs, tmp.path().join("hosted"), tmp.path().join("cache"))
             .unwrap();
     let name = CanonicalPackageName::parse("pkg", pnpr_package_name::Ecosystem::Npm).unwrap();
-    let slot = storage.reserve_hosted_blob(&name, "pkg-1.0.0.tgz").await.unwrap();
-    fs::write(&slot.tmp_path, b"tarball bytes").await.unwrap();
+    let slot = storage
+        .reserve_hosted_blob(&name, "pkg-1.0.0.tgz")
+        .await
+        .unwrap();
+    fs::write(&slot.tmp_path, b"tarball bytes")
+        .await
+        .unwrap();
 
     let txn_dir = tmp
         .path()
         .join("hosted")
         .join(JOURNAL_DIR)
         .join("0000000000000001-1-0");
-    fs::create_dir_all(&txn_dir).await.unwrap();
+    fs::create_dir_all(&txn_dir)
+        .await
+        .unwrap();
     fs::write(
         txn_dir.join("packument-0.json"),
         serde_json::to_vec(&json!({
@@ -652,7 +715,9 @@ async fn recovery_applies_a_journal_with_the_alias_manifest_keys() {
     )
     .await
     .unwrap();
-    fs::write(txn_dir.join(super::COMMIT_MARKER), b"").await.unwrap();
+    fs::write(txn_dir.join(super::COMMIT_MARKER), b"")
+        .await
+        .unwrap();
 
     storage
         .publish_journal()

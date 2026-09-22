@@ -50,7 +50,9 @@ impl CargoCache {
         let project = dunce::canonicalize(project)?;
         let target = project.join(relative);
         check_ancestors(&project, relative)?;
-        let parent = target.parent().expect("relative target has a parent");
+        let parent = target
+            .parent()
+            .expect("relative target has a parent");
         fs::create_dir_all(parent)?;
         let common = canonical_git_path(
             &["rev-parse", "--path-format=absolute", "--git-common-dir"],
@@ -82,7 +84,11 @@ impl CargoCache {
         }
         let staging = tempfile::Builder::new()
             .prefix(".pnpm-cargo-restore-")
-            .tempdir_in(self.target.parent().expect("target parent"))?;
+            .tempdir_in(
+                self.target
+                    .parent()
+                    .expect("target parent"),
+            )?;
         for file in snapshot.files {
             validate_relative_path(&file.path)?;
             check_ancestors(entry, &Path::new("files").join(&file.path))?;
@@ -106,7 +112,10 @@ impl CargoCache {
 
     pub fn prepare(&self, key: &str) -> io::Result<()> {
         if self.target.try_exists()?
-            && fs::read_to_string(self.target.join(INPUT_RECORD)).ok().as_deref() != Some(key)
+            && fs::read_to_string(self.target.join(INPUT_RECORD))
+                .ok()
+                .as_deref()
+                != Some(key)
         {
             invalidate_fingerprints(&self.target, None)?;
         }
@@ -119,9 +128,13 @@ impl CargoCache {
         if entry.try_exists()? {
             return Ok(());
         }
-        let parent = entry.parent().expect("snapshot entry has a parent");
+        let parent = entry
+            .parent()
+            .expect("snapshot entry has a parent");
         fs::create_dir_all(parent)?;
-        let staging = tempfile::Builder::new().prefix(".publish-").tempdir_in(parent)?;
+        let staging = tempfile::Builder::new()
+            .prefix(".publish-")
+            .tempdir_in(parent)?;
         let mut files = self.clone_target_into(staging.path())?;
         files.sort_by(|left, right| left.path.cmp(&right.path));
         fs::write(

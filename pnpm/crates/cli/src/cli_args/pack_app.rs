@@ -331,7 +331,12 @@ impl PackAppArgs {
     fn runtime_spec(&self, project: &ReadProjectAppConfigResult) -> String {
         self.runtime
             .clone()
-            .or_else(|| project.app.as_ref().and_then(|app| app.runtime.clone()))
+            .or_else(|| {
+                project
+                    .app
+                    .as_ref()
+                    .and_then(|app| app.runtime.clone())
+            })
             .unwrap_or_else(|| format!("node@{}", default_runtime_version()))
     }
 
@@ -342,9 +347,12 @@ impl PackAppArgs {
         project: &ReadProjectAppConfigResult,
         dir: &Path,
     ) -> miette::Result<String> {
-        let configured = self.output_name
-            .clone()
-            .or_else(|| project.app.as_ref().and_then(|app| app.output_name.clone()));
+        let configured = self.output_name.clone().or_else(|| {
+            project
+                .app
+                .as_ref()
+                .and_then(|app| app.output_name.clone())
+        });
         let output_name = match configured {
             Some(name) => name,
             None => derive_output_name_from_package(project, dir)?,
@@ -359,9 +367,15 @@ impl PackAppArgs {
         project: &ReadProjectAppConfigResult,
         dir: &Path,
     ) -> miette::Result<PathBuf> {
-        let output_dir_raw = self.output_dir
+        let output_dir_raw = self
+            .output_dir
             .clone()
-            .or_else(|| project.app.as_ref().and_then(|app| app.output_dir.clone()))
+            .or_else(|| {
+                project
+                    .app
+                    .as_ref()
+                    .and_then(|app| app.output_dir.clone())
+            })
             .unwrap_or_else(|| "dist-app".to_string());
         if escapes_project(&output_dir_raw) {
             return Err(PackAppError::OutputDirOutsideProject { path: output_dir_raw }.into());
@@ -387,7 +401,8 @@ impl PackAppArgs {
         project: &ReadProjectAppConfigResult,
     ) -> miette::Result<Vec<ParsedTarget>> {
         let raw_targets: Vec<String> = if self.target.is_empty() {
-            project.app
+            project
+                .app
                 .as_ref()
                 .map(|app| app.targets.clone())
                 .unwrap_or_default()
@@ -415,19 +430,24 @@ impl PackAppArgs {
         project: &ReadProjectAppConfigResult,
         dir: &Path,
     ) -> miette::Result<String> {
-        let entry_path = self.entry
+        let entry_path = self
+            .entry
             .clone()
             .or_else(|| self.params.first().cloned())
-            .or_else(|| project.app.as_ref().and_then(|app| app.entry.clone()))
+            .or_else(|| {
+                project
+                    .app
+                    .as_ref()
+                    .and_then(|app| app.entry.clone())
+            })
             .ok_or(PackAppError::MissingEntry)?;
         if escapes_project(&entry_path) {
             return Err(PackAppError::EntryOutsideProject { path: entry_path }.into());
         }
         let resolved_entry = dir.join(&entry_path);
-        let entry_meta = fs::metadata(&resolved_entry)
-            .map_err(|_| PackAppError::EntryNotFound {
-                path: resolved_entry.display().to_string(),
-            })?;
+        let entry_meta = fs::metadata(&resolved_entry).map_err(|_| {
+            PackAppError::EntryNotFound { path: resolved_entry.display().to_string() }
+        })?;
         if !entry_meta.is_file() {
             return Err(
                 PackAppError::EntryNotFile { path: resolved_entry.display().to_string() }.into()
@@ -504,7 +524,9 @@ impl SeaBuild<'_> {
             .tempdir()
             .into_diagnostic()
             .wrap_err("creating a temp directory for the SEA config")?;
-        let config_path = tmp_config_dir.path().join("sea-config.json");
+        let config_path = tmp_config_dir
+            .path()
+            .join("sea-config.json");
         fs::write(
             &config_path,
             serde_json::to_vec_pretty(&sea_config).expect("serialize SEA config"),
@@ -513,7 +535,9 @@ impl SeaBuild<'_> {
         .wrap_err("writing the SEA config")?;
 
         run_command(
-            Command::new(&self.builder_bin).arg("--build-sea").arg(&config_path),
+            Command::new(&self.builder_bin)
+                .arg("--build-sea")
+                .arg(&config_path),
             "node --build-sea",
         )?;
         drop(tmp_config_dir);

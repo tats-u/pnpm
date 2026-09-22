@@ -88,7 +88,9 @@ impl Config {
             .as_deref()
             .unwrap_or_else(|| {
                 if self.shared_workspace_lockfile {
-                    self.workspace_dir.as_deref().unwrap_or(project_dir)
+                    self.workspace_dir
+                        .as_deref()
+                        .unwrap_or(project_dir)
                 } else {
                     project_dir
                 }
@@ -151,13 +153,17 @@ impl Config {
     ///
     /// [`explicit_settings`]: Self::explicit_settings
     pub fn anchor_lockfile_paths(&mut self, dir: &Path) {
-        self.modules_dir =
-            match self.explicit_settings.get("modulesDir").and_then(serde_json::Value::as_str) {
-                Some(raw) => dir.join(raw),
-                None => dir.join("node_modules"),
-            };
+        self.modules_dir = match self
+            .explicit_settings
+            .get("modulesDir")
+            .and_then(serde_json::Value::as_str)
+        {
+            Some(raw) => dir.join(raw),
+            None => dir.join("node_modules"),
+        };
         if !self.enable_global_virtual_store {
-            self.virtual_store_dir = match self.explicit_settings
+            self.virtual_store_dir = match self
+                .explicit_settings
                 .get("virtualStoreDir")
                 .and_then(serde_json::Value::as_str)
             {
@@ -195,7 +201,9 @@ impl Config {
         if let Some(node_options) = &self.node_options {
             let node_options = esm_node_path_loader::keep_esm_node_path_loader_option(
                 node_options,
-                self.extra_env.get("NODE_OPTIONS").map(String::as_str),
+                self.extra_env
+                    .get("NODE_OPTIONS")
+                    .map(String::as_str),
             );
             extra_env.insert("NODE_OPTIONS".to_string(), node_options);
         }
@@ -214,7 +222,10 @@ impl Config {
         if !self.virtual_store_only {
             return;
         }
-        if self.hoist_patterns_before_virtual_store_only.is_none() {
+        if self
+            .hoist_patterns_before_virtual_store_only
+            .is_none()
+        {
             self.hoist_patterns_before_virtual_store_only = Some(HoistPatterns {
                 hoist_pattern: self.hoist_pattern.take(),
                 public_hoist_pattern: self.public_hoist_pattern.take(),
@@ -235,7 +246,10 @@ impl Config {
         if self.virtual_store_only {
             return;
         }
-        if let Some(patterns) = self.hoist_patterns_before_virtual_store_only.take() {
+        if let Some(patterns) = self
+            .hoist_patterns_before_virtual_store_only
+            .take()
+        {
             self.hoist_pattern = patterns.hoist_pattern;
             self.public_hoist_pattern = patterns.public_hoist_pattern;
         }
@@ -278,9 +292,13 @@ impl Config {
     pub fn apply_git_branch_lockfile_derivation<Sys: GetCurrentDir>(&mut self) {
         // An explicit `mergeGitBranchLockfiles` — including an explicit
         // `false` — settles the question without consulting the pattern.
-        let merge_is_explicit = self.explicit_settings.contains_key("mergeGitBranchLockfiles");
+        let merge_is_explicit = self
+            .explicit_settings
+            .contains_key("mergeGitBranchLockfiles");
         let pattern_decides = !merge_is_explicit
-            && !self.merge_git_branch_lockfiles_branch_pattern.is_empty();
+            && !self
+                .merge_git_branch_lockfiles_branch_pattern
+                .is_empty();
         if !self.use_git_branch_lockfile && !pattern_decides {
             return;
         }
@@ -308,7 +326,11 @@ impl Config {
     /// `shamefullyHoist` value takes precedence over `publicHoistPattern`
     /// regardless of which source supplied either setting.
     pub fn apply_shamefully_hoist_derivation(&mut self) {
-        match self.explicit_settings.get("shamefullyHoist").and_then(serde_json::Value::as_bool) {
+        match self
+            .explicit_settings
+            .get("shamefullyHoist")
+            .and_then(serde_json::Value::as_bool)
+        {
             Some(true) => self.public_hoist_pattern = Some(vec!["*".to_string()]),
             Some(false) => self.public_hoist_pattern = None,
             None => {}
@@ -333,7 +355,10 @@ impl Config {
     ///
     /// [`prefer_symlinked_executables`]: Self::prefer_symlinked_executables
     pub fn apply_prefer_symlinked_executables_derivation(&mut self) {
-        if self.explicit_settings.contains_key("preferSymlinkedExecutables") {
+        if self
+            .explicit_settings
+            .contains_key("preferSymlinkedExecutables")
+        {
             return;
         }
         self.prefer_symlinked_executables =
@@ -348,10 +373,14 @@ impl Config {
     {
         self.store_dir = default_store_dir::<Sys>();
         self.resolve_default_store_dir::<Sys>(start_dir);
-        self.explicit_settings.remove("storeDir");
-        let virtual_store_dir_explicit = self.explicit_settings.contains_key("virtualStoreDir");
-        let global_virtual_store_dir_explicit =
-            self.explicit_settings.contains_key("globalVirtualStoreDir");
+        self.explicit_settings
+            .remove("storeDir");
+        let virtual_store_dir_explicit = self
+            .explicit_settings
+            .contains_key("virtualStoreDir");
+        let global_virtual_store_dir_explicit = self
+            .explicit_settings
+            .contains_key("globalVirtualStoreDir");
         self.apply_global_virtual_store_derivation(
             virtual_store_dir_explicit,
             global_virtual_store_dir_explicit,

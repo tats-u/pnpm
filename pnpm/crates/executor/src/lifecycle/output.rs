@@ -85,12 +85,14 @@ impl StreamedScript<'_> {
         let stderr = child.stderr.take();
         let stdout_pump = async {
             if let Some(stream) = stdout {
-                self.pump_async_stream(stream, LifecycleStdio::Stdout).await;
+                self.pump_async_stream(stream, LifecycleStdio::Stdout)
+                    .await;
             }
         };
         let stderr_pump = async {
             if let Some(stream) = stderr {
-                self.pump_async_stream(stream, LifecycleStdio::Stderr).await;
+                self.pump_async_stream(stream, LifecycleStdio::Stderr)
+                    .await;
             }
         };
         let child_wait = child.wait();

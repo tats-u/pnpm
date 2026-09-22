@@ -74,7 +74,8 @@ fn save_spec_into_field(
     spec: &PackageSpecObject,
     field: &str,
 ) -> Result<(), PackageManifestError> {
-    let resolved_spec = spec.bare_specifier
+    let resolved_spec = spec
+        .bare_specifier
         .clone()
         .or_else(|| find_spec(&spec.alias, root))
         .filter(|spec| !spec.is_empty());
@@ -99,7 +100,8 @@ fn update_unsaved_spec(
     root: &mut Value,
     spec: &PackageSpecObject,
 ) -> Result<(), PackageManifestError> {
-    let Some(bare_specifier) = spec.bare_specifier
+    let Some(bare_specifier) = spec
+        .bare_specifier
         .as_deref()
         .filter(|spec| !spec.is_empty())
     else {
@@ -141,7 +143,9 @@ fn create_version_spec_from_resolved_version(
     if !parsed.pre_release.is_empty() {
         return Some(resolved_version.to_string());
     }
-    let prefix = range_spec_style.unwrap_or(RangeSpecStyle::Major).range_prefix();
+    let prefix = range_spec_style
+        .unwrap_or(RangeSpecStyle::Major)
+        .range_prefix();
     Some(format!("{prefix}{resolved_version}"))
 }
 
@@ -197,7 +201,10 @@ fn define_dep_entry(
 }
 
 fn delete_dep_entry(root: &mut Value, field: &str, alias: &str) {
-    if let Some(deps) = root.get_mut(field).and_then(Value::as_object_mut) {
+    if let Some(deps) = root
+        .get_mut(field)
+        .and_then(Value::as_object_mut)
+    {
         deps.remove(alias);
     }
 }

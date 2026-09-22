@@ -14,8 +14,13 @@ fn prune_ignored_advisories(
     report: &AuditReport,
     settings_dir: &std::path::Path,
 ) -> miette::Result<()> {
-    if !config.audit_ignore_prune.unwrap_or(false)
-        || config.audit_config.ignore_ghsas.is_empty()
+    if !config
+        .audit_ignore_prune
+        .unwrap_or(false)
+        || config
+            .audit_config
+            .ignore_ghsas
+            .is_empty()
     {
         return Ok(());
     }
@@ -57,7 +62,8 @@ fn report_pruned_ghsas(pruned: &[String]) {
 impl PackageVersionGuard for VulnerabilityGuard {
     fn check<'a>(&'a self, name: &'a str, version: &'a str) -> PackageVersionGuardFuture<'a> {
         Box::pin(async move {
-            let rejected = self.ranges_by_name
+            let rejected = self
+                .ranges_by_name
                 .get(name)
                 .is_some_and(|ranges| {
                     version

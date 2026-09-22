@@ -17,9 +17,19 @@ patchedDependencies:
   bar: patches/bar.patch
 "#;
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
-    let map = settings.patched_dependencies.expect("field present");
-    assert_eq!(map.get("lodash@4.17.21").map(String::as_str), Some("patches/lodash@4.17.21.patch"));
-    assert_eq!(map.get("foo@^1.0.0").map(String::as_str), Some("patches/foo.patch"));
+    let map = settings
+        .patched_dependencies
+        .expect("field present");
+    assert_eq!(
+        map.get("lodash@4.17.21")
+            .map(String::as_str),
+        Some("patches/lodash@4.17.21.patch")
+    );
+    assert_eq!(
+        map.get("foo@^1.0.0")
+            .map(String::as_str),
+        Some("patches/foo.patch")
+    );
     assert_eq!(map.get("bar").map(String::as_str), Some("patches/bar.patch"));
 }
 
@@ -44,15 +54,24 @@ ignoredOptionalDependencies:
 ";
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
     assert_eq!(
-        settings.ignored_optional_dependencies.as_deref(),
+        settings
+            .ignored_optional_dependencies
+            .as_deref(),
         Some(&["foo".to_string(), "@scope/bar".to_string()][..]),
     );
 
     let mut config = Config::new();
-    assert!(config.ignored_optional_dependencies.is_none(), "default is None");
+    assert!(
+        config
+            .ignored_optional_dependencies
+            .is_none(),
+        "default is None"
+    );
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert_eq!(
-        config.ignored_optional_dependencies.as_deref(),
+        config
+            .ignored_optional_dependencies
+            .as_deref(),
         Some(&["foo".to_string(), "@scope/bar".to_string()][..]),
     );
 }
@@ -63,11 +82,19 @@ ignoredOptionalDependencies:
 fn omitting_ignored_optional_dependencies_keeps_default() {
     let yaml = "name: stub\n";
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap_or_default();
-    assert!(settings.ignored_optional_dependencies.is_none());
+    assert!(
+        settings
+            .ignored_optional_dependencies
+            .is_none()
+    );
 
     let mut config = Config::new();
     settings.apply_to(&mut config, Path::new("/irrelevant"));
-    assert!(config.ignored_optional_dependencies.is_none());
+    assert!(
+        config
+            .ignored_optional_dependencies
+            .is_none()
+    );
 }
 
 /// `externalDependencies` deserializes as a flat list of names.
@@ -81,14 +108,25 @@ externalDependencies:
   - some-other-external
 ";
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
-    let raw = settings.external_dependencies.clone().expect("field present");
+    let raw = settings
+        .external_dependencies
+        .clone()
+        .expect("field present");
     assert!(raw.contains("bit-bin") && raw.contains("some-other-external"));
 
     let mut config = Config::new();
     assert!(config.external_dependencies.is_empty(), "default is empty");
     settings.apply_to(&mut config, Path::new("/irrelevant"));
-    assert!(config.external_dependencies.contains("bit-bin"));
-    assert!(config.external_dependencies.contains("some-other-external"));
+    assert!(
+        config
+            .external_dependencies
+            .contains("bit-bin")
+    );
+    assert!(
+        config
+            .external_dependencies
+            .contains("some-other-external")
+    );
 }
 
 /// `allowedDeprecatedVersions` is a `name → semver-range` map parsed
@@ -103,14 +141,25 @@ allowedDeprecatedVersions:
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
 
     let mut config = Config::new();
-    assert!(config.allowed_deprecated_versions.is_empty(), "default is empty");
+    assert!(
+        config
+            .allowed_deprecated_versions
+            .is_empty(),
+        "default is empty"
+    );
     settings.apply_to(&mut config, Path::new("/irrelevant"));
     assert_eq!(
-        config.allowed_deprecated_versions.get("request").map(String::as_str),
+        config
+            .allowed_deprecated_versions
+            .get("request")
+            .map(String::as_str),
         Some("^2.88.0"),
     );
     assert_eq!(
-        config.allowed_deprecated_versions.get("lodash").map(String::as_str),
+        config
+            .allowed_deprecated_versions
+            .get("lodash")
+            .map(String::as_str),
         Some("<5.0.0"),
     );
 }
@@ -141,7 +190,15 @@ peerDependencyRules:
     let rules = &config.peer_dependency_rules;
     assert_eq!(rules.ignore_missing.as_deref(), Some(&["ajv".to_string()][..]));
     assert_eq!(rules.allow_any.as_deref(), Some(&["react".to_string()][..]));
-    let allowed = rules.allowed_versions.as_ref().expect("allowedVersions set");
+    let allowed = rules
+        .allowed_versions
+        .as_ref()
+        .expect("allowedVersions set");
     assert_eq!(allowed.get("bbb").map(String::as_str), Some("2"));
-    assert_eq!(allowed.get("xxx>@foo/bar").map(String::as_str), Some("2"));
+    assert_eq!(
+        allowed
+            .get("xxx>@foo/bar")
+            .map(String::as_str),
+        Some("2")
+    );
 }

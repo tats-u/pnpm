@@ -52,7 +52,9 @@ fn register_creates_symlink_to_project_dir() {
 
     let registry_dir = store_dir.projects();
     assert!(registry_dir.is_dir(), "projects dir must be created");
-    let mut entries: Vec<_> = fs::read_dir(&registry_dir).unwrap().collect();
+    let mut entries: Vec<_> = fs::read_dir(&registry_dir)
+        .unwrap()
+        .collect();
     assert_eq!(entries.len(), 1, "exactly one entry per project");
     let entry = entries.pop().unwrap().unwrap();
     // `symlink_dir` writes a path relative to the link's parent
@@ -75,7 +77,9 @@ fn register_is_idempotent_on_repeat() {
     register_project(&store_dir, project.path()).expect("second register (idempotent)");
 
     let registry_dir = store_dir.projects();
-    let entries: Vec<_> = fs::read_dir(&registry_dir).unwrap().collect();
+    let entries: Vec<_> = fs::read_dir(&registry_dir)
+        .unwrap()
+        .collect();
     assert_eq!(entries.len(), 1, "still exactly one entry after re-register");
 }
 

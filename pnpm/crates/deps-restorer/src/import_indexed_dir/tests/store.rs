@@ -82,7 +82,9 @@ fn safe_to_skip_repairs_a_slot_holding_a_nested_node_modules_in_place() {
     let cas = cas_map(&[("package.json", pkg_json), ("index.js", index)]);
 
     let target = tmp.path().join("slot");
-    let bundled = target.join("node_modules").join("bundled");
+    let bundled = target
+        .join("node_modules")
+        .join("bundled");
     fs::create_dir_all(&bundled).unwrap();
     fs::write(bundled.join("index.js"), b"bundled dependency").unwrap();
     let occupied = fs::metadata(&target).unwrap().ino();

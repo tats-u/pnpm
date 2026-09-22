@@ -138,12 +138,7 @@ struct DroppedKeys {
 
 impl DroppedKeys {
     fn warn(self, path: &Path) {
-        let DroppedKeys {
-            movable,
-            unrecognized,
-            nowhere,
-            kebab_case,
-        } = self;
+        let DroppedKeys { movable, unrecognized, nowhere, kebab_case } = self;
 
         let path = path.display();
         if !movable.is_empty() {
@@ -181,17 +176,20 @@ impl DroppedKeys {
     fn classify(&mut self, key: &str) {
         if is_config_file_key(&to_kebab_case(key)) {
             if !is_camel_case(key) {
-                self.kebab_case.push(format!(r#""{key}" (use "{}")"#, to_camel_case(key)));
+                self.kebab_case
+                    .push(format!(r#""{key}" (use "{}")"#, to_camel_case(key)));
             }
             return;
         }
         if is_refused_by_a_project_manifest(key) {
             let belongs = where_refused_key_belongs(&to_camel_case(key));
-            self.nowhere.push(format!(r#""{key}" ({belongs})"#));
+            self.nowhere
+                .push(format!(r#""{key}" ({belongs})"#));
         } else if is_known_setting_key(key) {
             self.movable.push(format!(r#""{key}""#));
         } else {
-            self.unrecognized.push(annotate_unknown_setting(key));
+            self.unrecognized
+                .push(annotate_unknown_setting(key));
         }
     }
 }
@@ -263,7 +261,8 @@ macro_rules! identically_named_settings {
 
 fn global_shims_setting(config: &Config) -> crate::GlobalShimsSetting {
     crate::GlobalShimsSetting::Entries(
-        config.global_shims
+        config
+            .global_shims
             .entries()
             .map(|(name, policy)| {
                 // `Off` has no named spelling; it is written as the
@@ -292,7 +291,11 @@ fn global_shims_setting(config: &Config) -> crate::GlobalShimsSetting {
 fn side_effects_cache_setting(config: &Config) -> SideEffectsCacheSetting {
     let read = config.side_effects_cache_read();
     let write = config.side_effects_cache_write();
-    if read == write && config.remote_side_effects_cache.is_none() {
+    if read == write
+        && config
+            .remote_side_effects_cache
+            .is_none()
+    {
         SideEffectsCacheSetting::Enabled(read)
     } else {
         SideEffectsCacheSetting::Settings(Box::new(SideEffectsCacheSettings {
@@ -315,7 +318,8 @@ fn explicit_or_default(
 
 /// The pattern a source still sets under `key`.
 fn explicit_pattern(config: &Config, key: &str) -> Option<Vec<String>> {
-    config.explicit_settings
+    config
+        .explicit_settings
         .get(key)
         .and_then(|value| serde_json::from_value(value.clone()).ok())
 }
@@ -381,7 +385,8 @@ fn opt_path(value: Option<&Path>) -> Option<String> {
 /// The value a source set for `key`, as written, or `None` when
 /// nothing set it.
 fn as_set<Setting: serde::de::DeserializeOwned>(config: &Config, key: &str) -> Option<Setting> {
-    config.explicit_settings
+    config
+        .explicit_settings
         .get(key)
         .cloned()
         .and_then(|value| serde_json::from_value(value).ok())

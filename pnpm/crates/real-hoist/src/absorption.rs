@@ -191,11 +191,15 @@ pub(super) fn apply_decision(
     }
     match decision {
         AbsorbDecision::Free => {
-            node.dependencies.borrow_mut().shift_remove(child);
+            node.dependencies
+                .borrow_mut()
+                .shift_remove(child);
             node.hoisted_dependencies
                 .borrow_mut()
                 .insert(child.0.name.clone(), Rc::clone(&child.0));
-            root.dependencies.borrow_mut().insert(child.clone());
+            root.dependencies
+                .borrow_mut()
+                .insert(child.clone());
             root_index.insert(child.0.name.clone(), child.clone());
             // Child is now a direct dep of root; its ancestor path collapses
             // to `[root]`.
@@ -208,7 +212,9 @@ pub(super) fn apply_decision(
             // represents the subtree from here on (it is
             // walked as a root child every round), so there
             // is nothing to descend into.
-            node.dependencies.borrow_mut().shift_remove(child);
+            node.dependencies
+                .borrow_mut()
+                .shift_remove(child);
             node.hoisted_dependencies
                 .borrow_mut()
                 .insert(child.0.name.clone(), Rc::clone(&child.0));
@@ -266,11 +272,15 @@ fn would_shadow_peer(
     // practice this check never fires today — kept for parity with
     // upstream and to stay correct if a future caller hands in a
     // root with declared peers.
-    if root.peer_names.contains(&candidate.name) {
+    if root
+        .peer_names
+        .contains(&candidate.name)
+    {
         return true;
     }
 
-    candidate.peer_names
+    candidate
+        .peer_names
         .iter()
         .any(|peer_name| {
             // No ancestor (excluding root) providing the peer means the candidate
@@ -284,7 +294,9 @@ fn would_shadow_peer(
             // current slot for the same name. Root carrying this exact provider
             // means promoting the candidate doesn't change resolution; a
             // different ident, or no entry at all, means hoisting would shadow.
-            !root_index.get(peer_name).is_some_and(|at_root| same_locator(&at_root.0, &provider))
+            !root_index
+                .get(peer_name)
+                .is_some_and(|at_root| same_locator(&at_root.0, &provider))
         })
 }
 
@@ -303,7 +315,8 @@ fn nearest_peer_provider(
         .iter()
         .rev()
         .find_map(|ancestor| {
-            ancestor.dependencies
+            ancestor
+                .dependencies
                 .borrow()
                 .iter()
                 .find(|dep| dep.0.name == *peer_name)

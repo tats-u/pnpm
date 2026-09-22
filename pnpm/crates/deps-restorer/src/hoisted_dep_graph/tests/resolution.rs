@@ -46,7 +46,9 @@ fn walker_resolves_peered_reference_via_peerless_packages_key() {
     };
     let result = lockfile_to_hoisted_dep_graph(&lockfile, None, &opts).expect("walker succeeds");
 
-    let b_dir = lockfile_dir.join("node_modules").join("b");
+    let b_dir = lockfile_dir
+        .join("node_modules")
+        .join("b");
     assert!(
         result.graph.contains_key(&b_dir),
         "peered node must be in the graph: {:?}",
@@ -58,7 +60,13 @@ fn walker_resolves_peered_reference_via_peerless_packages_key() {
         "the peered depPath must keep its full-suffix key in hoistedLocations",
     );
     // The peer itself is a plain dep of the root and must be there too.
-    assert!(result.graph.contains_key(&lockfile_dir.join("node_modules").join("peer")));
+    assert!(
+        result.graph.contains_key(
+            &lockfile_dir
+                .join("node_modules")
+                .join("peer")
+        )
+    );
 }
 /// The hoister collapses every peer variant of one package version onto
 /// a single node keyed by the first snapshot key it sees, so the graph
@@ -118,7 +126,9 @@ fn walker_wires_edges_declared_against_a_collapsed_peer_variant() {
         "the importer that declared the collapsed variant keeps its direct dependency",
     );
     assert_eq!(
-        result.graph[&modules.join("c")].children.get("b"),
+        result.graph[&modules.join("c")]
+            .children
+            .get("b"),
         Some(&modules.join("b")),
         "a snapshot edge on the collapsed variant resolves to the surviving copy",
     );
@@ -194,8 +204,14 @@ fn walker_keeps_file_dep_peer_variants_apart() {
         r1_comp, r2_comp,
         "each importer's direct dependency must be its own variant's copy",
     );
-    let r1_peer = result.graph[&r1_comp].children.get("peer").expect("r1's copy resolves peer");
-    let r2_peer = result.graph[&r2_comp].children.get("peer").expect("r2's copy resolves peer");
+    let r1_peer = result.graph[&r1_comp]
+        .children
+        .get("peer")
+        .expect("r1's copy resolves peer");
+    let r2_peer = result.graph[&r2_comp]
+        .children
+        .get("peer")
+        .expect("r2's copy resolves peer");
     assert_eq!(
         result.graph[r1_peer].package.dep_path,
         DepPath::from("peer@1.0.0".to_string()),

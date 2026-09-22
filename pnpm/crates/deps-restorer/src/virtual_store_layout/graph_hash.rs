@@ -182,7 +182,12 @@ impl<'h> GvsHasher<'h> {
             }
             None => hasher.update([0_u8]),
         }
-        write_field(&mut hasher, self.project_scope.as_deref().unwrap_or(""));
+        write_field(
+            &mut hasher,
+            self.project_scope
+                .as_deref()
+                .unwrap_or(""),
+        );
         self.write_gating_set(&mut hasher);
         self.write_graph(&mut hasher);
         self.write_snapshot_extras(&mut hasher, snapshots);
@@ -236,7 +241,9 @@ impl<'h> GvsHasher<'h> {
     ) {
         for (snapshot_key, snapshot) in crate::deps_graph::in_lockfile_order(snapshots) {
             let metadata_key = snapshot_key.without_peer();
-            let metadata = self.packages.and_then(|packages| packages.get(&metadata_key));
+            let metadata = self
+                .packages
+                .and_then(|packages| packages.get(&metadata_key));
             write_field(hasher, &snapshot_key.to_string());
             write_field(
                 hasher,
@@ -252,7 +259,9 @@ impl<'h> GvsHasher<'h> {
         let own_engine =
             find_own_runtime_node_major(snapshot).map(|major| engine_name(major, None, None));
         let metadata_key = snapshot_key.without_peer();
-        let metadata = self.packages.and_then(|packages| packages.get(&metadata_key));
+        let metadata = self
+            .packages
+            .and_then(|packages| packages.get(&metadata_key));
         let hex_digest = calc_graph_node_hash(
             &self.graph,
             &mut self.cache,

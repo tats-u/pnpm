@@ -42,7 +42,8 @@ impl LiveGraph {
 
     fn count_live_dependencies(&mut self) {
         let mut needed = vec![false; self.parents.len()];
-        let mut stack = self.live_sources
+        let mut stack = self
+            .live_sources
             .iter()
             .enumerate()
             .filter(|(_, count)| **count > 0)

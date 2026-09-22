@@ -162,7 +162,10 @@ impl PrioritySemaphore {
     pub(crate) async fn acquire(&self, priority: u64) -> Permit {
         let class = Class::of(priority);
         let rx = {
-            let mut state = self.state.lock().expect("priority semaphore lock poisoned");
+            let mut state = self
+                .state
+                .lock()
+                .expect("priority semaphore lock poisoned");
             if state.free > 0 {
                 state.free -= 1;
                 *state.in_flight.count_mut(class) += 1;
@@ -174,17 +177,23 @@ impl PrioritySemaphore {
             let waiter = Waiter { priority, seq, tx };
             match class {
                 Class::Latency => state.latency_waiters.push_back(waiter),
-                Class::Background => state.background_waiters.push_back(waiter),
+                Class::Background => state
+                    .background_waiters
+                    .push_back(waiter),
                 Class::Throughput => state.throughput_waiters.push(waiter),
             }
             rx
         };
-        rx.await.expect("priority semaphore state dropped while a permit was awaited")
+        rx.await
+            .expect("priority semaphore state dropped while a permit was awaited")
     }
 
     #[cfg(test)]
     pub(crate) fn queued_waiters(&self) -> usize {
-        let state = self.state.lock().expect("priority semaphore lock poisoned");
+        let state = self
+            .state
+            .lock()
+            .expect("priority semaphore lock poisoned");
         state.latency_waiters.len()
             + state.background_waiters.len()
             + state.throughput_waiters.len()
@@ -192,7 +201,10 @@ impl PrioritySemaphore {
 
     #[cfg(test)]
     pub(crate) fn available_permits(&self) -> usize {
-        self.state.lock().expect("priority semaphore lock poisoned").free
+        self.state
+            .lock()
+            .expect("priority semaphore lock poisoned")
+            .free
     }
 }
 
@@ -229,7 +241,10 @@ impl SemState {
 
 impl std::fmt::Debug for PrioritySemaphore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let state = self.state.lock().expect("priority semaphore lock poisoned");
+        let state = self
+            .state
+            .lock()
+            .expect("priority semaphore lock poisoned");
         f.debug_struct("PrioritySemaphore")
             .field("free", &state.free)
             .field("latency", &state.in_flight.latency)
@@ -246,7 +261,9 @@ impl std::fmt::Debug for PrioritySemaphore {
 /// waiters whose `acquire` future was dropped while queued; with no
 /// live waiter the slot returns to the free-permit count.
 fn release(state_arc: &Arc<Mutex<SemState>>, released: Class) {
-    let mut state = state_arc.lock().expect("priority semaphore lock poisoned");
+    let mut state = state_arc
+        .lock()
+        .expect("priority semaphore lock poisoned");
     *state.in_flight.count_mut(released) -= 1;
     loop {
         let Some((waiter, class)) = state.next_waiter() else {

@@ -90,12 +90,18 @@ async fn importer_scoped_update_route_owns_shared_parent_children_in_either_orde
 
         for importer_id in ["selected", "unselected"] {
             assert_eq!(
-                result.peers.direct_dependencies_by_importer[importer_id]["parent"].as_str(),
+                result
+                    .peers
+                    .direct_dependencies_by_importer[importer_id]["parent"]
+                    .as_str(),
                 "parent@1.0.0",
             );
         }
-        let parent_children =
-            result.merged_tree.children_by_id.get("parent@1.0.0").expect("parent children");
+        let parent_children = result
+            .merged_tree
+            .children_by_id
+            .get("parent@1.0.0")
+            .expect("parent children");
         assert_eq!(parent_children.len(), 1);
         assert_eq!(&*parent_children[0].pkg_id, "pkg@100.1.0");
         // Recording the winner's children is not enough on its own: the

@@ -294,7 +294,8 @@ impl ReporterState {
         ) {
             self.flush_pending_lockfile_message();
         }
-        self.display.finish(self.options.append_only)
+        self.display
+            .finish(self.options.append_only)
     }
 
     fn handle_event(&mut self, event: &LogEvent) {
@@ -304,7 +305,8 @@ impl ReporterState {
             LogEvent::Prompt(_) => {}
             LogEvent::PackageImportMethod(log) => {
                 self.install.import_method = Some(log.method);
-                self.install.maybe_render_context(&self.rendering.cwd, &mut self.display.frame);
+                self.install
+                    .maybe_render_context(&self.rendering.cwd, &mut self.display.frame);
             }
             LogEvent::Progress(log) => self.on_progress(&log.message),
             LogEvent::Stage(log) => self.on_stage(&log.prefix, log.stage),
@@ -379,7 +381,11 @@ fn entries_label(entries: u64) -> String {
 fn cached_verdict(verified_at: Option<&str>, now: DateTime<Utc>) -> String {
     let elapsed_ms = verified_at
         .and_then(|verified_at| DateTime::parse_from_rfc3339(verified_at).ok())
-        .map(|verified_at| (now - verified_at.with_timezone(&Utc)).num_milliseconds().max(0));
+        .map(|verified_at| {
+            (now - verified_at.with_timezone(&Utc))
+                .num_milliseconds()
+                .max(0)
+        });
     match elapsed_ms {
         Some(elapsed_ms) => {
             format!("verified {} ago", pretty_ms_compact(elapsed_ms.unsigned_abs().into()))

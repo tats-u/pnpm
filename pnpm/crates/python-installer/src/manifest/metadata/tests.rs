@@ -11,7 +11,9 @@ fn dynamic_extras_keep_platform_markers_and_dependency_groups() {
         "requires_dist": ["alpha", "beta; extra == 'cli' and sys_platform == 'linux'"]
     }))
     .unwrap();
-    manifest.set_metadata(metadata, None).unwrap();
+    manifest
+        .set_metadata(metadata, None)
+        .unwrap();
     let mut config = Config::new();
     let requirements = |config: &Config, selection| {
         manifest
@@ -22,7 +24,10 @@ fn dynamic_extras_keep_platform_markers_and_dependency_groups() {
             .collect::<Vec<_>>()
     };
     assert_eq!(requirements(&config, DependencySelection::ALL), ["alpha", "pytest"]);
-    config.python.extras.push("cli".to_string());
+    config
+        .python
+        .extras
+        .push("cli".to_string());
     assert_eq!(
         requirements(&config, DependencySelection::ALL),
         ["alpha", "beta ; sys_platform == 'linux'", "pytest"],
@@ -32,7 +37,8 @@ fn dynamic_extras_keep_platform_markers_and_dependency_groups() {
         ["pytest"],
     );
     assert_eq!(
-        manifest.project
+        manifest
+            .project
             .as_ref()
             .unwrap()
             .version
@@ -52,11 +58,20 @@ fn static_extras_select_using_their_normalized_names() {
         "requires_dist": ["alpha; extra == 'dev-tools'"]
     }))
     .unwrap();
-    manifest.validate_static_metadata(&metadata).unwrap();
-    manifest.set_metadata(metadata, None).unwrap();
+    manifest
+        .validate_static_metadata(&metadata)
+        .unwrap();
+    manifest
+        .set_metadata(metadata, None)
+        .unwrap();
     let mut config = Config::new();
-    config.python.extras.push("dev_tools".to_string());
-    let requirements = manifest.requirements(&config, DependencySelection::ALL).unwrap();
+    config
+        .python
+        .extras
+        .push("dev_tools".to_string());
+    let requirements = manifest
+        .requirements(&config, DependencySelection::ALL)
+        .unwrap();
     assert_eq!(
         requirements
             .into_iter()
@@ -77,7 +92,9 @@ fn dynamic_extras_use_project_overrides_and_skip_missing_workspace_defaults() {
     }))
     .unwrap();
     let mut manifest = Manifest::parse(contents).unwrap();
-    manifest.set_metadata(metadata, None).unwrap();
+    manifest
+        .set_metadata(metadata, None)
+        .unwrap();
     let mut config = Config::new();
     config.python.extras = vec!["cli".into()];
     assert_eq!(
@@ -90,7 +107,9 @@ fn dynamic_extras_use_project_overrides_and_skip_missing_workspace_defaults() {
     let metadata = manifest.metadata.clone().unwrap();
     let mut manifest =
         Manifest::parse(&format!("{contents}\n[tool.pnpm.python]\nextras = ['web']\n")).unwrap();
-    manifest.set_metadata(metadata, None).unwrap();
+    manifest
+        .set_metadata(metadata, None)
+        .unwrap();
     assert_eq!(
         manifest
             .requirements(&config, DependencySelection::ALL)

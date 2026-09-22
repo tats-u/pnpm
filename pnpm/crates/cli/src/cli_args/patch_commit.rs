@@ -162,7 +162,11 @@ impl PatchCommitArgs {
         apply_to_all: bool,
         patch_content: &str,
     ) -> Result<(), PatchCommitError> {
-        let workspace_dir = state.config.workspace_dir.clone().unwrap_or_else(|| dir.to_path_buf());
+        let workspace_dir = state
+            .config
+            .workspace_dir
+            .clone()
+            .unwrap_or_else(|| dir.to_path_buf());
         let patches_dir_name = normalize_patches_dir_name(
             self.patches_dir
                 .as_deref()
@@ -170,24 +174,24 @@ impl PatchCommitArgs {
                 .unwrap_or("patches"),
         );
         let patches_dir = workspace_dir.join(path_from_forward_slash(&patches_dir_name));
-        fs::create_dir_all(&patches_dir)
-            .map_err(|source| PatchCommitError::CreatePatchesDir {
-                path: patches_dir.clone(),
-                source,
-            })?;
+        fs::create_dir_all(&patches_dir).map_err(|source| PatchCommitError::CreatePatchesDir {
+            path: patches_dir.clone(),
+            source,
+        })?;
         let patch_file_context = PatchFileWriteContext::new(&workspace_dir, &patches_dir_name)?;
 
         let patch_key = if apply_to_all { name.to_string() } else { format!("{name}@{version}") };
         let patch_file_name = format!("{}.patch", patch_key.replace('/', "__"));
         let patch_file_path = patch_file_context.patch_file_path(&patch_file_name)?;
-        write_patch_file_atomically(&patch_file_path, patch_content.as_bytes())
-            .map_err(|source| PatchCommitError::WritePatch {
-                path: patch_file_path.clone(),
-                source,
-            })?;
+        write_patch_file_atomically(&patch_file_path, patch_content.as_bytes()).map_err(
+            |source| PatchCommitError::WritePatch { path: patch_file_path.clone(), source },
+        )?;
 
-        let mut patched_dependencies =
-            state.config.patched_dependencies.clone().unwrap_or_default();
+        let mut patched_dependencies = state
+            .config
+            .patched_dependencies
+            .clone()
+            .unwrap_or_default();
         patched_dependencies.insert(patch_key, format!("{patches_dir_name}/{patch_file_name}"));
         pnpm_workspace_manifest_writer::set_patched_dependencies(
             &workspace_dir,
@@ -259,11 +263,12 @@ fn prepare_diff_files(
     match prepare_pkg_files_for_diff(patch_dir) {
         Ok(filtered) => Ok(filtered),
         Err(source) => {
-            remove_dir_if_exists(clean_dir)
-                .map_err(|cleanup_source| PatchCommitError::CleanupTempDir {
+            remove_dir_if_exists(clean_dir).map_err(|cleanup_source| {
+                PatchCommitError::CleanupTempDir {
                     path: clean_dir.to_path_buf(),
                     source: cleanup_source,
-                })?;
+                }
+            })?;
             Err(PatchCommitError::PatchCommit(source))
         }
     }
@@ -301,7 +306,10 @@ fn patch_target_from_state(
     Ok(PatchTarget {
         alias: name.to_string(),
         version: version.to_string(),
-        bare_specifier: candidate.git_tarball_url.clone().unwrap_or_else(|| version.to_string()),
+        bare_specifier: candidate
+            .git_tarball_url
+            .clone()
+            .unwrap_or_else(|| version.to_string()),
         apply_to_all: state_value.apply_to_all,
         git_tarball_url: candidate.git_tarball_url.clone(),
         package_key: candidate.package_key,

@@ -100,7 +100,9 @@ pub async fn resolve_ref<Runner: GitCommandRunner + ?Sized>(
     // ref looks like a committish: there is no single canonical ref
     // name to filter on in those cases.
     let filter = if range.is_some() || committish { None } else { Some(ref_) };
-    let refs = get_repo_refs(runner, repo, filter).await.map_err(GitResolveRefError::Runner)?;
+    let refs = get_repo_refs(runner, repo, filter)
+        .await
+        .map_err(GitResolveRefError::Runner)?;
     let commit = resolve_ref_from_refs(&refs, repo, ref_, committish, range)?;
     if committish && !commit.starts_with(ref_) {
         return Err(GitResolveRefError::AmbiguousRef { ref_: ref_.to_string(), commit });
@@ -150,11 +152,12 @@ fn resolve_ref_from_refs(
     range: Option<&str>,
 ) -> Result<String, GitResolveRefError> {
     let Some(range) = range else {
-        return resolve_exact_ref(refs, ref_, committish)
-            .ok_or_else(|| GitResolveRefError::UnknownRef {
+        return resolve_exact_ref(refs, ref_, committish).ok_or_else(|| {
+            GitResolveRefError::UnknownRef {
                 ref_: ref_.to_string(),
                 repo: redact_and_sanitize(repo),
-            });
+            }
+        });
     };
     resolve_range(refs, repo, range)
 }

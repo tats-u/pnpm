@@ -19,7 +19,9 @@ pub(super) fn importer_scoped_update_lockfile(
     };
 
     let direct_name = PkgName::parse(direct_name).expect("parse direct package name");
-    let direct_version = direct_version.parse::<PkgVerPeer>().expect("parse direct version");
+    let direct_version = direct_version
+        .parse::<PkgVerPeer>()
+        .expect("parse direct version");
     let direct_key = PkgNameVerPeer::new(direct_name.clone(), direct_version.clone());
     let importers = importer_ids
         .iter()
@@ -63,7 +65,9 @@ pub(super) fn importer_scoped_update_lockfile(
         std::collections::HashMap::from([(direct_key.clone(), SnapshotEntry::default())]);
     if let Some((child_name, child_version)) = transitive {
         let child_name = PkgName::parse(child_name).expect("parse child package name");
-        let child_version = child_version.parse::<PkgVerPeer>().expect("parse child version");
+        let child_version = child_version
+            .parse::<PkgVerPeer>()
+            .expect("parse child version");
         let child_key = PkgNameVerPeer::new(child_name.clone(), child_version.clone());
         packages.insert(child_key.clone(), metadata());
         snapshots.insert(child_key, SnapshotEntry::default());
@@ -138,7 +142,9 @@ pub(super) async fn resolve_importer_scoped_update_direct(
         })
         .await
         .expect("resolve importer-scoped update");
-    result.peers.direct_dependencies_by_importer
+    result
+        .peers
+        .direct_dependencies_by_importer
         .into_iter()
         .map(|(importer_id, dependencies)| (importer_id, dependencies["pkg"].as_str().to_string()))
         .collect()
@@ -239,7 +245,9 @@ pub(super) fn reuse_graph_lockfile(
                 ResolvedDependencySpec {
                     specifier: (*specifier).to_string(),
                     version: ImporterDepVersion::Regular(
-                        version.parse::<PkgVerPeer>().expect("parse direct version"),
+                        version
+                            .parse::<PkgVerPeer>()
+                            .expect("parse direct version"),
                     ),
                 },
             )
@@ -273,7 +281,9 @@ pub(super) fn reuse_graph_lockfile(
     let mut packages = std::collections::HashMap::new();
     let mut snapshots = std::collections::HashMap::new();
     for (key, children) in graph {
-        let key = key.parse::<PkgNameVerPeer>().expect("parse graph key");
+        let key = key
+            .parse::<PkgNameVerPeer>()
+            .expect("parse graph key");
         packages.insert(key.clone(), metadata());
         let dependencies = (!children.is_empty()).then(|| {
             children
@@ -282,7 +292,9 @@ pub(super) fn reuse_graph_lockfile(
                     (
                         PkgName::parse(*alias).expect("parse child alias"),
                         SnapshotDepRef::Plain(
-                            version.parse::<PkgVerPeer>().expect("parse child version"),
+                            version
+                                .parse::<PkgVerPeer>()
+                                .expect("parse child version"),
                         ),
                     )
                 })
@@ -328,7 +340,9 @@ pub(super) fn graph_versions_of(
     name: &str,
 ) -> Vec<String> {
     let prefix = format!("{name}@");
-    let mut versions: Vec<String> = result.peers.graph
+    let mut versions: Vec<String> = result
+        .peers
+        .graph
         .keys()
         .filter_map(|dep_path| dep_path.as_str().strip_prefix(&prefix))
         .map(str::to_string)

@@ -8,13 +8,41 @@ fn compiler_cache_policies_distinguish_readers_and_publishers() {
         "artifacts:\n  enabled: true\n  compilerCaches:\n    acme:\n      access: [ci, developer]\n      publish: ci\n    disabled:\n      access: []\n      publish: []\n",
         Path::new("/config"), listen(), None,
     ).unwrap();
-    let policy = &config.features.artifacts.compiler_caches["acme"];
-    assert!(policy.access.allows(&Identity::user("developer")), "developer must be able to read");
-    assert!(!policy.publish.allows(&Identity::user("developer")), "developer must not publish");
-    assert!(policy.publish.allows(&Identity::user("ci")), "CI must be able to publish");
-    assert!(!policy.access.allows(&Identity::Anonymous), "anonymous reads must not be granted");
+    let policy = &config
+        .features
+        .artifacts
+        .compiler_caches["acme"];
     assert!(
-        config.features.artifacts.compiler_caches["disabled"].access.is_empty(),
+        policy
+            .access
+            .allows(&Identity::user("developer")),
+        "developer must be able to read"
+    );
+    assert!(
+        !policy
+            .publish
+            .allows(&Identity::user("developer")),
+        "developer must not publish"
+    );
+    assert!(
+        policy
+            .publish
+            .allows(&Identity::user("ci")),
+        "CI must be able to publish"
+    );
+    assert!(
+        !policy
+            .access
+            .allows(&Identity::Anonymous),
+        "anonymous reads must not be granted"
+    );
+    assert!(
+        config
+            .features
+            .artifacts
+            .compiler_caches["disabled"]
+            .access
+            .is_empty(),
         "empty access must deny reads",
     );
 }

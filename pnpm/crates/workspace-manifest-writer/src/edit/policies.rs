@@ -26,7 +26,13 @@ pub(crate) fn set_audit_ignore_ghsas(
     if ghsas.is_empty() {
         return Ok(remove_audit_config_ghsas(manifest, BLOCK));
     }
-    if manifest.exceptions.legacy_audit_ghsas.as_deref().unwrap_or_default() == ghsas {
+    if manifest
+        .exceptions
+        .legacy_audit_ghsas
+        .as_deref()
+        .unwrap_or_default()
+        == ghsas
+    {
         return Ok(false);
     }
 
@@ -60,7 +66,11 @@ fn set_audit_ignore(manifest: &mut Manifest, ghsas: &[String]) -> bool {
         manifest.exceptions.audit = Some(ghsas.to_vec());
         true
     };
-    if manifest.exceptions.legacy_audit_ghsas.is_some() {
+    if manifest
+        .exceptions
+        .legacy_audit_ghsas
+        .is_some()
+    {
         remove_block_list_key(manifest, "auditConfig", "ignoreGhsas");
         manifest.exceptions.legacy_audit_ghsas = None;
         changed = true;
@@ -99,7 +109,10 @@ fn remove_block_list_key(manifest: &mut Manifest, block: &str, key: &str) {
     if keys.iter().all(|k| k == key) {
         let new_text = remove_top_level_block(text, block);
         manifest.document.set_text(new_text);
-        manifest.document.keys.retain(|k| k != block);
+        manifest
+            .document
+            .keys
+            .retain(|k| k != block);
     } else {
         let new_text = remove_mapping_entries(text, &[block], &[key.to_string()]);
         manifest.document.set_text(new_text);
@@ -148,7 +161,11 @@ fn set_exclude_list(manifest: &mut Manifest, list: ExcludeList, items: &[String]
         return remove_exclude_list(manifest, list);
     }
 
-    if decoded(manifest).as_deref().unwrap_or_default() == items {
+    if decoded(manifest)
+        .as_deref()
+        .unwrap_or_default()
+        == items
+    {
         return false;
     }
     // `text` borrows the manifest for the rest of the write, so the
@@ -165,7 +182,9 @@ fn set_exclude_list(manifest: &mut Manifest, list: ExcludeList, items: &[String]
                 .iter()
                 .map(|item| render::render_value(item))
                 .collect();
-            manifest.document.set_text(flow::set_items(text, &collection, &rendered));
+            manifest
+                .document
+                .set_text(flow::set_items(text, &collection, &rendered));
             *decoded(manifest) = Some(items.to_vec());
             return true;
         }
@@ -190,11 +209,9 @@ fn set_exclude_list(manifest: &mut Manifest, list: ExcludeList, items: &[String]
 fn replace_exclude_sequence(manifest: &mut Manifest, block: &str, items: &[String]) {
     let rendered = render_top_level_sequence(block, items);
     if let Some(span) = top_level_span(manifest.document.text(), block) {
-        manifest.document.set_text(replace_top_level_block(
-            manifest.document.text(),
-            &span,
-            &rendered,
-        ));
+        manifest
+            .document
+            .set_text(replace_top_level_block(manifest.document.text(), &span, &rendered));
     } else {
         let new_text = insert_top_level_block(manifest, block, &rendered);
         manifest.document.set_text(new_text);
@@ -205,15 +222,22 @@ fn replace_exclude_sequence(manifest: &mut Manifest, block: &str, items: &[Strin
 
 fn remove_exclude_list(manifest: &mut Manifest, list: ExcludeList) -> bool {
     let ExcludeList { key: block, decoded } = list;
-    let has_block = manifest.document.keys
+    let has_block = manifest
+        .document
+        .keys
         .iter()
         .any(|key| key == block);
     if !has_block {
         return false;
     }
-    manifest.document.set_text(remove_top_level_block(manifest.document.text(), block));
+    manifest
+        .document
+        .set_text(remove_top_level_block(manifest.document.text(), block));
     *decoded(manifest) = None;
-    manifest.document.keys.retain(|key| key != block);
+    manifest
+        .document
+        .keys
+        .retain(|key| key != block);
     true
 }
 
@@ -248,7 +272,9 @@ fn prune_exclude_list(
     list: ExcludeList,
     resolved: &pnpm_config::version_policy::ResolvedPackageVersions,
 ) -> bool {
-    let current = (list.decoded)(manifest).as_deref().unwrap_or_default();
+    let current = (list.decoded)(manifest)
+        .as_deref()
+        .unwrap_or_default();
     if current.is_empty() {
         return false;
     }

@@ -8,8 +8,12 @@ fn yaml_save_preserves_comments_and_existing_key_order() {
     let original = "# project\nname: fixture\n# dependencies\ndependencies:\n  zebra: '1.0.0' # keep\n  alpha: 1.0.0 # update\n# metadata\ncustom:\n  empty: {}\n  nullable: null\n  sequence: [null, {}]\n";
     fs::write(&path, original).unwrap();
     let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
-    manifest.add_dependency("alpha", "2.0.0", DependencyGroup::Prod).unwrap();
-    manifest.add_dependency("bravo", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("alpha", "2.0.0", DependencyGroup::Prod)
+        .unwrap();
+    manifest
+        .add_dependency("bravo", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
     assert_eq!(
         read_to_string(&path).unwrap(),
@@ -62,7 +66,9 @@ fn yaml_scalar_alias_edit_does_not_change_other_fields() {
     )
     .unwrap();
     let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
-    manifest.add_dependency("alpha", "2.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("alpha", "2.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
     let reread = PackageManifest::from_path(path).unwrap();
     assert_eq!(reread.value()["dependencies"], json!({"alpha":"2.0.0","bravo":"1.0.0"}));
@@ -94,10 +100,14 @@ fn yaml_creation_and_empty_files_are_writable() {
             fs::write(&path, source).unwrap();
         }
         let mut manifest = PackageManifest::create_if_needed(path.clone()).unwrap();
-        manifest.add_dependency("alpha", "1.0.0", DependencyGroup::Prod).unwrap();
+        manifest
+            .add_dependency("alpha", "1.0.0", DependencyGroup::Prod)
+            .unwrap();
         manifest.save().unwrap();
         assert_eq!(
-            PackageManifest::from_path(path).unwrap().value()["dependencies"],
+            PackageManifest::from_path(path)
+                .unwrap()
+                .value()["dependencies"],
             json!({"alpha":"1.0.0"}),
         );
     }
@@ -112,7 +122,12 @@ fn yaml_scaffolding_preserves_trailing_newlines_in_values() {
         super::InitOptions { license: Some("custom\n\n"), ..Default::default() },
     )
     .unwrap();
-    assert_eq!(PackageManifest::from_path(path).unwrap().value()["license"], "custom\n\n");
+    assert_eq!(
+        PackageManifest::from_path(path)
+            .unwrap()
+            .value()["license"],
+        "custom\n\n"
+    );
 }
 
 #[test]
@@ -121,8 +136,14 @@ fn rejects_non_mapping_yaml_without_replacing_it() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("package.yaml");
         fs::write(&path, source).unwrap();
-        let error = PackageManifest::from_path(path.clone()).err().unwrap();
-        assert!(error.to_string().contains("the manifest root must be an object"));
+        let error = PackageManifest::from_path(path.clone())
+            .err()
+            .unwrap();
+        assert!(
+            error
+                .to_string()
+                .contains("the manifest root must be an object")
+        );
         assert!(
             error
                 .to_string()

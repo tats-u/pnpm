@@ -81,21 +81,29 @@ async fn start_pnpr_inner(
     artifacts_enabled: bool,
 ) -> (String, String, TempDir) {
     let storage = TempDir::new().expect("pnpr storage tempdir");
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.expect("bind pnpr");
-    let addr = listener.local_addr().expect("pnpr addr");
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+        .await
+        .expect("bind pnpr");
+    let addr = listener
+        .local_addr()
+        .expect("pnpr addr");
 
     let mut config = pnpr::Config::proxy(addr, storage.path().to_path_buf());
     config.features.artifacts.enabled = artifacts_enabled;
     config.http.public_url = public_url.unwrap_or_else(|| format!("http://{addr}"));
     config.identity.auth.htpasswd.max_users = pnpr::MaxUsers::Unlimited;
     for (name, upstream) in upstreams {
-        config.routing.upstreams.insert(name, upstream);
+        config
+            .routing
+            .upstreams
+            .insert(name, upstream);
     }
     for registry in public_registries {
-        config.routing.route_policy.public.push(pnpr::PublicRoute {
-            registry: Some(registry),
-            package: None,
-        });
+        config
+            .routing
+            .route_policy
+            .public
+            .push(pnpr::PublicRoute { registry: Some(registry), package: None });
     }
 
     tokio::spawn(async move {
@@ -132,7 +140,10 @@ fn registry_upstream(registry_url: &str, token: &str) -> (String, pnpr::Upstream
 
 async fn wait_until_ready(addr: SocketAddr) {
     for _ in 0..200 {
-        if tokio::net::TcpStream::connect(addr).await.is_ok() {
+        if tokio::net::TcpStream::connect(addr)
+            .await
+            .is_ok()
+        {
             return;
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
@@ -143,11 +154,17 @@ async fn wait_until_ready(addr: SocketAddr) {
 /// Accept one HTTP request, return its full raw bytes (headers + body), and
 /// send the supplied raw HTTP response.
 async fn capture_one_request_with_response(listener: TcpListener, response: String) -> String {
-    let (mut socket, _) = listener.accept().await.expect("accept request");
+    let (mut socket, _) = listener
+        .accept()
+        .await
+        .expect("accept request");
     let mut buffer = Vec::new();
     let mut chunk = [0u8; 4096];
     loop {
-        let read = socket.read(&mut chunk).await.expect("read request");
+        let read = socket
+            .read(&mut chunk)
+            .await
+            .expect("read request");
         if read == 0 {
             break;
         }
@@ -177,7 +194,9 @@ async fn capture_one_request_with_response(listener: TcpListener, response: Stri
             break;
         }
     }
-    let _ = socket.write_all(response.as_bytes()).await;
+    let _ = socket
+        .write_all(response.as_bytes())
+        .await;
     let _ = socket.shutdown().await;
     String::from_utf8_lossy(&buffer).into_owned()
 }
@@ -210,7 +229,10 @@ async fn register_token(registry_url: &str, username: &str) -> String {
         .await
         .expect("adduser request");
     assert!(response.status().is_success(), "adduser returned {}", response.status());
-    let json: serde_json::Value = response.json().await.expect("adduser response json");
+    let json: serde_json::Value = response
+        .json()
+        .await
+        .expect("adduser response json");
     json["token"]
         .as_str()
         .expect("token in adduser response")

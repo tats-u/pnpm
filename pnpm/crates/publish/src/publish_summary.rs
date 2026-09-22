@@ -77,7 +77,8 @@ pub fn create_publish_summary(info: &PackedPkgInfo<'_>, tarball_data: &[u8]) -> 
         shasum: sha1_hex(tarball_data),
         integrity: sha512_sri(tarball_data),
         filename,
-        files: info.contents
+        files: info
+            .contents
             .iter()
             .map(|path| PublishSummaryFile { path: path.clone() })
             .collect(),

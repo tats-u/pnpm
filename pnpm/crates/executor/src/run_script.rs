@@ -102,7 +102,10 @@ pub fn run_script(opts: &RunScript<'_>) -> Result<ScriptExit, RunScriptError> {
     let child_env = child_env(opts, &command);
 
     if let ScriptOutput::Streamed { dep_path, emit } = opts.output {
-        let wd = opts.pkg_root.to_string_lossy().into_owned();
+        let wd = opts
+            .pkg_root
+            .to_string_lossy()
+            .into_owned();
         let streamed = StreamedScript { dep_path, stage: opts.invocation.stage, wd: &wd, emit };
         return run_streamed(opts, &shell, &command, &child_env, streamed);
     }

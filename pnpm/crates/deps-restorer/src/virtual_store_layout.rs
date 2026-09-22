@@ -447,7 +447,9 @@ pub fn global_virtual_store_version_dir(
     if !pnpm_fs::is_subdir(package_store_dir, &candidate_slot) {
         return None;
     }
-    candidate_slot.parent().map(Path::to_path_buf)
+    candidate_slot
+        .parent()
+        .map(Path::to_path_buf)
 }
 
 /// Map each injected `file:` project to the virtual-store package
@@ -543,14 +545,20 @@ fn injected_targets(
     // separator normalization matches the `hoistedLocations` entries the
     // hoisted branch reuses (see `path_relative_to_lockfile_dir`).
     let target = pnpm_fs::join_slash_separated_path(
-        &layout.slot_dir(key).join("node_modules"),
+        &layout
+            .slot_dir(key)
+            .join("node_modules"),
         &key.name.to_string(),
     );
     let target = match target.strip_prefix(lockfile_dir) {
         Ok(relative) => relative.to_path_buf(),
         Err(_) => target,
     };
-    vec![target.to_string_lossy().replace('\\', "/")]
+    vec![
+        target
+            .to_string_lossy()
+            .replace('\\', "/"),
+    ]
 }
 
 /// Version segment of a snapshot's global-virtual-store path. Derives
@@ -627,7 +635,9 @@ fn local_directory_scope<'a>(
     suffix: &PkgVerPeer,
     lockfile_dir: Option<&'a str>,
 ) -> Option<&'a str> {
-    is_local_directory(metadata, suffix).then_some(lockfile_dir).flatten()
+    is_local_directory(metadata, suffix)
+        .then_some(lockfile_dir)
+        .flatten()
 }
 
 #[cfg(test)]

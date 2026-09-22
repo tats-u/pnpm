@@ -72,14 +72,23 @@ async fn two_peer_chains_resolve_against_their_own_sibling() {
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
     assert_eq!(
-        result.direct_dependencies_by_alias.get("foo-a"),
+        result
+            .direct_dependencies_by_alias
+            .get("foo-a"),
         Some(&DepPath::from("foo-a@1.0.0(bar-a@1.0.0)".to_string())),
     );
     assert_eq!(
-        result.direct_dependencies_by_alias.get("foo-b"),
+        result
+            .direct_dependencies_by_alias
+            .get("foo-b"),
         Some(&DepPath::from("foo-b@1.0.0(bar-b@1.0.0)".to_string())),
     );
-    assert!(result.peer_dependency_issues.missing.is_empty());
+    assert!(
+        result
+            .peer_dependency_issues
+            .missing
+            .is_empty()
+    );
 }
 
 /// A peer satisfied by a wrong-version sibling inside the
@@ -140,7 +149,10 @@ async fn bad_peer_inside_subtree_records_resolved_from_parent() {
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
     assert!(
-        result.peer_dependency_issues.bad.contains_key("dep"),
+        result
+            .peer_dependency_issues
+            .bad
+            .contains_key("dep"),
         "expected bad peer issue for dep, got {:?}",
         result.peer_dependency_issues,
     );
@@ -252,7 +264,11 @@ async fn revisit_with_peer_only_child_keeps_per_occurrence_node_id() {
     // First-walk classification must be non-leaf — `pkg_is_leaf`
     // counts a declared peer as a child.
     assert!(
-        !tree.packages.get("peer-only@1.0.0").expect("peer-only resolved").is_leaf,
+        !tree
+            .packages
+            .get("peer-only@1.0.0")
+            .expect("peer-only resolved")
+            .is_leaf,
         "a package declaring a peer must keep is_leaf=false (eager walker contract)",
     );
 
@@ -264,7 +280,8 @@ async fn revisit_with_peer_only_child_keeps_per_occurrence_node_id() {
     // `realize_children` misclassified the package and collapsed
     // distinct occurrences, breaking per-call-site state for any
     // future visitor that descends through it.
-    let peer_only_node_ids: Vec<&NodeId> = tree.dependencies_tree
+    let peer_only_node_ids: Vec<&NodeId> = tree
+        .dependencies_tree
         .iter()
         .filter(|(_, node)| node.resolved_package_id == "peer-only@1.0.0".into())
         .map(|(id, _)| id)
@@ -364,7 +381,8 @@ async fn external_link_peer_remaps_to_node_modules_when_exclude_links_on() {
         },
     );
 
-    let abc_dep_path = result.direct_dependencies_by_alias
+    let abc_dep_path = result
+        .direct_dependencies_by_alias
         .get("abc")
         .cloned()
         .expect("abc is a direct dep");
@@ -373,9 +391,15 @@ async fn external_link_peer_remaps_to_node_modules_when_exclude_links_on() {
         DepPath::from("abc@1.0.0(peer-a@node_modules+peer-a)".to_string()),
         "abc's peer suffix encodes `<modules_dir-relative>/<alias>` via link_path_to_peer_version",
     );
-    let abc_node = result.graph.get(&abc_dep_path).expect("abc node in graph");
-    let peer_child =
-        abc_node.edges.children.get("peer-a").expect("abc snapshot has a peer-a child edge");
+    let abc_node = result
+        .graph
+        .get(&abc_dep_path)
+        .expect("abc node in graph");
+    let peer_child = abc_node
+        .edges
+        .children
+        .get("peer-a")
+        .expect("abc snapshot has a peer-a child edge");
     assert_eq!(
         peer_child,
         &DepPath::from("link:node_modules/peer-a".to_string()),

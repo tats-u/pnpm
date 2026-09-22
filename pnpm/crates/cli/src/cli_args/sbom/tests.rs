@@ -583,7 +583,10 @@ fn normalize_link_path_escape_returns_none() {
 #[test]
 fn integrity_string_publishes_only_verified_hashes() {
     const HASH: &str = "sha512-gf6ZldcfCDyNXPRiW3lQjEP1Z9rrUM/4Cn7BZbv3SdTA82zxWRP8OmLwvGR974uuENhGCFgFdN11z3n1Ofpprg==";
-    let hash = || HASH.parse::<ssri::Integrity>().expect("parse integrity");
+    let hash = || {
+        HASH.parse::<ssri::Integrity>()
+            .expect("parse integrity")
+    };
 
     let registry = LockfileResolution::Registry(pnpm_lockfile::RegistryResolution {
         integrity: hash(),

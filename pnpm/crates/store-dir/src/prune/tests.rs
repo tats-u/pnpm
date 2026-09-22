@@ -29,7 +29,9 @@ fn make_slot(
 fn prune_is_noop_without_links_dir() {
     let store = tempdir().unwrap();
     let store_dir = StoreDir::new(store.path().to_path_buf());
-    store_dir.prune().expect("missing links/ must be a silent no-op");
+    store_dir
+        .prune()
+        .expect("missing links/ must be a silent no-op");
 }
 
 /// `prune()` does nothing destructive when no projects are
@@ -56,7 +58,9 @@ fn prune_removes_dead_project_slots_and_keeps_live_slots() {
     let live_project = tempdir().unwrap();
     fs::create_dir_all(live_project.path().join("node_modules")).unwrap();
     symlink_dir(
-        &live_slot.join("node_modules").join("live-pkg"),
+        &live_slot
+            .join("node_modules")
+            .join("live-pkg"),
         &live_project
             .path()
             .join("node_modules")
@@ -67,7 +71,9 @@ fn prune_removes_dead_project_slots_and_keeps_live_slots() {
     let dead_project = tempdir().unwrap();
     fs::create_dir_all(dead_project.path().join("node_modules")).unwrap();
     symlink_dir(
-        &dead_slot.join("node_modules").join("dead-pkg"),
+        &dead_slot
+            .join("node_modules")
+            .join("dead-pkg"),
         &dead_project
             .path()
             .join("node_modules")
@@ -104,7 +110,9 @@ fn prune_keeps_slot_referenced_by_any_surviving_project() {
     let a_project = tempdir().unwrap();
     fs::create_dir_all(a_project.path().join("node_modules")).unwrap();
     symlink_dir(
-        &shared_slot.join("node_modules").join("shared"),
+        &shared_slot
+            .join("node_modules")
+            .join("shared"),
         &a_project
             .path()
             .join("node_modules")
@@ -115,7 +123,9 @@ fn prune_keeps_slot_referenced_by_any_surviving_project() {
     let b_project = tempdir().unwrap();
     fs::create_dir_all(b_project.path().join("node_modules")).unwrap();
     symlink_dir(
-        &shared_slot.join("node_modules").join("shared"),
+        &shared_slot
+            .join("node_modules")
+            .join("shared"),
         &b_project
             .path()
             .join("node_modules")
@@ -144,7 +154,9 @@ fn prune_removes_orphan_slot_unreferenced_by_any_project() {
     let project = tempdir().unwrap();
     fs::create_dir_all(project.path().join("node_modules")).unwrap();
     symlink_dir(
-        &referenced.join("node_modules").join("referenced"),
+        &referenced
+            .join("node_modules")
+            .join("referenced"),
         &project
             .path()
             .join("node_modules")

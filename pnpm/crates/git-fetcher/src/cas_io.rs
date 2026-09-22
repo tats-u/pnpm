@@ -124,8 +124,9 @@ pub(crate) fn import_into_cas(
         let bytes = fs::read(&source).map_err(GitFetcherError::Io)?;
         let size = bytes.len() as u64;
         let executable = is_executable(mode);
-        let (cas_path, hash) =
-            store_dir.write_cas_file(&bytes, executable).map_err(map_write_cas)?;
+        let (cas_path, hash) = store_dir
+            .write_cas_file(&bytes, executable)
+            .map_err(map_write_cas)?;
         cas_paths.insert(rel.clone(), cas_path);
         files_index.insert(
             rel.clone(),
@@ -180,15 +181,14 @@ pub(crate) fn synthesize_files_index(
 ) -> Result<HashMap<String, CafsFileInfo>, GitFetcherError> {
     let mut out = HashMap::with_capacity(cas_paths.len());
     for (rel, cas_path) in cas_paths {
-        let digest = cas_path_digest(cas_path)
-            .ok_or_else(|| {
-                GitFetcherError::Io(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!(
-                        "CAS path {cas_path:?} for {rel:?} does not match `files/XX/<rest>[-exec]`",
-                    ),
-                ))
-            })?;
+        let digest = cas_path_digest(cas_path).ok_or_else(|| {
+            GitFetcherError::Io(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "CAS path {cas_path:?} for {rel:?} does not match `files/XX/<rest>[-exec]`",
+                ),
+            ))
+        })?;
         let executable = cas_path_is_executable(cas_path);
         // Match the read-side `cas_file_path_by_mode` round-trip rule:
         // any-exec-bit-set ↔ `-exec` suffix. The exact mode value is
@@ -217,12 +217,22 @@ fn cas_path_digest(path: &Path) -> Option<String> {
     // that would later poison `index.db`.
     const STEM_LEN: usize = 128 - 2;
     let file_name = path.file_name()?.to_str()?;
-    let stem = file_name.strip_suffix("-exec").unwrap_or(file_name);
+    let stem = file_name
+        .strip_suffix("-exec")
+        .unwrap_or(file_name);
     let shard = path.parent()?.file_name()?.to_str()?;
-    if shard.len() != 2 || !shard.bytes().all(|b| b.is_ascii_hexdigit()) {
+    if shard.len() != 2
+        || !shard
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit())
+    {
         return None;
     }
-    if stem.len() != STEM_LEN || !stem.bytes().all(|b| b.is_ascii_hexdigit()) {
+    if stem.len() != STEM_LEN
+        || !stem
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit())
+    {
         return None;
     }
     Some(format!("{shard}{stem}"))

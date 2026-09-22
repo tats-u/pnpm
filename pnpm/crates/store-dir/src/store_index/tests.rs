@@ -128,8 +128,14 @@ async fn writer_persists_remote_side_effects_and_bounded_quarantine() {
         .get(&key)
         .unwrap()
         .unwrap();
-    assert!(row.side_effects.unwrap().contains_key("linux"));
-    let quarantine = row.remote_side_effects_quarantine.unwrap();
+    assert!(
+        row.side_effects
+            .unwrap()
+            .contains_key("linux")
+    );
+    let quarantine = row
+        .remote_side_effects_quarantine
+        .unwrap();
     assert_eq!(
         quarantine["https://pnpr.example/"],
         (6..70)
@@ -169,7 +175,10 @@ fn get_returns_none_for_missing_key() {
             .unwrap()
             .is_none(),
     );
-    assert!(!idx.contains_key("sha512-never\tnone@0.0.0").unwrap());
+    assert!(
+        !idx.contains_key("sha512-never\tnone@0.0.0")
+            .unwrap()
+    );
 }
 
 #[test]
@@ -292,7 +301,10 @@ fn get_decodes_msgpackr_records_rows() {
         .unwrap()
         .expect("row must decode");
     assert_eq!(loaded.algo, "sha512");
-    let info = loaded.files.get("package.json").unwrap();
+    let info = loaded
+        .files
+        .get("package.json")
+        .unwrap();
     assert_eq!(info.digest, "abc");
     assert_eq!(info.mode, 0o644);
     assert_eq!(info.size, 17);
@@ -528,7 +540,9 @@ fn open_immutable_reads_wal_db_on_readonly_directory() {
 
     // Drop the directory to read + execute only: no writes permitted,
     // so SQLite cannot create any `-shm` / `-wal` / `-journal` sidecar.
-    let original = fs::metadata(dir.path()).unwrap().permissions();
+    let original = fs::metadata(dir.path())
+        .unwrap()
+        .permissions();
     fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o555)).unwrap();
 
     let read_result = StoreIndex::open_immutable(dir.path()).map(|idx| idx.get(&key));

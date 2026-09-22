@@ -19,7 +19,9 @@ fn dlx_errors_when_no_command_given() {
             command.arg(reporter);
         }
         command.arg("dlx");
-        let output = command.output().expect("spawn pacquet dlx");
+        let output = command
+            .output()
+            .expect("spawn pacquet dlx");
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!("STDERR:\n{stderr}\n");
         assert!(!output.status.success(), "dlx with no command must fail");
@@ -191,10 +193,9 @@ fn dlx_fails_when_a_package_spec_is_missing_from_the_catalog() {
             "the failure must carry the missing-entry error code: {stderr}",
         );
         assert!(
-            flatten_report(&stderr)
-                .contains(&format!(
-                    "Nocatalogentry'@foo/touch-file-one-bin'wasfoundforcatalog'{catalog_name}'."
-                )),
+            flatten_report(&stderr).contains(&format!(
+                "Nocatalogentry'@foo/touch-file-one-bin'wasfoundforcatalog'{catalog_name}'."
+            )),
             "the failure must name the missing entry and its catalog: {stderr}",
         );
 
@@ -212,7 +213,9 @@ fn dlx_ignores_the_caller_projects_patched_dependencies() {
 
     std::fs::create_dir(workspace.join("patches")).expect("create the caller's patches dir");
     std::fs::write(
-        workspace.join("patches").join("touch-file-one-bin.patch"),
+        workspace
+            .join("patches")
+            .join("touch-file-one-bin.patch"),
         concat!(
             "diff --git a/cli.js b/cli.js\n",
             "--- a/cli.js\n",
@@ -261,13 +264,8 @@ fn dlx_ignores_the_caller_projects_patched_dependencies() {
 #[cfg(unix)]
 #[test]
 fn dlx_ignores_an_ambient_workspace_manifest_above_the_cache_dir() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     // `root` is the parent of both the caller's workspace and the
     // `pacquet-cache` dir the dlx prepare dir is created under.
@@ -337,13 +335,8 @@ fn dlx_provisions_a_package_manager_by_name() {
 #[test]
 fn dlx_recovers_ignored_builds() {
     for (approve, cached) in [(false, false), (true, false), (true, true)] {
-        let CommandTempCwd {
-            mut pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let caller_yaml = std::fs::read_to_string(workspace.join("pnpm-workspace.yaml"))
             .expect("read caller settings");
         pacquet.env_remove("PNPM_AUTO_APPROVE_BUILDS_FOR_TESTS");

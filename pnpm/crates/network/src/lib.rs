@@ -217,13 +217,21 @@ impl HostSocketLimit {
         // Lock only long enough to look up (or mint) the origin's semaphore and
         // clone its `Arc` — never held across the `.await` below.
         let semaphore = {
-            let mut map = self.per_origin.lock().expect("host-socket-limit mutex poisoned");
+            let mut map = self
+                .per_origin
+                .lock()
+                .expect("host-socket-limit mutex poisoned");
             Arc::clone(
                 map.entry(origin)
                     .or_insert_with(|| Arc::new(Semaphore::new(self.max.get()))),
             )
         };
-        Some(semaphore.acquire_owned().await.expect("host-socket semaphore is never closed"))
+        Some(
+            semaphore
+                .acquire_owned()
+                .await
+                .expect("host-socket semaphore is never closed"),
+        )
     }
 }
 
@@ -307,7 +315,9 @@ impl ThrottledResponse {
         let (sender, receiver) = tokio::sync::mpsc::channel(1);
         let (completion_sender, completion) = tokio::sync::oneshot::channel();
         tokio::spawn(async move {
-            let remaining = self.body_timeout.saturating_sub(self.received_at.elapsed());
+            let remaining = self
+                .body_timeout
+                .saturating_sub(self.received_at.elapsed());
             let result = tokio::select! {
                 () = sender.closed() => Ok(()),
                 result = tokio::time::timeout(remaining, async {
@@ -331,7 +341,9 @@ impl ThrottledResponse {
                 if let Some(chunk) = receiver.recv().await {
                     return Ok(Some((chunk, (receiver, completion))));
                 }
-                completion.await.map_err(std::io::Error::other)??;
+                completion
+                    .await
+                    .map_err(std::io::Error::other)??;
                 Ok::<_, std::io::Error>(None)
             },
         )
@@ -368,12 +380,18 @@ impl Deref for ThrottledClientGuard<'_> {
 impl ThrottledClient {
     /// Replace the sink used by successful slow-fetch warnings.
     pub fn set_warning_handler(&self, handler: fn(&str)) {
-        *self.warning_handler.write().expect("warning-handler lock poisoned") = handler;
+        *self
+            .warning_handler
+            .write()
+            .expect("warning-handler lock poisoned") = handler;
     }
 
     /// Emit a successful slow-fetch warning through the configured sink.
     pub fn warn(&self, message: &str) {
-        let handler = *self.warning_handler.read().expect("warning-handler lock poisoned");
+        let handler = *self
+            .warning_handler
+            .read()
+            .expect("warning-handler lock poisoned");
         handler(message);
     }
 
@@ -393,7 +411,10 @@ impl ThrottledClient {
     /// against [`default_network_concurrency`] — typically the full
     /// `send + body-consume` lifetime, not just `.send()`.
     pub async fn acquire(&self) -> ThrottledClientGuard<'_> {
-        let permit = self.semaphore.acquire(UNPRIORITIZED).await;
+        let permit = self
+            .semaphore
+            .acquire(UNPRIORITIZED)
+            .await;
         ThrottledClientGuard {
             permit,
             host_permit: None,
@@ -432,7 +453,8 @@ impl ThrottledClient {
     /// just to satisfy the type signature — the lookup itself works
     /// on the raw string form.
     pub async fn acquire_for_url(&self, url: &str) -> ThrottledClientGuard<'_> {
-        self.acquire_for_url_with_priority(url, UNPRIORITIZED).await
+        self.acquire_for_url_with_priority(url, UNPRIORITIZED)
+            .await
     }
 
     /// [`Self::acquire_for_url`], but queueing behind the saturated
@@ -449,7 +471,8 @@ impl ThrottledClient {
         url: &str,
         priority: u64,
     ) -> ThrottledClientGuard<'_> {
-        self.acquire_for_url_with_priority_and_redirects(url, priority, true).await
+        self.acquire_for_url_with_priority_and_redirects(url, priority, true)
+            .await
     }
 
     /// [`Self::acquire_for_url_with_priority`] using a client that returns the
@@ -459,7 +482,8 @@ impl ThrottledClient {
         url: &str,
         priority: u64,
     ) -> ThrottledClientGuard<'_> {
-        self.acquire_for_url_with_priority_and_redirects(url, priority, false).await
+        self.acquire_for_url_with_priority_and_redirects(url, priority, false)
+            .await
     }
 }
 
@@ -486,8 +510,10 @@ where
         let inner = Arc::clone(&self.inner);
         let permits = Arc::clone(&self.permits);
         Box::pin(async move {
-            let _permit =
-                permits.acquire_owned().await.expect("DNS concurrency semaphore is never closed");
+            let _permit = permits
+                .acquire_owned()
+                .await
+                .expect("DNS concurrency semaphore is never closed");
             inner.resolve(name).await
         })
     }

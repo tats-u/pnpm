@@ -45,7 +45,9 @@ async fn reuses_preferred_version_instead_of_resolving_fresh() {
         .count();
     assert_eq!(react_call_count, 1, "should not re-resolve react via a hoisted spec");
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();

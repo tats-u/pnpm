@@ -183,7 +183,9 @@ const ABBREVIATED_BODY: &str = r#"{
 }"#;
 
 fn parse_cutoff(rfc3339: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(rfc3339).expect("parse cutoff").with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(rfc3339)
+        .expect("parse cutoff")
+        .with_timezone(&Utc)
 }
 
 /// A route hook that records every `(url, package)` it is asked to

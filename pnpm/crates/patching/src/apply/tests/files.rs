@@ -225,7 +225,9 @@ fn previewing_leaves_the_directory_untouched() {
 #[test]
 fn missing_patch_file_errors_patch_not_found() {
     let patched = tempdir().unwrap();
-    let missing = patched.path().join("does-not-exist.patch");
+    let missing = patched
+        .path()
+        .join("does-not-exist.patch");
     let err = apply_patch_to_dir(patched.path(), &missing).expect_err("must fail");
     assert!(matches!(err, PatchApplyError::PatchNotFound { .. }), "got: {err:?}");
 }

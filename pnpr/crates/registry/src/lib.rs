@@ -167,7 +167,8 @@ impl Registries {
     /// The name used in an ecosystem's `~name` URL, without its internal prefix.
     #[must_use]
     pub fn local_name(key: &str) -> &str {
-        key.split_once('/').map_or(key, |(_, name)| name)
+        key.split_once('/')
+            .map_or(key, |(_, name)| name)
     }
 
     /// The default serving-table key for one ecosystem.
@@ -187,7 +188,8 @@ impl Registries {
     /// unless declared otherwise.
     #[must_use]
     pub fn with_ecosystem(mut self, registry: &str, ecosystem: Ecosystem) -> Self {
-        self.ecosystems.insert(registry.to_string(), ecosystem);
+        self.ecosystems
+            .insert(registry.to_string(), ecosystem);
         self
     }
 
@@ -252,7 +254,9 @@ impl Registries {
             Some((_, Registry::Router { sources })) => sources
                 .iter()
                 .filter(|source| {
-                    self.entries.get(source.as_str()).is_some_and(Registry::is_concrete)
+                    self.entries
+                        .get(source.as_str())
+                        .is_some_and(Registry::is_concrete)
                         && self.concrete_ecosystem(source) == ecosystem
                 })
                 .map(String::as_str)
@@ -294,12 +298,14 @@ impl Registries {
     /// bound on an upstream declares its own entry (with patterns) first.
     pub fn ensure_upstream(&mut self, name: &str) {
         if !self.entries.contains_key(name) {
-            self.entries.insert(name.to_string(), Registry::Upstream { patterns: Vec::new() });
+            self.entries
+                .insert(name.to_string(), Registry::Upstream { patterns: Vec::new() });
             if let Some((prefix, _)) = name.split_once('/')
                 && let Some(ecosystem) =
                     Ecosystem::all().find(|ecosystem| ecosystem.as_str() == prefix)
             {
-                self.ecosystems.insert(name.to_string(), ecosystem);
+                self.ecosystems
+                    .insert(name.to_string(), ecosystem);
             }
         }
     }
@@ -385,12 +391,18 @@ impl Registries {
             return Err(RegistryConfigError::UndefinedDefaultRegistry { target: target.clone() });
         }
         for (ecosystem, target) in &self.defaults {
-            if self.addressed(target, *ecosystem).is_none() {
+            if self
+                .addressed(target, *ecosystem)
+                .is_none()
+            {
                 return Err(RegistryConfigError::UndefinedDefaultRegistry {
                     target: target.clone(),
                 });
             }
-            if self.sources(target, *ecosystem).is_empty() {
+            if self
+                .sources(target, *ecosystem)
+                .is_empty()
+            {
                 return Err(RegistryConfigError::DefaultRegistryWithoutEcosystem {
                     target: target.clone(),
                     ecosystem: *ecosystem,
@@ -444,7 +456,8 @@ impl Registries {
         kind: &Registry,
         ecosystem: Ecosystem,
     ) -> bool {
-        let duplicate = self.entries
+        let duplicate = self
+            .entries
             .get(local)
             .is_some_and(|other| {
                 !other.is_concrete() || self.concrete_ecosystem(local) == ecosystem

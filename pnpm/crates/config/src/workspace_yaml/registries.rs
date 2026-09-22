@@ -165,9 +165,10 @@ pub fn routed_scopes(entries: &IndexMap<String, RegistryEntry>) -> BTreeSet<Stri
                 vec![DEFAULT_REGISTRY_SCOPE.to_owned()]
             }
             RegistryEntry::ScopeRoute(_) => vec![key.clone()],
-            RegistryEntry::Declaration(declaration) => {
-                declaration.scopes.clone().unwrap_or_default()
-            }
+            RegistryEntry::Declaration(declaration) => declaration
+                .scopes
+                .clone()
+                .unwrap_or_default(),
         })
         .collect()
 }
@@ -195,7 +196,11 @@ pub fn validate(entries: &IndexMap<String, RegistryEntry>) -> Result<(), LoadWor
     }
     if !scope_routes.is_empty() {
         return Err(LoadWorkspaceYamlError::MixedRegistriesShapes {
-            scopes: quote_and_join(scope_routes.into_iter().map(String::as_str)),
+            scopes: quote_and_join(
+                scope_routes
+                    .into_iter()
+                    .map(String::as_str),
+            ),
         });
     }
 
@@ -241,7 +246,8 @@ fn validate_declaration_fields(
     declaration: &RegistryDeclaration,
 ) -> Result<(), LoadWorkspaceYamlError> {
     let redacted = redact_registry_url(registry);
-    if let Some(field) = declaration.unknown
+    if let Some(field) = declaration
+        .unknown
         .keys()
         .find(|field| SECRET_REGISTRY_FIELDS.contains(&field.as_str()))
     {
@@ -306,7 +312,9 @@ pub fn into_lookups(entries: IndexMap<String, RegistryEntry>) -> RegistryLookups
                 if registry == "default" {
                     lookups.default_registry = Some(url);
                 } else {
-                    lookups.registries_by_scope.insert(registry, url);
+                    lookups
+                        .registries_by_scope
+                        .insert(registry, url);
                 }
             }
             RegistryEntry::Declaration(declaration) => {
@@ -357,11 +365,15 @@ fn extend_npm_routes(
         if scope == DEFAULT_REGISTRY_SCOPE {
             lookups.default_registry = Some(normalized.to_owned());
         } else {
-            lookups.registries_by_scope.insert(scope, normalized.to_owned());
+            lookups
+                .registries_by_scope
+                .insert(scope, normalized.to_owned());
         }
     }
     if let Some(prefix) = declaration.prefix {
-        lookups.registries_by_prefix.insert(prefix, registry);
+        lookups
+            .registries_by_prefix
+            .insert(prefix, registry);
     }
 }
 
@@ -372,7 +384,11 @@ fn extend_registry_options(
     normalized: &str,
     declaration: &RegistryDeclaration,
 ) {
-    if declaration.server_type.is_none() && declaration.supports_time_field.is_none() {
+    if declaration.server_type.is_none()
+        && declaration
+            .supports_time_field
+            .is_none()
+    {
         return;
     }
     lookups.registry_options_by_url.insert(
@@ -409,10 +425,15 @@ pub fn to_declarations(lookups: &RegistryLookups) -> IndexMap<String, RegistryDe
             .push(scope.clone());
     }
     for (prefix, registry) in &lookups.registries_by_prefix {
-        declarations.entry(registry.clone()).or_default().prefix = Some(prefix.clone());
+        declarations
+            .entry(registry.clone())
+            .or_default()
+            .prefix = Some(prefix.clone());
     }
     for (registry, options) in &lookups.registry_options_by_url {
-        let declaration = declarations.entry(registry.clone()).or_default();
+        let declaration = declarations
+            .entry(registry.clone())
+            .or_default();
         declaration.server_type = options.server_type;
         declaration.supports_time_field = options.supports_time_field;
     }

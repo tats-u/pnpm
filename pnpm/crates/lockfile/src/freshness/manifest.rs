@@ -210,17 +210,14 @@ fn check_field_specs(
         let importer_dep = parsed
             .as_ref()
             .and_then(|name| importer_field.and_then(|map| map.get(name)));
-        let matched = importer_dep.is_some_and(|dep| {
-            dependency_specifiers_equal(&dep.specifier, manifest_spec)
-        });
+        let matched = importer_dep
+            .is_some_and(|dep| dependency_specifiers_equal(&dep.specifier, manifest_spec));
         if !matched {
             return Err(StalenessReason::DepSpecifierMismatch {
                 field: field_name,
                 name: (*name).to_string(),
-                lockfile: importer_dep.map_or_else(
-                    || "(absent)".to_string(),
-                    |dep| dep.specifier.clone(),
-                ),
+                lockfile: importer_dep
+                    .map_or_else(|| "(absent)".to_string(), |dep| dep.specifier.clone()),
                 manifest: (*manifest_spec).to_string(),
             });
         }
@@ -239,7 +236,11 @@ fn check_resolution_satisfies(
     let (Some(dep), Ok(range)) = (importer_dep, manifest_spec.parse::<node_semver::Range>()) else {
         return Ok(());
     };
-    let Some(version) = dep.version.ver_peer().and_then(|version| version.version_semver()) else {
+    let Some(version) = dep
+        .version
+        .ver_peer()
+        .and_then(|version| version.version_semver())
+    else {
         return Ok(());
     };
     if range.satisfies(version) {
@@ -381,16 +382,19 @@ fn diff_flat_records(
     let rhs_keys: BTreeSet<&String> = manifest_specs.keys().collect();
     let mut diff = SpecDiff::default();
     for k in lhs_keys.difference(&rhs_keys) {
-        diff.removed.insert((**k).clone(), lockfile_specs[*k].clone());
+        diff.removed
+            .insert((**k).clone(), lockfile_specs[*k].clone());
     }
     for k in rhs_keys.difference(&lhs_keys) {
-        diff.added.insert((**k).clone(), manifest_specs[*k].clone());
+        diff.added
+            .insert((**k).clone(), manifest_specs[*k].clone());
     }
     for k in lhs_keys.intersection(&rhs_keys) {
         let lhs_spec = &lockfile_specs[*k];
         let rhs_spec = &manifest_specs[*k];
         if !dependency_specifiers_equal(lhs_spec, rhs_spec) {
-            diff.modified.insert((**k).clone(), (lhs_spec.clone(), rhs_spec.clone()));
+            diff.modified
+                .insert((**k).clone(), (lhs_spec.clone(), rhs_spec.clone()));
         }
     }
     diff

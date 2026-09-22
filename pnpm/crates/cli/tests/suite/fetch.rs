@@ -5,7 +5,9 @@ use pnpm_testing_utils::bin::{AddMockedRegistry, CommandTempCwd};
 use std::{fs, path::Path, process::Command};
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 /// Direct dependency from each group, so a test can assert which groups
@@ -56,18 +58,18 @@ fn write_manifest_and_lockfile(workspace: &Path) {
         .with_args(["install", "--lockfile-only"])
         .assert()
         .success();
-    assert!(workspace.join("pnpm-lock.yaml").exists(), "lockfile must exist after --lockfile-only");
+    assert!(
+        workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "lockfile must exist after --lockfile-only"
+    );
 }
 
 #[test]
 fn fetch_requires_existing_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -112,9 +114,9 @@ fn fetch_populates_every_group_by_default() {
     assert!(virtual_dep(&workspace, OPTIONAL_DEP).exists(), "optional dep must be fetched");
     assert_no_importer_links(&workspace);
     assert_eq!(
-        pnpm_modules_yaml::read_modules_manifest::<pnpm_modules_yaml::Host>(&workspace.join(
-            "node_modules"
-        ),)
+        pnpm_modules_yaml::read_modules_manifest::<pnpm_modules_yaml::Host>(
+            &workspace.join("node_modules"),
+        )
         .expect("read .modules.yaml")
         .expect("fetch must write .modules.yaml")
         .virtual_store_only,
@@ -196,7 +198,9 @@ fn fetch_populates_the_global_virtual_store_without_importer_links() {
         .assert()
         .success();
 
-    let gvs_root = store_dir.join(STORE_VERSION).join("links");
+    let gvs_root = store_dir
+        .join(STORE_VERSION)
+        .join("links");
     assert!(gvs_root.is_dir(), "fetch must populate the global virtual store");
     assert!(
         gvs_root
@@ -293,11 +297,15 @@ fn fetch_runs_a_build_script_that_calls_a_sibling_dependency_bin() {
         .join("node_modules")
         .join(BUILT_DEP);
     assert!(
-        pkg_dir.join("node_modules/.bin/hello-world-js-bin").exists(),
+        pkg_dir
+            .join("node_modules/.bin/hello-world-js-bin")
+            .exists(),
         "fetch must link the built package's dependency bins next to it",
     );
     assert!(
-        pkg_dir.join("generated-by-postinstall.js").exists(),
+        pkg_dir
+            .join("generated-by-postinstall.js")
+            .exists(),
         "the postinstall script must have run to completion",
     );
 

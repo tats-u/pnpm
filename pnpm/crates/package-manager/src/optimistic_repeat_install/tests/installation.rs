@@ -386,7 +386,9 @@ fn returns_skipped_when_minimum_release_age_drifts() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -427,7 +429,9 @@ fn returns_skipped_when_minimum_release_age_ignore_missing_time_drifts() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -467,7 +471,9 @@ fn returns_skipped_when_ignored_optional_dependencies_drift() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -520,7 +526,9 @@ fn returns_skipped_when_package_extensions_drift() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -562,7 +570,9 @@ fn returns_skipped_when_dedupe_direct_deps_drifts() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -615,7 +625,9 @@ fn returns_up_to_date_when_state_carries_unported_pnpm_settings() {
 
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), settings, projects);

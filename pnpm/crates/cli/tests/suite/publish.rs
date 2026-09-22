@@ -363,13 +363,12 @@ fn json_flag_suppresses_explicit_reporter_output() {
         String::from_utf8_lossy(&output.stderr),
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let parsed: Value = serde_json::from_str(&stdout)
-        .unwrap_or_else(|error| {
-            panic!(
-                "stdout is one JSON value: {error}; stdout: {stdout}; stderr: {}",
-                String::from_utf8_lossy(&output.stderr),
-            )
-        });
+    let parsed: Value = serde_json::from_str(&stdout).unwrap_or_else(|error| {
+        panic!(
+            "stdout is one JSON value: {error}; stdout: {stdout}; stderr: {}",
+            String::from_utf8_lossy(&output.stderr),
+        )
+    });
     assert_eq!(parsed["id"], "test-publish-json-reporter@1.0.0");
 }
 
@@ -390,13 +389,12 @@ fn json_flag_prints_errors_to_stdout() {
         String::from_utf8_lossy(&output.stderr),
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
-    serde_json::from_str::<Value>(&stdout)
-        .unwrap_or_else(|error| {
-            panic!(
-                "stdout is a JSON error envelope: {error}; stdout: {stdout}; stderr: {}",
-                String::from_utf8_lossy(&output.stderr),
-            )
-        });
+    serde_json::from_str::<Value>(&stdout).unwrap_or_else(|error| {
+        panic!(
+            "stdout is a JSON error envelope: {error}; stdout: {stdout}; stderr: {}",
+            String::from_utf8_lossy(&output.stderr),
+        )
+    });
     assert_eq!(
         stdout,
         "{\n  \"error\": {\n    \"code\": \"ERR_PNPM_PACKAGE_VERSION_NOT_FOUND\",\n    \"message\": \"Package version is not defined in the package.json.\"\n  }\n}\n",
@@ -435,13 +433,12 @@ fn json_flag_preserves_webauth_urls_on_noninteractive_otp_errors() {
         String::from_utf8_lossy(&output.stderr),
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let parsed: Value = serde_json::from_str(&stdout)
-        .unwrap_or_else(|error| {
-            panic!(
-                "stdout is a JSON error envelope: {error}; stdout: {stdout}; stderr: {}",
-                String::from_utf8_lossy(&output.stderr),
-            )
-        });
+    let parsed: Value = serde_json::from_str(&stdout).unwrap_or_else(|error| {
+        panic!(
+            "stdout is a JSON error envelope: {error}; stdout: {stdout}; stderr: {}",
+            String::from_utf8_lossy(&output.stderr),
+        )
+    });
     assert_eq!(parsed["error"]["code"], "ERR_PNPM_OTP_NON_INTERACTIVE");
     assert_eq!(
         parsed["error"]["message"],
@@ -529,12 +526,16 @@ fn ignore_scripts_skips_the_publish_lifecycle_scripts() {
 fn publishing_a_nested_project_by_relative_path_keeps_catalog_entries_relative() {
     let workspace = tempfile::tempdir().expect("workspace");
     let mut server = mockito::Server::new();
-    let project_dir = workspace.path().join("projects/nested/bar");
+    let project_dir = workspace
+        .path()
+        .join("projects/nested/bar");
     fs::create_dir_all(&project_dir).expect("create the project directory");
     fs::write(workspace.path().join(".npmrc"), format!("registry={}/\n", server.url()))
         .expect("write .npmrc");
     fs::write(
-        workspace.path().join("pnpm-workspace.yaml"),
+        workspace
+            .path()
+            .join("pnpm-workspace.yaml"),
         "packages:\n  - projects/*/*\ncatalog:\n  \
          pkg-from-tarball: file:./tarballs/pkg-from-tarball-1.0.0.tgz\n  \
          local-lib: link:./libs/local-lib\n",

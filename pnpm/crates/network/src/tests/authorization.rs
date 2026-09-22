@@ -279,9 +279,13 @@ async fn default_tls_rejects_an_untrusted_certificate_without_panicking() {
             .with_single_cert(vec![cert], key)
             .expect("configure untrusted TLS server");
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind TLS server");
-        let address = listener.local_addr().expect("TLS server address");
+        let address = listener
+            .local_addr()
+            .expect("TLS server address");
         let server = std::thread::spawn(move || {
-            let (mut stream, _) = listener.accept().expect("accept TLS connection");
+            let (mut stream, _) = listener
+                .accept()
+                .expect("accept TLS connection");
             stream
                 .set_read_timeout(Some(Duration::from_secs(10)))
                 .expect("set read timeout");
@@ -303,7 +307,9 @@ async fn default_tls_rejects_an_untrusted_certificate_without_panicking() {
             .expect_err("untrusted certificate must fail verification");
         eprintln!("TLS error: {error:?}");
         assert!(error.is_connect(), "expected a TLS connection error: {error:?}");
-        server.join().expect("TLS server thread");
+        server
+            .join()
+            .expect("TLS server thread");
     }
 }
 
@@ -382,7 +388,12 @@ fn a_blank_scoped_cert_shadows_the_top_level_identity() {
         ..TlsConfig::default()
     };
     let scoped = RegistryTls { cert: Some(String::new()), ..RegistryTls::default() };
-    assert_eq!(super::super::merge_tls(&top, &scoped).cert.as_deref(), Some(""));
+    assert_eq!(
+        super::super::merge_tls(&top, &scoped)
+            .cert
+            .as_deref(),
+        Some("")
+    );
 }
 
 /// The blocked-redirect error must name only the origin, never the path or

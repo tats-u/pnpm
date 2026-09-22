@@ -32,7 +32,9 @@ pub(super) fn build_extra_env(
         env.insert("NODE_OPTIONS".to_string(), node_options.clone());
     }
     if matches!(node_linker, NodeLinker::Pnp) {
-        let node_options = env.get("NODE_OPTIONS").map(String::as_str);
+        let node_options = env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
         env.insert(
             "NODE_OPTIONS".to_string(),
             crate::make_node_require_option(
@@ -42,8 +44,12 @@ pub(super) fn build_extra_env(
         );
     }
     if config.node_experimental_package_map && !matches!(node_linker, NodeLinker::Pnp) {
-        let package_map_path = config.modules_dir.join(crate::package_map::PACKAGE_MAP_FILENAME);
-        let node_options = env.get("NODE_OPTIONS").map(String::as_str);
+        let package_map_path = config
+            .modules_dir
+            .join(crate::package_map::PACKAGE_MAP_FILENAME);
+        let node_options = env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
         env.insert(
             "NODE_OPTIONS".to_string(),
             crate::make_node_package_map_option(&package_map_path, node_options),
@@ -59,7 +65,9 @@ pub(super) async fn await_lockfile_gate(
     gate: &mut Option<crate::install::LockfileVerificationGate>,
 ) -> Result<(), InstallWithFreshLockfileError> {
     let Some(gate) = gate.take() else { return Ok(()) };
-    gate.wait().await.map_err(InstallWithFreshLockfileError::LockfileVerification)
+    gate.wait()
+        .await
+        .map_err(InstallWithFreshLockfileError::LockfileVerification)
 }
 /// What the on-disk phases read once the lockfile is built and the
 /// materialization plan is fixed.
@@ -107,7 +115,11 @@ impl<'a> OnDiskInputs<'a> {
     /// See `linking::run_link_phase` for why this anchors on
     /// `modules_dir.parent()` rather than the install root.
     fn symlink_root(&self) -> &'a Path {
-        self.ctx.config.modules_dir.parent().unwrap_or(self.ctx.workspace_root)
+        self.ctx
+            .config
+            .modules_dir
+            .parent()
+            .unwrap_or(self.ctx.workspace_root)
     }
 
     /// Materialize the virtual store. Skipped snapshots stay out of every
@@ -135,11 +147,17 @@ impl<'a> OnDiskInputs<'a> {
             selection: pnpm_deps_restorer::SnapshotSelection {
                 skipped,
                 include_optional: self.include_transitive_optional_dependencies,
-                supported_architectures: self.install.projects.supported_architectures,
+                supported_architectures: self
+                    .install
+                    .projects
+                    .supported_architectures,
             },
             ctx: self.ctx,
 
-            entries: self.projects.materialization_lockfile.into(),
+            entries: self
+                .projects
+                .materialization_lockfile
+                .into(),
             current_entries: LockfileEntries::of_previous_install(self.install.prior.lockfile),
 
             dir_clone_cache: self.store.dir_clone_cache,
@@ -182,9 +200,8 @@ impl<'a> OnDiskInputs<'a> {
         pnpm_deps_restorer::LinkLockfiles {
             lockfile: self.projects.materialization_lockfile,
             current_lockfile: self.install.prior.lockfile,
-            materialized_snapshots: (!self.install.prior.relink_every_slot_bin).then_some(
-                materialized_snapshots,
-            ),
+            materialized_snapshots: (!self.install.prior.relink_every_slot_bin)
+                .then_some(materialized_snapshots),
             sidecar_lockfile: self.projects.materialization_lockfile,
         }
     }
@@ -197,9 +214,12 @@ impl<'a> OnDiskInputs<'a> {
         materialized: &mut CreateVirtualStoreOutput,
         skipped: &mut SkippedSnapshots,
     ) -> Result<pnpm_deps_restorer::linking::LinkPhaseOutput, InstallWithFreshLockfileError> {
-        let project_manifests = self.projects.project_manifests(self.ctx.workspace_root, true);
-        let package_map_project_manifests =
-            self.projects.project_manifests(self.ctx.workspace_root, false);
+        let project_manifests = self
+            .projects
+            .project_manifests(self.ctx.workspace_root, true);
+        let package_map_project_manifests = self
+            .projects
+            .project_manifests(self.ctx.workspace_root, false);
         let root_component_importers = self.projects.root_component_importers();
 
         let linked = pnpm_deps_restorer::linking::run_link_phase::<Reporter>(
@@ -216,13 +236,18 @@ impl<'a> OnDiskInputs<'a> {
                     package_map_manifests: &package_map_project_manifests,
                     dependency_groups: self.install.projects.dependency_groups,
                     symlink_root: self.symlink_root(),
-                    trusted_importer_ids: self.projects.project_anchor_importer_ids,
+                    trusted_importer_ids: self
+                        .projects
+                        .project_anchor_importer_ids,
                     root_component_importers: &root_component_importers,
                 },
                 ctx: self.ctx,
 
                 host_node: self.runtime.host_node,
-                supported_architectures: self.install.projects.supported_architectures,
+                supported_architectures: self
+                    .install
+                    .projects
+                    .supported_architectures,
             },
             skipped,
         )
@@ -266,19 +291,27 @@ impl<'a> OnDiskInputs<'a> {
         );
         let built = crate::install_frozen_lockfile::run_build_phase::<Reporter>(
             &crate::install_frozen_lockfile::BuildPhaseInputs {
-                cache: materialized.build_cache(
-                    engine_name.as_deref(),
-                    &self.store.store_index_writer,
-                ),
+                cache: materialized
+                    .build_cache(engine_name.as_deref(), &self.store.store_index_writer),
                 directories: build_directories(self.ctx, linked, top_level_bin_root),
                 graph: pnpm_deps_restorer::BuildPhaseGraph {
-                    snapshots: self.projects.materialization_lockfile.snapshots.as_ref(),
-                    packages: self.projects.materialization_lockfile.packages.as_ref(),
-                    importers: &self.projects.materialization_lockfile.importers,
+                    snapshots: self
+                        .projects
+                        .materialization_lockfile
+                        .snapshots
+                        .as_ref(),
+                    packages: self
+                        .projects
+                        .materialization_lockfile
+                        .packages
+                        .as_ref(),
+                    importers: &self
+                        .projects
+                        .materialization_lockfile
+                        .importers,
                     dependency_groups: self.install.projects.dependency_groups,
-                    materialized_snapshots: linked.build_snapshots(
-                        &materialized.materialized_snapshots,
-                    ),
+                    materialized_snapshots: linked
+                        .build_snapshots(&materialized.materialized_snapshots),
                 },
                 policy: pnpm_deps_restorer::BuildPhasePolicy {
                     config: self.ctx.config,
@@ -311,7 +344,9 @@ pub(super) async fn run_on_disk_phases<Reporter: self::Reporter + 'static>(
 ) -> Result<OnDiskOutput, InstallWithFreshLockfileError> {
     let ctx = inputs.ctx;
     let lockfile = inputs.projects.materialization_lockfile;
-    let mut materialized = inputs.materialize::<Reporter>(skipped).await?;
+    let mut materialized = inputs
+        .materialize::<Reporter>(skipped)
+        .await?;
 
     // The concurrent pre-resolve verification of the existing
     // lockfile must have its verdict before anything sensitive: the
@@ -321,18 +356,17 @@ pub(super) async fn run_on_disk_phases<Reporter: self::Reporter + 'static>(
     fold_fetch_failures(skipped, std::mem::take(&mut materialized.fetch_failed));
 
     let linked = inputs.link::<Reporter>(&mut materialized, skipped)?;
-    let crate::BuildModulesOutput {
-        ignored_builds,
-        deferred_builds,
-        mutated_slots: _,
-    } = inputs.build::<Reporter>(&materialized, &linked, skipped).await?;
+    let crate::BuildModulesOutput { ignored_builds, deferred_builds, mutated_slots: _ } = inputs
+        .build::<Reporter>(&materialized, &linked, skipped)
+        .await?;
 
     let injected_deps = crate::collect_injected_deps(
         ctx.linker.layout,
         ctx.workspace_root,
         lockfile.into(),
         skipped,
-        ctx.is_hoisted().then_some(&linked.hoisted_locations),
+        ctx.is_hoisted()
+            .then_some(&linked.hoisted_locations),
     );
     Ok(OnDiskOutput {
         hoisted: pnpm_deps_restorer::InstalledHoistedState {
@@ -354,11 +388,15 @@ pub(super) async fn finish_early_materialization<Reporter: self::Reporter + 'sta
 ) {
     let Some(materializer) = materializer else { return };
     let phase_start = std::time::Instant::now();
-    let materialized = materializer.finish(
-        |key| wanted.is_some_and(|snapshots| snapshots.contains_key(key)) && !skipped.contains(key),
-        logged_methods,
-    )
-    .await;
+    let materialized = materializer
+        .finish(
+            |key| {
+                wanted.is_some_and(|snapshots| snapshots.contains_key(key))
+                    && !skipped.contains(key)
+            },
+            logged_methods,
+        )
+        .await;
     tracing::info!(
         target: "pacquet::install::phase",
         phase = "early_materialization",
@@ -387,7 +425,9 @@ pub(super) fn publish_deps_requiring_build(
         .filter(|(_, requires_build)| **requires_build)
         .map(|(snapshot_key, _)| snapshot_key.to_string())
         .collect();
-    *sink.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(deps_requiring_build);
+    *sink
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(deps_requiring_build);
 }
 /// Resolve the deferred `node --version` probe (non-GVS path); it overlapped
 /// `CreateVirtualStore`. Falls back to the synchronous value when the probe
@@ -411,7 +451,10 @@ impl OnDiskProjects<'_> {
         self.importer_manifests
             .iter()
             .filter(|(id, _)| {
-                !only_anchors || self.project_anchor_importer_ids.contains(id.as_str())
+                !only_anchors
+                    || self
+                        .project_anchor_importer_ids
+                        .contains(id.as_str())
             })
             .map(|(id, manifest)| (workspace_root.join(id), *manifest))
             .collect()
@@ -420,7 +463,10 @@ impl OnDiskProjects<'_> {
     fn root_component_importers(&self) -> std::collections::HashSet<String> {
         self.importer_manifests
             .iter()
-            .filter(|(id, _)| self.project_anchor_importer_ids.contains(id.as_str()))
+            .filter(|(id, _)| {
+                self.project_anchor_importer_ids
+                    .contains(id.as_str())
+            })
             .filter(|(_, manifest)| {
                 manifest.install_config_hoisting_limits()
                     == Some(pnpm_deps_restorer::HOISTING_LIMITS_WORKSPACES)

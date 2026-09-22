@@ -33,7 +33,9 @@ where
         .await?;
     let grandchild_overlay =
         PreferredVersionsOverlay::layer(node.children_overlay.clone(), level_versions(ctx, &seeds));
-    let grandchild_pkg_aliases = node.children_pkg_aliases.extend(level_aliases(&seeds));
+    let grandchild_pkg_aliases = node
+        .children_pkg_aliases
+        .extend(level_aliases(&seeds));
     Ok(SeededNode { node, child_specs, seeds, grandchild_overlay, grandchild_pkg_aliases })
 }
 
@@ -112,19 +114,26 @@ pub(super) struct ChildSeedScope<'s> {
 impl<'s> ChildSeedScope<'s> {
     pub(super) fn of(ctx: &'s TreeCtx, pending: &PendingNode) -> Self {
         Self {
-            prior_children_snapshot: pending.prior_key
+            prior_children_snapshot: pending
+                .prior_key
                 .as_ref()
                 .filter(|key| landed_on_prior_entry(key, &pending.identity.id))
                 .and_then(|key| {
-                    ctx.workspace.reuse.lockfile
+                    ctx.workspace
+                        .reuse
+                        .lockfile
                         .as_ref()?
                         .snapshots
                         .as_ref()?
                         .get(key)
                 }),
-            direct_versions: lock_recoverable(&ctx.workspace.versions.direct_dep_versions)
-                .get(&ctx.importer.id)
-                .map(Arc::clone),
+            direct_versions: lock_recoverable(
+                &ctx.workspace
+                    .versions
+                    .direct_dep_versions,
+            )
+            .get(&ctx.importer.id)
+            .map(Arc::clone),
             declaring_dir: declaring_manifest_dir(ctx, &pending.result),
             parent_is_workspace: pending.result.resolved_via == "workspace",
         }
@@ -149,7 +158,10 @@ where
         ChildEdge {
             ancestor_ids: &node.pending.ancestry.next_ancestors,
             depth: node.pending.ancestry.depth + 1,
-            parent_optional: node.pending.ancestry.current_is_optional,
+            parent_optional: node
+                .pending
+                .ancestry
+                .current_is_optional,
             reuse: ReuseSource::Transitive { key: prior },
             pick_overlay: node.children_overlay.clone(),
             parent_dir: scope.declaring_dir.as_deref(),
@@ -177,8 +189,9 @@ pub(super) fn child_wanted(
         injected: injected.then_some(true),
         ..WantedDependency::default()
     };
-    let mut prior =
-        scope.prior_children_snapshot.and_then(|snapshot| prior_child_key(snapshot, name, range));
+    let mut prior = scope
+        .prior_children_snapshot
+        .and_then(|snapshot| prior_child_key(snapshot, name, range));
     if let Some(higher) = prior
         .as_ref()
         .and_then(|key| key.suffix.version_semver().cloned())

@@ -25,8 +25,8 @@ pub(super) fn derive_cache_keys(
         .keys()
         .map(|snapshot_key| {
             let cache_key =
-                snapshot_cache_key(snapshot_key, packages, config.ignore_scripts, &selector)
-                    .map(|mut key| {
+                snapshot_cache_key(snapshot_key, packages, config.ignore_scripts, &selector).map(
+                    |mut key| {
                         if key.is_git_hosted
                             && allow_build_policy.check(&snapshot_key.without_peer().to_string())
                                 == Some(false)
@@ -37,7 +37,8 @@ pub(super) fn derive_cache_keys(
                             ));
                         }
                         key
-                    });
+                    },
+                );
             (snapshot_key.clone(), cache_key)
         })
         .collect()
@@ -217,7 +218,11 @@ pub(crate) fn dir_clone_cacheable(
         && packages
             .get(&snapshot_key.without_peer())
             .filter(|metadata| integrity_identifies_content(&metadata.resolution))
-            .and_then(|metadata| metadata.resolution.checkable_integrity())
+            .and_then(|metadata| {
+                metadata
+                    .resolution
+                    .checkable_integrity()
+            })
             .is_some()
 }
 /// Whether a resolution's recorded `integrity` pins the bytes the

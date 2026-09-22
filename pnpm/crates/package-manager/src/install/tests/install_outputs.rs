@@ -73,7 +73,9 @@ async fn should_install_dependencies() {
     manifest
         .add_dependency("@pnpm.e2e/hello-world-js-bin", "1.0.0", DependencyGroup::Prod)
         .unwrap();
-    manifest.add_dependency("@pnpm/xyz", "1.0.0", DependencyGroup::Dev).unwrap();
+    manifest
+        .add_dependency("@pnpm/xyz", "1.0.0", DependencyGroup::Dev)
+        .unwrap();
 
     manifest.save().unwrap();
 
@@ -162,24 +164,20 @@ async fn should_install_dependencies() {
         "install must report the input package manifest exactly once; events={captured:#?}",
     );
     assert!(
-        captured
-            .iter()
-            .any(|event| matches!(
-                event,
-                LogEvent::Stats(StatsLog {
-                    message: StatsMessage::Added { added, .. },
-                    ..
-                }) if *added > 0
-            )),
+        captured.iter().any(|event| matches!(
+            event,
+            LogEvent::Stats(StatsLog {
+                message: StatsMessage::Added { added, .. },
+                ..
+            }) if *added > 0
+        )),
         "install must report a positive added count; events={captured:#?}",
     );
     assert!(
-        captured
-            .iter()
-            .any(|event| matches!(
-                event,
-                LogEvent::Stats(StatsLog { message: StatsMessage::Removed { removed: 0, .. }, .. })
-            )),
+        captured.iter().any(|event| matches!(
+            event,
+            LogEvent::Stats(StatsLog { message: StatsMessage::Removed { removed: 0, .. }, .. })
+        )),
         "install must report that it removed no packages; events={captured:#?}",
     );
     let importing_done_indices: Vec<_> = captured
@@ -237,9 +235,8 @@ async fn should_install_dependencies() {
     // matching the snapshot key shape `pnpm install` would write
     // to `pnpm-lock.yaml` and the slot the frozen-lockfile
     // path materialises into.
-    let path = project_root.join(
-        "node_modules/.pacquet/@pnpm+xyz@1.0.0_@pnpm+x@1.0.0_@pnpm+y@1.0.0_@pnpm+z@1.0.0",
-    );
+    let path = project_root
+        .join("node_modules/.pacquet/@pnpm+xyz@1.0.0_@pnpm+x@1.0.0_@pnpm+y@1.0.0_@pnpm+z@1.0.0");
     eprintln!("path={path:?} is_dir={}", path.is_dir());
     assert!(path.is_dir());
 
@@ -267,7 +264,9 @@ async fn install_prunes_surplus_virtual_store_dir() {
 
     // Seed a surplus virtual-store directory that no lockfile entry
     // references. The install must sweep it.
-    let surplus = dirs.virtual_store_dir.join("surplus-pkg@9.9.9");
+    let surplus = dirs
+        .virtual_store_dir
+        .join("surplus-pkg@9.9.9");
     std::fs::create_dir_all(&surplus).unwrap();
 
     let mut config = Config::new();
@@ -330,7 +329,9 @@ async fn install_prunes_surplus_virtual_store_dir() {
     .expect("install should succeed");
 
     assert!(
-        dirs.virtual_store_dir.join("@pnpm.e2e+hello-world-js-bin@1.0.0").exists(),
+        dirs.virtual_store_dir
+            .join("@pnpm.e2e+hello-world-js-bin@1.0.0")
+            .exists(),
         "the installed package's virtual-store dirs.dir must survive the prune",
     );
     assert!(!surplus.exists(), "the surplus virtual-store dirs.dir must be pruned on install");
@@ -422,20 +423,30 @@ async fn npm_alias_dependency_installs_under_alias_key() {
     .await
     .expect("npm-alias install should succeed");
 
-    let alias_link = dirs.project_root.join("node_modules/hello-world-alias");
+    let alias_link = dirs
+        .project_root
+        .join("node_modules/hello-world-alias");
     assert!(
         is_symlink_or_junction(&alias_link).unwrap(),
         "expected alias symlink at {alias_link:?}",
     );
     assert!(
-        !dirs.project_root.join("node_modules/@pnpm.e2e/hello-world-js-bin").exists(),
+        !dirs
+            .project_root
+            .join("node_modules/@pnpm.e2e/hello-world-js-bin")
+            .exists(),
         "the real package name must not be exposed alongside an unrelated alias",
     );
 
-    let virtual_store_path =
-        dirs.project_root.join("node_modules/.pacquet/@pnpm.e2e+hello-world-js-bin@1.0.0");
+    let virtual_store_path = dirs
+        .project_root
+        .join("node_modules/.pacquet/@pnpm.e2e+hello-world-js-bin@1.0.0");
     assert!(virtual_store_path.is_dir(), "expected real-name virtual store dirs.dir");
-    assert!(virtual_store_path.join("node_modules/@pnpm.e2e/hello-world-js-bin").is_dir());
+    assert!(
+        virtual_store_path
+            .join("node_modules/@pnpm.e2e/hello-world-js-bin")
+            .is_dir()
+    );
 
     drop((dirs.dir, mock_instance));
 }
@@ -529,19 +540,26 @@ async fn unversioned_npm_alias_defaults_to_latest() {
     .await
     .expect("unversioned npm-alias install should succeed (defaults to latest)");
 
-    let alias_link = dirs.project_root.join("node_modules/hello-world-alias");
+    let alias_link = dirs
+        .project_root
+        .join("node_modules/hello-world-alias");
     assert!(
         is_symlink_or_junction(&alias_link).unwrap(),
         "expected alias symlink at {alias_link:?}",
     );
     assert!(
-        !dirs.project_root.join("node_modules/@pnpm.e2e/hello-world-js-bin").exists(),
+        !dirs
+            .project_root
+            .join("node_modules/@pnpm.e2e/hello-world-js-bin")
+            .exists(),
         "the real package name must not be exposed alongside the alias",
     );
 
     // Virtual-store directory uses the real package name (version resolved
     // at runtime from `latest` — just assert the real name prefix exists).
-    let virtual_store_dir_path = dirs.project_root.join("node_modules/.pacquet");
+    let virtual_store_dir_path = dirs
+        .project_root
+        .join("node_modules/.pacquet");
     let has_real_name_dir = std::fs::read_dir(&virtual_store_dir_path)
         .unwrap()
         .flatten()
@@ -572,10 +590,9 @@ pub(super) async fn install_writes_modules_yaml() {
     config.store_dir = dirs.store_dir.clone().into();
     config.modules_dir = dirs.modules_dir.clone();
     config.virtual_store_dir = dirs.virtual_store_dir.clone();
-    config.registries_by_scope.insert(
-        "@private".to_string(),
-        "https://private.example.com/npm/".to_string(),
-    );
+    config
+        .registries_by_scope
+        .insert("@private".to_string(), "https://private.example.com/npm/".to_string());
     let config = config.leak();
 
     // Empty v9 lockfile drives the cheapest successful install path,
@@ -654,7 +671,8 @@ pub(super) async fn install_writes_modules_yaml() {
         virtual_store_dir_max_length,
         package_manager,
         ..
-    } = dirs.modules_dir
+    } = dirs
+        .modules_dir
         .pipe_as_ref(read_modules_manifest::<Host>)
         .expect("read .modules.yaml")
         .expect("modules manifest exists");
@@ -772,9 +790,11 @@ async fn install_optional_failing_postinstall_dep_via_registry_mock_succeeds() {
 
     // Both the wrapper and the transitive must reach the virtual store.
     assert!(
-        is_symlink_or_junction(&dirs.project_root.join(
-            "node_modules/@pnpm.e2e/has-failing-postinstall-dep"
-        ),)
+        is_symlink_or_junction(
+            &dirs
+                .project_root
+                .join("node_modules/@pnpm.e2e/has-failing-postinstall-dep"),
+        )
         .unwrap(),
         "wrapper symlink missing",
     );

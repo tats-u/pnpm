@@ -120,7 +120,9 @@ fn install_cli_globally<Reporter: self::Reporter + 'static>(
     let separator = if cfg!(windows) { ";" } else { ":" };
     // Build `PATH` as an `OsString` so a non-UTF-8 ambient `PATH` is
     // preserved verbatim rather than lost to a lossy string conversion.
-    let mut path_value = pnpm_home_dir.join("bin").into_os_string();
+    let mut path_value = pnpm_home_dir
+        .join("bin")
+        .into_os_string();
     path_value.push(separator);
     if let Some(existing) = std::env::var_os("PATH") {
         path_value.push(existing);
@@ -135,9 +137,13 @@ fn install_cli_globally<Reporter: self::Reporter + 'static>(
     // over a cleanup error.
     let cleanup = if created_pkg_json { fs::remove_file(&pkg_json_path) } else { Ok(()) };
 
-    let status = status.into_diagnostic().wrap_err("run the global pnpm install")?;
+    let status = status
+        .into_diagnostic()
+        .wrap_err("run the global pnpm install")?;
     if !status.success() {
-        let code = status.code().map_or_else(|| "unknown".to_string(), |code| code.to_string());
+        let code = status
+            .code()
+            .map_or_else(|| "unknown".to_string(), |code| code.to_string());
         return Err(miette::miette!("Failed to install pnpm globally (exit code {code})"));
     }
     cleanup

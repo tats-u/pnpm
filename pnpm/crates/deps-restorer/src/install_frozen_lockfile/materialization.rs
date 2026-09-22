@@ -49,16 +49,18 @@ impl<'a> InstallFrozenLockfile<'a> {
             // `allow_build_policy` was constructed up-front (before
             // `CreateVirtualStore`) so the git fetcher could consult it.
             run_build_phase::<Reporter>(&BuildPhaseInputs {
-                cache: phase.fetched.build_cache(engine_name.as_deref(), phase.store_index_writer),
+                cache: phase
+                    .fetched
+                    .build_cache(engine_name.as_deref(), phase.store_index_writer),
                 directories: build_directories(install, ctx, phase.linked),
                 graph: crate::BuildPhaseGraph {
                     snapshots,
                     packages,
                     importers: &install.lockfiles.wanted.importers,
                     dependency_groups: install.projects.dependency_groups,
-                    materialized_snapshots: phase.linked.build_snapshots(
-                        &phase.fetched.materialized_snapshots,
-                    ),
+                    materialized_snapshots: phase
+                        .linked
+                        .build_snapshots(&phase.fetched.materialized_snapshots),
                 },
                 policy: install.build_policy(ctx.allow_build_policy),
 
@@ -88,7 +90,12 @@ impl<'a> InstallFrozenLockfile<'a> {
                     current_lockfile: install.lockfiles.current,
                     materialized_snapshots: (install.prior.rebuild.is_none()
                         && !install.prior.relink_every_slot_bin)
-                        .then_some(phase.fetched.materialized_snapshots.as_slice()),
+                        .then_some(
+                            phase
+                                .fetched
+                                .materialized_snapshots
+                                .as_slice(),
+                        ),
                     sidecar_lockfile: phase.current_lockfile,
                 },
                 packages: crate::LinkPackageData {
@@ -177,8 +184,9 @@ impl<'a> InstallFrozenLockfile<'a> {
             let phase_start = std::time::Instant::now();
             let installability_host = host.host_detection.resolve().await;
             report_host_detection_wait(phase_start, host.needs_installability_check);
-            let host_node =
-                installability_host.as_ref().map(crate::materialization_plan::HostNode::from);
+            let host_node = installability_host
+                .as_ref()
+                .map(crate::materialization_plan::HostNode::from);
             // Deliver the host-derived engine name to the directory-clone
             // cache's shared slot before anything can wait on it, and pick
             // it up for `BuildModules` below.
@@ -194,7 +202,10 @@ impl<'a> InstallFrozenLockfile<'a> {
                     closure: crate::SkipSetClosure {
                         lockfile: inputs.lockfiles.wanted,
                         root: inputs.projects.workspace_root,
-                        importer_ids: &inputs.lockfiles.wanted.importers
+                        importer_ids: &inputs
+                            .lockfiles
+                            .wanted
+                            .importers
                             .keys()
                             .cloned()
                             .collect(),

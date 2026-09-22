@@ -183,10 +183,8 @@ async fn prepare_pnpr_session<'a, Reporter: self::Reporter + 'static>(
     link: &PnprLink<'_>,
     lockfile_dir: &std::path::Path,
 ) -> miette::Result<PnprSession<'a>> {
-    let PreviousWanted {
-        lockfile: previous_wanted,
-        had_conflicts,
-    } = load_previous_wanted::<Reporter>(state, link, lockfile_dir)?;
+    let PreviousWanted { lockfile: previous_wanted, had_conflicts } =
+        load_previous_wanted::<Reporter>(state, link, lockfile_dir)?;
     let merge_wanted = merge_source(state, link, previous_wanted)?;
 
     let selection_importer_ids = selection_importer_ids(state, selection);
@@ -273,21 +271,22 @@ async fn resolve_via_pnpr(
 
     let result = match prefetcher.as_ref() {
         Some(prefetcher) => {
-            client.resolve_projects_streaming(opts, |pkg| {
-                let tarball = benchmark_registry_override.map_or_else(
-                    || pkg.tarball.clone(),
-                    |registry| registry.client_tarball_url(&pkg.tarball),
-                );
-                prefetcher.prefetch(
-                    pkg.id,
-                    tarball,
-                    &pkg.integrity,
-                    pkg.unpacked_size,
-                    pkg.file_count,
-                    pkg.revision.is_some(),
-                );
-            })
-            .await
+            client
+                .resolve_projects_streaming(opts, |pkg| {
+                    let tarball = benchmark_registry_override.map_or_else(
+                        || pkg.tarball.clone(),
+                        |registry| registry.client_tarball_url(&pkg.tarball),
+                    );
+                    prefetcher.prefetch(
+                        pkg.id,
+                        tarball,
+                        &pkg.integrity,
+                        pkg.unpacked_size,
+                        pkg.file_count,
+                        pkg.revision.is_some(),
+                    );
+                })
+                .await
         }
         None => client.resolve_projects(opts).await,
     };
@@ -326,8 +325,9 @@ fn load_previous_wanted<'a, Reporter: self::Reporter + 'static>(
     let loaded = lockfile_source.get();
     match loaded {
         Ok(lockfile) => {
-            let merged_conflict_files =
-                lockfile_source.merged_conflict_files().map_err(miette::Report::new)?;
+            let merged_conflict_files = lockfile_source
+                .merged_conflict_files()
+                .map_err(miette::Report::new)?;
             report_merged_lockfile_conflicts::<Reporter>(
                 merged_conflict_files,
                 &lockfile_dir.to_string_lossy(),
@@ -342,7 +342,9 @@ fn load_previous_wanted<'a, Reporter: self::Reporter + 'static>(
                         "Ignoring broken lockfile at {}: {error}",
                         lockfile_dir.display(),
                     ),
-                    prefix: lockfile_dir.to_string_lossy().into_owned(),
+                    prefix: lockfile_dir
+                        .to_string_lossy()
+                        .into_owned(),
                 },
             ));
             Ok(PreviousWanted::default())
@@ -425,7 +427,9 @@ async fn resolve_and_link_pnpr<Reporter: self::Reporter + 'static>(
         state,
         pnpr_server,
         opts,
-        inputs.benchmark_registry_override.as_ref(),
+        inputs
+            .benchmark_registry_override
+            .as_ref(),
         ResolveStreaming {
             lockfile_dir,
             lockfile_only: link.lockfile.only,

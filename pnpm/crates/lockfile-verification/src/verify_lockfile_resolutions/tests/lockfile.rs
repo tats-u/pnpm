@@ -38,7 +38,8 @@ packages:
 #[tokio::test]
 async fn verifier_receives_the_lockfile_resolution_verbatim() {
     let lockfile = parse(SINGLE_PKG_LOCKFILE);
-    let expected = lockfile.packages
+    let expected = lockfile
+        .packages
         .as_ref()
         .expect("packages")
         .values()

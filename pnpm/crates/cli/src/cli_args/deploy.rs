@@ -142,11 +142,13 @@ struct SelectedProject {
 
 impl SelectedProject {
     fn project_info(&self, root: &Path) -> Option<&ProjectInfo> {
-        self.projects_by_path.get(&ProjectPathKey::new(root))
+        self.projects_by_path
+            .get(&ProjectPathKey::new(root))
     }
 
     fn has_bin(&self, root: &Path) -> Option<bool> {
-        self.project_info(root).map(|project| project.has_bin)
+        self.project_info(root)
+            .map(|project| project.has_bin)
     }
 }
 
@@ -166,8 +168,10 @@ impl DeployArgs {
         config: &'static Config,
         dir: &Path,
     ) -> miette::Result<()> {
-        let workspace_dir =
-            config.workspace_dir.as_deref().ok_or_else(|| cannot_deploy_error(dir))?;
+        let workspace_dir = config
+            .workspace_dir
+            .as_deref()
+            .ok_or_else(|| cannot_deploy_error(dir))?;
         let selected = select_project(config, workspace_dir, dir)?;
         if self.target_dirs.len() != 1 {
             return Err(DeployError::InvalidDeployTarget.into());
@@ -202,7 +206,8 @@ impl DeployArgs {
             );
         }
 
-        self.run_legacy_deploy::<ReporterT>(config, &selected, &deploy_dir, source_hooks).await
+        self.run_legacy_deploy::<ReporterT>(config, &selected, &deploy_dir, source_hooks)
+            .await
     }
 
     async fn run_legacy_deploy<ReporterT: Reporter + 'static>(
@@ -277,7 +282,9 @@ impl DeployArgs {
         };
 
         let project_id = importer_id_from_root_dir(lockfile_dir, &selected.project.root_dir);
-        let dependency_groups = self.install_args.dependency_options
+        let dependency_groups = self
+            .install_args
+            .dependency_options
             .dependency_groups(config.optional)
             .collect::<Vec<_>>();
         let deploy_files = create_deploy_files(
@@ -355,7 +362,8 @@ fn index_projects(projects: &[Project]) -> HashMap<ProjectPathKey, ProjectInfo> 
         projects_by_path
             .entry(ProjectPathKey::new(&project.root_dir))
             .or_insert_with(|| ProjectInfo {
-                name: project.manifest
+                name: project
+                    .manifest
                     .value()
                     .get("name")
                     .and_then(Value::as_str)

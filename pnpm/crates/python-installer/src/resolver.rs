@@ -26,7 +26,9 @@ pub(super) async fn resolve_all<Reporter: InstallReporter + 'static>(
 ) -> Result<Vec<Solved>> {
     let mut solved = Vec::new();
     for environment in environments {
-        registry.resolution.answer_for(environment.target.clone());
+        registry
+            .resolution
+            .answer_for(environment.target.clone());
         let solution = resolve::<Reporter>(registry, requirements).await?;
         solved.push(Solved::new(
             environment.target.clone(),
@@ -35,7 +37,9 @@ pub(super) async fn resolve_all<Reporter: InstallReporter + 'static>(
             environment.declared.clone(),
         )?);
     }
-    registry.resolution.answer_for(registry.interpreter.target.clone());
+    registry
+        .resolution
+        .answer_for(registry.interpreter.target.clone());
     Ok(solved)
 }
 
@@ -48,23 +52,33 @@ pub(super) async fn resolve<Reporter: InstallReporter + 'static>(
 ) -> Result<BTreeMap<PackageName, Version>> {
     let mut alternatives = Vec::new();
     loop {
-        let environment = registry.resolution.target.environment.clone();
+        let environment = registry
+            .resolution
+            .target
+            .environment
+            .clone();
         match pnpm_python_resolver::step(&registry.resolution.packages, requirements, &environment)?
         {
             Step::Solved(solution) => return Ok(solution),
             Step::NeedCandidates(name) => registry.fetch_index(&name).await?,
             Step::NeedUrl(name, url) => {
                 let mut alternative = registry.resolution.packages.clone();
-                alternative.rejected_sources.insert((name.clone(), url.clone()));
+                alternative
+                    .rejected_sources
+                    .insert((name.clone(), url.clone()));
                 alternatives.push(alternative);
-                registry.fetch_source::<Reporter>(&name, &url).await?;
+                registry
+                    .fetch_source::<Reporter>(&name, &url)
+                    .await?;
             }
             Step::Backtrack(message) => {
                 let Some(alternative) = alternatives.pop() else { bail!("{message}") };
                 registry.resolution.packages = alternative;
             }
             Step::NeedMetadata(name, version) => {
-                registry.fetch_metadata::<Reporter>(&name, &version).await?;
+                registry
+                    .fetch_metadata::<Reporter>(&name, &version)
+                    .await?;
             }
         }
         tokio::task::yield_now().await;

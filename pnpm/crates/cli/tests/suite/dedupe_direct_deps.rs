@@ -28,13 +28,8 @@ use std::{fs, path::Path, process::Command};
 /// get a `node_modules/` of its own.
 #[test]
 fn dedupes_direct_deps_against_workspace_root() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -100,13 +95,8 @@ fn dedupes_direct_deps_against_workspace_root() {
 /// resolves the same alias to the same target.
 #[test]
 fn dedupe_direct_deps_disabled_keeps_per_project_symlinks() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -167,13 +157,8 @@ fn dedupe_direct_deps_disabled_keeps_per_project_symlinks() {
 /// `install_frozen_lockfile` codepath.
 #[test]
 fn dedupes_direct_deps_with_frozen_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -265,13 +250,8 @@ fn dedupes_direct_deps_with_frozen_lockfile() {
 /// non-root importer, frozen-lockfile replay.
 #[test]
 fn dedupe_off_by_default_keeps_shared_workspace_link() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // Root depends on the shared workspace package, exactly like the
@@ -390,7 +370,9 @@ fn fs_remove_dir_all(path: &Path) {
 /// drive a second invocation in the same workspace because
 /// [`assert_cmd::Command::assert`] consumes the wrapped command.
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 /// Partial dedupe: a sibling with one shared dep and one unique
@@ -398,13 +380,8 @@ fn pacquet_at(workspace: &Path) -> Command {
 /// while the shared dep is omitted.
 #[test]
 fn dedupes_only_overlapping_direct_deps() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -469,13 +446,8 @@ fn dedupes_only_overlapping_direct_deps() {
 /// manifests produces (pnpm/pnpm#13775).
 #[test]
 fn removes_a_project_link_the_root_starts_providing() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let root_manifest_path = workspace.join("package.json");
@@ -567,13 +539,8 @@ fn removes_a_project_link_the_root_starts_providing() {
 /// pins that normalisation.
 #[test]
 fn dedupes_link_deps_resolving_to_the_same_dir_via_different_segments() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -654,13 +621,8 @@ fn dedupes_link_deps_resolving_to_the_same_dir_via_different_segments() {
 /// the dedupe pass skips re-creating the project-2 symlink for it.
 #[test]
 fn dedupes_direct_dep_against_publicly_hoisted_root_dep() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -755,13 +717,8 @@ fn dedupes_direct_dep_against_publicly_hoisted_root_dep() {
 /// install now runs end-to-end.
 #[test]
 fn dedupe_under_shamefully_hoist() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -812,7 +769,9 @@ fn dedupe_under_shamefully_hoist() {
         "@pnpm.e2e/foobar",
         "@pnpm.e2e/foo",
     ] {
-        let entry = workspace.join("node_modules").join(alias);
+        let entry = workspace
+            .join("node_modules")
+            .join(alias);
         let entry_linked = is_symlink_or_junction(&entry).expect("query root entry");
         eprintln!("entry={entry:?} linked={entry_linked}");
         assert!(entry_linked, "expected root/node_modules/{alias} to be a symlink");
@@ -848,13 +807,8 @@ fn dedupe_under_shamefully_hoist() {
 /// its own target.
 #[test]
 fn relative_link_payloads_survive_the_dedupe_prune() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(

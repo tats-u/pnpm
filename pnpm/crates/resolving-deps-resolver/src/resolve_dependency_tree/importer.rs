@@ -39,7 +39,10 @@ pub(super) fn importer_injected_dependency_names(manifest: &PackageManifest) -> 
 }
 
 fn injected_dependency_names(manifest: &Value) -> HashSet<String> {
-    let Some(meta) = manifest.get("dependenciesMeta").and_then(Value::as_object) else {
+    let Some(meta) = manifest
+        .get("dependenciesMeta")
+        .and_then(Value::as_object)
+    else {
         return HashSet::default();
     };
     meta.iter()

@@ -94,15 +94,26 @@ async fn shared_subtree_owner_context_suppresses_later_optional_hoist() {
     .await
     .unwrap();
 
-    let root_direct = result.peers.direct_dependencies_by_importer.get(".").expect("root importer");
+    let root_direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get(".")
+        .expect("root importer");
     assert_eq!(
-        root_direct.get("shared").map(std::string::ToString::to_string),
+        root_direct
+            .get("shared")
+            .map(std::string::ToString::to_string),
         Some("shared@1.0.0(opt@18.0.0)".to_string()),
     );
-    let a_direct =
-        result.peers.direct_dependencies_by_importer.get("pkg-a").expect("pkg-a importer");
+    let a_direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get("pkg-a")
+        .expect("pkg-a importer");
     assert_eq!(
-        a_direct.get("shared").map(std::string::ToString::to_string),
+        a_direct
+            .get("shared")
+            .map(std::string::ToString::to_string),
         Some("shared@1.0.0".to_string()),
         "pkg-a must not hoist opt, but it also must not reuse root's opt provider",
     );
@@ -150,10 +161,15 @@ async fn shared_subtree_owner_context_suppresses_later_optional_hoist() {
     .await
     .unwrap();
 
-    let a_direct =
-        result.peers.direct_dependencies_by_importer.get("pkg-a").expect("pkg-a importer");
+    let a_direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get("pkg-a")
+        .expect("pkg-a importer");
     assert_eq!(
-        a_direct.get("shared").map(std::string::ToString::to_string),
+        a_direct
+            .get("shared")
+            .map(std::string::ToString::to_string),
         Some("shared@1.0.0(opt@25.0.0)".to_string()),
         "a locked peer provider must remain eligible for importer-local hoisting",
     );
@@ -260,10 +276,15 @@ async fn shared_subtree_owner_context_is_available_before_optional_hoisting() {
     .await
     .unwrap();
 
-    let nested =
-        result.peers.direct_dependencies_by_importer.get("nested").expect("nested importer");
+    let nested = result
+        .peers
+        .direct_dependencies_by_importer
+        .get("nested")
+        .expect("nested importer");
     assert_eq!(
-        nested.get("wrapper").map(std::string::ToString::to_string),
+        nested
+            .get("wrapper")
+            .map(std::string::ToString::to_string),
         Some("wrapper@1.0.0".to_string()),
         "the importer visited before the shared-subtree owner must not hoist the owner's peer",
     );
@@ -294,7 +315,9 @@ async fn skips_an_optional_dependency_for_every_coded_resolver_failure() {
         .await
         .expect("a coded resolution failure of an optional dependency is skipped");
 
-        let direct = &result.peers.direct_dependencies_by_importer["."];
+        let direct = &result
+            .peers
+            .direct_dependencies_by_importer["."];
         assert!(direct.contains_key("kept"), "the regular dep resolves: {direct:?}");
         assert!(!direct.contains_key("broken"), "the failing optional edge is dropped: {direct:?}");
         let skipped = skipped.lock().unwrap();

@@ -77,9 +77,8 @@ fn explicit_allow_by_git_hosted_tarball_repo_url() {
     // Bitbucket and GitLab (with nested groups) tarball downloads too.
     assert_eq!(policy.check("bar@https://bitbucket.org/org/bar/get/abc123.tar.gz"), Some(true));
     assert_eq!(
-        policy.check(
-            "baz@https://gitlab.com/group/subgroup/baz/-/archive/abc123/baz-abc123.tar.gz"
-        ),
+        policy
+            .check("baz@https://gitlab.com/group/subgroup/baz/-/archive/abc123/baz-abc123.tar.gz"),
         Some(true),
     );
     // A different repository under the same package name is not approved.
@@ -174,14 +173,18 @@ fn allow_via_version_union() {
 #[test]
 fn from_config_propagates_invalid_version_union() {
     let mut config = Config::new();
-    config.allow_builds.insert("foo@not-a-version".to_string(), true);
+    config
+        .allow_builds
+        .insert("foo@not-a-version".to_string(), true);
     let err = AllowBuildPolicy::from_config(&config).expect_err("must reject");
     assert!(matches!(err, crate::VersionPolicyError::InvalidVersionUnion { .. }), "got: {err:?}");
 }
 #[test]
 fn from_config_propagates_name_pattern_in_version_union() {
     let mut config = Config::new();
-    config.allow_builds.insert("foo*@1.0.0".to_string(), true);
+    config
+        .allow_builds
+        .insert("foo*@1.0.0".to_string(), true);
     let err = AllowBuildPolicy::from_config(&config).expect_err("must reject");
     assert!(
         matches!(err, crate::VersionPolicyError::NamePatternInVersionUnion { .. }),
@@ -403,7 +406,9 @@ async fn write_path_disabled_skips_upload() {
             pnpm_lockfile::PackageMetadata {
                 resolution: pnpm_lockfile::LockfileResolution::Registry(
                     pnpm_lockfile::RegistryResolution {
-                        integrity: integrity_str.parse().expect("parse integrity"),
+                        integrity: integrity_str
+                            .parse()
+                            .expect("parse integrity"),
                         revision: None,
                     },
                 ),
@@ -503,7 +508,10 @@ async fn write_path_disabled_skips_upload() {
     .expect("build modules must complete cleanly");
 
     drop(writer);
-    writer_task.await.expect("await writer").expect("writer succeeds");
+    writer_task
+        .await
+        .expect("await writer")
+        .expect("writer succeeds");
 
     let index = StoreIndex::open_readonly_in(&store_dir).expect("open index for read");
     let row = index
@@ -540,7 +548,9 @@ async fn upload_error_does_not_interrupt_install() {
             pnpm_lockfile::PackageMetadata {
                 resolution: pnpm_lockfile::LockfileResolution::Registry(
                     pnpm_lockfile::RegistryResolution {
-                        integrity: integrity_str.parse().expect("parse integrity"),
+                        integrity: integrity_str
+                            .parse()
+                            .expect("parse integrity"),
                         revision: None,
                     },
                 ),
@@ -645,7 +655,10 @@ async fn upload_error_does_not_interrupt_install() {
     .expect("upload failure must not propagate; install continues");
 
     drop(writer);
-    writer_task.await.expect("await writer").expect("writer succeeds");
+    writer_task
+        .await
+        .expect("await writer")
+        .expect("writer succeeds");
 
     assert!(
         pkg_dir.join("generated.txt").exists(),
@@ -689,7 +702,9 @@ fn pkg_root_for_key_isolated_uses_layout() {
     let config = config.leak();
     let layout = VirtualStoreLayout::new(config, None, None, None, None, None);
 
-    let key: PackageKey = "is-positive@1.0.0".parse().expect("parse key");
+    let key: PackageKey = "is-positive@1.0.0"
+        .parse()
+        .expect("parse key");
     let result = super::super::PkgRoots { layout: &layout, by_key: None }
         .canonical(&key)
         .expect("isolated lookup hits");

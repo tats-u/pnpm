@@ -21,8 +21,14 @@ pub(crate) fn record_changed_direct_deps(
 ) -> HashSet<PkgName> {
     let lockfile = ctx.workspace.reuse.lockfile.as_deref();
     let prior = lockfile.and_then(|lockfile| lockfile.importers.get(importer_id));
-    let mut changed = lock_recoverable(&ctx.workspace.versions.changed_direct_deps);
-    let bucket = changed.entry(importer_id.to_string()).or_default();
+    let mut changed = lock_recoverable(
+        &ctx.workspace
+            .versions
+            .changed_direct_deps,
+    );
+    let bucket = changed
+        .entry(importer_id.to_string())
+        .or_default();
     for (alias, spec, _optional, _injected) in wanted {
         let unchanged = prior
             .and_then(|importer| importer_dep_specifier(importer, alias))
@@ -89,8 +95,16 @@ pub(in super::super) fn record_direct_dep_versions(
     importer_id: &str,
     level: &BTreeMap<String, Vec<String>>,
 ) {
-    let mut versions = lock_recoverable(&ctx.workspace.versions.direct_dep_versions);
-    let by_name = Arc::make_mut(versions.entry(importer_id.to_string()).or_default());
+    let mut versions = lock_recoverable(
+        &ctx.workspace
+            .versions
+            .direct_dep_versions,
+    );
+    let by_name = Arc::make_mut(
+        versions
+            .entry(importer_id.to_string())
+            .or_default(),
+    );
     for (name, level_versions) in level {
         let bucket = by_name.entry(name.clone()).or_default();
         for version in level_versions {
@@ -112,7 +126,11 @@ pub(super) fn reused_parent_has_changed_direct_child(
 ) -> bool {
     // Copy the (small) changed set out and drop the lock before scanning.
     let importer_changed = {
-        let changed = lock_recoverable(&ctx.workspace.versions.changed_direct_deps);
+        let changed = lock_recoverable(
+            &ctx.workspace
+                .versions
+                .changed_direct_deps,
+        );
         match changed.get(&ctx.importer.id) {
             Some(set) if !set.is_empty() => set.clone(),
             _ => return false,
@@ -136,7 +154,9 @@ pub(in super::super) fn node_depends_on_changed_direct_dep(
 ) -> bool {
     prior_key
         .and_then(|key| {
-            ctx.workspace.reuse.lockfile
+            ctx.workspace
+                .reuse
+                .lockfile
                 .as_ref()?
                 .snapshots
                 .as_ref()?

@@ -98,7 +98,11 @@ pub fn get_tree(
     // subtrees free of context-dependent circular flags.
     let mut circular_ancestors = HashSet::new();
     if let Some(parent_dir) = parent_dir {
-        circular_ancestors.insert(parent_dir.to_string_lossy().into_owned());
+        circular_ancestors.insert(
+            parent_dir
+                .to_string_lossy()
+                .into_owned(),
+        );
     }
     fix_circular_refs(result.nodes, &mut circular_ancestors)
 }
@@ -178,7 +182,9 @@ fn materialize_edge(inputs: MaterializeEdge<'_>) {
     let MaterializeEdge { opts, edge, result, .. } = inputs;
     let edge_ctx = EdgeContext {
         peers: Some(inputs.peers),
-        linked_path_base_dir: inputs.linked_path_base_dir.to_path_buf(),
+        linked_path_base_dir: inputs
+            .linked_path_base_dir
+            .to_path_buf(),
         rewrite_link_version_dir: Some(opts.rewrite_link_version_dir.clone()),
         parent_dir: inputs.parent_dir.map(Path::to_path_buf),
     };
@@ -204,14 +210,26 @@ fn materialize_edge(inputs: MaterializeEdge<'_>) {
         }),
     };
     result.has_search_match |= subtree.walked_has_search_match || subtree.deduped_has_search_match;
-    result.search_messages.extend(subtree.walked_search_messages.iter().cloned());
-    result.search_messages.extend(subtree.deduped_search_messages.iter().cloned());
+    result.search_messages.extend(
+        subtree
+            .walked_search_messages
+            .iter()
+            .cloned(),
+    );
+    result.search_messages.extend(
+        subtree
+            .deduped_search_messages
+            .iter()
+            .cloned(),
+    );
 
     // An entry is kept when it has children to show, when it matched the
     // search itself, or when it stands in for an elided subtree that did.
     let keep = !subtree.dependencies.is_empty()
         || opts.search.is_none()
-        || search_match.as_ref().is_some_and(super::search::SearchMatch::is_match)
+        || search_match
+            .as_ref()
+            .is_some_and(super::search::SearchMatch::is_match)
         || subtree.deduped_has_search_match;
     if !keep {
         return;
@@ -234,10 +252,7 @@ fn record_materialized_edge(
     }
     annotate_search(&mut entry, search_match, &subtree, result);
 
-    if entry.status.is_peer
-        && opts.exclude_peer_dependencies
-        && entry.dependencies.is_empty()
-    {
+    if entry.status.is_peer && opts.exclude_peer_dependencies && entry.dependencies.is_empty() {
         return;
     }
     result.count += 1 + if entry.dependencies.is_empty() { 0 } else { subtree.count };
@@ -275,12 +290,7 @@ struct SubtreeWalk<'a> {
 fn materialize_subtree(walk: SubtreeWalk<'_>) -> Subtree {
     let opts = walk.opts;
     let target = walk.target;
-    let TraversalState {
-        cache,
-        ancestors,
-        max_depth,
-        guard_depth,
-    } = walk.traversal;
+    let TraversalState { cache, ancestors, max_depth, guard_depth } = walk.traversal;
 
     // A back-edge to an ancestor is truncated here; `fix_circular_refs`
     // flags it in a post-pass.
@@ -357,14 +367,23 @@ fn annotate_search(
         result.has_search_match = true;
         if let Some(message) = search_match.message() {
             entry.search.message = Some(message.to_string());
-            result.search_messages.push(message.to_string());
+            result
+                .search_messages
+                .push(message.to_string());
         }
         return;
     }
     if subtree.deduped_has_search_match {
         entry.search.matched = true;
-        if !subtree.deduped_search_messages.is_empty() {
-            entry.search.message = Some(subtree.deduped_search_messages.join("\n"));
+        if !subtree
+            .deduped_search_messages
+            .is_empty()
+        {
+            entry.search.message = Some(
+                subtree
+                    .deduped_search_messages
+                    .join("\n"),
+            );
         }
     }
 }

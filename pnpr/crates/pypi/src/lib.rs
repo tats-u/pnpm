@@ -114,7 +114,9 @@ impl ProjectFile {
     /// The file's lowercase hex SHA-256, when the index published one.
     #[must_use]
     pub fn sha256(&self) -> Option<&str> {
-        self.hashes.get("sha256").map(String::as_str)
+        self.hashes
+            .get("sha256")
+            .map(String::as_str)
     }
 }
 
@@ -155,7 +157,8 @@ impl ProjectDocument {
     /// skipped rather than failing the page.
     #[must_use]
     pub fn versions(&self) -> Vec<String> {
-        let mut versions: Vec<Version> = self.files
+        let mut versions: Vec<Version> = self
+            .files
             .iter()
             .filter_map(|file| parse_distribution_filename(&file.filename).ok())
             .filter_map(|distribution| Version::from_str(&distribution.version).ok())
@@ -172,7 +175,8 @@ impl ProjectDocument {
     /// `<file_base>/<filename>`.
     #[must_use]
     pub fn render_json(&self, file_base: &str) -> Value {
-        let files: Vec<Value> = self.files
+        let files: Vec<Value> = self
+            .files
             .iter()
             .map(|file| {
                 let mut entry = json!({
@@ -312,10 +316,9 @@ pub fn wants_json(accept: Option<&str>) -> bool {
 #[must_use]
 pub fn wants_versioned_html(accept: Option<&str>) -> bool {
     accept.is_some_and(|accept| {
-        quality(accept, HTML_CONTENT_TYPE)
-            .is_some_and(|quality| {
-                quality > 0.0 && quality >= media_quality(accept, "text/html").unwrap_or(0.0)
-            })
+        quality(accept, HTML_CONTENT_TYPE).is_some_and(|quality| {
+            quality > 0.0 && quality >= media_quality(accept, "text/html").unwrap_or(0.0)
+        })
     })
 }
 
@@ -395,7 +398,9 @@ pub fn parse_distribution_filename(filename: &str) -> Result<Distribution, Filen
         .strip_suffix(".tar.gz")
         .or_else(|| filename.strip_suffix(".zip"))
     {
-        let (name, version) = stem.rsplit_once('-').ok_or_else(invalid)?;
+        let (name, version) = stem
+            .rsplit_once('-')
+            .ok_or_else(invalid)?;
         (name, version, DistributionKind::Sdist)
     } else {
         return Err(invalid());
@@ -438,7 +443,9 @@ pub struct Upload {
 pub fn parse_upload(parts: Vec<multipart::FormPart>) -> Result<Upload, UploadError> {
     let mut fields: BTreeMap<String, multipart::FormPart> = BTreeMap::new();
     for part in parts {
-        fields.entry(part.name.clone()).or_insert(part);
+        fields
+            .entry(part.name.clone())
+            .or_insert(part);
     }
     let text = |fields: &BTreeMap<String, multipart::FormPart>, name: &'static str| {
         fields
@@ -462,7 +469,9 @@ pub fn parse_upload(parts: Vec<multipart::FormPart>) -> Result<Upload, UploadErr
     let content = fields
         .remove("content")
         .ok_or(UploadError::MissingField("content"))?;
-    let filename = content.filename.ok_or(UploadError::MissingFilename)?;
+    let filename = content
+        .filename
+        .ok_or(UploadError::MissingFilename)?;
     Ok(Upload {
         name,
         version,

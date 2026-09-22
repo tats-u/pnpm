@@ -280,10 +280,16 @@ fn recursive_run_keeps_the_matched_scripts_within_workspace_concurrency() {
 
     let peaks: Vec<usize> = fs::read_dir(workspace.join(PEAK_DIR))
         .expect("read the peak-probe directory")
-        .map(|entry| entry.expect("read a peak-probe entry").path())
+        .map(|entry| {
+            entry
+                .expect("read a peak-probe entry")
+                .path()
+        })
         .filter(|path| {
-            path.file_name()
-                .is_some_and(|name| name.to_string_lossy().starts_with("peak-"))
+            path.file_name().is_some_and(|name| {
+                name.to_string_lossy()
+                    .starts_with("peak-")
+            })
         })
         .map(|path| {
             fs::read_to_string(&path)

@@ -30,18 +30,15 @@ pub(super) async fn load_lockfiles<'a, Reporter: self::Reporter + 'static>(
     discovery: (&HashSet<PathBuf>, Option<&[pnpm_workspace::Project]>),
 ) -> Result<Loaded<'a>, InstallError> {
     let (pre_hooked_paths, loaded_workspace_projects) = discovery;
-    let StartedLockfiles {
-        wanted,
-        current_lockfile_task,
-        early_host_detection,
-    } = start_lockfile_load::<Reporter>(
-        install,
-        owned,
-        mode,
-        workspace,
-        selection,
-        loaded_workspace_projects,
-    )?;
+    let StartedLockfiles { wanted, current_lockfile_task, early_host_detection } =
+        start_lockfile_load::<Reporter>(
+            install,
+            owned,
+            mode,
+            workspace,
+            selection,
+            loaded_workspace_projects,
+        )?;
     announce_manifest_load::<Reporter>(install, &workspace.dirs.workspace_root);
     let (pnpmfile_hook, manifests) =
         load_hooked_manifests::<Reporter>(install, owned, workspace, scope, pre_hooked_paths)
@@ -124,7 +121,10 @@ pub(super) fn start_lockfile_load<'a, Reporter: self::Reporter>(
                 pnpm_deps_restorer::materialization_plan::HostDetection::spawn(
                     install.context.config.engine_strict,
                     mode.effective_node_version.clone(),
-                    owned.projects.supported_architectures.clone(),
+                    owned
+                        .projects
+                        .supported_architectures
+                        .clone(),
                 )
             });
     Ok(StartedLockfiles { wanted, current_lockfile_task, early_host_detection })
@@ -153,7 +153,8 @@ pub(super) async fn join_current_lockfile_load<Reporter: self::Reporter>(
 ) -> Option<Lockfile> {
     let phase_start = std::time::Instant::now();
     let current_lockfile = load_current_lockfile::<Reporter>(
-        task.await.expect("join the current-lockfile load task"),
+        task.await
+            .expect("join the current-lockfile load task"),
         config,
         prefix,
     );
@@ -202,8 +203,12 @@ pub(super) fn load_wanted_lockfile<'a, Reporter: self::Reporter>(
             report_merged_lockfile_conflicts::<Reporter>(merged_conflict_files, prefix);
             Ok(LoadedWantedLockfile {
                 lockfile,
-                shared: lockfile_source.shared().map_err(InstallError::LoadWantedLockfile)?,
-                merge: lockfile_source.get_for_merge().map_err(InstallError::LoadWantedLockfile)?,
+                shared: lockfile_source
+                    .shared()
+                    .map_err(InstallError::LoadWantedLockfile)?,
+                merge: lockfile_source
+                    .get_for_merge()
+                    .map_err(InstallError::LoadWantedLockfile)?,
                 pre_merge_importers: lockfile_source
                     .pre_merge_importers()
                     .map_err(InstallError::LoadWantedLockfile)?,
@@ -320,7 +325,10 @@ async fn load_hooked_manifests<Reporter: self::Reporter + 'static>(
     let pnpmfile_hook = resolve_pnpmfile_hook(
         install.context.config,
         &workspace.dirs.workspace_root,
-        owned.projects.pnpmfile_hook_override.take(),
+        owned
+            .projects
+            .pnpmfile_hook_override
+            .take(),
     )?;
     let manifests = HookedManifests::hook::<Reporter>(
         install.context.config,

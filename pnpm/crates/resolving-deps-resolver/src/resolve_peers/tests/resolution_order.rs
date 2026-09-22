@@ -20,11 +20,15 @@ fn a_cycle_package_resolves_identically_at_every_occurrence() {
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
     assert!(
-        result.peer_dependency_issues.missing.is_empty(),
+        result
+            .peer_dependency_issues
+            .missing
+            .is_empty(),
         "unexpected missing peers: {:#?}",
         result.peer_dependency_issues.missing,
     );
-    let mut ring00_variants: Vec<&str> = result.graph
+    let mut ring00_variants: Vec<&str> = result
+        .graph
         .keys()
         .map(pnpm_deps_path::DepPath::as_str)
         .filter(|path| path.starts_with("ring00@1.0.0"))
@@ -66,7 +70,10 @@ fn cycle_re_walks_collapse_instead_of_multiplying_occurrences() {
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
     assert!(
-        result.peer_dependency_issues.missing.is_empty(),
+        result
+            .peer_dependency_issues
+            .missing
+            .is_empty(),
         "the bound only means something for a healthy resolution",
     );
     let occurrences = tree.dependencies_tree.len();
@@ -94,10 +101,8 @@ fn backedge_bindings_do_not_depend_on_importer_order() {
         let mut packages = HashMap::default();
         packages.insert(Arc::from("p@1.0.0"), package("p", "1.0.0", &[], true));
         packages.insert(Arc::from("p@2.0.0"), package("p", "2.0.0", &[], true));
-        packages.insert(
-            Arc::from("ring00@1.0.0"),
-            package("ring00", "1.0.0", &[("p", "*")], false),
-        );
+        packages
+            .insert(Arc::from("ring00@1.0.0"), package("ring00", "1.0.0", &[("p", "*")], false));
         packages.insert(Arc::from("ring01@1.0.0"), package("ring01", "1.0.0", &[], false));
         packages.insert(Arc::from("enter-a@1.0.0"), package("enter-a", "1.0.0", &[], false));
         packages.insert(Arc::from("enter-b@1.0.0"), package("enter-b", "1.0.0", &[], false));
@@ -162,7 +167,8 @@ fn backedge_bindings_do_not_depend_on_importer_order() {
             true,
             ResolvePeersOptions::default(),
         );
-        let mut keys: Vec<String> = result.graph
+        let mut keys: Vec<String> = result
+            .graph
             .keys()
             .map(|path| path.as_str().to_string())
             .collect();

@@ -123,17 +123,37 @@ fn defaults_match_registry_mock_config() {
     let policies = registry_mock_rules();
 
     let needs_auth = policies.for_package("@pnpm.e2e/needs-auth");
-    assert!(!needs_auth.access.allows(&Identity::Anonymous));
+    assert!(
+        !needs_auth
+            .access
+            .allows(&Identity::Anonymous)
+    );
     assert!(needs_auth.access.allows(&user("alice")));
 
     let private = policies.for_package("@private/foo");
-    assert!(!private.access.allows(&Identity::Anonymous));
+    assert!(
+        !private
+            .access
+            .allows(&Identity::Anonymous)
+    );
 
     let public = policies.for_package("@pnpm.e2e/no-deps");
-    assert!(public.access.allows(&Identity::Anonymous));
-    assert!(!public.publish.allows(&Identity::Anonymous));
+    assert!(
+        public
+            .access
+            .allows(&Identity::Anonymous)
+    );
+    assert!(
+        !public
+            .publish
+            .allows(&Identity::Anonymous)
+    );
     assert!(public.publish.allows(&user("alice")));
-    assert!(!public.unpublish.allows(&Identity::Anonymous));
+    assert!(
+        !public
+            .unpublish
+            .allows(&Identity::Anonymous)
+    );
     assert!(public.unpublish.allows(&user("alice")));
 }
 
@@ -152,8 +172,18 @@ fn most_specific_rule_wins_regardless_of_key_order() {
         None,
     );
     for rules in [&scope_first, &exact_first] {
-        assert!(!rules.for_package("@acme/secret").access.allows(&Identity::Anonymous));
-        assert!(rules.for_package("@acme/other").access.allows(&Identity::Anonymous));
+        assert!(
+            !rules
+                .for_package("@acme/secret")
+                .access
+                .allows(&Identity::Anonymous)
+        );
+        assert!(
+            rules
+                .for_package("@acme/other")
+                .access
+                .allows(&Identity::Anonymous)
+        );
     }
 }
 
@@ -222,9 +252,19 @@ fn omitted_rule_fields_fall_back_to_registry_default_not_broader_keys() {
         None, // registry default access: $all
     );
     // `@acme/open`: exact key wins, omits access -> registry default ($all).
-    assert!(rules.for_package("@acme/open").access.allows(&Identity::Anonymous));
+    assert!(
+        rules
+            .for_package("@acme/open")
+            .access
+            .allows(&Identity::Anonymous)
+    );
     // Other scope names: scope key wins with its own access.
-    assert!(!rules.for_package("@acme/foo").access.allows(&Identity::Anonymous));
+    assert!(
+        !rules
+            .for_package("@acme/foo")
+            .access
+            .allows(&Identity::Anonymous)
+    );
 }
 
 #[test]
@@ -233,7 +273,12 @@ fn unclaimed_name_still_answers_with_defaults() {
     // registry defaults; namespace enforcement (404 before this lookup)
     // is the routing graph's job, not the rules'.
     let rules = PackageRules::new(vec![rule("@acme/*", Some("$authenticated"))], None);
-    assert!(rules.for_package("unclaimed").access.allows(&Identity::Anonymous));
+    assert!(
+        rules
+            .for_package("unclaimed")
+            .access
+            .allows(&Identity::Anonymous)
+    );
 }
 
 #[test]
@@ -255,9 +300,25 @@ fn all_access_admit_requires_the_default_and_every_refinement() {
 fn falls_back_to_safe_defaults_when_no_rules_match() {
     let policies = PackageRules::default();
     let effective = policies.for_package("anything");
-    assert!(effective.access.allows(&Identity::Anonymous));
-    assert!(!effective.publish.allows(&Identity::Anonymous));
+    assert!(
+        effective
+            .access
+            .allows(&Identity::Anonymous)
+    );
+    assert!(
+        !effective
+            .publish
+            .allows(&Identity::Anonymous)
+    );
     assert!(effective.publish.allows(&user("alice")));
-    assert!(!effective.unpublish.allows(&Identity::Anonymous));
-    assert!(!effective.unpublish.allows(&user("alice")));
+    assert!(
+        !effective
+            .unpublish
+            .allows(&Identity::Anonymous)
+    );
+    assert!(
+        !effective
+            .unpublish
+            .allows(&user("alice"))
+    );
 }

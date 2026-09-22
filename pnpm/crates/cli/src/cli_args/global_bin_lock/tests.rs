@@ -13,7 +13,9 @@ fn serializes_global_bin_writers() {
             .send(())
             .expect("report lock attempt");
         let lock = acquire_global_bin_lock(&path).expect("take second lock");
-        sender.send(lock).expect("report second lock");
+        sender
+            .send(lock)
+            .expect("report second lock");
     });
 
     attempt_receiver
@@ -37,7 +39,11 @@ fn try_lock_does_not_wait_for_a_global_bin_writer() {
     let global_bin_dir = tempfile::tempdir().expect("create global bin directory");
     let held = acquire_global_bin_lock(global_bin_dir.path()).expect("take first lock");
 
-    assert!(try_acquire_global_bin_lock(global_bin_dir.path()).expect("try second lock").is_none());
+    assert!(
+        try_acquire_global_bin_lock(global_bin_dir.path())
+            .expect("try second lock")
+            .is_none()
+    );
 
     drop(held);
 }

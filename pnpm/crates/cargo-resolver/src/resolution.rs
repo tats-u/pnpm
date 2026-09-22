@@ -89,7 +89,10 @@ fn unified_dependencies(
         let entry = discovered.entry(package).or_default();
         let previous = entry.selection.clone();
         entry.selection.default_features |= dependency.default_features;
-        entry.selection.features.extend(dependency.features.iter().cloned());
+        entry
+            .selection
+            .features
+            .extend(dependency.features.iter().cloned());
         let unwalked = &selectable - &entry.versions;
         entry.versions.extend(selectable);
         let walk = if entry.selection == previous { unwalked } else { entry.versions.clone() };
@@ -160,7 +163,10 @@ fn validate_selected_graph(
         let package = validated_package(registry, &dependency, solution, &mut validated)?;
         let Some(package) = package else { return Ok(None) };
         let Some(selected_version) = solution.get(&package) else { return Ok(None) };
-        if !dependency.requirement.matches(selected_version) {
+        if !dependency
+            .requirement
+            .matches(selected_version)
+        {
             return Ok(None);
         }
         if validated.contains_key(&package) {
@@ -290,11 +296,9 @@ fn register_candidates(
         .cloned()
         .unwrap_or_default();
     let versions = registry.package(name)?;
-    let candidates = versions
-        .iter()
-        .filter(|version| {
-            !version.yanked && compatibility_line(&version.version) == *compatibility
-        });
+    let candidates = versions.iter().filter(|version| {
+        !version.yanked && compatibility_line(&version.version) == *compatibility
+    });
     for version in candidates {
         let dependencies = locked_dependencies(version, &resolved)?;
         let constraints = constraints_for(registry, &dependencies, pending)?;
@@ -317,13 +321,7 @@ fn register_compatibility_lines(
     provider: &mut OfflineDependencyProvider<PackageKey, Ranges<Version>>,
     pending: &mut VecDeque<PackageKey>,
 ) -> Result<()> {
-    let PackageKey::Requirement {
-        name,
-        requirement,
-        default_features,
-        features,
-    } = package
-    else {
+    let PackageKey::Requirement { name, requirement, default_features, features } = package else {
         return Ok(());
     };
     let requested = FeatureSelection {

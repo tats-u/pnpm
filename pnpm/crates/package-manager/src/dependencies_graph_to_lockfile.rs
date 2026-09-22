@@ -198,15 +198,22 @@ pub fn dependencies_graph_to_lockfile(
             .expect("the generated lockfile version is supported"),
         settings: Some(opts.settings),
         catalogs: build_catalog_snapshots(&importers, opts.catalogs),
-        overrides: opts.manifest_settings.overrides.filter(|map| !map.is_empty()),
-        package_extensions_checksum: opts.manifest_settings.package_extensions_checksum,
+        overrides: opts
+            .manifest_settings
+            .overrides
+            .filter(|map| !map.is_empty()),
+        package_extensions_checksum: opts
+            .manifest_settings
+            .package_extensions_checksum,
         pnpmfile_checksum: opts.manifest_settings.pnpmfile_checksum,
-        ignored_optional_dependencies: opts.manifest_settings
+        ignored_optional_dependencies: opts
+            .manifest_settings
             .ignored_optional_dependencies
             .filter(|list| !list.is_empty()),
-        patched_dependencies: opts.manifest_settings.patched_dependencies.filter(|map| {
-            !map.is_empty()
-        }),
+        patched_dependencies: opts
+            .manifest_settings
+            .patched_dependencies
+            .filter(|map| !map.is_empty()),
         importers,
         packages: (!packages.is_empty()).then_some(packages),
         snapshots: (!snapshots.is_empty()).then_some(snapshots),
@@ -360,8 +367,14 @@ fn walk_subgraph<'g>(
 /// optional by `peerDependenciesMeta`.
 fn optional_children_of(node: &DependenciesGraphNode) -> rustc_hash::FxHashSet<String> {
     let mut out: rustc_hash::FxHashSet<String> = node.edges.optional_children.clone();
-    if let Some(manifest) = node.resolve_result.package.manifest.as_ref()
-        && let Some(map) = manifest.get("optionalDependencies").and_then(Value::as_object)
+    if let Some(manifest) = node
+        .resolve_result
+        .package
+        .manifest
+        .as_ref()
+        && let Some(map) = manifest
+            .get("optionalDependencies")
+            .and_then(Value::as_object)
     {
         for name in map.keys() {
             out.insert(name.clone());

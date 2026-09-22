@@ -64,7 +64,8 @@ fn workspace_install_via_pnpr_names_importers_relative_to_a_pinned_lockfile_dir(
 
     let wanted = read_workspace_lockfile(root.path());
     assert_eq!(
-        wanted.importers
+        wanted
+            .importers
             .keys()
             .cloned()
             .collect::<std::collections::BTreeSet<_>>(),
@@ -94,7 +95,10 @@ fn workspace_pnpr_install_uses_current_resolver_settings_and_frozen_replays_them
     write_workspace_project(&workspace, "app", "app", (WORKSPACE_HELLO, "1.0.0"));
     write_workspace_project(&workspace, "lib", "lib", (WORKSPACE_PARENT, "100.0.0"));
     let resolver_settings = |lockfile: &Lockfile| {
-        let settings = lockfile.settings.as_ref().expect("lockfile settings");
+        let settings = lockfile
+            .settings
+            .as_ref()
+            .expect("lockfile settings");
         (settings.auto_install_peers, settings.dedupe_peers, settings.exclude_links_from_lockfile)
     };
     pacquet_at(&workspace)
@@ -148,8 +152,16 @@ fn workspace_pnpr_install_uses_current_resolver_settings_and_frozen_replays_them
         before_frozen,
     );
     assert!(!workspace.join("node_modules").exists());
-    assert!(!workspace.join("packages/app/node_modules").exists());
-    assert!(!workspace.join("packages/lib/node_modules").exists());
+    assert!(
+        !workspace
+            .join("packages/app/node_modules")
+            .exists()
+    );
+    assert!(
+        !workspace
+            .join("packages/lib/node_modules")
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
@@ -174,7 +186,11 @@ fn filtered_pnpr_repair_preserves_unselected_metadata() {
     let mut previous = read_workspace_lockfile(&workspace);
     let previous_unselected = workspace_importer(&previous, "packages/unselected").clone();
     let mut preserved_package_count = 0;
-    for (key, metadata) in previous.packages.as_mut().expect("packages") {
+    for (key, metadata) in previous
+        .packages
+        .as_mut()
+        .expect("packages")
+    {
         if is_preserved_key(&key.to_string()) {
             metadata.deprecated = Some("preserve this metadata".to_string());
             preserved_package_count += 1;
@@ -182,7 +198,11 @@ fn filtered_pnpr_repair_preserves_unselected_metadata() {
     }
     assert!(preserved_package_count > 0);
     let mut preserved_snapshot_count = 0;
-    for (key, snapshot) in previous.snapshots.as_mut().expect("snapshots") {
+    for (key, snapshot) in previous
+        .snapshots
+        .as_mut()
+        .expect("snapshots")
+    {
         if is_preserved_key(&key.to_string()) {
             snapshot.optional = true;
             snapshot.transitive_peer_dependencies = Some(vec!["preserved-peer".to_string()]);
@@ -216,7 +236,8 @@ fn filtered_pnpr_repair_preserves_unselected_metadata() {
 
     let repaired = read_workspace_lockfile(&workspace);
     assert_eq!(workspace_importer(&repaired, "packages/unselected"), &previous_unselected);
-    let preserved_packages = repaired.packages
+    let preserved_packages = repaired
+        .packages
         .as_ref()
         .expect("repaired packages")
         .iter()
@@ -230,7 +251,8 @@ fn filtered_pnpr_repair_preserves_unselected_metadata() {
                 metadata.deprecated.as_deref() == Some("preserve this metadata")
             }),
     );
-    let preserved_snapshots = repaired.snapshots
+    let preserved_snapshots = repaired
+        .snapshots
         .as_ref()
         .expect("repaired snapshots")
         .iter()
@@ -242,7 +264,8 @@ fn filtered_pnpr_repair_preserves_unselected_metadata() {
             .iter()
             .all(|(_, snapshot)| {
                 snapshot.optional
-                    && snapshot.transitive_peer_dependencies
+                    && snapshot
+                        .transitive_peer_dependencies
                         .as_ref()
                         .is_some_and(|peers| peers.len() == 1 && peers[0] == "preserved-peer")
             }),

@@ -10,7 +10,9 @@ fn prefer_frozen_lockfile(request: &ResolveRequest) -> Option<bool> {
     if request.update_patches || request.fix_lockfile {
         Some(false)
     } else {
-        request.prefer_frozen_lockfile.or(Some(true))
+        request
+            .prefer_frozen_lockfile
+            .or(Some(true))
     }
 }
 
@@ -41,13 +43,7 @@ impl<'a> ResolutionInstall<'a> {
         manifest: &'a PackageManifest,
         lockfile_path: &'a Path,
     ) -> Install<'a, [DependencyGroup; 3]> {
-        let Self {
-            config,
-            client,
-            request,
-            auth_headers,
-            observer,
-        } = self;
+        let Self { config, client, request, auth_headers, observer } = self;
         let mut install = Install::new(
             Arc::new(MemCache::default()),
             resolved_packages,
@@ -59,7 +55,9 @@ impl<'a> ResolutionInstall<'a> {
         );
         install.lockfile_policy.frozen = request.frozen_lockfile;
         install.lockfile_policy.prefer_frozen = prefer_frozen_lockfile(request);
-        install.lockfile_policy.ignore_manifest_check = request.ignore_manifest_check;
+        install
+            .lockfile_policy
+            .ignore_manifest_check = request.ignore_manifest_check;
         install.lockfile_policy.trust = true;
         install.lockfile_policy.update_checksums = request.update_patches;
         install.execution.skip_runtimes = false;
@@ -68,9 +66,15 @@ impl<'a> ResolutionInstall<'a> {
         install.resolution.update_seed_policy = update_seed_policy(request);
         install.resolution.auth_override = Some(Arc::clone(auth_headers));
         install.resolution.observer = observer;
-        install.context.lockfile_path = request.lockfile.as_ref().map(|_| lockfile_path);
+        install.context.lockfile_path = request
+            .lockfile
+            .as_ref()
+            .map(|_| lockfile_path);
         install.projects.supported_architectures = None;
-        install.projects.catalogs_override.clone_from(&request.catalogs);
+        install
+            .projects
+            .catalogs_override
+            .clone_from(&request.catalogs);
         install
     }
 }

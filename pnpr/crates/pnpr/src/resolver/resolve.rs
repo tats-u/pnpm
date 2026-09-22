@@ -79,7 +79,9 @@ pub async fn resolve(
 ) -> Result<Lockfile, ResolveError> {
     let projects = request.projects_normalized();
 
-    let temp = tempfile::Builder::new().prefix("pnpr-resolve-").tempdir()?;
+    let temp = tempfile::Builder::new()
+        .prefix("pnpr-resolve-")
+        .tempdir()?;
     let dir = temp.path();
 
     let Workspace { member_dirs, wrote_root } = write_importer_manifests(dir, &projects).await?;
@@ -187,8 +189,14 @@ async fn write_importer_manifest(
     rel: &str,
     project: &ProjectDeps,
 ) -> Result<(), ResolveError> {
-    let name = project.name.clone().unwrap_or_else(|| importer_manifest_name(rel));
-    let version = project.version.as_deref().unwrap_or("0.0.0");
+    let name = project
+        .name
+        .clone()
+        .unwrap_or_else(|| importer_manifest_name(rel));
+    let version = project
+        .version
+        .as_deref()
+        .unwrap_or("0.0.0");
     let manifest_json = serde_json::json!({
         "name": name,
         "version": version,
@@ -251,7 +259,9 @@ pub fn fresh_frozen_input_lockfile(config: &Config, request: &ResolveRequest) ->
     if project.dir != "." {
         return None;
     }
-    let importer = lockfile.importers.get(Lockfile::ROOT_IMPORTER_KEY)?;
+    let importer = lockfile
+        .importers
+        .get(Lockfile::ROOT_IMPORTER_KEY)?;
     let temp = tempfile::Builder::new()
         .prefix("pnpr-frozen-")
         .tempdir()
@@ -274,7 +284,8 @@ pub fn fresh_frozen_input_lockfile(config: &Config, request: &ResolveRequest) ->
 }
 
 fn request_has_overrides(request: &ResolveRequest) -> bool {
-    request.overrides
+    request
+        .overrides
         .as_ref()
         .is_some_and(|value| match value {
             serde_json::Value::Object(map) => !map.is_empty(),
@@ -286,16 +297,20 @@ fn request_has_overrides(request: &ResolveRequest) -> bool {
 /// Whether the config rewrites the dependency graph in a way a lockfile
 /// cannot be checked against without a resolve.
 fn config_transforms_lockfile(config: &Config) -> bool {
-    config.package_extensions
+    config
+        .package_extensions
         .as_ref()
         .is_some_and(|extensions| !extensions.is_empty())
-        || config.ignored_optional_dependencies
+        || config
+            .ignored_optional_dependencies
             .as_ref()
             .is_some_and(|patterns| !patterns.is_empty())
-        || config.patched_dependencies
+        || config
+            .patched_dependencies
             .as_ref()
             .is_some_and(|map| !map.is_empty())
-        || config.patched_dependency_hashes_override
+        || config
+            .patched_dependency_hashes_override
             .as_ref()
             .is_some_and(|map| !map.is_empty())
         || config.inject_workspace_packages
@@ -353,7 +368,10 @@ fn check_frozen_settings(
     check_lockfile_settings(
         lockfile,
         LockfileSettingsCheck {
-            catalogs: request.catalogs.as_ref().unwrap_or(&no_catalogs),
+            catalogs: request
+                .catalogs
+                .as_ref()
+                .unwrap_or(&no_catalogs),
             overrides: None,
             package_extensions_checksum: None,
             ignored_optional_dependencies: None,

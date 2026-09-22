@@ -59,8 +59,16 @@ fn materialization_closure_excludes_optional_snapshot_link_when_optionals_are_di
     );
 
     assert_eq!(closure.importer_ids, HashSet::from([selected_id]));
-    assert!(!closure.importer_ids.contains(&linked_id));
-    let snapshots = closure.lockfile.snapshots.as_ref().unwrap();
+    assert!(
+        !closure
+            .importer_ids
+            .contains(&linked_id)
+    );
+    let snapshots = closure
+        .lockfile
+        .snapshots
+        .as_ref()
+        .unwrap();
     assert!(snapshots.contains_key(&key("parent", "1.0.0")));
     assert!(!snapshots.contains_key(&key("linked-pkg", "1.0.0")));
 }

@@ -18,7 +18,8 @@ pub async fn get_peer_dependency_issues(
         .map_err(|error| {
             napi::Error::from_reason(format!("failed to spawn peer-issues thread: {error}"))
         })?;
-    rx.await.map_err(|_| napi::Error::from_reason("peer-issues worker thread panicked"))?
+    rx.await
+        .map_err(|_| napi::Error::from_reason("peer-issues worker thread panicked"))?
 }
 
 /// Run a sink-driven `dry_run` resolve and serialize the per-importer issues
@@ -32,8 +33,11 @@ fn run_peer_issues_blocking(options: PeerIssuesOptions) -> napi::Result<serde_js
 
     let sink: pnpm_package_manager::PeerIssuesSink = Arc::default();
     run_install_inner(&install_options, None, EngineMode::PeerIssues(Arc::clone(&sink)))?;
-    let issues_by_importer =
-        std::mem::take(&mut *sink.lock().expect("peer-issues sink lock poisoned"));
+    let issues_by_importer = std::mem::take(
+        &mut *sink
+            .lock()
+            .expect("peer-issues sink lock poisoned"),
+    );
 
     let mut result = serde_json::Map::new();
     for (importer_id, issues) in issues_by_importer {
@@ -64,7 +68,11 @@ pub(super) fn peer_issues_install_options(
             "virtualStoreDirMaxLength",
         )?,
         // Unlike install, this query must expose missing peers by default.
-        auto_install_peers: Some(options.auto_install_peers.unwrap_or(false)),
+        auto_install_peers: Some(
+            options
+                .auto_install_peers
+                .unwrap_or(false),
+        ),
         ..InstallOptions::default()
     })
 }
@@ -170,17 +178,22 @@ fn peer_intersections_json(
     let mut conflicts: Vec<String> = Vec::new();
     let mut intersections = serde_json::Map::new();
     for (peer_name, entries) in &issues.missing {
-        if entries.iter().all(|entry| entry.optional) {
+        if entries
+            .iter()
+            .all(|entry| entry.optional)
+        {
             continue;
         }
         if let [entry] = entries.as_slice() {
-            intersections.insert(
-                peer_name.clone(),
-                serde_json::Value::String(entry.wanted_range.clone()),
-            );
+            intersections
+                .insert(peer_name.clone(), serde_json::Value::String(entry.wanted_range.clone()));
             continue;
         }
-        match safe_intersect(entries.iter().map(|entry| entry.wanted_range.as_str())) {
+        match safe_intersect(
+            entries
+                .iter()
+                .map(|entry| entry.wanted_range.as_str()),
+        ) {
             Some(intersection) => {
                 intersections.insert(peer_name.clone(), serde_json::Value::String(intersection));
             }

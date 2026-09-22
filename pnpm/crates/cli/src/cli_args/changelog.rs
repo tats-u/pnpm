@@ -79,13 +79,16 @@ pub async fn confirmed_published_versions(
             let section = read_pending_changelog(workspace_dir, &name, &version).ok()??;
             // The parked file is keyed by the manifest name, which is what the
             // ledger joins on; the registry only knows the published one.
-            let probe = published_names.get(&name).map_or(name.as_str(), String::as_str);
+            let probe = published_names
+                .get(&name)
+                .map_or(name.as_str(), String::as_str);
             let changelog = fetch_changelog(config, probe, VersionPick::Exact(&version)).await?;
             changelog
                 .contains(section.trim())
                 .then(|| format!("{name}@{version}"))
         });
-    Ok(futures_util::future::join_all(checks).await
+    Ok(futures_util::future::join_all(checks)
+        .await
         .into_iter()
         .flatten()
         .collect())
@@ -98,9 +101,12 @@ pub fn published_names(projects: &[pnpm_workspace::Project]) -> HashMap<String, 
     let mut renames = HashMap::new();
     for project in projects {
         let manifest = project.manifest.value();
-        let (Some(name), Some(published)) =
-            (manifest.get("name").and_then(serde_json::Value::as_str), published_name(manifest))
-        else {
+        let (Some(name), Some(published)) = (
+            manifest
+                .get("name")
+                .and_then(serde_json::Value::as_str),
+            published_name(manifest),
+        ) else {
             continue;
         };
         if published != name {
@@ -129,18 +135,17 @@ pub async fn unpublished_release_dirs(
     }
     // One client for the batch; its per-origin semaphore bounds the fan-out.
     let client = build_registry_client(config)?;
-    let checks = plan.releases
-        .iter()
-        .map(|release| {
-            let client = &client;
-            let probe =
-                published_names.get(&release.name).map_or(release.name.as_str(), String::as_str);
-            async move {
-                let published =
-                    is_version_published(client, config, probe, &release.version.current).await?;
-                Ok::<_, miette::Report>((release.dir.clone(), published))
-            }
-        });
+    let checks = plan.releases.iter().map(|release| {
+        let client = &client;
+        let probe = published_names
+            .get(&release.name)
+            .map_or(release.name.as_str(), String::as_str);
+        async move {
+            let published =
+                is_version_published(client, config, probe, &release.version.current).await?;
+            Ok::<_, miette::Report>((release.dir.clone(), published))
+        }
+    });
     let probed = futures_util::future::try_join_all(checks).await?;
     Ok(probed
         .into_iter()
@@ -159,13 +164,14 @@ async fn is_version_published(
     let registry = registry_for(config, name);
     let url = format!("{registry}{}", encode_package_name(name));
     let guard = client.acquire_for_url(&url).await;
-    let mut request = guard
-        .get(&url)
-        .header(
-            "accept",
-            "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
-        );
-    if let Some(value) = config.auth_headers.for_url_with_package(&url, Some(name)) {
+    let mut request = guard.get(&url).header(
+        "accept",
+        "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
+    );
+    if let Some(value) = config
+        .auth_headers
+        .for_url_with_package(&url, Some(name))
+    {
         request = request.header("authorization", value);
     }
     let response = request.send().await.into_diagnostic()?;
@@ -179,7 +185,10 @@ async fn is_version_published(
             "registry returned status {status} for {display_url} while checking whether {name}@{version} is published",
         ));
     }
-    let package: Package = response.json().await.into_diagnostic()?;
+    let package: Package = response
+        .json()
+        .await
+        .into_diagnostic()?;
     Ok(package.versions.contains_key(version))
 }
 
@@ -199,18 +208,25 @@ async fn fetch_changelog(config: &Config, name: &str, pick: VersionPick<'_>) -> 
         .await
         .ok()?;
     let version = match pick {
-        VersionPick::Exact(version) => {
-            package.versions.contains_key(version).then(|| version.to_string())?
-        }
+        VersionPick::Exact(version) => package
+            .versions
+            .contains_key(version)
+            .then(|| version.to_string())?,
         VersionPick::PreviousTo(version) => previous_version(&package, version)?,
     };
-    let tarball_url = package.versions
+    let tarball_url = package
+        .versions
         .get(&version)?
         .as_tarball_url()
         .to_string();
-    let guard = client.acquire_for_url(&tarball_url).await;
+    let guard = client
+        .acquire_for_url(&tarball_url)
+        .await;
     let mut request = guard.get(&tarball_url);
-    if let Some(value) = config.auth_headers.for_url_with_package(&tarball_url, Some(name)) {
+    if let Some(value) = config
+        .auth_headers
+        .for_url_with_package(&tarball_url, Some(name))
+    {
         request = request.header("authorization", value);
     }
     let response = request.send().await.ok()?;
@@ -234,7 +250,8 @@ async fn fetch_changelog(config: &Config, name: &str, pick: VersionPick<'_>) -> 
 /// Highest published version of the package that is semver-lower than `version`.
 fn previous_version(package: &Package, version: &str) -> Option<String> {
     let target: node_semver::Version = version.parse().ok()?;
-    package.versions
+    package
+        .versions
         .keys()
         .filter_map(|key| {
             key.parse::<node_semver::Version>()
@@ -266,7 +283,9 @@ fn extract_entry(gzipped_tarball: &[u8], entry_name: &str) -> Option<String> {
         let mut entry = entry.ok()?;
         if entry.path().ok()?.to_str() == Some(entry_name) {
             let mut contents = String::new();
-            entry.read_to_string(&mut contents).ok()?;
+            entry
+                .read_to_string(&mut contents)
+                .ok()?;
             return Some(contents);
         }
     }

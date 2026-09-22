@@ -33,7 +33,10 @@ impl PingArgs {
     /// default), GET `<registry>-/ping?write=true` with any resolved auth
     /// header, and render the `PING`/`PONG` report.
     pub async fn run(&self, config: &Config) -> miette::Result<String> {
-        let registry_url = self.registry.as_deref().unwrap_or(&config.registry);
+        let registry_url = self
+            .registry
+            .as_deref()
+            .unwrap_or(&config.registry);
         // Add a trailing slash before joining so a registry with a path
         // prefix keeps it.
         let normalized_registry_url = if registry_url.ends_with('/') {
@@ -42,7 +45,9 @@ impl PingArgs {
             format!("{registry_url}/")
         };
         let ping_url = format!("{normalized_registry_url}-/ping?write=true");
-        let auth_header = config.auth_headers.for_url(&normalized_registry_url);
+        let auth_header = config
+            .auth_headers
+            .for_url(&normalized_registry_url);
         let http_client = build_registry_client(config)?;
 
         // `ping` issues a single attempt with no retries.
@@ -96,7 +101,9 @@ async fn fetch_ping(
             message: format!(
                 "{} {}",
                 status.as_u16(),
-                status.canonical_reason().unwrap_or_default(),
+                status
+                    .canonical_reason()
+                    .unwrap_or_default(),
             )
             .trim_end()
             .to_owned(),

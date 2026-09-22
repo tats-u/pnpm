@@ -114,7 +114,10 @@ pub(crate) fn decide_catalog_outcome(
     // A `runtime:` specifier round-trips to `devEngines.runtime` through
     // the manifest writer; promoting it into a catalog would strand it in
     // `devDependencies`. Skip it, matching pnpm.
-    if dep.bare_specifier.starts_with("runtime:") {
+    if dep
+        .bare_specifier
+        .starts_with("runtime:")
+    {
         return Ok(CatalogDecisionOutcome { decision: CatalogDecision::KeepDirect, warning: None });
     }
 

@@ -22,7 +22,9 @@ impl ReporterState {
         };
         let unit = if log.workspace_prefix.is_some() { "workspace projects" } else { "projects" };
         let mut slot = std::mem::take(&mut self.display.scope_slot);
-        self.display.frame.emit(&mut slot, format!("Scope: {count} {unit}"), false);
+        self.display
+            .frame
+            .emit(&mut slot, format!("Scope: {count} {unit}"), false);
         self.display.scope_slot = slot;
     }
 
@@ -30,7 +32,8 @@ impl ReporterState {
 
     pub(super) fn on_context(&mut self, log: &ContextLog) {
         self.install.context = Some(log.clone());
-        self.install.maybe_render_context(&self.rendering.cwd, &mut self.display.frame);
+        self.install
+            .maybe_render_context(&self.rendering.cwd, &mut self.display.frame);
     }
 
     // --- progress ---------------------------------------------------------
@@ -42,7 +45,11 @@ impl ReporterState {
             | ProgressMessage::FoundInStore { requester, .. }
             | ProgressMessage::Imported { requester, .. } => requester.clone(),
         };
-        let entry = self.downloads.progress.entry(requester.clone()).or_default();
+        let entry = self
+            .downloads
+            .progress
+            .entry(requester.clone())
+            .or_default();
         match message {
             ProgressMessage::Resolved { .. } => entry.stats.resolved += 1,
             ProgressMessage::Fetched { .. } => entry.stats.fetched += 1,
@@ -55,10 +62,22 @@ impl ReporterState {
             &requester,
             false,
         );
-        let mut slot =
-            std::mem::take(&mut self.downloads.progress.get_mut(&requester).unwrap().slot);
-        self.display.frame.emit(&mut slot, msg, true);
-        self.downloads.progress.get_mut(&requester).unwrap().slot = slot;
+        let mut slot = std::mem::take(
+            &mut self
+                .downloads
+                .progress
+                .get_mut(&requester)
+                .unwrap()
+                .slot,
+        );
+        self.display
+            .frame
+            .emit(&mut slot, msg, true);
+        self.downloads
+            .progress
+            .get_mut(&requester)
+            .unwrap()
+            .slot = slot;
     }
 
     pub(super) fn on_stage(&mut self, prefix: &str, stage: Stage) {
@@ -67,7 +86,11 @@ impl ReporterState {
                 self.flush_deprecated_subdeps();
             }
             Stage::ImportingDone => {
-                if !self.downloads.progress.contains_key(prefix) {
+                if !self
+                    .downloads
+                    .progress
+                    .contains_key(prefix)
+                {
                     return;
                 }
                 let msg = self.downloads.progress_message(
@@ -76,10 +99,22 @@ impl ReporterState {
                     prefix,
                     true,
                 );
-                let mut slot =
-                    std::mem::take(&mut self.downloads.progress.get_mut(prefix).unwrap().slot);
-                self.display.frame.emit(&mut slot, msg, false);
-                self.downloads.progress.get_mut(prefix).unwrap().slot = slot;
+                let mut slot = std::mem::take(
+                    &mut self
+                        .downloads
+                        .progress
+                        .get_mut(prefix)
+                        .unwrap()
+                        .slot,
+                );
+                self.display
+                    .frame
+                    .emit(&mut slot, msg, false);
+                self.downloads
+                    .progress
+                    .get_mut(prefix)
+                    .unwrap()
+                    .slot = slot;
             }
             _ => {}
         }
@@ -97,18 +132,34 @@ impl ReporterState {
                 }
                 let mut entry = BigTarball { size: *size, slot: BlockSlot::default() };
                 let msg = self.downloading_message(package_id, 0, *size);
-                self.display.frame.emit(&mut entry.slot, msg, true);
-                self.downloads.tarballs.insert(package_id.clone(), entry);
+                self.display
+                    .frame
+                    .emit(&mut entry.slot, msg, true);
+                self.downloads
+                    .tarballs
+                    .insert(package_id.clone(), entry);
             }
             FetchingProgressMessage::InProgress { downloaded, package_id } => {
                 let Some(entry) = self.downloads.tarballs.get(package_id) else { return };
                 let size = entry.size;
                 let done = *downloaded == size;
                 let msg = self.downloading_message(package_id, *downloaded, size);
-                let mut slot =
-                    std::mem::take(&mut self.downloads.tarballs.get_mut(package_id).unwrap().slot);
-                self.display.frame.emit(&mut slot, msg, !done);
-                self.downloads.tarballs.get_mut(package_id).unwrap().slot = slot;
+                let mut slot = std::mem::take(
+                    &mut self
+                        .downloads
+                        .tarballs
+                        .get_mut(package_id)
+                        .unwrap()
+                        .slot,
+                );
+                self.display
+                    .frame
+                    .emit(&mut slot, msg, !done);
+                self.downloads
+                    .tarballs
+                    .get_mut(package_id)
+                    .unwrap()
+                    .slot = slot;
             }
         }
     }
@@ -123,8 +174,12 @@ impl ReporterState {
         let suffix = if done { ", done" } else { "" };
         format!(
             "Downloading {package_id}: {}/{}{suffix}",
-            self.rendering.colors.cyan_bright(&pretty_bytes(downloaded)),
-            self.rendering.colors.cyan_bright(&pretty_bytes(size)),
+            self.rendering
+                .colors
+                .cyan_bright(&pretty_bytes(downloaded)),
+            self.rendering
+                .colors
+                .cyan_bright(&pretty_bytes(size)),
         )
     }
 
@@ -151,27 +206,49 @@ impl ReporterState {
     }
 
     pub(super) fn render_stats(&mut self) {
-        let added = self.install.stats_added.take().unwrap_or(0);
-        let removed = self.install.stats_removed.take().unwrap_or(0);
+        let added = self
+            .install
+            .stats_added
+            .take()
+            .unwrap_or(0);
+        let removed = self
+            .install
+            .stats_removed
+            .take()
+            .unwrap_or(0);
         if added == 0 && removed == 0 {
             let mut slot = std::mem::take(&mut self.install.stats_slot);
-            self.display.frame.emit(&mut slot, "Already up to date".to_string(), false);
+            self.display
+                .frame
+                .emit(&mut slot, "Already up to date".to_string(), false);
             self.install.stats_slot = slot;
             return;
         }
         let mut msg = String::from("Packages:");
         if added > 0 {
             msg.push(' ');
-            msg.push_str(&self.rendering.colors.green(&format!("+{added}")));
+            msg.push_str(
+                &self
+                    .rendering
+                    .colors
+                    .green(&format!("+{added}")),
+            );
         }
         if removed > 0 {
             msg.push(' ');
-            msg.push_str(&self.rendering.colors.red(&format!("-{removed}")));
+            msg.push_str(
+                &self
+                    .rendering
+                    .colors
+                    .red(&format!("-{removed}")),
+            );
         }
         msg.push('\n');
         msg.push_str(&self.pluses_and_minuses(self.rendering.width, added, removed));
         let mut slot = std::mem::take(&mut self.install.stats_slot);
-        self.display.frame.emit(&mut slot, msg, false);
+        self.display
+            .frame
+            .emit(&mut slot, msg, false);
         self.install.stats_slot = slot;
     }
 
@@ -214,11 +291,16 @@ impl DownloadState {
         requester: &str,
         done: bool,
     ) -> String {
-        let stats = self.progress
+        let stats = self
+            .progress
             .get(requester)
             .map(|entry| entry.stats)
             .unwrap_or_default();
-        let hl = |count: u64| rendering.colors.cyan_bright(&count.to_string());
+        let hl = |count: u64| {
+            rendering
+                .colors
+                .cyan_bright(&count.to_string())
+        };
         let mut msg = format!(
             "Progress: resolved {}, reused {}, downloaded {}",
             hl(stats.resolved),

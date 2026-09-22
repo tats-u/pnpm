@@ -35,10 +35,10 @@ fn private_cached_resolution_keeps_routed_tarball_urls() {
     let key = "base".to_string();
     let pnpm_config = config_for_registry("https://npm.corp.example/");
     let mut registry = registry_config();
-    registry.routing.upstreams.insert(
-        "corp".to_string(),
-        upstream_with_access("https://npm.corp.example/", "alice"),
-    );
+    registry
+        .routing
+        .upstreams
+        .insert("corp".to_string(), upstream_with_access("https://npm.corp.example/", "alice"));
     let router = tarball_router(&registry, user("alice"));
     let routed = router.route_lockfile(&pnpm_config, &lockfile("1.0.0"));
 
@@ -98,9 +98,16 @@ fn a_package_frame_carries_unpacked_size_and_omits_it_when_unknown() {
     assert_eq!(sized["fileCount"], serde_json::json!(42));
     assert_eq!(sized["revision"], serde_json::json!(3));
 
-    let unsized_frame: serde_json::Value =
-        serde_json::from_slice(&rx.try_recv().expect("unsized frame sent")).unwrap();
-    assert!(unsized_frame.get("unpackedSize").is_none());
+    let unsized_frame: serde_json::Value = serde_json::from_slice(
+        &rx.try_recv()
+            .expect("unsized frame sent"),
+    )
+    .unwrap();
+    assert!(
+        unsized_frame
+            .get("unpackedSize")
+            .is_none()
+    );
     assert!(unsized_frame.get("fileCount").is_none());
     assert!(unsized_frame.get("revision").is_none());
     assert_eq!(unsized_frame["tarball"], serde_json::json!("https://r.test/acme/-/acme-1.0.0.tgz"));
@@ -132,7 +139,9 @@ fn package_frames_route_private_alias_tarballs_to_gateway() {
             },
         },
     );
-    let tarball = frame["tarball"].as_str().expect("tarball URL");
+    let tarball = frame["tarball"]
+        .as_str()
+        .expect("tarball URL");
 
     assert!(tarball.contains("/~corp/acme/-/acme-1.0.0.tgz"));
     assert!(!tarball.contains("npm.corp.example"));
@@ -169,7 +178,9 @@ fn package_frame_routes_split_domain_registry_tarball_by_registry() {
             },
         },
     );
-    let tarball = frame["tarball"].as_str().expect("tarball URL");
+    let tarball = frame["tarball"]
+        .as_str()
+        .expect("tarball URL");
 
     // Routed by the corp registry, not the CDN host — so the raw upstream CDN
     // URL is never emitted to the client.
@@ -202,7 +213,9 @@ fn package_frame_strips_signed_token_from_public_registry_tarball() {
             },
         },
     );
-    let tarball = frame["tarball"].as_str().expect("tarball URL");
+    let tarball = frame["tarball"]
+        .as_str()
+        .expect("tarball URL");
 
     // The upstream token is never emitted to the client.
     assert_eq!(tarball, "https://registry.npmjs.org/acme/-/acme-1.0.0.tgz", "got {tarball}");
@@ -276,7 +289,9 @@ fn frozen_package_frames_route_private_alias_tarballs_to_gateway() {
     );
 
     let frame: serde_json::Value = serde_json::from_slice(&frames[0]).unwrap();
-    let tarball = frame["tarball"].as_str().expect("tarball URL");
+    let tarball = frame["tarball"]
+        .as_str()
+        .expect("tarball URL");
     assert!(tarball.contains("/~corp/acme/-/acme-1.0.0.tgz"));
     assert!(!tarball.contains("npm.corp.example"));
 }

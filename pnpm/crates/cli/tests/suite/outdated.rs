@@ -42,9 +42,13 @@ fn outdated_reports_newer_version() {
     // `^100.0.0` installs the highest in-range version (100.1.0); the
     // `latest` tag is 101.0.0, so the dependency is outdated.
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(1), "outdated deps present should exit 1");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(DEP), "report should mention the package: {stdout}");
@@ -69,9 +73,13 @@ fn outdated_from_workspace_member_reads_member_importer() {
         ),
     )
     .expect("write member package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&member, ["outdated"]).output().expect("run member outdated");
+    let output = pacquet(&member, ["outdated"])
+        .output()
+        .expect("run member outdated");
 
     assert_eq!(output.status.code(), Some(1), "member dependency should be outdated");
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -92,7 +100,9 @@ fn outdated_compatible_ignores_out_of_range_releases() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     // Default run is outdated (101.0.0 latest)...
     assert_eq!(
@@ -107,8 +117,9 @@ fn outdated_compatible_ignores_out_of_range_releases() {
 
     // ...but --compatible only considers in-range versions; 100.1.0 is
     // already the highest in `^100.0.0`, so nothing is outdated.
-    let output =
-        pacquet(&workspace, ["outdated", "--compatible"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated", "--compatible"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(0), "compatible run should be up to date");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(!stdout.contains(DEP), "compatible run should report nothing: {stdout}");
@@ -122,7 +133,9 @@ fn outdated_json_format() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["outdated", "--format", "json"])
         .output()
@@ -146,9 +159,13 @@ fn outdated_up_to_date_exits_zero() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "101.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(0), "up-to-date deps should exit 0");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(!stdout.contains(DEP), "no outdated dep should be reported: {stdout}");
@@ -164,9 +181,13 @@ fn outdated_respects_minimum_release_age() {
 
     write_manifest(&workspace, &format!(r#"{{ "{BRAVO_DEP}": "1.0.0" }}"#));
     set_minimum_release_age(&workspace, bravo_dep_mature_up_to_1_0_1_minimum_release_age());
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(1), "the mature release should be offered");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(BRAVO_DEP), "report should include the package: {stdout}");
@@ -174,8 +195,12 @@ fn outdated_respects_minimum_release_age() {
     assert!(!stdout.contains("1.1.0"), "report should omit the immature release: {stdout}");
 
     write_manifest(&workspace, &format!(r#"{{ "{BRAVO_DEP}": "1.0.1" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(0), "immature releases should not be offered");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(!stdout.contains(BRAVO_DEP), "report should omit immature releases: {stdout}");
@@ -189,9 +214,13 @@ fn outdated_pattern_filters_dependencies() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0", "{FOO}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["outdated", FOO]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated", FOO])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(1));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(FOO), "selected package should be reported: {stdout}");
@@ -207,9 +236,13 @@ fn outdated_reports_deprecated_package() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEPRECATED}": "1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(1), "deprecated dep should be flagged");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(DEPRECATED), "deprecated package should be reported: {stdout}");
@@ -226,7 +259,9 @@ fn outdated_without_lockfile_errors() {
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     assert!(!output.status.success(), "outdated without a lockfile should fail");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("No lockfile in directory"), "stderr should explain why: {stderr}");
@@ -285,7 +320,9 @@ fn outdated_recursive_aggregates_workspace_dependents() {
         )
         .expect("write project manifest");
     }
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["outdated", "--recursive", "--format", "json"])
         .output()
@@ -294,7 +331,9 @@ fn outdated_recursive_aggregates_workspace_dependents() {
     assert_eq!(output.status.code(), Some(1));
     let value: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("recursive outdated should emit valid JSON");
-    let dependents = value[DEP]["dependentPackages"].as_array().expect("dependent package list");
+    let dependents = value[DEP]["dependentPackages"]
+        .as_array()
+        .expect("dependent package list");
     assert_eq!(dependents.len(), 2);
     assert_eq!(dependents[0]["name"], "app-a");
     assert_eq!(dependents[1]["name"], "app-b");
@@ -320,7 +359,12 @@ fn outdated_recursive_aggregates_workspace_dependents() {
     assert_eq!(filtered.status.code(), Some(1));
     let value: serde_json::Value = serde_json::from_slice(&filtered.stdout)
         .expect("filtered recursive outdated should emit valid JSON");
-    assert_eq!(value[DEP]["dependentPackages"].as_array().map(Vec::len), Some(1));
+    assert_eq!(
+        value[DEP]["dependentPackages"]
+            .as_array()
+            .map(Vec::len),
+        Some(1)
+    );
     assert_eq!(value[DEP]["dependentPackages"][0]["name"], "app-a");
 
     drop((root, anchor));
@@ -344,7 +388,9 @@ fn outdated_recursive_reads_dedicated_project_lockfiles() {
         ),
     )
     .expect("write project manifest");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["outdated", "--recursive"])
         .output()
@@ -369,9 +415,16 @@ fn outdated_no_dependencies_no_lockfile_is_empty() {
     fs::write(workspace.join("package.json"), r#"{ "name": "test-outdated", "version": "1.0.0" }"#)
         .expect("write package.json");
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(0), "no dependencies should exit 0");
-    assert!(String::from_utf8_lossy(&output.stdout).trim().is_empty(), "report should be empty");
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .trim()
+            .is_empty(),
+        "report should be empty"
+    );
 
     drop((root, anchor));
 }
@@ -383,7 +436,9 @@ fn outdated_json_empty_when_up_to_date() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "101.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["outdated", "--format", "json"])
         .output()
@@ -401,10 +456,13 @@ fn outdated_list_format() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output =
-        pacquet(&workspace, ["outdated", "--no-table"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated", "--no-table"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(1));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(DEP), "list should mention the package: {stdout}");
@@ -420,10 +478,13 @@ fn outdated_long_shows_deprecation_and_homepage_details() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEPRECATED}": "1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output =
-        pacquet(&workspace, ["outdated", "--long"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated", "--long"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(1));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
@@ -442,9 +503,13 @@ fn outdated_npm_alias_reports_real_name() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "positive": "npm:{FOO}@^1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(1));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(FOO), "report should use the real package name: {stdout}");
@@ -461,9 +526,13 @@ fn outdated_catalog_npm_alias_reports_real_name() {
 
     append_workspace_yaml_key(&workspace, "catalog", format!("{{ positive: 'npm:{FOO}@^1.0.0' }}"));
     write_manifest(&workspace, r#"{ "positive": "catalog:" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(1));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains(FOO), "report should use the catalog entry's package name: {stdout}");
@@ -478,7 +547,9 @@ fn outdated_compatible_uses_the_catalog_range() {
 
     append_workspace_yaml_key(&workspace, "catalog", format!("{{ '{DEP}': '100.0.0' }}"));
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "catalog:" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     // Widening the catalog range without reinstalling leaves the lockfile
     // pinned at 100.0.0 while 100.1.0 is now in range.
@@ -487,8 +558,9 @@ fn outdated_compatible_uses_the_catalog_range() {
     fs::write(&workspace_yaml, yaml.replace("'100.0.0'", "'^100.0.0'"))
         .expect("widen the catalog range");
 
-    let output =
-        pacquet(&workspace, ["outdated", "--compatible"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated", "--compatible"])
+        .output()
+        .expect("run pacquet outdated");
     assert_eq!(output.status.code(), Some(1), "the in-range 100.1.0 should be reported");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("100.1.0"), "report should show the in-range version: {stdout}");
@@ -505,7 +577,9 @@ fn outdated_catalog_entry_missing_is_a_catalog_error() {
 
     append_workspace_yaml_key(&workspace, "catalog", format!("{{ '{DEP}': '^100.0.0' }}"));
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "catalog:" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let workspace_yaml = workspace.join("pnpm-workspace.yaml");
     let yaml = fs::read_to_string(&workspace_yaml).expect("read pnpm-workspace.yaml");
@@ -516,7 +590,9 @@ fn outdated_catalog_entry_missing_is_a_catalog_error() {
         .join("\n");
     fs::write(&workspace_yaml, without_catalog).expect("drop the catalog entry");
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "the run should fail: {stderr}");
     assert!(
@@ -540,14 +616,20 @@ fn outdated_prod_dev_filtering() {
         ),
     )
     .expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let prod = pacquet(&workspace, ["outdated", "--prod"]).output().expect("run pacquet outdated");
+    let prod = pacquet(&workspace, ["outdated", "--prod"])
+        .output()
+        .expect("run pacquet outdated");
     let prod_out = String::from_utf8_lossy(&prod.stdout);
     assert!(prod_out.contains(DEP), "--prod includes the prod dep: {prod_out}");
     assert!(!prod_out.contains(FOO), "--prod excludes the dev dep: {prod_out}");
 
-    let dev = pacquet(&workspace, ["outdated", "--dev"]).output().expect("run pacquet outdated");
+    let dev = pacquet(&workspace, ["outdated", "--dev"])
+        .output()
+        .expect("run pacquet outdated");
     let dev_out = String::from_utf8_lossy(&dev.stdout);
     assert!(dev_out.contains(FOO), "--dev includes the dev dep: {dev_out}");
     assert!(!dev_out.contains(DEP), "--dev excludes the prod dep: {dev_out}");
@@ -562,10 +644,14 @@ fn outdated_leaves_out_ignored_dependencies() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0", "{FOO}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     set_ignore_dependencies(&workspace, &[FOO]);
 
-    let output = pacquet(&workspace, ["outdated"]).output().expect("run pacquet outdated");
+    let output = pacquet(&workspace, ["outdated"])
+        .output()
+        .expect("run pacquet outdated");
 
     assert_eq!(output.status.code(), Some(1), "the unignored dependency is still outdated");
     let stdout = String::from_utf8_lossy(&output.stdout);

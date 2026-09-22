@@ -313,8 +313,18 @@ fn filtered_add_with_dedicated_lockfiles_mutates_only_selected_project() {
     assert_eq!(dependency_spec(&unselected, "dependencies", HELLO), None);
     let selected_lockfile = read_lockfile(&selected.join("pnpm-lock.yaml"));
     assert_eq!(importer_version(&selected_lockfile, ".", HELLO), "1.0.0");
-    assert!(!unselected.join("pnpm-lock.yaml").exists(), "unselected must not be mutated");
-    assert!(!fixture.workspace.join("pnpm-lock.yaml").exists());
+    assert!(
+        !unselected
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "unselected must not be mutated"
+    );
+    assert!(
+        !fixture
+            .workspace
+            .join("pnpm-lock.yaml")
+            .exists()
+    );
 }
 
 #[test]
@@ -337,7 +347,10 @@ fn recursive_add_with_dedicated_lockfiles_excludes_workspace_root() {
         );
     }
     assert!(
-        !fixture.workspace.join("pnpm-lock.yaml").exists(),
+        !fixture
+            .workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "the auto-excluded root must not get its own lockfile",
     );
 }
@@ -379,7 +392,12 @@ fn filtered_update_with_dedicated_lockfiles_mutates_only_selected_project() {
         fs::read(unselected.join("pnpm-lock.yaml")).expect("read lockfile"),
         unselected_lockfile_before,
     );
-    assert!(!fixture.workspace.join("pnpm-lock.yaml").exists());
+    assert!(
+        !fixture
+            .workspace
+            .join("pnpm-lock.yaml")
+            .exists()
+    );
 }
 
 #[test]
@@ -414,7 +432,12 @@ fn filtered_remove_with_dedicated_lockfiles_mutates_only_selected_project() {
         fs::read(unselected.join("pnpm-lock.yaml")).expect("read lockfile"),
         unselected_lockfile_before,
     );
-    assert!(!fixture.workspace.join("pnpm-lock.yaml").exists());
+    assert!(
+        !fixture
+            .workspace
+            .join("pnpm-lock.yaml")
+            .exists()
+    );
 }
 
 #[test]
@@ -463,16 +486,23 @@ fn filtered_install_after_full_install_preserves_unselected_materialization() {
     assert!(map_contains(&prior_package_map, PARENT));
     assert!(map_contains(&prior_package_map, DEP));
     let mut modules = fixture.modules();
-    let prior_hoisted: HashMap<_, _> = modules.hoisted_dependencies
+    let prior_hoisted: HashMap<_, _> = modules
+        .hoisted_dependencies
         .iter()
         .filter(|(key, _)| key.contains(PARENT) || key.contains(DEP))
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();
     assert!(!prior_hoisted.is_empty(), "unselected hoist metadata must be present");
-    let pending_id = snapshot_entries(&before_wanted, PARENT)[0].0.clone();
-    modules.pending_builds.push(pending_id.clone());
+    let pending_id = snapshot_entries(&before_wanted, PARENT)[0]
+        .0
+        .clone();
+    modules
+        .pending_builds
+        .push(pending_id.clone());
     fixture.write_modules(modules);
-    let retained_link = unselected.join("node_modules").join(PARENT);
+    let retained_link = unselected
+        .join("node_modules")
+        .join(PARENT);
     let retained_parent_slot = fixture.slot(PARENT, "100.0.0");
     let retained_child_slot = fixture.slot(DEP, "100.1.0");
     let obsolete_selected_slot = fixture.slot(HELLO, "1.0.0");
@@ -507,9 +537,18 @@ fn filtered_install_after_full_install_preserves_unselected_materialization() {
     assert!(map_contains(&after_package_map, DEP));
     let after_modules = fixture.modules();
     for (key, value) in prior_hoisted {
-        assert_eq!(after_modules.hoisted_dependencies.get(&key), Some(&value));
+        assert_eq!(
+            after_modules
+                .hoisted_dependencies
+                .get(&key),
+            Some(&value)
+        );
     }
-    assert!(after_modules.pending_builds.contains(&pending_id));
+    assert!(
+        after_modules
+            .pending_builds
+            .contains(&pending_id)
+    );
     assert!(!obsolete_selected_slot.exists());
     assert!(!has_snapshot(&after_current, HELLO, "1.0.0"));
     assert!(has_link(&selected, NO_DEPS));

@@ -38,7 +38,9 @@ pub fn split_spec(spec: &str) -> (&str, Option<&str>) {
 /// build corepack records the downloaded artifact with.
 #[must_use]
 pub fn version_without_build(reference: &str) -> &str {
-    reference.split_once('+').map_or(reference, |(version, _)| version)
+    reference
+        .split_once('+')
+        .map_or(reference, |(version, _)| version)
 }
 
 /// Whether `reference` asks for a released version — a version, a range,
@@ -72,7 +74,12 @@ pub fn dev_engines_package_managers(manifest: &Value) -> impl Iterator<Item = &V
 #[must_use]
 pub fn engine_name_version(entry: &Value) -> Option<(&str, Option<&str>)> {
     let name = entry.get("name")?.as_str()?;
-    Some((name, entry.get("version").and_then(Value::as_str)))
+    Some((
+        name,
+        entry
+            .get("version")
+            .and_then(Value::as_str),
+    ))
 }
 
 #[cfg(test)]

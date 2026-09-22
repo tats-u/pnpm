@@ -28,8 +28,9 @@ fn configured_relative_state_dir_stays_inside_machine_state_root() {
     let root = tempfile::tempdir().unwrap();
     let state_root = root.path().join("pnpm-state-root");
     let default_state_dir = state_root.join("pnpm");
-    let expected_state_dir =
-        dunce::canonicalize(root.path()).unwrap().join("pnpm-state-root/configured");
+    let expected_state_dir = dunce::canonicalize(root.path())
+        .unwrap()
+        .join("pnpm-state-root/configured");
 
     assert_eq!(
         resolve_configured_state_dir(&default_state_dir, "nested/../configured"),
@@ -39,7 +40,11 @@ fn configured_relative_state_dir_stays_inside_machine_state_root() {
         resolve_configured_state_dir(&default_state_dir, "nested/../../outside"),
         PathBuf::new(),
     );
-    assert!(resolve_configured_state_dir(&default_state_dir, "../outside").as_os_str().is_empty());
+    assert!(
+        resolve_configured_state_dir(&default_state_dir, "../outside")
+            .as_os_str()
+            .is_empty()
+    );
 }
 
 #[test]

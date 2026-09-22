@@ -329,7 +329,10 @@ fn test_set_rejects_empty_path() {
     let result = set_object_value_by_property_path(&mut value, "", json!("value"));
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(err.to_string().contains("empty property path"));
+    assert!(
+        err.to_string()
+            .contains("empty property path")
+    );
 }
 
 #[test]

@@ -56,13 +56,14 @@ impl DiffTempFile {
             if read == 0 {
                 break;
             }
-            let next_len = bytes
-                .len()
-                .checked_add(read)
-                .ok_or(PatchCommitError::DiffOutputTooLarge {
-                    stream,
-                    limit: MAX_DIFF_OUTPUT_BYTES,
-                })?;
+            let next_len =
+                bytes
+                    .len()
+                    .checked_add(read)
+                    .ok_or(PatchCommitError::DiffOutputTooLarge {
+                        stream,
+                        limit: MAX_DIFF_OUTPUT_BYTES,
+                    })?;
             if next_len as u64 > MAX_DIFF_OUTPUT_BYTES {
                 return Err(PatchCommitError::DiffOutputTooLarge {
                     stream,

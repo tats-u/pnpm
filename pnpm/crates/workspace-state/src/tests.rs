@@ -11,7 +11,11 @@ use tempfile::tempdir;
 #[test]
 fn file_path_matches_upstream() {
     let dir = std::path::Path::new("/tmp/example");
-    assert_eq!(get_file_path(dir), dir.join("node_modules").join(".pnpm-workspace-state-v1.json"));
+    assert_eq!(
+        get_file_path(dir),
+        dir.join("node_modules")
+            .join(".pnpm-workspace-state-v1.json")
+    );
 }
 
 #[test]
@@ -21,7 +25,9 @@ fn write_and_load_round_trip() {
 
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_dir.to_string_lossy().into_owned(),
+        workspace_dir
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("my-pkg".into()), version: Some("1.2.3".into()) },
     );
 
@@ -57,7 +63,9 @@ fn write_and_load_round_trip() {
     let on_disk = std::fs::read_to_string(&path).expect("read state");
     assert!(on_disk.ends_with('\n'), "upstream appends a trailing newline");
 
-    let loaded = load_workspace_state(workspace_dir).expect("load state").expect("file present");
+    let loaded = load_workspace_state(workspace_dir)
+        .expect("load state")
+        .expect("file present");
     assert_eq!(loaded, state);
 }
 
@@ -110,8 +118,16 @@ fn package_extensions_round_trip() {
 
     let tmp = tempdir().expect("create temp dir");
     update_workspace_state(tmp.path(), &state).expect("write state");
-    let loaded = load_workspace_state(tmp.path()).expect("load state").expect("file present");
-    assert_eq!(loaded.settings.package_extensions.as_ref(), Some(&extensions));
+    let loaded = load_workspace_state(tmp.path())
+        .expect("load state")
+        .expect("file present");
+    assert_eq!(
+        loaded
+            .settings
+            .package_extensions
+            .as_ref(),
+        Some(&extensions)
+    );
 
     let on_disk = std::fs::read_to_string(get_file_path(tmp.path())).expect("read state");
     assert!(on_disk.contains(r#""packageExtensions""#), "got: {on_disk}");

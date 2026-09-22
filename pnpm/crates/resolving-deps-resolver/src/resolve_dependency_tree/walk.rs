@@ -115,7 +115,12 @@ pub(super) async fn resolve_node<Chain>(
 where
     Chain: Resolver + ?Sized,
 {
-    let base_overlay = ctx.options.base.version.preferred_versions_overlay.clone();
+    let base_overlay = ctx
+        .options
+        .base
+        .version
+        .preferred_versions_overlay
+        .clone();
     let seed = resolve_node_seed(
         ctx,
         resolver,
@@ -295,7 +300,10 @@ where
 /// no-resolver error message.
 fn render_specifier(wanted: &WantedDependency) -> String {
     let alias = wanted.alias.as_deref().unwrap_or("");
-    let bare = wanted.bare_specifier.as_deref().unwrap_or("");
+    let bare = wanted
+        .bare_specifier
+        .as_deref()
+        .unwrap_or("");
     match (alias.is_empty(), bare.is_empty()) {
         (true, true) => String::new(),
         (true, false) => bare.to_string(),

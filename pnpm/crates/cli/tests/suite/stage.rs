@@ -136,7 +136,9 @@ fn list_stops_paginating_at_the_fail_safe_page_cap() {
     let mut server = mockito::Server::new();
     let registry = format!("{}/", server.url());
     write_registry_config(dir.path(), &registry);
-    let full_page: Vec<Value> = (0..100).map(|_| staged_item()).collect();
+    let full_page: Vec<Value> = (0..100)
+        .map(|_| staged_item())
+        .collect();
     let mock = server
         .mock("GET", "/-/stage")
         .match_query(Matcher::Any)
@@ -159,7 +161,9 @@ fn list_uses_package_scoped_auth_for_package_filters() {
     let mut server = mockito::Server::new();
     let registry = format!("{}/", server.url());
     write_registry_config(dir.path(), &registry);
-    let host = registry.strip_prefix("http://").unwrap_or(&registry);
+    let host = registry
+        .strip_prefix("http://")
+        .unwrap_or(&registry);
     let auth_file = dir.path().join("auth-npmrc");
     fs::write(
         &auth_file,
@@ -345,12 +349,20 @@ fn gzipped_tarball(entries: &[(&str, &str)]) -> Vec<u8> {
         header.set_size(contents.len() as u64);
         header.set_mode(0o644);
         header.set_cksum();
-        builder.append_data(&mut header, path, contents.as_bytes()).expect("append tar entry");
+        builder
+            .append_data(&mut header, path, contents.as_bytes())
+            .expect("append tar entry");
     }
-    let tar = builder.into_inner().expect("finish the tar archive");
+    let tar = builder
+        .into_inner()
+        .expect("finish the tar archive");
     let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
-    encoder.write_all(&tar).expect("gzip the tarball");
-    encoder.finish().expect("finish the gzip stream")
+    encoder
+        .write_all(&tar)
+        .expect("gzip the tarball");
+    encoder
+        .finish()
+        .expect("finish the gzip stream")
 }
 
 fn package_tarball(manifest: &Value) -> Vec<u8> {
@@ -370,8 +382,12 @@ fn spawn_hosted_registry() -> (String, tempfile::TempDir) {
     let storage = tempfile::tempdir().expect("registry storage");
     let listener = std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
         .expect("bind the stage e2e registry to an unused localhost port");
-    listener.set_nonblocking(true).expect("set the registry listener to nonblocking");
-    let listen = listener.local_addr().expect("read the registry listener address");
+    listener
+        .set_nonblocking(true)
+        .expect("set the registry listener to nonblocking");
+    let listen = listener
+        .local_addr()
+        .expect("read the registry listener address");
     let url = format!("http://{listen}/");
     let mut config = pnpr::Config::static_serve(listen, storage.path().to_path_buf());
     config.http.public_url = url.trim_end_matches('/').to_string();
@@ -386,7 +402,9 @@ fn spawn_hosted_registry() -> (String, tempfile::TempDir) {
             runtime.block_on(async move {
                 let listener = tokio::net::TcpListener::from_std(listener)
                     .expect("create the registry tokio listener");
-                pnpr::serve_listener(config, listener).await.expect("serve the stage e2e registry");
+                pnpr::serve_listener(config, listener)
+                    .await
+                    .expect("serve the stage e2e registry");
             });
         })
         .expect("spawn the registry thread");
@@ -430,7 +448,10 @@ fn add_user(registry: &str) -> String {
             .await
             .expect("send the adduser request");
         assert_eq!(response.status().as_u16(), 201, "adduser must succeed");
-        let payload: Value = response.json().await.expect("parse the adduser response");
+        let payload: Value = response
+            .json()
+            .await
+            .expect("parse the adduser response");
         payload["token"]
             .as_str()
             .expect("token in the adduser response")
@@ -457,7 +478,9 @@ fn packument_status(registry: &str, token: &str, name: &str) -> u16 {
 /// carrying the registered user's token.
 fn e2e_workspace(dir: &Path, registry: &str, token: &str, manifest: &Value) -> PathBuf {
     write_project(dir, registry, manifest);
-    let host = registry.strip_prefix("http://").unwrap_or(registry);
+    let host = registry
+        .strip_prefix("http://")
+        .unwrap_or(registry);
     let auth_file = dir.join("auth-npmrc");
     fs::write(&auth_file, format!("//{host}:_authToken={token}\n")).expect("write auth .npmrc");
     auth_file

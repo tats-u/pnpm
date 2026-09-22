@@ -48,7 +48,9 @@ fn store_path_accepts_the_silent_shorthand() {
 
         let normalize = |path: &str| path.replace('\\', "/");
         assert_eq!(
-            String::from_utf8_lossy(&output.stdout).trim_end().pipe(normalize),
+            String::from_utf8_lossy(&output.stdout)
+                .trim_end()
+                .pipe(normalize),
             canonicalize(&workspace)
                 .join("foo/bar")
                 .join(STORE_VERSION)
@@ -83,7 +85,9 @@ fn store_path_should_return_store_dir_from_pnpm_workspace_yaml() {
     eprintln!("Stdout");
     let normalize = |path: &str| path.replace('\\', "/");
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout).trim_end().pipe(normalize),
+        String::from_utf8_lossy(&output.stdout)
+            .trim_end()
+            .pipe(normalize),
         canonicalize(&workspace)
             .join("foo/bar")
             .join(STORE_VERSION)
@@ -169,7 +173,9 @@ fn empty_store_dir_override_restores_the_platform_default() {
     eprintln!("default stdout={}", String::from_utf8_lossy(&default_output.stdout));
     eprintln!("default stderr={}", String::from_utf8_lossy(&default_output.stderr));
     assert!(default_output.status.success());
-    let default_store = String::from_utf8_lossy(&default_output.stdout).trim_end().to_owned();
+    let default_store = String::from_utf8_lossy(&default_output.stdout)
+        .trim_end()
+        .to_owned();
 
     fs::write(workspace.join("pnpm-workspace.yaml"), "storeDir: yaml-store\n")
         .expect("write configured store directory");
@@ -190,9 +196,8 @@ fn empty_store_dir_override_restores_the_platform_default() {
 
 #[test]
 fn store_status_reports_an_untouched_store() {
-    let CommandTempCwd {
-        mut pacquet, workspace, root: _root, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     pacquet
         .arg("add")
         .arg("is-odd@3.0.1")
@@ -213,9 +218,8 @@ fn store_status_reports_an_untouched_store() {
 
 #[test]
 fn store_status_reports_a_package_edited_after_it_was_linked_out() {
-    let CommandTempCwd {
-        mut pacquet, workspace, root: _root, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     pacquet
         .arg("add")
         .arg("is-odd@3.0.1")
@@ -241,13 +245,8 @@ fn store_status_reports_a_package_edited_after_it_was_linked_out() {
 
 #[test]
 fn store_add_fetches_a_package_without_touching_the_project() {
-    let CommandTempCwd {
-        pacquet,
-        workspace,
-        root: _root,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, workspace, root: _root, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .with_args(["store", "add", "is-odd@3.0.1"])
@@ -256,14 +255,21 @@ fn store_add_fetches_a_package_without_touching_the_project() {
 
     assert!(!workspace.join("node_modules").exists(), "store add must not install anything");
     assert!(!workspace.join("package.json").exists(), "store add must not write a manifest");
-    assert!(!workspace.join("pnpm-lock.yaml").exists(), "store add must not write a lockfile");
+    assert!(
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "store add must not write a lockfile"
+    );
 
     // The package is now in the store, which is the whole point: the row
     // the fetch wrote is what a later install reuses.
     let store_dir = pnpm_store_dir::StoreDir::from(npmrc_info.store_dir);
     let store_index = pnpm_store_dir::StoreIndex::open_readonly_in(&store_dir)
         .expect("open the store index store add just wrote");
-    let keys = store_index.keys().expect("read the store index keys");
+    let keys = store_index
+        .keys()
+        .expect("read the store index keys");
     assert!(
         keys.iter()
             .any(|key| key.contains("is-odd@3.0.1")),
@@ -273,19 +279,16 @@ fn store_add_fetches_a_package_without_touching_the_project() {
 
 #[test]
 fn store_add_waits_for_the_store_operation_lock() {
-    let CommandTempCwd {
-        pacquet,
-        workspace,
-        root: _root,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, workspace, root: _root, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let store_dir = pnpm_store_dir::StoreDir::from(npmrc_info.store_dir);
     pacquet_at(&workspace)
         .with_args(["store", "add", "@pnpm.e2e/foo@100.0.0"])
         .assert()
         .success();
-    let prune_lock = store_dir.lock_for_prune().expect("lock store for prune");
+    let prune_lock = store_dir
+        .lock_for_prune()
+        .expect("lock store for prune");
     let alternate_temp = workspace.join("alternate-temp");
     fs::create_dir(&alternate_temp).expect("create alternate temporary directory");
     let output_path = workspace.join("store-add-lock.ndjson");
@@ -337,9 +340,8 @@ fn store_add_fails_when_a_package_cannot_be_fetched() {
 
 #[test]
 fn store_prune_removes_packages_left_unreferenced_by_remove() {
-    let CommandTempCwd {
-        root: _root, workspace, npmrc_info, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { root: _root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     pacquet_at(&workspace)
         .with_args(["add", "is-positive@1.0.0", "--package-import-method=hardlink"])
         .assert()

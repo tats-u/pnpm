@@ -43,13 +43,16 @@ fn tri_ecosystem_config(storage: PathBuf) -> Config {
             },
         );
     }
-    let mut graph: indexmap::IndexMap<String, Registry> = config.routing
+    let mut graph: indexmap::IndexMap<String, Registry> = config
+        .routing
         .registries
         .names()
         .map(|name| {
             (
                 name.to_string(),
-                config.routing.registries
+                config
+                    .routing
+                    .registries
                     .get(name)
                     .unwrap()
                     .clone(),
@@ -68,18 +71,27 @@ fn tri_ecosystem_config(storage: PathBuf) -> Config {
     );
     graph.insert(
         "main".to_string(),
-        Registry::Router { sources: ["local", "crates", "python"].map(str::to_string).to_vec() },
+        Registry::Router {
+            sources: ["local", "crates", "python"]
+                .map(str::to_string)
+                .to_vec(),
+        },
     );
     let registries = Registries::new(graph, Some("main".to_string()))
         .with_ecosystem("crates", Ecosystem::Cargo)
         .with_ecosystem("python", Ecosystem::Pypi);
-    registries.validate().expect("the three-ecosystem graph is valid");
+    registries
+        .validate()
+        .expect("the three-ecosystem graph is valid");
     config.routing.registries = registries;
     config
 }
 
 async fn body_bytes(body: Body) -> Vec<u8> {
-    to_bytes(body, usize::MAX).await.expect("read body").to_vec()
+    to_bytes(body, usize::MAX)
+        .await
+        .expect("read body")
+        .to_vec()
 }
 
 async fn body_json(body: Body) -> Value {

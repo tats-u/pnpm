@@ -30,12 +30,15 @@ impl FeatureActivations {
         pending: &mut VecDeque<String>,
     ) {
         if let Some(alias) = activation.strip_prefix("dep:") {
-            self.active_aliases.insert(alias.to_string());
+            self.active_aliases
+                .insert(alias.to_string());
         } else if let Some((alias, feature)) = activation.split_once('/') {
             if let Some(alias) = alias.strip_suffix('?') {
-                self.weak_dependency_features.push((alias.to_string(), feature.to_string()));
+                self.weak_dependency_features
+                    .push((alias.to_string(), feature.to_string()));
             } else {
-                self.active_aliases.insert(alias.to_string());
+                self.active_aliases
+                    .insert(alias.to_string());
                 self.dependency_features
                     .entry(alias.to_string())
                     .or_default()
@@ -44,14 +47,16 @@ impl FeatureActivations {
         } else if features.contains_key(activation) {
             pending.push_back(activation.to_string());
         } else if implicit_optional_aliases.contains(activation) {
-            self.active_aliases.insert(activation.to_string());
+            self.active_aliases
+                .insert(activation.to_string());
         }
     }
 
     fn activate_weak_dependency_features(&mut self, lockfile: bool) {
         for (alias, feature) in std::mem::take(&mut self.weak_dependency_features) {
             if lockfile || self.active_aliases.contains(&alias) {
-                self.active_aliases.insert(alias.clone());
+                self.active_aliases
+                    .insert(alias.clone());
                 self.dependency_features
                     .entry(alias)
                     .or_default()
@@ -79,7 +84,8 @@ pub(crate) fn locked_dependencies(
 pub(crate) fn supports_features(package: &RegistryVersion, selection: &FeatureSelection) -> bool {
     let implicit_optional_aliases =
         implicit_optional_aliases(&package.dependencies, &package.features);
-    selection.features
+    selection
+        .features
         .iter()
         .all(|feature| {
             package.features.contains_key(feature)
@@ -99,12 +105,20 @@ pub(crate) fn dependencies_from_parts(
         .iter()
         .filter(|dependency| options.include_dev || dependency.kind != DependencyKind::Dev)
         .filter(|dependency| {
-            !dependency.optional || activations.active_aliases.contains(&dependency.alias)
+            !dependency.optional
+                || activations
+                    .active_aliases
+                    .contains(&dependency.alias)
         })
         .map(|dependency| {
             let mut dependency = dependency.clone();
-            if let Some(features) = activations.dependency_features.get(&dependency.alias) {
-                dependency.features.extend(features.iter().cloned());
+            if let Some(features) = activations
+                .dependency_features
+                .get(&dependency.alias)
+            {
+                dependency
+                    .features
+                    .extend(features.iter().cloned());
             }
             dependency
         })
@@ -118,7 +132,8 @@ fn collect_feature_activations(
     lockfile: bool,
 ) -> FeatureActivations {
     let implicit_optional_aliases = implicit_optional_aliases(dependencies, features);
-    let mut pending = selection.features
+    let mut pending = selection
+        .features
         .iter()
         .cloned()
         .collect::<VecDeque<_>>();
@@ -134,7 +149,9 @@ fn collect_feature_activations(
         }
         let Some(feature_activations) = features.get(&feature) else {
             if implicit_optional_aliases.contains(feature.as_str()) {
-                activations.active_aliases.insert(feature);
+                activations
+                    .active_aliases
+                    .insert(feature);
             }
             continue;
         };
@@ -227,9 +244,13 @@ fn widen_line_selection(
     package: &PackageKey,
 ) -> bool {
     let previous = selections.get(package).cloned();
-    let selection = selections.entry(package.clone()).or_default();
+    let selection = selections
+        .entry(package.clone())
+        .or_default();
     selection.default_features |= dependency.default_features;
-    selection.features.extend(dependency.features.iter().cloned());
+    selection
+        .features
+        .extend(dependency.features.iter().cloned());
     previous.as_ref() != Some(selection)
 }
 

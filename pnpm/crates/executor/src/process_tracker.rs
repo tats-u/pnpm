@@ -67,12 +67,16 @@ impl ProcessTracker {
     /// that initiated cancellation.
     pub fn cancel(&self) -> bool {
         let executions = {
-            let mut state = self.state.lock().expect("process tracker lock is not poisoned");
+            let mut state = self
+                .state
+                .lock()
+                .expect("process tracker lock is not poisoned");
             if state.cancelled {
                 return false;
             }
             state.cancelled = true;
-            state.executions
+            state
+                .executions
                 .values()
                 .cloned()
                 .collect::<Vec<_>>()
@@ -91,7 +95,10 @@ impl ProcessTracker {
 
     #[must_use]
     pub fn is_cancelled(&self) -> bool {
-        self.state.lock().expect("process tracker lock is not poisoned").cancelled
+        self.state
+            .lock()
+            .expect("process tracker lock is not poisoned")
+            .cancelled
     }
 
     pub(crate) fn track_emulated(&self) -> EmulatedCancellation<'_> {
@@ -101,7 +108,10 @@ impl ProcessTracker {
     }
 
     fn register(&self, execution: RunningExecution) -> Registration<'_> {
-        let mut state = self.state.lock().expect("process tracker lock is not poisoned");
+        let mut state = self
+            .state
+            .lock()
+            .expect("process tracker lock is not poisoned");
         if state.cancelled {
             drop(state);
             execution.cancel();
@@ -127,9 +137,9 @@ pub fn spawn_child<'tracker>(
     command: &mut Command,
     process_tracker: Option<&'tracker ProcessTracker>,
 ) -> io::Result<SpawnedChild<'tracker>> {
-    let separate_process_group =
-        process_tracker.is_some_and(|tracker| tracker.separate_process_groups)
-            || spawns_without_terminal();
+    let separate_process_group = process_tracker
+        .is_some_and(|tracker| tracker.separate_process_groups)
+        || spawns_without_terminal();
     if separate_process_group {
         prepare_command(command);
     }
@@ -229,7 +239,8 @@ struct Registration<'tracker> {
 impl Drop for Registration<'_> {
     fn drop(&mut self) {
         let Some(id) = self.id else { return };
-        self.tracker.state
+        self.tracker
+            .state
             .lock()
             .expect("process tracker lock is not poisoned")
             .executions
@@ -302,7 +313,9 @@ fn process_listing() -> Option<String> {
     let mut stdout = child.stdout.take()?;
     let output = std::thread::spawn(move || {
         let mut listing = String::new();
-        stdout.read_to_string(&mut listing).map(|_| listing)
+        stdout
+            .read_to_string(&mut listing)
+            .map(|_| listing)
     });
     let completed = wait_briefly(&mut child);
     if !completed {

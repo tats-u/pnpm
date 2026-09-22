@@ -51,7 +51,9 @@ fn task_concurrency_of_one_keeps_scripts_in_the_foreground_process_group() {
 
     let terminal = Terminal::open();
     let mut process = terminal.spawn_foreground(pacquet.with_args(["-r", "run", "build"]));
-    let status = process.wait().expect("wait for pacquet");
+    let status = process
+        .wait()
+        .expect("wait for pacquet");
     assert!(status.success(), "pacquet should succeed on the terminal");
 
     let groups =
@@ -104,7 +106,9 @@ fn recursive_run_respects_workspace_concurrency() {
 
     assert!(workspace.join("saw-parallel").exists(), "two scripts should overlap");
     assert!(
-        !workspace.join("exceeded-concurrency").exists(),
+        !workspace
+            .join("exceeded-concurrency")
+            .exists(),
         "no more than two scripts should overlap",
     );
 
@@ -168,7 +172,9 @@ setTimeout(() => {
         .success();
 
     assert!(
-        !workspace.join("exceeded-task-concurrency").exists(),
+        !workspace
+            .join("exceeded-task-concurrency")
+            .exists(),
         "only one build task should run at a time",
     );
     for name in ["project-1", "project-2", "project-3"] {
@@ -262,11 +268,15 @@ fn parallel_before_run_starts_selected_projects_concurrently() {
         .success();
 
     assert!(
-        workspace.join("project-1.started").exists(),
+        workspace
+            .join("project-1.started")
+            .exists(),
         "project-1 should start while project-2 is waiting",
     );
     assert!(
-        workspace.join("project-2.started").exists(),
+        workspace
+            .join("project-2.started")
+            .exists(),
         "project-2 should start while project-1 is waiting",
     );
 
@@ -335,7 +345,9 @@ fn recursive_run_resolves_local_bin_on_path_per_project() {
         )],
     );
     let pkg_root = workspace.join("pkg-with-local-bin");
-    let bin_dir = pkg_root.join("node_modules").join(".bin");
+    let bin_dir = pkg_root
+        .join("node_modules")
+        .join(".bin");
     write_node_bin(&bin_dir, "say-hi", "require('fs').writeFileSync('hi.txt', '')\n");
 
     pacquet

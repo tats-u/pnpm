@@ -30,7 +30,11 @@ const MAX_ENTRY_BYTES: u64 = 4096;
 fn cache_path(cache_dir: &Path, lockfile_dir: &Path) -> PathBuf {
     let mut hasher = sha2::Sha256::new();
     hasher.update(CACHE_FORMAT_VERSION.as_bytes());
-    hasher.update(lockfile_dir.to_string_lossy().as_bytes());
+    hasher.update(
+        lockfile_dir
+            .to_string_lossy()
+            .as_bytes(),
+    );
     cache_dir
         .join("gvs-layout")
         .join(format!("{:x}.bin", hasher.finalize()))
@@ -100,7 +104,10 @@ pub(super) fn load(
     // install before it has read a single package: require a
     // regular file, and one that is not reached through a symlink,
     // before opening.
-    if !std::fs::symlink_metadata(&path).ok()?.is_file() {
+    if !std::fs::symlink_metadata(&path)
+        .ok()?
+        .is_file()
+    {
         return None;
     }
     let handle = std::fs::File::open(&path).ok()?;
@@ -129,7 +136,8 @@ pub(super) fn load(
         }
         suffixes.insert(package_key, suffix.to_owned());
     }
-    expected.snapshots
+    expected
+        .snapshots
         .keys()
         .all(|key| suffixes.contains_key(key))
         .then_some(suffixes)
@@ -167,7 +175,9 @@ impl Expected<'_> {
     fn slot_prefix(&self, package_key: &PackageKey) -> Option<String> {
         let metadata_key = package_key.without_peer();
         self.snapshots.get(package_key)?;
-        let metadata = self.packages.and_then(|packages| packages.get(&metadata_key));
+        let metadata = self
+            .packages
+            .and_then(|packages| packages.get(&metadata_key));
         let name = metadata_key.name.to_string();
         let version = super::gvs_version_segment(metadata, &metadata_key.suffix);
         // The empty digest leaves exactly the fixed part of a

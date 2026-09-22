@@ -97,7 +97,9 @@ pub async fn resolve_node_version_with_auth(
 ) -> Result<Option<String>, ResolveNodeVersionError> {
     let all_versions = fetch_all_versions(http_client, auth_headers, node_mirror_base_url).await?;
     if is_latest_selector(version_spec) {
-        return Ok(all_versions.first().map(|version| version.version.clone()));
+        return Ok(all_versions
+            .first()
+            .map(|version| version.version.clone()));
     }
     let (versions, range) = filter_versions(&all_versions, version_spec);
     Ok(max_satisfying(&versions, &range))
@@ -175,15 +177,14 @@ async fn fetch_all_versions(
             status: response.status.as_u16(),
         });
     }
-    let raw: Vec<RawNodeVersion> = serde_json::from_slice(&response.body)
-        .map_err(|error| ResolveNodeVersionError::DecodeIndex {
-            url: url.clone(),
-            error: Arc::new(error),
-        })?;
+    let raw: Vec<RawNodeVersion> = serde_json::from_slice(&response.body).map_err(|error| {
+        ResolveNodeVersionError::DecodeIndex { url: url.clone(), error: Arc::new(error) }
+    })?;
     Ok(raw
         .into_iter()
         .map(|entry| NodeVersion {
-            version: entry.version
+            version: entry
+                .version
                 .strip_prefix('v')
                 .unwrap_or(&entry.version)
                 .to_string(),
@@ -224,7 +225,8 @@ fn filter_versions(versions: &[NodeVersion], version_selector: &str) -> (Vec<Str
             versions
                 .iter()
                 .filter(|version| {
-                    version.lts
+                    version
+                        .lts
                         .as_deref()
                         .is_some_and(|name| name.eq_ignore_ascii_case(&wanted))
                 })

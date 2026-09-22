@@ -22,12 +22,16 @@ fn moves_a_widened_range_to_the_higher_version_another_importer_locks() {
     .expect("the version is already in the lockfile, so nothing needs resolving");
 
     let alias: PkgName = "foo".parse().expect("alias");
-    let recorded = &updated.importers["."].dependencies.as_ref().expect("dependencies")[&alias];
+    let recorded = &updated.importers["."]
+        .dependencies
+        .as_ref()
+        .expect("dependencies")[&alias];
     assert_eq!(
         (recorded.specifier.as_str(), recorded.version.to_string().as_str()),
         ("^1.1.0", "1.2.0"),
     );
-    let mut packages: Vec<_> = updated.packages
+    let mut packages: Vec<_> = updated
+        .packages
         .as_ref()
         .expect("packages")
         .keys()
@@ -52,8 +56,10 @@ fn writes_a_new_project_importer_from_the_highest_locked_versions() {
     .expect("every version the new project needs is already locked");
 
     let alias: PkgName = "child".parse().expect("alias");
-    let recorded =
-        &updated.importers["pkg-b"].dev_dependencies.as_ref().expect("devDependencies")[&alias];
+    let recorded = &updated.importers["pkg-b"]
+        .dev_dependencies
+        .as_ref()
+        .expect("devDependencies")[&alias];
     assert_eq!(
         (recorded.specifier.as_str(), recorded.version.to_string().as_str()),
         ("^3.0.0", "3.1.0"),
@@ -174,8 +180,15 @@ fn drops_the_importer_of_a_workspace_project_that_is_gone() {
     )
     .expect("dropping a project's importer needs no resolution");
 
-    assert_eq!(updated.importers.keys().collect::<Vec<_>>(), vec!["packages/a"]);
-    let mut packages: Vec<_> = updated.packages
+    assert_eq!(
+        updated
+            .importers
+            .keys()
+            .collect::<Vec<_>>(),
+        vec!["packages/a"]
+    );
+    let mut packages: Vec<_> = updated
+        .packages
         .as_ref()
         .expect("packages")
         .keys()
@@ -204,7 +217,8 @@ fn keeps_the_importer_when_the_run_does_not_see_every_project() {
 #[test]
 fn rejects_dropping_an_importer_a_survivor_links_to() {
     let mut subject = parsed_lockfile(WITH_TWO_IMPORTERS);
-    subject.importers
+    subject
+        .importers
         .get_mut("packages/a")
         .expect("importer")
         .dependencies
@@ -273,8 +287,10 @@ fn a_resolve_needing_importer_vetoes_absorbable_siblings_in_either_order() {
     )
     .expect("absorbable + clean should compose");
     assert_eq!(
-        updated.importers["a"].dependencies.as_ref().expect("dependencies")
-            [&"foo".parse().expect("package name")]
+        updated.importers["a"]
+            .dependencies
+            .as_ref()
+            .expect("dependencies")[&"foo".parse().expect("package name")]
             .specifier,
         ">=1 <2",
     );
@@ -305,8 +321,10 @@ fn updates_a_range_that_stays_on_the_peer_variant_the_importer_records() {
     )
     .expect("the edge stays on the version it already names, suffix and all");
 
-    let foo = &updated.importers["."].dependencies.as_ref().expect("dependencies")
-        [&"foo".parse::<PkgName>().expect("alias")];
+    let foo = &updated.importers["."]
+        .dependencies
+        .as_ref()
+        .expect("dependencies")[&"foo".parse::<PkgName>().expect("alias")];
     assert_eq!(foo.specifier, "^1.1.0");
     assert_eq!(foo.version.to_string(), "1.1.0(bar@2.0.0)");
 }

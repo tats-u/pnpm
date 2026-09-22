@@ -177,7 +177,8 @@ fn reachable_keys(lockfile: &Lockfile) -> Option<HashSet<PkgNameVerPeer>> {
 
 /// The snapshot keys every importer declares directly.
 fn importer_root_keys(lockfile: &Lockfile) -> VecDeque<PkgNameVerPeer> {
-    lockfile.importers
+    lockfile
+        .importers
         .values()
         .flat_map(|importer| {
             [
@@ -243,7 +244,8 @@ fn optionally_reached_keys(lockfile: &Lockfile) -> Option<HashSet<PkgNameVerPeer
 }
 
 fn importer_optional_roots(lockfile: &Lockfile) -> VecDeque<(PkgNameVerPeer, bool)> {
-    lockfile.importers
+    lockfile
+        .importers
         .values()
         .flat_map(|importer| {
             [
@@ -306,7 +308,10 @@ pub(crate) fn prune_unreferenced_catalog_entries(lockfile: &mut Lockfile) {
     if stale.is_empty() {
         return;
     }
-    let catalogs = lockfile.catalogs.as_mut().expect("checked above");
+    let catalogs = lockfile
+        .catalogs
+        .as_mut()
+        .expect("checked above");
     for (catalog_name, alias) in stale {
         if let Some(entries) = catalogs.get_mut(&catalog_name) {
             entries.remove(&alias);

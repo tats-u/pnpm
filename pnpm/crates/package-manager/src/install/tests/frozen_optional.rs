@@ -99,7 +99,10 @@ async fn frozen_lockfile_with_gvs_off_skips_project_registry() {
     .expect("frozen-lockfile install with GVS off should succeed");
 
     assert!(
-        !dirs.store_dir.join("v11/projects").exists(),
+        !dirs
+            .store_dir
+            .join("v11/projects")
+            .exists(),
         "GVS-off install must NOT create the project-registry directory",
     );
 
@@ -267,7 +270,10 @@ async fn frozen_install_preserves_seeded_skipped_across_reinstall() {
         layout_version: Some(LayoutVersion),
         node_linker: Some(NodeLinker::Isolated),
         store_dir: dirs.store_dir.display().to_string(),
-        virtual_store_dir: dirs.virtual_store_dir.to_string_lossy().into_owned(),
+        virtual_store_dir: dirs
+            .virtual_store_dir
+            .to_string_lossy()
+            .into_owned(),
         virtual_store_dir_max_length: DEFAULT_VIRTUAL_STORE_DIR_MAX_LENGTH,
         skipped: seeded_keys
             .iter()
@@ -341,7 +347,8 @@ async fn frozen_install_preserves_seeded_skipped_across_reinstall() {
     .await
     .expect("frozen-lockfile install should succeed");
 
-    let written = dirs.modules_dir
+    let written = dirs
+        .modules_dir
         .pipe_as_ref(read_modules_manifest::<Host>)
         .expect("read .modules.yaml")
         .expect("modules manifest exists");
@@ -351,9 +358,18 @@ async fn frozen_install_preserves_seeded_skipped_across_reinstall() {
     // `@scope/...` < `previously-...` lexically, so the scoped
     // entry leads.
     assert_eq!(written.skipped.len(), 2, "both seeded entries must survive");
-    assert!(written.skipped.contains(&"previously-skipped@1.0.0".to_string()));
-    assert!(written.skipped.contains(&"@scope/also-skipped@2.3.4".to_string()));
-    let sorted: Vec<&str> = written.skipped
+    assert!(
+        written
+            .skipped
+            .contains(&"previously-skipped@1.0.0".to_string())
+    );
+    assert!(
+        written
+            .skipped
+            .contains(&"@scope/also-skipped@2.3.4".to_string())
+    );
+    let sorted: Vec<&str> = written
+        .skipped
         .iter()
         .map(String::as_str)
         .collect();
@@ -406,7 +422,9 @@ async fn frozen_install_silently_swallows_unreachable_optional_tarball() {
     // Manifest must match the lockfile importer entry so the
     // freshness check (<https://github.com/pnpm/pacquet/issues/447>) doesn't reject the install before we
     // reach the fetch site.
-    manifest.add_dependency("broken-pkg", "1.0.0", DependencyGroup::Optional).unwrap();
+    manifest
+        .add_dependency("broken-pkg", "1.0.0", DependencyGroup::Optional)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -489,7 +507,10 @@ async fn frozen_install_silently_swallows_unreachable_optional_tarball() {
 
     // The broken snapshot's virtual-store slot must not have been
     // created — the cold-batch dispatch failed before extraction.
-    let expected_slot = dirs.virtual_store_dir.join("broken-pkg@1.0.0").join("node_modules");
+    let expected_slot = dirs
+        .virtual_store_dir
+        .join("broken-pkg@1.0.0")
+        .join("node_modules");
     assert!(
         !expected_slot.exists(),
         "broken optional snapshot's slot must not exist, found {expected_slot:?}",
@@ -499,7 +520,8 @@ async fn frozen_install_silently_swallows_unreachable_optional_tarball() {
     // `.modules.yaml.skipped`. The silent catch site never updates
     // `opts.skipped`, so a future install retries the fetch (in case
     // the URL becomes reachable again).
-    let written = dirs.modules_dir
+    let written = dirs
+        .modules_dir
         .pipe_as_ref(read_modules_manifest::<Host>)
         .expect("read .modules.yaml")
         .expect("modules manifest exists");
@@ -538,7 +560,9 @@ async fn frozen_install_propagates_non_optional_fetch_failure() {
 
     let manifest_path = dirs.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("broken-pkg", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("broken-pkg", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -661,7 +685,9 @@ async fn frozen_install_no_optional_drops_optional_only_snapshots() {
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
     // Manifest matches the lockfile importer entry so the
     // freshness check doesn't reject the install.
-    manifest.add_dependency("drop-me", "1.0.0", DependencyGroup::Optional).unwrap();
+    manifest
+        .add_dependency("drop-me", "1.0.0", DependencyGroup::Optional)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -734,7 +760,10 @@ async fn frozen_install_no_optional_drops_optional_only_snapshots() {
     .await
     .expect("install must succeed with --no-optional despite missing optional metadata");
 
-    let expected_slot = dirs.virtual_store_dir.join("drop-me@1.0.0").join("node_modules");
+    let expected_slot = dirs
+        .virtual_store_dir
+        .join("drop-me@1.0.0")
+        .join("node_modules");
     assert!(
         !expected_slot.exists(),
         "optional-only snapshot's slot must not exist, found {expected_slot:?}",
@@ -742,7 +771,8 @@ async fn frozen_install_no_optional_drops_optional_only_snapshots() {
 
     // Transient — must not bleed into the persistent
     // `.modules.yaml.skipped` set.
-    let written = dirs.modules_dir
+    let written = dirs
+        .modules_dir
         .pipe_as_ref(read_modules_manifest::<Host>)
         .expect("read .modules.yaml")
         .expect("modules manifest exists");
@@ -782,7 +812,9 @@ async fn frozen_install_optional_included_surfaces_missing_metadata() {
 
     let manifest_path = dirs.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("drop-me", "1.0.0", DependencyGroup::Optional).unwrap();
+    manifest
+        .add_dependency("drop-me", "1.0.0", DependencyGroup::Optional)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -896,7 +928,9 @@ async fn frozen_install_no_optional_keeps_shared_non_optional_snapshot() {
 
     let manifest_path = dirs.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("shared", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("shared", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();

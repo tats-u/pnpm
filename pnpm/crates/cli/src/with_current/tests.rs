@@ -58,7 +58,11 @@ fn leaves_argv_untouched_without_with_current() {
 #[test]
 fn errors_when_no_command_follows_current() {
     let error = plan(argv(&["with", "current"])).expect_err("missing command must error");
-    assert!(error.downcast_ref::<MissingWithCurrentCommand>().is_some());
+    assert!(
+        error
+            .downcast_ref::<MissingWithCurrentCommand>()
+            .is_some()
+    );
 }
 
 #[test]

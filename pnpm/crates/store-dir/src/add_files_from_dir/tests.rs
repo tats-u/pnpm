@@ -9,7 +9,9 @@ use tempfile::tempdir;
 fn make_store() -> (tempfile::TempDir, StoreDir) {
     let tmp = tempdir().expect("create temp dir");
     let store_dir = StoreDir::from(tmp.path().to_path_buf());
-    store_dir.init().expect("init store dir");
+    store_dir
+        .init()
+        .expect("init store dir");
     (tmp, store_dir)
 }
 
@@ -46,7 +48,13 @@ fn nested_paths_use_forward_slashes() {
     write(&pkg_dir.path().join("lib/inner/deep.js"), "deep\n");
 
     let added = add_files_from_dir(&store_dir, pkg_dir.path()).expect("walk");
-    assert!(added.files.contains_key("lib/inner/deep.js"), "got keys: {:?}", added.files.keys());
+    assert!(
+        added
+            .files
+            .contains_key("lib/inner/deep.js"),
+        "got keys: {:?}",
+        added.files.keys()
+    );
 }
 
 #[cfg(unix)]
@@ -60,10 +68,15 @@ fn executable_files_get_exec_suffix() {
     fs::set_permissions(&bin, fs::Permissions::from_mode(0o755)).expect("chmod");
 
     let added = add_files_from_dir(&store_dir, pkg_dir.path()).expect("walk");
-    let info = added.files.get("bin/run").expect("entry for bin/run");
+    let info = added
+        .files
+        .get("bin/run")
+        .expect("entry for bin/run");
     assert_eq!(info.mode & 0o111, 0o111);
 
-    let on_disk = store_dir.cas_file_path_by_mode(&info.digest, info.mode).unwrap();
+    let on_disk = store_dir
+        .cas_file_path_by_mode(&info.digest, info.mode)
+        .unwrap();
     let path_str = on_disk.to_string_lossy();
     assert!(path_str.ends_with("-exec"), "expected -exec suffix, got `{path_str}`");
 }
@@ -73,7 +86,12 @@ fn top_level_node_modules_is_skipped() {
     let (_tmp, store_dir) = make_store();
     let pkg_dir = tempdir().expect("create pkg dir");
     write(&pkg_dir.path().join("index.js"), "x\n");
-    write(&pkg_dir.path().join("node_modules/dep/index.js"), "y\n");
+    write(
+        &pkg_dir
+            .path()
+            .join("node_modules/dep/index.js"),
+        "y\n",
+    );
 
     let added = add_files_from_dir(&store_dir, pkg_dir.path()).expect("walk");
     let keys: Vec<_> = added.files.keys().cloned().collect();
@@ -84,11 +102,18 @@ fn top_level_node_modules_is_skipped() {
 fn nested_node_modules_is_walked() {
     let (_tmp, store_dir) = make_store();
     let pkg_dir = tempdir().expect("create pkg dir");
-    write(&pkg_dir.path().join("lib/node_modules/inner.js"), "i\n");
+    write(
+        &pkg_dir
+            .path()
+            .join("lib/node_modules/inner.js"),
+        "i\n",
+    );
 
     let added = add_files_from_dir(&store_dir, pkg_dir.path()).expect("walk");
     assert!(
-        added.files.contains_key("lib/node_modules/inner.js"),
+        added
+            .files
+            .contains_key("lib/node_modules/inner.js"),
         "got keys: {:?}",
         added.files.keys(),
     );
@@ -121,8 +146,14 @@ fn symlinks_within_root_are_followed() {
     unix_fs::symlink("target.js", pkg_dir.path().join("alias.js")).expect("create symlink");
 
     let added = add_files_from_dir(&store_dir, pkg_dir.path()).expect("walk");
-    let info_target = added.files.get("target.js").expect("target.js");
-    let info_alias = added.files.get("alias.js").expect("alias.js");
+    let info_target = added
+        .files
+        .get("target.js")
+        .expect("target.js");
+    let info_alias = added
+        .files
+        .get("alias.js")
+        .expect("alias.js");
     assert_eq!(
         info_target.digest, info_alias.digest,
         "alias must hash to the same digest as its target",

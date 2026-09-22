@@ -67,7 +67,9 @@ fn make_package(name: &str, versions: &[(&str, &str, Evidence)]) -> Package {
 }
 
 fn now_at(date: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(date).expect("parse RFC3339").with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(date)
+        .expect("parse RFC3339")
+        .with_timezone(&Utc)
 }
 
 #[test]

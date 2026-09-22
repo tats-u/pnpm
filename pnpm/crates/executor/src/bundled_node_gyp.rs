@@ -48,7 +48,9 @@ pub fn bundled_node_gyp_bin() -> Option<&'static Path> {
 /// can be exercised against a fixture directory instead of wherever the
 /// test binary happens to live.
 fn bundled_node_gyp_bin_in(exe_dir: &Path) -> Option<PathBuf> {
-    let bin_dir = exe_dir.join(DIST_DIR).join(NODE_GYP_BIN_DIR);
+    let bin_dir = exe_dir
+        .join(DIST_DIR)
+        .join(NODE_GYP_BIN_DIR);
     bin_dir
         .join(NODE_GYP_WRAPPER)
         .is_file()

@@ -51,11 +51,15 @@ async fn cycle_reentry_does_not_drop_sibling_occurrence_transitive_peers() {
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
     for name in ["p@1.0.0", "w@1.0.0"] {
-        let entry = result.graph
+        let entry = result
+            .graph
             .get(&DepPath::from(name.to_string()))
             .expect("entry in graph");
         assert!(
-            entry.edges.transitive_peer_dependencies.contains("e"),
+            entry
+                .edges
+                .transitive_peer_dependencies
+                .contains("e"),
             "{name} should carry transitive peer 'e', got {:?}",
             entry.edges.transitive_peer_dependencies,
         );
@@ -100,20 +104,36 @@ async fn peer_resolved_against_sibling_at_parent_level() {
     )
     .await
     .unwrap();
-    assert!(tree.all_peer_dep_names.contains("react"));
+    assert!(
+        tree.all_peer_dep_names
+            .contains("react")
+    );
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
-    let react_dom_dep_path = result.direct_dependencies_by_alias
+    let react_dom_dep_path = result
+        .direct_dependencies_by_alias
         .get("react-dom")
         .cloned()
         .expect("react-dom is a direct dep");
     assert_eq!(react_dom_dep_path, DepPath::from("react-dom@18.0.0(react@18.0.0)".to_string()));
     assert_eq!(
-        result.direct_dependencies_by_alias.get("react"),
+        result
+            .direct_dependencies_by_alias
+            .get("react"),
         Some(&DepPath::from("react@18.0.0".to_string())),
     );
-    assert!(result.peer_dependency_issues.missing.is_empty());
-    assert!(result.peer_dependency_issues.bad.is_empty());
+    assert!(
+        result
+            .peer_dependency_issues
+            .missing
+            .is_empty()
+    );
+    assert!(
+        result
+            .peer_dependency_issues
+            .bad
+            .is_empty()
+    );
 }
 
 #[tokio::test]
@@ -156,13 +176,20 @@ async fn bad_peer_version_is_reported() {
     .unwrap();
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
-    assert!(result.peer_dependency_issues.bad.contains_key("react"));
+    assert!(
+        result
+            .peer_dependency_issues
+            .bad
+            .contains_key("react")
+    );
     let bad = &result.peer_dependency_issues.bad["react"];
     assert_eq!(bad.len(), 1);
     assert_eq!(bad[0].found_version, "17.0.0");
     assert_eq!(bad[0].wanted_range, "^18.0.0");
     assert_eq!(
-        result.direct_dependencies_by_alias.get("react-dom"),
+        result
+            .direct_dependencies_by_alias
+            .get("react-dom"),
         Some(&DepPath::from("react-dom@18.0.0(react@17.0.0)".to_string())),
     );
 }
@@ -183,7 +210,8 @@ async fn dedupe_peers_collapses_nested_peer_suffixes() {
         ..ResolvePeersOptions::default()
     })
     .await;
-    let mut keys: Vec<String> = result.graph
+    let mut keys: Vec<String> = result
+        .graph
         .keys()
         .map(|dp| dp.as_str().to_string())
         .collect();
@@ -205,7 +233,8 @@ async fn dedupe_peers_collapses_nested_peer_suffixes() {
 #[tokio::test]
 async fn no_dedupe_peers_keeps_nested_peer_suffixes() {
     let result = resolve_emotion_fixture(ResolvePeersOptions::default()).await;
-    let mut keys: Vec<String> = result.graph
+    let mut keys: Vec<String> = result
+        .graph
         .keys()
         .map(|dp| dp.as_str().to_string())
         .collect();
@@ -285,7 +314,8 @@ async fn dedupe_peers_propagates_transitive_peer_to_parent() {
         &mut tree,
         ResolvePeersOptions { dedupe_peers: true, ..ResolvePeersOptions::default() },
     );
-    let mut keys: Vec<String> = result.graph
+    let mut keys: Vec<String> = result
+        .graph
         .keys()
         .map(|dp| dp.as_str().to_string())
         .collect();
@@ -390,7 +420,8 @@ async fn peers_own_peer_shared_with_sibling_that_peer_depends_both() {
     .unwrap();
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
-    let keys: Vec<String> = result.graph
+    let keys: Vec<String> = result
+        .graph
         .keys()
         .map(|dp| dp.as_str().to_string())
         .collect();
@@ -470,7 +501,8 @@ async fn ancestor_peer_carries_its_own_suffix() {
     .unwrap();
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
-    let mut keys: Vec<String> = result.graph
+    let mut keys: Vec<String> = result
+        .graph
         .keys()
         .map(|dp| dp.as_str().to_string())
         .collect();
@@ -487,7 +519,9 @@ async fn ancestor_peer_carries_its_own_suffix() {
     // `c` is `a`'s peer, not `b`'s — it must not leak into `b`'s
     // dependencies (only `b`'s own peer `a` is a child of `b`).
     let b_node = &result.graph[&DepPath::from("b@1.0.0(a@1.0.0(c@1.0.0))".to_string())];
-    let b_children: Vec<&str> = b_node.edges.children
+    let b_children: Vec<&str> = b_node
+        .edges
+        .children
         .keys()
         .map(String::as_str)
         .collect();
@@ -541,11 +575,15 @@ async fn peer_edge_is_patched_when_peer_walked_after_consumer() {
     .unwrap();
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
-    let react_dom_dep_path = result.direct_dependencies_by_alias
+    let react_dom_dep_path = result
+        .direct_dependencies_by_alias
         .get("react-dom")
         .cloned()
         .expect("react-dom is a direct dep");
-    let node = result.graph.get(&react_dom_dep_path).expect("graph entry for react-dom");
+    let node = result
+        .graph
+        .get(&react_dom_dep_path)
+        .expect("graph entry for react-dom");
     // Without the post-pass, this edge would be missing because
     // `node_dep_paths` doesn't yet contain react when react-dom is
     // being walked.
@@ -649,7 +687,8 @@ async fn cyclic_peer_dependencies_resolve_cleanly() {
     // their peers form a cycle. The exact peer-suffix shape is
     // sensitive to walk order; the important invariant is that
     // every depPath starts with the expected pkg id.
-    let dep_paths: Vec<String> = result.graph
+    let dep_paths: Vec<String> = result
+        .graph
         .keys()
         .map(|dp| dp.as_str().to_string())
         .collect();
@@ -737,7 +776,8 @@ async fn revisit_resolves_peer_in_one_occurrence_misses_in_other() {
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
-    let dep_paths: std::collections::HashSet<String> = result.graph
+    let dep_paths: std::collections::HashSet<String> = result
+        .graph
         .keys()
         .map(|dp| dp.as_str().to_string())
         .collect();
@@ -760,8 +800,15 @@ async fn revisit_resolves_peer_in_one_occurrence_misses_in_other() {
     );
 
     assert!(
-        result.peer_dependency_issues.missing.contains_key("qar"),
+        result
+            .peer_dependency_issues
+            .missing
+            .contains_key("qar"),
         "expected missing qar peer issue, got {:?}",
-        result.peer_dependency_issues.missing.keys().collect::<Vec<_>>(),
+        result
+            .peer_dependency_issues
+            .missing
+            .keys()
+            .collect::<Vec<_>>(),
     );
 }

@@ -24,7 +24,10 @@ pub fn collect_npm_lockfile_versions(lockfile: &Value, versions: &mut VersionsBy
         return;
     }
     for field in ["dependencies", "packages"] {
-        if let Some(packages) = lockfile.get(field).and_then(Value::as_object) {
+        if let Some(packages) = lockfile
+            .get(field)
+            .and_then(Value::as_object)
+        {
             collect_from_flat_packages(packages, versions);
         }
     }
@@ -40,11 +43,17 @@ fn is_nested_format(lockfile: &Value) -> bool {
 fn collect_from_dependency_tree(root: &Value, versions: &mut VersionsByPackageName) {
     let mut pending = vec![root];
     while let Some(node) = pending.pop() {
-        let Some(dependencies) = node.get("dependencies").and_then(Value::as_object) else {
+        let Some(dependencies) = node
+            .get("dependencies")
+            .and_then(Value::as_object)
+        else {
             continue;
         };
         for (name, entry) in dependencies {
-            if let Some(version) = entry.get("version").and_then(Value::as_str) {
+            if let Some(version) = entry
+                .get("version")
+                .and_then(Value::as_str)
+            {
                 add_version(versions, name, version);
             }
             pending.push(entry);
@@ -69,13 +78,22 @@ fn collect_from_flat_entry<'a>(
     versions: &mut VersionsByPackageName,
     pending: &mut Vec<&'a Map<String, Value>>,
 ) {
-    if let Some(version) = entry.get("version").and_then(Value::as_str) {
+    if let Some(version) = entry
+        .get("version")
+        .and_then(Value::as_str)
+    {
         add_version(versions, package_name_from_key(key), version);
     }
-    if let Some(nested) = entry.get("packages").and_then(Value::as_object) {
+    if let Some(nested) = entry
+        .get("packages")
+        .and_then(Value::as_object)
+    {
         pending.push(nested);
     }
-    let Some(dependencies) = entry.get("dependencies").and_then(Value::as_object) else {
+    let Some(dependencies) = entry
+        .get("dependencies")
+        .and_then(Value::as_object)
+    else {
         return;
     };
     for (name, range) in dependencies {

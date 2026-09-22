@@ -84,7 +84,9 @@ async fn add_user_and_get_token(app: &axum::Router, username: &str, password: &s
         .unwrap();
     let response = app.clone().oneshot(req).await.unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
-    let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let bytes = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let payload: Value = serde_json::from_slice(&bytes).unwrap();
     payload["token"]
         .as_str()

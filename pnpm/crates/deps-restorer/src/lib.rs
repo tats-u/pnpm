@@ -105,7 +105,8 @@ pub fn store_index_key_for_resolution(
     match resolution {
         pnpm_lockfile::LockfileResolution::Tarball(tarball) => {
             Some(pnpm_store_dir::pick_store_index_key(
-                tarball.integrity
+                tarball
+                    .integrity
                     .as_ref()
                     .map(ToString::to_string)
                     .as_deref(),
@@ -147,7 +148,12 @@ pub fn name_version_from_package_key(
     let version = packages
         .and_then(|packages| packages.get(&metadata_key))
         .and_then(|metadata| metadata.version.clone())
-        .unwrap_or_else(|| metadata_key.suffix.version().to_string());
+        .unwrap_or_else(|| {
+            metadata_key
+                .suffix
+                .version()
+                .to_string()
+        });
     (name, version)
 }
 

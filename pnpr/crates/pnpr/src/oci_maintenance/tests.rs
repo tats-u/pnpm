@@ -28,8 +28,13 @@ async fn blob(storage: &Storage, repository: &CanonicalPackageName, bytes: &[u8]
         .reserve_hosted_blob(repository, &digest.blob_filename())
         .await
         .unwrap();
-    tokio::fs::write(&slot.tmp_path, bytes).await.unwrap();
-    storage.finalize_blob_slot(slot).await.unwrap();
+    tokio::fs::write(&slot.tmp_path, bytes)
+        .await
+        .unwrap();
+    storage
+        .finalize_blob_slot(slot)
+        .await
+        .unwrap();
     digest
 }
 
@@ -121,7 +126,9 @@ async fn corrupt_or_missing_manifests_prevent_deletion() {
         .path()
         .join("store/acme/app")
         .join(manifest.blob_filename());
-    tokio::fs::write(&path, b"corrupt").await.unwrap();
+    tokio::fs::write(&path, b"corrupt")
+        .await
+        .unwrap();
     let error = collect(&storage, Duration::ZERO, false, &HashSet::new(), MANIFEST_LIMIT)
         .await
         .unwrap_err();
@@ -135,7 +142,9 @@ async fn corrupt_or_missing_manifests_prevent_deletion() {
             .unwrap()
             .is_some(),
     );
-    tokio::fs::remove_file(path).await.unwrap();
+    tokio::fs::remove_file(path)
+        .await
+        .unwrap();
     let error = collect(&storage, Duration::ZERO, false, &HashSet::new(), MANIFEST_LIMIT)
         .await
         .unwrap_err();
@@ -167,7 +176,9 @@ async fn index_keeps_children_removed_from_the_document_and_their_layers() {
         .await
         .unwrap();
     assert_eq!(
-        referenced_blobs(&storage, &repository, MANIFEST_LIMIT).await.unwrap(),
+        referenced_blobs(&storage, &repository, MANIFEST_LIMIT)
+            .await
+            .unwrap(),
         HashSet::from([index.blob_filename(), child.blob_filename(), layer.blob_filename()]),
     );
     assert_eq!(
@@ -213,7 +224,9 @@ async fn collection_uses_the_stored_media_type_for_header_only_manifests() {
         .await
         .unwrap();
     assert_eq!(
-        referenced_blobs(&storage, &repository, MANIFEST_LIMIT).await.unwrap(),
+        referenced_blobs(&storage, &repository, MANIFEST_LIMIT)
+            .await
+            .unwrap(),
         HashSet::from([digest.blob_filename(), layer.blob_filename()]),
     );
 }
@@ -291,8 +304,12 @@ async fn collection_does_not_remove_a_matching_blob_from_the_shared_cache() {
         .path()
         .join("cache/acme/app")
         .join(digest.blob_filename());
-    tokio::fs::create_dir_all(cache.parent().unwrap()).await.unwrap();
-    tokio::fs::write(&cache, b"cached").await.unwrap();
+    tokio::fs::create_dir_all(cache.parent().unwrap())
+        .await
+        .unwrap();
+    tokio::fs::write(&cache, b"cached")
+        .await
+        .unwrap();
     assert_eq!(
         collect(&hosted, Duration::ZERO, false, &HashSet::new(), MANIFEST_LIMIT)
             .await

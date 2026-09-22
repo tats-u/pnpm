@@ -38,7 +38,11 @@ fn canonical_spdx_id(license: &str) -> Option<&'static str> {
 fn case_insensitive_license_id(license: &str) -> Option<&'static str> {
     spdx::identifiers::LICENSES
         .iter()
-        .find(|candidate| candidate.name.eq_ignore_ascii_case(license))
+        .find(|candidate| {
+            candidate
+                .name
+                .eq_ignore_ascii_case(license)
+        })
         .map(|candidate| candidate.name)
 }
 
@@ -110,8 +114,9 @@ fn push_normalized_spdx_token(normalized: &mut String, token: &str) -> Option<()
     if is_lowercased_spdx_operator(token) {
         return None;
     }
-    let token =
-        canonical_spdx_id(token).or_else(|| canonical_spdx_exception_id(token)).unwrap_or(token);
+    let token = canonical_spdx_id(token)
+        .or_else(|| canonical_spdx_exception_id(token))
+        .unwrap_or(token);
     normalized.push_str(token);
     Some(())
 }
@@ -128,7 +133,11 @@ fn canonical_spdx_exception_id(exception: &str) -> Option<&'static str> {
         .or_else(|| {
             spdx::identifiers::EXCEPTIONS
                 .iter()
-                .find(|candidate| candidate.name.eq_ignore_ascii_case(exception))
+                .find(|candidate| {
+                    candidate
+                        .name
+                        .eq_ignore_ascii_case(exception)
+                })
                 .map(|candidate| candidate.name)
         })
 }

@@ -126,13 +126,12 @@ fn nearest_manifest_name(start_dir: &Path) -> Result<String, ViewError> {
 /// object, or carries no usable name, is as invalid as one that fails to
 /// parse.
 fn manifest_name(dir: &Path) -> Result<String, ViewError> {
-    let manifest = try_read_project_manifest(dir)
-        .map_err(|err| ViewError::InvalidPackageJson {
-            message: format!(
-                r#"Failed to read or parse project manifest in "{dir}": {err}"#,
-                dir = dir.display(),
-            ),
-        })?;
+    let manifest = try_read_project_manifest(dir).map_err(|err| ViewError::InvalidPackageJson {
+        message: format!(
+            r#"Failed to read or parse project manifest in "{dir}": {err}"#,
+            dir = dir.display(),
+        ),
+    })?;
     let value = manifest.map_or(Value::Null, |(_, manifest)| manifest.value().clone());
     value
         .get("name")
@@ -163,7 +162,10 @@ pub(super) async fn fetch_package_metadata(
 ) -> miette::Result<(pnpm_registry::Package, Arc<pnpm_registry::PackageVersion>)> {
     let parsed = parse_wanted_dependency(package_spec);
     let alias = parsed.alias.as_deref();
-    let bare = parsed.bare_specifier.as_deref().unwrap_or("latest");
+    let bare = parsed
+        .bare_specifier
+        .as_deref()
+        .unwrap_or("latest");
     let name_hint = alias.unwrap_or(package_spec);
 
     let mut registries: std::collections::HashMap<String, String> = config
@@ -233,7 +235,10 @@ fn assemble_info(meta: &pnpm_registry::Package, picked: &pnpm_registry::PackageV
 
     let versions: Vec<&String> = meta.versions.keys().collect();
     let versions_count = versions.len();
-    let deps_count = picked.dependencies.as_ref().map_or(0, std::collections::HashMap::len);
+    let deps_count = picked
+        .dependencies
+        .as_ref()
+        .map_or(0, std::collections::HashMap::len);
 
     info.insert("versions".to_string(), serde_json::to_value(&versions).unwrap_or(Value::Null));
     if versions_count > 0 {

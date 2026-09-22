@@ -6,7 +6,9 @@ use std::path::Path;
 
 fn parse(yaml: &str) -> PackageConfigsSetting {
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
-    settings.package_configs.expect("packageConfigs is set")
+    settings
+        .package_configs
+        .expect("packageConfigs is set")
 }
 
 fn parse_error(yaml: &str) -> String {
@@ -68,9 +70,19 @@ packageConfigs:
     )
     .into_record();
     dbg!(&record);
-    assert_eq!(record.get("a").and_then(|config| config.save_exact), Some(true));
+    assert_eq!(
+        record
+            .get("a")
+            .and_then(|config| config.save_exact),
+        Some(true)
+    );
     // A later entry wins over an earlier one naming the same project.
-    assert_eq!(record.get("b").and_then(|config| config.save_exact), Some(false));
+    assert_eq!(
+        record
+            .get("b")
+            .and_then(|config| config.save_exact),
+        Some(false)
+    );
 }
 
 #[test]
@@ -205,5 +217,10 @@ fn modules_dir_resolves_against_the_project_and_carries_the_virtual_store() {
         ProjectConfig { modules_dir: Some("modules".to_string()), ..ProjectConfig::default() },
     );
     assert_eq!(config.modules_dir, project_dir.join("modules"));
-    assert_eq!(config.virtual_store_dir, project_dir.join("modules").join(".pnpm"));
+    assert_eq!(
+        config.virtual_store_dir,
+        project_dir
+            .join("modules")
+            .join(".pnpm")
+    );
 }

@@ -112,8 +112,9 @@ impl ApprovalPrompt for DialoguerPrompt {
     async fn confirm(&mut self, message: &str) -> dialoguer::Result<bool> {
         let message = message.to_owned();
         tokio::task::spawn_blocking(move || {
-            let (list, question) =
-                message.rsplit_once('\n').expect("approval question follows the version list");
+            let (list, question) = message
+                .rsplit_once('\n')
+                .expect("approval question follows the version list");
             // Dialoguer only clears the last line when it renders the answer.
             writeln!(std::io::stderr(), "{list}")?;
             dialoguer::Confirm::new()
@@ -168,7 +169,10 @@ where
     let message = format_prompt(&immature);
     let confirmed = {
         let _guard = PromptGuard::<ReporterImpl>::new();
-        prompt.confirm(&message).await.map_err(MinimumReleaseAgeError::Prompt)?
+        prompt
+            .confirm(&message)
+            .await
+            .map_err(MinimumReleaseAgeError::Prompt)?
     };
     if !confirmed {
         return Err(MinimumReleaseAgeError::Denied);
@@ -193,7 +197,8 @@ fn persist_and_report_excludes<ReporterImpl: Reporter>(
         .iter()
         .map(|violation| format!("{}@{}", violation.name, violation.version))
         .collect();
-    let added = merge_package_version_specs(&added).map_err(MinimumReleaseAgeError::VersionPolicy)?;
+    let added =
+        merge_package_version_specs(&added).map_err(MinimumReleaseAgeError::VersionPolicy)?;
     update_workspace_manifest(
         workspace_dir,
         &UpdateWorkspaceManifestOptions {
@@ -211,7 +216,9 @@ fn persist_and_report_excludes<ReporterImpl: Reporter>(
             if added.len() == 1 { "entry" } else { "entries" },
             added.join("\n  "),
         ),
-        prefix: workspace_dir.to_string_lossy().into_owned(),
+        prefix: workspace_dir
+            .to_string_lossy()
+            .into_owned(),
     }));
     Ok(())
 }

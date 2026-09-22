@@ -27,7 +27,9 @@ impl LockedPackages {
         Ok(Self {
             crates: merge_packages(
                 "registry",
-                self.crates.into_iter().chain(other.crates),
+                self.crates
+                    .into_iter()
+                    .chain(other.crates),
                 LockedCrate::link_name,
             )?,
             git: merge_packages(
@@ -41,7 +43,8 @@ impl LockedPackages {
     /// The git sources the locked packages come from, deduplicated so the
     /// managed Cargo configuration declares each one once.
     pub(super) fn git_sources(&self) -> Vec<GitSource> {
-        let mut sources: Vec<GitSource> = self.git
+        let mut sources: Vec<GitSource> = self
+            .git
             .iter()
             .map(|package| GitSource::clone(&package.source))
             .collect();
@@ -98,8 +101,9 @@ pub(super) async fn discover_workspace_roots(manifests: &[PathBuf]) -> Result<Ve
     let mut roots = BTreeSet::new();
     while !pending.is_empty() {
         let concurrency = if roots.is_empty() { 1 } else { WORKSPACE_INSTALL_CONCURRENCY };
-        let batch =
-            std::iter::from_fn(|| pending.pop_first()).take(concurrency).collect::<Vec<_>>();
+        let batch = std::iter::from_fn(|| pending.pop_first())
+            .take(concurrency)
+            .collect::<Vec<_>>();
         let metadata = stream::iter(batch)
             .map(|manifest| async move { workspace_metadata(&manifest).await })
             .buffer_unordered(concurrency)
@@ -172,7 +176,11 @@ pub(super) async fn read_or_resolve_lockfile(
 /// resolves npm alone: a server that does not serve Cargo resolution
 /// means a local resolve, not a failed install.
 pub(super) async fn resolve_via_pnpr(config: &Config, metadata: &str) -> Result<Option<String>> {
-    let Some(pnpr_server) = config.pnpr_server.as_deref().filter(|_| !config.offline) else {
+    let Some(pnpr_server) = config
+        .pnpr_server
+        .as_deref()
+        .filter(|_| !config.offline)
+    else {
         return Ok(None);
     };
     let client = PnprClient::new(pnpr_server);
@@ -223,12 +231,15 @@ async fn read_cargo_metadata_for_manifest(manifest_path: &Path) -> Result<String
         let stderr = stderr.trim();
         return Err(miette::miette!("cargo metadata failed for {}: {}", manifest_path, stderr,));
     }
-    String::from_utf8(output.stdout).into_diagnostic().wrap_err("decode cargo metadata output")
+    String::from_utf8(output.stdout)
+        .into_diagnostic()
+        .wrap_err("decode cargo metadata output")
 }
 
 pub(super) fn parse_lockfile(input: &str, index_url: &str) -> Result<LockedPackages> {
-    let lockfile =
-        cargo_lock::Lockfile::from_str(input).into_diagnostic().wrap_err("parse Cargo.lock")?;
+    let lockfile = cargo_lock::Lockfile::from_str(input)
+        .into_diagnostic()
+        .wrap_err("parse Cargo.lock")?;
     let mut packages = LockedPackages::default();
     // One repository serves every package a checkout of it provides, so the
     // packages of a source share the description of it.
@@ -247,15 +258,31 @@ pub(super) fn parse_lockfile(input: &str, index_url: &str) -> Result<LockedPacka
                     Arc::clone(slot.insert(Arc::new(GitSource::from_source_id(source)?)))
                 }
             };
-            packages.git.push(GitPackage { name, version, source });
+            packages
+                .git
+                .push(GitPackage { name, version, source });
             continue;
         }
         let crate_source = source.clone();
-        packages.crates.push(locked_crate_from_package(package, &crate_source, index_url)?);
+        packages
+            .crates
+            .push(locked_crate_from_package(package, &crate_source, index_url)?);
     }
 
-    reject_duplicate_links("registry", packages.crates.iter().map(LockedCrate::link_name))?;
-    reject_duplicate_links("git", packages.git.iter().map(GitPackage::link_name))?;
+    reject_duplicate_links(
+        "registry",
+        packages
+            .crates
+            .iter()
+            .map(LockedCrate::link_name),
+    )?;
+    reject_duplicate_links(
+        "git",
+        packages
+            .git
+            .iter()
+            .map(GitPackage::link_name),
+    )?;
     Ok(packages)
 }
 
@@ -291,11 +318,16 @@ fn locked_crate_from_package(
     }
     let name = package.name.to_string();
     let version = package.version.to_string();
-    let checksum = package.checksum
+    let checksum = package
+        .checksum
         .ok_or_else(|| miette::miette!("registry package {name} {version} has no checksum"))?
         .to_string();
     validate_package_identity(&name, &version)?;
-    if checksum.len() != 64 || !checksum.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    if checksum.len() != 64
+        || !checksum
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    {
         return Err(miette::miette!("invalid checksum for crate {name} {version}"));
     }
     Ok(LockedCrate { name, version, checksum: checksum.to_ascii_lowercase() })

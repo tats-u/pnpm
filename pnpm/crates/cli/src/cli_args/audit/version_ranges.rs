@@ -16,7 +16,9 @@ pub(crate) fn satisfies_including_prerelease(version: &Version, range: &Range) -
         .to_string()
         .split("||")
         .any(|comparators| {
-            comparators.split_whitespace().all(|comparator| comparator_matches(version, comparator))
+            comparators
+                .split_whitespace()
+                .all(|comparator| comparator_matches(version, comparator))
         })
 }
 
@@ -64,7 +66,9 @@ pub(crate) fn infer_patched_versions(vulnerable_range: &str) -> Option<String> {
 }
 
 pub(crate) fn last_upper_bound(input: &str) -> Option<(&str, &str)> {
-    let mut parts = input.split_whitespace().collect::<Vec<_>>();
+    let mut parts = input
+        .split_whitespace()
+        .collect::<Vec<_>>();
     let last = parts.pop()?;
     if let Some(version) = last.strip_prefix("<=") {
         return Some(("<=", version.trim()));

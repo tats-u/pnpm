@@ -55,7 +55,9 @@ fn policy_from_specs<const LEN: usize>(
     let mut config = Config::new();
     config.dangerously_allow_all_builds = dangerously_allow_all;
     for (spec, value) in entries {
-        config.allow_builds.insert(spec.to_string(), value);
+        config
+            .allow_builds
+            .insert(spec.to_string(), value);
     }
     AllowBuildPolicy::from_config(&config).expect("valid specs")
 }
@@ -78,8 +80,12 @@ fn key(name_text: &str, version: &str) -> PackageKey {
 /// execution, so the script never actually runs.
 fn create_buildable_pkg(virtual_store_dir: &Path, key: &PackageKey) -> PathBuf {
     let key_str = key.without_peer().to_string();
-    let name_version = key_str.strip_prefix('/').unwrap_or(&key_str);
-    let at_idx = name_version.rfind('@').unwrap_or(name_version.len());
+    let name_version = key_str
+        .strip_prefix('/')
+        .unwrap_or(&key_str);
+    let at_idx = name_version
+        .rfind('@')
+        .unwrap_or(name_version.len());
     let pkg_name = &name_version[..at_idx];
     let store_name = name_version.replace('/', "+");
     let pkg_dir = virtual_store_dir
@@ -228,8 +234,12 @@ fn frozen_backstop_run(
 #[cfg(unix)]
 fn create_failing_postinstall_fixture(virtual_store_dir: &Path, key: &PackageKey) -> PathBuf {
     let key_str = key.without_peer().to_string();
-    let name_version = key_str.strip_prefix('/').unwrap_or(&key_str);
-    let at_idx = name_version.rfind('@').unwrap_or(name_version.len());
+    let name_version = key_str
+        .strip_prefix('/')
+        .unwrap_or(&key_str);
+    let at_idx = name_version
+        .rfind('@')
+        .unwrap_or(name_version.len());
     let pkg_name = &name_version[..at_idx];
     let store_name = name_version.replace('/', "+");
     let pkg_dir = virtual_store_dir
@@ -268,8 +278,12 @@ fn create_postinstall_modifies_source_fixture(
     use std::os::unix::fs::PermissionsExt;
 
     let key_str = key.without_peer().to_string();
-    let name_version = key_str.strip_prefix('/').unwrap_or(&key_str);
-    let at_idx = name_version.rfind('@').unwrap_or(name_version.len());
+    let name_version = key_str
+        .strip_prefix('/')
+        .unwrap_or(&key_str);
+    let at_idx = name_version
+        .rfind('@')
+        .unwrap_or(name_version.len());
     let pkg_name = &name_version[..at_idx];
     let store_name = name_version.replace('/', "+");
     let pkg_dir = virtual_store_dir
@@ -330,8 +344,12 @@ fn create_postinstall_with_unreadable_fixture(
     key: &PackageKey,
 ) -> PathBuf {
     let key_str = key.without_peer().to_string();
-    let name_version = key_str.strip_prefix('/').unwrap_or(&key_str);
-    let at_idx = name_version.rfind('@').unwrap_or(name_version.len());
+    let name_version = key_str
+        .strip_prefix('/')
+        .unwrap_or(&key_str);
+    let at_idx = name_version
+        .rfind('@')
+        .unwrap_or(name_version.len());
     let pkg_name = &name_version[..at_idx];
     let store_name = name_version.replace('/', "+");
     let pkg_dir = virtual_store_dir
@@ -369,16 +387,18 @@ fn snapshot_regular_files(root: &Path) -> std::collections::BTreeMap<PathBuf, Ve
     while let Some(directory) = directories.pop() {
         for entry in fs::read_dir(&directory).expect("read snapshot directory") {
             let entry = entry.expect("read snapshot entry");
-            let file_type = entry.file_type().expect("read snapshot entry type");
+            let file_type = entry
+                .file_type()
+                .expect("read snapshot entry type");
             if file_type.is_dir() {
                 directories.push(entry.path());
             } else if file_type.is_file() {
                 let path = entry.path();
-                let relative = path.strip_prefix(root).expect("snapshot path is under root");
-                snapshot.insert(
-                    relative.to_path_buf(),
-                    fs::read(&path).expect("read snapshot file"),
-                );
+                let relative = path
+                    .strip_prefix(root)
+                    .expect("snapshot path is under root");
+                snapshot
+                    .insert(relative.to_path_buf(), fs::read(&path).expect("read snapshot file"));
             }
         }
     }
@@ -391,8 +411,12 @@ fn snapshot_regular_files(root: &Path) -> std::collections::BTreeMap<PathBuf, Ve
 #[cfg(unix)]
 fn create_marker_pkg(virtual_store_dir: &Path, key: &PackageKey) -> PathBuf {
     let key_str = key.without_peer().to_string();
-    let name_version = key_str.strip_prefix('/').unwrap_or(&key_str);
-    let at_idx = name_version.rfind('@').unwrap_or(name_version.len());
+    let name_version = key_str
+        .strip_prefix('/')
+        .unwrap_or(&key_str);
+    let at_idx = name_version
+        .rfind('@')
+        .unwrap_or(name_version.len());
     let pkg_name = &name_version[..at_idx];
     let store_name = name_version.replace('/', "+");
     let pkg_dir = virtual_store_dir

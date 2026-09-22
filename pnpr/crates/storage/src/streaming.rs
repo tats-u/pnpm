@@ -104,7 +104,9 @@ async fn forward_chunk(
     mut state: TeeState,
     chunk: Bytes,
 ) -> Option<(io::Result<Bytes>, Option<TeeState>)> {
-    let received = state.written.saturating_add(chunk.len() as u64);
+    let received = state
+        .written
+        .saturating_add(chunk.len() as u64);
     if received > state.max_bytes {
         let limit = state.max_bytes;
         tracing::warn!(
@@ -202,7 +204,10 @@ pub async fn download_verified_to_temp(
         write.abandon().await;
         return Err(err);
     }
-    write.into_temp_file().await.map_err(BlobStreamError::Io)
+    write
+        .into_temp_file()
+        .await
+        .map_err(BlobStreamError::Io)
 }
 
 async fn download_verified(
@@ -268,7 +273,10 @@ pub fn stream_file_and_remove(file: File, path: PathBuf) -> Body {
     let stream = stream::unfold(Some(RemoveOnDropFile::new(file, path)), |state| async move {
         let mut state = state?;
         let mut buf = vec![0u8; READ_CHUNK];
-        let file = state.file.as_mut().expect("file is present until stream finishes");
+        let file = state
+            .file
+            .as_mut()
+            .expect("file is present until stream finishes");
         match file.read(&mut buf).await {
             Ok(0) => None,
             Ok(n) => {

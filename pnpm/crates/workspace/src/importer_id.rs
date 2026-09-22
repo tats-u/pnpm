@@ -39,7 +39,9 @@ pub fn importer_id_from_root_dir(lockfile_dir: &Path, project_dir: &Path) -> Str
                 rendered.replace('\\', "/")
             }
         }
-        None => project_dir.to_string_lossy().replace('\\', "/"),
+        None => project_dir
+            .to_string_lossy()
+            .replace('\\', "/"),
     }
 }
 

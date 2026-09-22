@@ -162,7 +162,9 @@ impl super::Workspace {
         root: &Path,
         manifest: &Manifest,
     ) -> Result<()> {
-        let requirements = project.metadata.requires_dist
+        let requirements = project
+            .metadata
+            .requires_dist
             .iter()
             .map(|requirement| parse_requirement(requirement))
             .collect::<Result<Vec<_>>>()?;

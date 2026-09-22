@@ -11,7 +11,9 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 fn warm_cas_paths_share_prefetch_maps_and_deduplicate_peer_variants() {
     let plain: PackageKey = "a@1.0.0".parse().unwrap();
     let peered: PackageKey = "a@1.0.0(peer@1.0.0)".parse().unwrap();
-    let patched: PackageKey = "a@1.0.0(patch_hash=abc)".parse().unwrap();
+    let patched: PackageKey = "a@1.0.0(patch_hash=abc)"
+        .parse()
+        .unwrap();
     let snapshot = SnapshotEntry::default();
     let paths = Arc::new(HashMap::from([("index.js".to_string(), PathBuf::from("cas/plain"))]));
     let patched_paths =

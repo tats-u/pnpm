@@ -139,11 +139,15 @@ impl<Reporter: pnpm_reporter::Reporter + 'static> EarlyMaterializer<Reporter> {
         is_wanted: impl Fn(&PackageKey) -> bool,
         logged_methods: &AtomicU8,
     ) -> usize {
-        self.shared.closing.store(true, Ordering::Release);
+        self.shared
+            .closing
+            .store(true, Ordering::Release);
         let mut tasks = std::mem::take(&mut *lock(&self.tasks));
         while tasks.join_next().await.is_some() {}
         logged_methods.fetch_or(
-            self.shared.logged_methods.load(Ordering::Acquire),
+            self.shared
+                .logged_methods
+                .load(Ordering::Acquire),
             Ordering::AcqRel,
         );
         let orphans: Vec<PathBuf> = std::mem::take(&mut *lock(&self.slots))
@@ -159,7 +163,9 @@ impl<Reporter: pnpm_reporter::Reporter + 'static> EarlyMaterializer<Reporter> {
             })
             .await;
         }
-        self.shared.materialized.load(Ordering::Acquire)
+        self.shared
+            .materialized
+            .load(Ordering::Acquire)
     }
 }
 
@@ -174,7 +180,10 @@ fn required_dependencies(
         .filter(|child| !child.optional)
         .filter_map(|child| {
             let alias = PkgName::parse(child.alias.as_str()).ok()?;
-            let key = child.pkg_id.parse::<PackageKey>().ok()?;
+            let key = child
+                .pkg_id
+                .parse::<PackageKey>()
+                .ok()?;
             Some((alias, SnapshotDepRef::Alias(key)))
         })
         .collect()
@@ -226,7 +235,8 @@ impl SlotJob {
         shared: &Shared,
         cas_paths: &HashMap<String, PathBuf>,
     ) -> Result<(), String> {
-        std::fs::create_dir_all(&self.virtual_node_modules_dir).map_err(|error| error.to_string())?;
+        std::fs::create_dir_all(&self.virtual_node_modules_dir)
+            .map_err(|error| error.to_string())?;
         import_indexed_dir::<Reporter>(
             &shared.logged_methods,
             shared.import_method,
@@ -247,7 +257,9 @@ impl SlotJob {
             )
             .map_err(|error| error.to_string())?;
         }
-        shared.materialized.fetch_add(1, Ordering::AcqRel);
+        shared
+            .materialized
+            .fetch_add(1, Ordering::AcqRel);
         Ok::<(), String>(())
     }
 }
@@ -262,7 +274,10 @@ async fn wait_for_cas_paths(
     mem_cache_key: &str,
 ) -> Option<Arc<HashMap<String, PathBuf>>> {
     loop {
-        let slot = shared.mem_cache.get(mem_cache_key).map(|entry| Arc::clone(entry.value()));
+        let slot = shared
+            .mem_cache
+            .get(mem_cache_key)
+            .map(|entry| Arc::clone(entry.value()));
         let Some(slot) = slot else {
             if shared.closing.load(Ordering::Acquire) {
                 return None;
@@ -286,5 +301,7 @@ async fn wait_for_cas_paths(
 }
 
 fn lock<Inner>(mutex: &Mutex<Inner>) -> std::sync::MutexGuard<'_, Inner> {
-    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    mutex
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }

@@ -26,16 +26,14 @@ fn collect_rels(
             // Use `dunce::canonicalize` semantics indirectly: strip
             // the tmp root prefix off the absolute path and report
             // the remainder. That keeps assertions deterministic.
-            let stripped = abs
-                .strip_prefix(root)
-                .map_or_else(
-                    |_| abs.display().to_string(),
-                    |path| {
-                        path.display()
-                            .to_string()
-                            .replace('\\', "/")
-                    },
-                );
+            let stripped = abs.strip_prefix(root).map_or_else(
+                |_| abs.display().to_string(),
+                |path| {
+                    path.display()
+                        .to_string()
+                        .replace('\\', "/")
+                },
+            );
             (rel, stripped)
         })
         .collect()
@@ -152,7 +150,9 @@ fn walk_all_files_resolves_symlinks_when_requested() {
 
     let out = walk_all_files(root, true, true).unwrap();
     assert_eq!(out.len(), 1);
-    let src = out.get("link.txt").expect("link.txt entry");
+    let src = out
+        .get("link.txt")
+        .expect("link.txt entry");
     assert_eq!(
         fs::canonicalize(src).unwrap(),
         fs::canonicalize(&target).unwrap(),
@@ -173,7 +173,9 @@ fn walk_all_files_keeps_symlink_path_without_resolve_symlinks() {
     symlink(&target, root.join("link.txt")).unwrap();
 
     let out = walk_all_files(root, false, true).unwrap();
-    let src = out.get("link.txt").expect("link.txt entry");
+    let src = out
+        .get("link.txt")
+        .expect("link.txt entry");
     assert_eq!(src, &root.join("link.txt"));
 }
 
@@ -190,7 +192,8 @@ fn walk_all_files_rejects_symlink_escape_when_confined() {
 
     let err = walk_all_files(root, false, false).expect_err("outside symlink should fail");
     assert!(
-        err.to_string().contains("resolves outside source directory"),
+        err.to_string()
+            .contains("resolves outside source directory"),
         "unexpected error: {err}",
     );
 }
@@ -210,7 +213,8 @@ fn walk_all_files_rejects_nested_junction_escape_when_confined() {
     let err = walk_all_files(&root, false, false).expect_err("outside junction should fail");
     pnpm_fs::remove_symlink_dir(&link).unwrap();
     assert!(
-        err.to_string().contains("resolves outside source directory"),
+        err.to_string()
+            .contains("resolves outside source directory"),
         "unexpected error: {err}",
     );
 }
@@ -246,7 +250,8 @@ fn walk_all_files_rejects_escape_from_a_linked_root_when_confined() {
 
     let err = walk_all_files(&root_link, false, false).expect_err("outside symlink should fail");
     assert!(
-        err.to_string().contains("resolves outside source directory"),
+        err.to_string()
+            .contains("resolves outside source directory"),
         "unexpected error: {err}",
     );
 }
@@ -262,7 +267,9 @@ fn walk_all_files_rewrites_confined_symlink_sources_to_real_paths() {
     symlink(root.join("real.txt"), root.join("link.txt")).unwrap();
 
     let out = walk_all_files(root, false, false).unwrap();
-    let src = out.get("link.txt").expect("link.txt entry");
+    let src = out
+        .get("link.txt")
+        .expect("link.txt entry");
     assert_eq!(src, &fs::canonicalize(root.join("real.txt")).unwrap());
 }
 

@@ -54,7 +54,9 @@ pub(super) struct Packument {
 /// `None` when it can't be parsed (mirroring JS `Date.parse` yielding `NaN`,
 /// which then compares false).
 pub(super) fn parse_timestamp(value: &str) -> Option<i64> {
-    chrono::DateTime::parse_from_rfc3339(value).ok().map(|datetime| datetime.timestamp_millis())
+    chrono::DateTime::parse_from_rfc3339(value)
+        .ok()
+        .map(|datetime| datetime.timestamp_millis())
 }
 
 pub(super) async fn fetch_registry_keys(
@@ -65,13 +67,17 @@ pub(super) async fn fetch_registry_keys(
     let registry_url = with_trailing_slash(registry);
     let keys_url = format!("{registry_url}-/npm/v1/keys");
     let display_url = redact_url_credentials(&keys_url);
-    let authorization = config.auth_headers.for_url(&registry_url);
+    let authorization = config
+        .auth_headers
+        .for_url(&registry_url);
     // Keep the throttle guard alive until the body is fully read; dropping it
     // before `response.text()` would release the concurrency permit while the
     // socket is still draining (see [`send_with_retry`]).
     let (_guard, response) =
         send_with_retry(http_client, &keys_url, retry_opts_from_config(config), |client| {
-            let mut request = client.get(&keys_url).header("accept", "application/json");
+            let mut request = client
+                .get(&keys_url)
+                .header("accept", "application/json");
             if let Some(value) = &authorization {
                 request = request.header("authorization", value);
             }
@@ -111,18 +117,19 @@ pub(super) async fn fetch_registry_keys(
 /// keys; provenance attestations are handled separately and intentionally
 /// ignored here.
 fn parse_registry_keys(body: &str, display_url: &str) -> Result<Vec<RegistryKey>, SignaturesError> {
-    let value: serde_json::Value = serde_json::from_str(body)
-        .map_err(|err| SignaturesError::KeysInvalidJson {
+    let value: serde_json::Value =
+        serde_json::from_str(body).map_err(|err| SignaturesError::KeysInvalidJson {
             url: display_url.to_string(),
             reason: err.to_string(),
             body: sanitize_response_body(body),
         })?;
-    let parsed: RegistryKeysResponse = serde_json::from_value(value.clone())
-        .map_err(|_| SignaturesError::KeysUnexpectedBody {
+    let parsed: RegistryKeysResponse =
+        serde_json::from_value(value.clone()).map_err(|_| SignaturesError::KeysUnexpectedBody {
             url: display_url.to_string(),
             body: sanitize_response_body(&value.to_string()),
         })?;
-    Ok(parsed.keys
+    Ok(parsed
+        .keys
         .into_iter()
         .filter(|key| key.keytype == "ecdsa-sha2-nistp256" && key.scheme == "ecdsa-sha2-nistp256")
         .collect())
@@ -137,11 +144,15 @@ pub(super) async fn fetch_packument(
     let registry_url = with_trailing_slash(registry);
     let packument_url = format!("{registry_url}{}", encode_package_name(name));
     let display_url = redact_url_credentials(&packument_url);
-    let authorization = config.auth_headers.for_url(&registry_url);
+    let authorization = config
+        .auth_headers
+        .for_url(&registry_url);
     // Hold the throttle guard until the body is read; see `fetch_registry_keys`.
     let (_guard, response) =
         send_with_retry(http_client, &packument_url, retry_opts_from_config(config), |client| {
-            let mut request = client.get(&packument_url).header("accept", "application/json");
+            let mut request = client
+                .get(&packument_url)
+                .header("accept", "application/json");
             if let Some(value) = &authorization {
                 request = request.header("authorization", value);
             }
@@ -176,17 +187,16 @@ pub(super) async fn fetch_packument(
 }
 
 fn parse_packument(body: &str, display_url: &str) -> Result<Packument, SignaturesError> {
-    let value: serde_json::Value = serde_json::from_str(body)
-        .map_err(|err| SignaturesError::PackumentInvalidJson {
+    let value: serde_json::Value =
+        serde_json::from_str(body).map_err(|err| SignaturesError::PackumentInvalidJson {
             url: display_url.to_string(),
             reason: err.to_string(),
             body: sanitize_response_body(body),
         })?;
-    serde_json::from_value(value.clone())
-        .map_err(|_| SignaturesError::PackumentUnexpectedBody {
-            url: display_url.to_string(),
-            body: sanitize_response_body(&value.to_string()),
-        })
+    serde_json::from_value(value.clone()).map_err(|_| SignaturesError::PackumentUnexpectedBody {
+        url: display_url.to_string(),
+        body: sanitize_response_body(&value.to_string()),
+    })
 }
 
 fn with_trailing_slash(registry: &str) -> String {

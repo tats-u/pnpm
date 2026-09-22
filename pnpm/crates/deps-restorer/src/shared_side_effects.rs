@@ -65,7 +65,9 @@ pub(crate) async fn apply_shared_side_effects(mut options: ApplySharedSideEffect
         options.cached.by_snapshot,
     );
     if !options.config.side_effects_cache_read() {
-        options.side_effects_maps_by_snapshot.clear();
+        options
+            .side_effects_maps_by_snapshot
+            .clear();
     }
     let Some(setup) = remote_cache_setup(options.config, options.snapshots) else { return };
 
@@ -81,7 +83,9 @@ pub(crate) async fn apply_shared_side_effects(mut options: ApplySharedSideEffect
             packages: options.packages,
             setup: &setup,
             side_effects_by_snapshot: options.cached.by_snapshot,
-            store_index_keys_by_snapshot: options.cached.store_index_keys_by_snapshot,
+            store_index_keys_by_snapshot: options
+                .cached
+                .store_index_keys_by_snapshot,
         },
         roots,
         persisted_remote,
@@ -103,7 +107,9 @@ pub(crate) fn shared_side_effects_publisher(
     snapshots: Option<&HashMap<PackageKey, SnapshotEntry>>,
 ) -> Option<SharedSideEffectsPublisher> {
     let server = config.pnpr_server.as_deref()?;
-    let settings = config.remote_side_effects_cache.as_ref()?;
+    let settings = config
+        .remote_side_effects_cache
+        .as_ref()?;
     if settings.publish != Some(true) {
         return None;
     }
@@ -115,14 +121,18 @@ pub(crate) fn shared_side_effects_publisher(
     let key_id = settings.key_id.clone()?;
     let builder_id = settings.builder_id.clone()?;
     let organization = non_empty(&settings.org)?.to_string();
-    let environment = settings.build_env.clone().unwrap_or_default();
+    let environment = settings
+        .build_env
+        .clone()
+        .unwrap_or_default();
     Some(SharedSideEffectsPublisher {
         signer: BuilderSigningKey { builder_id, key_id, private_key },
         authorization: config.auth_headers.for_url(server),
 
         builder_profile: BuilderProfile {
             image_digest: settings.image_digest.clone(),
-            architecture_baseline: settings.architecture_baseline
+            architecture_baseline: settings
+                .architecture_baseline
                 .clone()
                 .unwrap_or_else(|| pnpm_graph_hasher::host_arch().to_string()),
             environment,
@@ -130,7 +140,8 @@ pub(crate) fn shared_side_effects_publisher(
         client: PnprClient::new(server),
 
         organization,
-        packages: settings.packages
+        packages: settings
+            .packages
             .iter()
             .cloned()
             .collect(),
@@ -146,8 +157,12 @@ impl SharedSideEffectsPublisher {
         metadata_key: &PackageKey,
         metadata: &PackageMetadata,
     ) -> bool {
-        self.packages.contains(&metadata_key.name.to_string())
-            && metadata.resolution.checkable_integrity().is_some()
+        self.packages
+            .contains(&metadata_key.name.to_string())
+            && metadata
+                .resolution
+                .checkable_integrity()
+                .is_some()
     }
 
     pub(crate) fn publish(
@@ -176,7 +191,11 @@ impl SharedSideEffectsPublisher {
             builder_id: self.signer.builder_id.clone(),
             builder_profile: self.builder_profile.clone(),
             compatibility: CompatibilityConstraints::Tagged {
-                tags: vec![self.platform.tag().map_err(|error| error.to_string())?],
+                tags: vec![
+                    self.platform
+                        .tag()
+                        .map_err(|error| error.to_string())?,
+                ],
             },
             manifest: ArtifactManifest {
                 added: upload.files,
@@ -222,8 +241,10 @@ impl SharedSideEffectsPublisher {
         if !self.packages.contains(&package_name) {
             return None;
         }
-        let source_integrity =
-            metadata.resolution.checkable_integrity().map(ToString::to_string)?;
+        let source_integrity = metadata
+            .resolution
+            .checkable_integrity()
+            .map(ToString::to_string)?;
         Some(ArtifactSubject::dependency_side_effects(
             PackageIdentity {
                 name: package_name,

@@ -76,7 +76,10 @@ fn build_renderer(
     options: &InstallOptions,
     on_output: Option<OutputSink>,
 ) -> Option<NativeRenderer> {
-    options.reporter.as_ref().map(|reporter| NativeRenderer::new(reporter, &options.dir, on_output))
+    options
+        .reporter
+        .as_ref()
+        .map(|reporter| NativeRenderer::new(reporter, &options.dir, on_output))
 }
 
 /// Serializes every engine call that touches the process-global log sink /
@@ -117,7 +120,8 @@ pub async fn install(
         .map_err(|error| {
             napi::Error::from_reason(format!("failed to spawn install thread: {error}"))
         })?;
-    rx.await.map_err(|_| napi::Error::from_reason("install worker thread panicked"))?
+    rx.await
+        .map_err(|_| napi::Error::from_reason("install worker thread panicked"))?
 }
 
 fn run_install_blocking(
@@ -138,9 +142,8 @@ fn run_install_blocking(
     // the batch contract.
     let pnpmfile_hook: Option<Arc<dyn PnpmfileHooks>> = match read_package_batch_hook {
         Some(batch) => Some(Arc::new(JsBatchedReadPackageHook::new(batch))),
-        None => read_package_hook.map(|sink| {
-            Arc::new(JsReadPackageHook::new(sink)) as Arc<dyn PnpmfileHooks>
-        }),
+        None => read_package_hook
+            .map(|sink| Arc::new(JsReadPackageHook::new(sink)) as Arc<dyn PnpmfileHooks>),
     };
     begin_stats();
     let deps_requiring_build_sink = (options.return_list_of_deps_requiring_build == Some(true))
@@ -148,7 +151,11 @@ fn run_install_blocking(
     let outcome = run_install_inner(
         options,
         pnpmfile_hook,
-        EngineMode::Install(deps_requiring_build_sink.as_ref().map(Arc::clone)),
+        EngineMode::Install(
+            deps_requiring_build_sink
+                .as_ref()
+                .map(Arc::clone),
+        ),
     );
     let stats = take_stats();
     let store_dir = outcome?;
@@ -450,23 +457,30 @@ fn run_install_inner(
             let install = shape.configure(install, options, &mode, pnpmfile_hook, &lockfile_path);
             match mode {
                 EngineMode::Install(_) | EngineMode::PeerIssues(_) => {
-                    install.run::<NodeBridgeReporter>().await
+                    install
+                        .run::<NodeBridgeReporter>()
+                        .await
                 }
                 EngineMode::Rebuild(rebuild) => {
-                    install.run_rebuild::<NodeBridgeReporter>(rebuild).await
+                    install
+                        .run_rebuild::<NodeBridgeReporter>(rebuild)
+                        .await
                 }
             }
         })
         .map_err(|error| to_napi_error(&error))?;
 
-    Ok(PathBuf::from(config.store_dir.clone()).display().to_string())
+    Ok(PathBuf::from(config.store_dir.clone())
+        .display()
+        .to_string())
 }
 
 /// The root importer is the project at `dir`; any others are siblings. A
 /// lone project takes the plain (non-workspace) install path; multiple
 /// importers are handed to the engine via `workspace_projects_override`.
 fn root_manifest_value(options: &InstallOptions, dir: &Path) -> napi::Result<serde_json::Value> {
-    options.projects
+    options
+        .projects
         .iter()
         .find(|project| Path::new(&project.root_dir) == dir)
         .map(|project| project.manifest.clone())
@@ -514,7 +528,8 @@ pub async fn rebuild(
         .map_err(|error| {
             napi::Error::from_reason(format!("failed to spawn rebuild thread: {error}"))
         })?;
-    rx.await.map_err(|_| napi::Error::from_reason("rebuild worker thread panicked"))?
+    rx.await
+        .map_err(|_| napi::Error::from_reason("rebuild worker thread panicked"))?
 }
 
 fn run_rebuild_blocking(

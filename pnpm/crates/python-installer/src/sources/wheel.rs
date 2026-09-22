@@ -27,15 +27,19 @@ impl Registry<'_> {
             bail!("Python URL requirement {name} names a wheel of {}", filename.name);
         }
         wheel.check_installable(&self.resolution.target.tags, name, &filename.version)?;
-        self.resolution.packages.candidates.insert(
-            name.clone(),
-            BTreeMap::from([(
-                filename.version.clone(),
-                Candidate::Wheel(IndexCandidate { wheel, core_metadata: None }),
-            )]),
-        );
-        let wheel =
-            self.download_wheel_from_buffer::<Reporter>(name, &filename.version, buffer).await?;
+        self.resolution
+            .packages
+            .candidates
+            .insert(
+                name.clone(),
+                BTreeMap::from([(
+                    filename.version.clone(),
+                    Candidate::Wheel(IndexCandidate { wheel, core_metadata: None }),
+                )]),
+            );
+        let wheel = self
+            .download_wheel_from_buffer::<Reporter>(name, &filename.version, buffer)
+            .await?;
         self.remember(name.clone(), filename.version, wheel);
         Ok(())
     }
@@ -50,11 +54,17 @@ impl Registry<'_> {
         if WheelFilename::parse(&name)?.is_none() {
             bail!("Python URL requirements currently require a wheel: {source}");
         }
-        let cache = self.config.cache_dir
+        let cache = self
+            .config
+            .cache_dir
             .join("python-url-v1")
             .join(format!("{}.json", pnpm_crypto_hash::create_hex_hash(source)));
         if self.config.offline {
-            return Ok((self.cached_url_wheel(&cache, source).await?, None));
+            return Ok((
+                self.cached_url_wheel(&cache, source)
+                    .await?,
+                None,
+            ));
         }
         if expected.is_none() && !pnpm_network::is_url_secure_for_credentials(url.as_str()) {
             bail!(
@@ -65,7 +75,9 @@ impl Registry<'_> {
         let buffer = if expected.is_none() { Some(self.wheel_bytes(&url).await?) } else { None };
         let digest = expected.unwrap_or_else(|| {
             pnpm_crypto_hash::create_hex_hash_bytes(
-                buffer.as_ref().expect("hashless wheels were downloaded"),
+                buffer
+                    .as_ref()
+                    .expect("hashless wheels were downloaded"),
             )
         });
         let wheel = LockedWheel {
@@ -74,9 +86,13 @@ impl Registry<'_> {
             hashes: BTreeMap::from([("sha256".to_string(), digest)]),
         };
         wheel.integrity()?;
-        tokio::fs::create_dir_all(cache.parent().expect("cache has parent"))
-            .await
-            .into_diagnostic()?;
+        tokio::fs::create_dir_all(
+            cache
+                .parent()
+                .expect("cache has parent"),
+        )
+        .await
+        .into_diagnostic()?;
         pnpm_fs::write_atomic(&cache, &serde_json::to_vec(&wheel).into_diagnostic()?)
             .into_diagnostic()?;
         Ok((wheel, buffer))
@@ -101,7 +117,8 @@ impl Registry<'_> {
     }
 
     async fn wheel_bytes(&self, url: &Url) -> Result<Vec<u8>> {
-        let response = self.client
+        let response = self
+            .client
             .get_limited_bytes_with_secure_auth_and_retry(
                 url.as_str(),
                 &self.index.auth,

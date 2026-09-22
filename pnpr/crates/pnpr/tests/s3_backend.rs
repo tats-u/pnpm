@@ -164,7 +164,12 @@ async fn rejected_publish_uploads_nothing_and_leaves_no_staging_file() {
     let text = String::from_utf8(body_bytes(response.into_body()).await).unwrap();
     assert!(text.contains("EINTEGRITY"), "error body should carry EINTEGRITY: {text}");
 
-    assert!(bucket_keys(&store, "bad-pkg").await.is_empty(), "nothing should be uploaded");
+    assert!(
+        bucket_keys(&store, "bad-pkg")
+            .await
+            .is_empty(),
+        "nothing should be uploaded"
+    );
     assert_eq!(staging_file_count(&storage), 0, "no staging tmp file should be left behind");
 }
 
@@ -199,14 +204,17 @@ async fn unpublish_removes_the_package_from_the_bucket() {
         .body(Body::empty())
         .unwrap();
     assert_eq!(
-        app.oneshot(request).await
+        app.oneshot(request)
+            .await
             .unwrap()
             .status(),
         StatusCode::CREATED,
     );
 
     assert!(
-        bucket_keys(&store, "mypkg").await.is_empty(),
+        bucket_keys(&store, "mypkg")
+            .await
+            .is_empty(),
         "package should be gone from the bucket",
     );
 }
@@ -216,7 +224,11 @@ async fn bucket_keys(store: &Arc<dyn ObjectStore>, prefix: &str) -> Vec<String> 
     let scope = ObjectPath::from(prefix);
     store
         .list(Some(&scope))
-        .map(|meta| meta.expect("list entry").location.to_string())
+        .map(|meta| {
+            meta.expect("list entry")
+                .location
+                .to_string()
+        })
         .collect::<Vec<_>>()
         .await
 }
@@ -225,12 +237,17 @@ async fn bucket_keys(store: &Arc<dyn ObjectStore>, prefix: &str) -> Vec<String> 
 /// subdirectory of the proxy-cache root, which `static_serve` nests
 /// under `storage`).
 fn staging_file_count(storage: &Path) -> usize {
-    let dir = storage.join(".pnpr-cache").join("pnpr-hosted-staging");
+    let dir = storage
+        .join(".pnpr-cache")
+        .join("pnpr-hosted-staging");
     std::fs::read_dir(dir).map_or(0, std::iter::Iterator::count)
 }
 
 async fn body_bytes(body: Body) -> Vec<u8> {
-    to_bytes(body, usize::MAX).await.expect("read body").to_vec()
+    to_bytes(body, usize::MAX)
+        .await
+        .expect("read body")
+        .to_vec()
 }
 
 async fn body_json(body: Body) -> Value {

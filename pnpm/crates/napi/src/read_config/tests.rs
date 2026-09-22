@@ -33,19 +33,25 @@ fn registries_carry_their_static_auth_headers() {
 
     let resolved = project_config(&config);
 
-    let by_name: BTreeMap<&str, Option<&str>> = resolved.registries
+    let by_name: BTreeMap<&str, Option<&str>> = resolved
+        .registries
         .iter()
         .map(|registry| (registry.name.as_str(), registry.auth_header.as_deref()))
         .collect();
     assert_eq!(by_name["default"], Some("Bearer default-token"));
     assert_eq!(by_name["@scope"], Some("Bearer scoped-token"));
     assert_eq!(
-        resolved.auth_header_by_uri.get("//reg.example/npm/").map(String::as_str),
+        resolved
+            .auth_header_by_uri
+            .get("//reg.example/npm/")
+            .map(String::as_str),
         Some("Bearer default-token"),
         "registry-wide headers land in the uri-keyed map",
     );
     assert_eq!(
-        resolved.auth_header_by_uri.get("//reg.example/scoped/"),
+        resolved
+            .auth_header_by_uri
+            .get("//reg.example/scoped/"),
         None,
         "scope-keyed credentials stay off the registry-wide map",
     );
@@ -66,7 +72,8 @@ fn scope_registry_prefers_its_scope_credential() {
 
     let resolved = project_config(&config);
 
-    let scope = resolved.registries
+    let scope = resolved
+        .registries
         .iter()
         .find(|registry| registry.name == "@scope")
         .expect("@scope registry");
@@ -78,7 +85,8 @@ fn scope_registry_prefers_its_scope_credential() {
         BTreeMap::from([("@".to_string(), "Bearer registry-wide".to_string())]),
     )])));
     let resolved = project_config(&config);
-    let scope = resolved.registries
+    let scope = resolved
+        .registries
         .iter()
         .find(|registry| registry.name == "@scope")
         .expect("@scope registry");
@@ -147,14 +155,18 @@ fn read_config_resolves_the_project_npmrc_cascade() {
         super::read_config(super::ReadConfigOptions { dir: dir.path().display().to_string() })
             .expect("read config");
 
-    let fixture_registry = resolved.registries
+    let fixture_registry = resolved
+        .registries
         .iter()
         .find(|registry| registry.name == "@fixture")
         .expect("@fixture registry resolved from the project .npmrc");
     assert_eq!(fixture_registry.url, "https://reg.fixture.example/scoped/");
     assert_eq!(fixture_registry.auth_header.as_deref(), Some("Bearer fixture-token"));
     assert_eq!(
-        resolved.auth_header_by_uri.get("//reg.fixture.example/scoped/").map(String::as_str),
+        resolved
+            .auth_header_by_uri
+            .get("//reg.fixture.example/scoped/")
+            .map(String::as_str),
         Some("Bearer fixture-token"),
     );
     assert_eq!(resolved.https_proxy.as_deref(), Some("http://proxy.fixture.example:8080"));
@@ -186,8 +198,24 @@ fn read_config_reports_explicitly_set_workspace_settings() {
     assert_eq!(resolved.fetch_retries, 7);
     assert_eq!(resolved.fetch_warn_timeout_ms, 2_345);
     assert_eq!(resolved.fetch_min_speed_ki_bps, 12);
-    assert!(resolved.explicit_settings.contains(&"fetchRetries".to_string()));
-    assert!(resolved.explicit_settings.contains(&"fetchWarnTimeoutMs".to_string()));
-    assert!(resolved.explicit_settings.contains(&"fetchMinSpeedKiBps".to_string()));
-    assert!(!resolved.explicit_settings.contains(&"fetchTimeout".to_string()));
+    assert!(
+        resolved
+            .explicit_settings
+            .contains(&"fetchRetries".to_string())
+    );
+    assert!(
+        resolved
+            .explicit_settings
+            .contains(&"fetchWarnTimeoutMs".to_string())
+    );
+    assert!(
+        resolved
+            .explicit_settings
+            .contains(&"fetchMinSpeedKiBps".to_string())
+    );
+    assert!(
+        !resolved
+            .explicit_settings
+            .contains(&"fetchTimeout".to_string())
+    );
 }

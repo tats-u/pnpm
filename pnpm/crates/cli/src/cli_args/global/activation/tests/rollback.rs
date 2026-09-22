@@ -156,7 +156,9 @@ fn hash_swap_failure_restores_bins_and_hash_target() {
     let fixture = ActivationFixture::new(&["tool"]);
     let tool = fixture.seed_file_slot("tool", b"old tool\n", 0o750);
     assert!(
-        !read_symlink_dir(&fixture.hash_link).expect("read relative hash target").is_absolute(),
+        !read_symlink_dir(&fixture.hash_link)
+            .expect("read relative hash target")
+            .is_absolute(),
     );
 
     let error = activate_global_install::<HashSwapFailure>(
@@ -208,7 +210,9 @@ fn hash_failure_removes_hash_link_that_was_originally_absent() {
 
     assert!(format!("{error:?}").contains("injected hash swap failure"));
     assert_eq!(
-        fs::symlink_metadata(&fixture.hash_link).expect_err("hash link remains absent").kind(),
+        fs::symlink_metadata(&fixture.hash_link)
+            .expect_err("hash link remains absent")
+            .kind(),
         io::ErrorKind::NotFound,
     );
     assert!(!fixture.fresh_install_dir.exists());
@@ -225,10 +229,19 @@ fn hash_failure_restores_windows_file_and_directory_symlink_kinds() {
     let fixture = ActivationFixture::new(&["file-link", "dir-link"]);
     let file_target = PathBuf::from("../old-install/file-target.js");
     let dir_target = PathBuf::from("../old-install/dir-target");
-    fs::write(fixture.old_install_dir.join("file-target.js"), b"old file target\n")
-        .expect("write file symlink target");
-    fs::create_dir_all(fixture.old_install_dir.join("dir-target"))
-        .expect("create directory symlink target");
+    fs::write(
+        fixture
+            .old_install_dir
+            .join("file-target.js"),
+        b"old file target\n",
+    )
+    .expect("write file symlink target");
+    fs::create_dir_all(
+        fixture
+            .old_install_dir
+            .join("dir-target"),
+    )
+    .expect("create directory symlink target");
     let file_link = fixture.global_bin_dir.join("file-link");
     let dir_link = fixture.global_bin_dir.join("dir-link");
     symlink_file(&file_target, &file_link).expect("seed file symlink");
@@ -251,10 +264,14 @@ fn hash_failure_restores_windows_file_and_directory_symlink_kinds() {
     .expect_err("the injected hash activation must fail");
 
     assert!(format!("{error:?}").contains("injected hash swap failure"));
-    let file_type = fs::symlink_metadata(&file_link).expect("file link metadata").file_type();
+    let file_type = fs::symlink_metadata(&file_link)
+        .expect("file link metadata")
+        .file_type();
     assert!(file_type.is_symlink_file());
     assert_eq!(fs::read_link(&file_link).expect("read file symlink"), file_target);
-    let dir_type = fs::symlink_metadata(&dir_link).expect("dir link metadata").file_type();
+    let dir_type = fs::symlink_metadata(&dir_link)
+        .expect("dir link metadata")
+        .file_type();
     assert!(dir_type.is_symlink_dir());
     assert_eq!(fs::read_link(&dir_link).expect("read directory symlink"), dir_target);
     assert!(!fixture.fresh_install_dir.exists());

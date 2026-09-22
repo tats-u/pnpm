@@ -112,7 +112,9 @@ fn to_lockfile_form_drops_the_encoded_scoped_path_only_when_the_registry_is_decl
         include_tarball_url: false,
     };
     assert_eq!(
-        resolution.to_lockfile_form("@babel/core", "7.0.0", declared_npm).unwrap(),
+        resolution
+            .to_lockfile_form("@babel/core", "7.0.0", declared_npm)
+            .unwrap(),
         LockfileResolution::Registry(RegistryResolution {
             integrity: integrity(SHA512),
             revision: None

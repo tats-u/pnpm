@@ -5,7 +5,9 @@ use pnpm_testing_utils::bin::{AddMockedRegistry, CommandTempCwd};
 use std::{fs, path::Path, process::Command};
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn manifest_has(workspace: &Path, group: DependencyGroup, name: &str) -> bool {
@@ -17,13 +19,8 @@ fn manifest_has(workspace: &Path, group: DependencyGroup, name: &str) -> bool {
 
 #[test]
 fn should_remove_from_package_json() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -46,13 +43,8 @@ fn should_remove_from_package_json() {
 #[test]
 fn remove_runs_with_ndjson_and_silent_reporters() {
     for reporter in ["--reporter=ndjson", "--reporter=silent"] {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
         pacquet
@@ -73,13 +65,8 @@ fn remove_runs_with_ndjson_and_silent_reporters() {
 
 #[test]
 fn should_remove_only_from_targeted_field() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -141,13 +128,8 @@ fn should_fail_when_no_package_specified() {
 
 #[test]
 fn should_fail_when_dependency_is_missing() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -176,13 +158,8 @@ fn should_fail_when_dependency_is_missing() {
 
 #[test]
 fn should_report_project_has_no_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // A manifest with no dependency fields at all, removed without a
@@ -222,13 +199,8 @@ fn should_report_project_has_no_dependencies() {
 
 #[test]
 fn should_accept_aliases() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet

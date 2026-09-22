@@ -90,7 +90,9 @@ impl RetryOpts {
         // one.
         let min_ms = u64::try_from(self.min_timeout.as_millis()).unwrap_or(u64::MAX);
         let max_ms = u64::try_from(self.max_timeout.as_millis()).unwrap_or(u64::MAX);
-        let pow = u64::from(self.factor).checked_pow(attempt).unwrap_or(u64::MAX);
+        let pow = u64::from(self.factor)
+            .checked_pow(attempt)
+            .unwrap_or(u64::MAX);
         Duration::from_millis(min_ms.saturating_mul(pow).min(max_ms))
     }
 }
@@ -142,7 +144,9 @@ pub async fn send_with_retry_at_priority<'client>(
 ) -> Result<(ThrottledClientGuard<'client>, Response), reqwest::Error> {
     let mut attempt = 0;
     loop {
-        let client = http_client.acquire_for_url_with_priority(url, priority).await;
+        let client = http_client
+            .acquire_for_url_with_priority(url, priority)
+            .await;
         match build_request(&client).send().await {
             Ok(response)
                 if should_retry_status(response.status()) && attempt < retry_opts.retries =>

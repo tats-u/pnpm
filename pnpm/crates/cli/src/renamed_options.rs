@@ -56,8 +56,12 @@ pub fn drop_shadowed_aliases(cmd: &Command, argv: Vec<OsString>) -> Vec<OsString
             let (name, has_inline_value) = rest
                 .split_once('=')
                 .map_or((rest, false), |(name, _)| (name, true));
-            let width =
-                token_width(arity.long_consumes_value(name).unwrap_or(false), has_inline_value);
+            let width = token_width(
+                arity
+                    .long_consumes_value(name)
+                    .unwrap_or(false),
+                has_inline_value,
+            );
             scan.note_long(name, index, width);
             index += width;
         } else if let Some(rest) = token
@@ -92,7 +96,8 @@ impl AliasScan {
     fn note_long(&mut self, name: &str, index: usize, width: usize) {
         for (option_index, option) in RENAMED_OPTIONS.iter().enumerate() {
             if name == option.alias {
-                self.occurrences.push((option_index, index, width));
+                self.occurrences
+                    .push((option_index, index, width));
             } else if name == option.canonical_long {
                 self.canonical_seen[option_index] = true;
             }
@@ -136,7 +141,10 @@ fn scan_short_cluster(
                 canonical_seen[option_index] = true;
             }
         }
-        if arity.short_consumes_value(short).unwrap_or(false) {
+        if arity
+            .short_consumes_value(short)
+            .unwrap_or(false)
+        {
             return chars.next().is_none();
         }
     }

@@ -59,7 +59,9 @@ pub fn install_already_up_to_date(check: &UpToDateFastPathCheck<'_>) -> Option<U
     let manifest_dir = check.manifest.path().parent()?;
     let workspace_dir_opt =
         configured_or_discovered_workspace_dir(check.config, manifest_dir).ok()?;
-    let workspace_root = workspace_dir_opt.clone().unwrap_or_else(|| manifest_dir.to_path_buf());
+    let workspace_root = workspace_dir_opt
+        .clone()
+        .unwrap_or_else(|| manifest_dir.to_path_buf());
     let (workspace_manifest, catalogs) =
         fast_path_workspace_context(check.config, workspace_dir_opt.as_deref())?;
     let workspace_projects =
@@ -71,7 +73,11 @@ pub fn install_already_up_to_date(check: &UpToDateFastPathCheck<'_>) -> Option<U
     // from the discovered workspace root. The workspace *state* keeps its
     // own root, which only a pin moves — `state_root` below.
     let lockfile_root = lockfile_root_for(check.config, workspace_dir_opt.as_deref(), manifest_dir);
-    let state_root = check.config.lockfile_dir.clone().unwrap_or_else(|| workspace_root.clone());
+    let state_root = check
+        .config
+        .lockfile_dir
+        .clone()
+        .unwrap_or_else(|| workspace_root.clone());
     let lockfile = lazy_wanted_lockfile(check.config, &lockfile_root);
     if strict_dep_builds_blocks_fast_path(check.config) {
         return None;
@@ -96,7 +102,9 @@ pub fn install_already_up_to_date(check: &UpToDateFastPathCheck<'_>) -> Option<U
     ensure_gvs_builds_complete(check, &lockfile, &lockfile_root)?;
     Some(UpToDateWorkspace {
         root: state_root,
-        project_count: workspace_projects.as_ref().map(Vec::len),
+        project_count: workspace_projects
+            .as_ref()
+            .map(Vec::len),
     })
 }
 
@@ -223,7 +231,10 @@ pub fn build_workspace_packages_map(
             &mut map,
             &project.root_dir,
             &project.manifest,
-            project.dependency_manifest.as_ref().unwrap_or(&project.manifest),
+            project
+                .dependency_manifest
+                .as_ref()
+                .unwrap_or(&project.manifest),
         );
     }
     Some(map)
@@ -246,7 +257,9 @@ pub(crate) fn workspace_packages_for_freshness(
 ) -> Option<pnpm_resolving_resolver_base::WorkspacePackages> {
     (is_workspace_install
         && config.exclude_links_from_lockfile
-        && config.link_workspace_packages.enabled_at_depth(0))
+        && config
+            .link_workspace_packages
+            .enabled_at_depth(0))
     .then(|| build_workspace_packages_map_from_manifests(projects))
 }
 
@@ -265,15 +278,13 @@ fn insert_workspace_package(
             version.to_string()
         }
     };
-    map.entry(name)
-        .or_default()
-        .insert(
-            version,
-            pnpm_resolving_resolver_base::WorkspacePackage {
-                root_dir: root_dir.to_path_buf(),
-                manifest: dependency_manifest.value().clone(),
-            },
-        );
+    map.entry(name).or_default().insert(
+        version,
+        pnpm_resolving_resolver_base::WorkspacePackage {
+            root_dir: root_dir.to_path_buf(),
+            manifest: dependency_manifest.value().clone(),
+        },
+    );
 }
 
 /// Build the `projects` map for [`WorkspaceState`] from the
@@ -294,7 +305,12 @@ pub(super) fn build_projects_map(
                 name: manifest_string_field(manifest, "name"),
                 version: manifest_string_field(manifest, "version"),
             };
-            (project_dir.to_string_lossy().into_owned(), entry)
+            (
+                project_dir
+                    .to_string_lossy()
+                    .into_owned(),
+                entry,
+            )
         })
         .collect()
 }

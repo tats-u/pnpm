@@ -229,7 +229,11 @@ fn get_valid_cache_dir_honors_max_age() {
     let within = mtime + Duration::from_secs(1440 * 60 - 1);
     assert_eq!(
         get_valid_cache_dir(&link, 1440, within).as_deref(),
-        Some(fs::canonicalize(&target).expect("canonicalize").as_path()),
+        Some(
+            fs::canonicalize(&target)
+                .expect("canonicalize")
+                .as_path()
+        ),
     );
 
     let past = mtime + Duration::from_mins(1441);
@@ -370,7 +374,19 @@ fn only_managed_tools_are_provisioned_by_name() {
 
     // `--package` names the engine, and the command names which of its
     // bins to run: every one the channel table publishes qualifies.
-    assert!(PackageManager::Npm.bins().contains(&"npx"));
-    assert!(PackageManager::Yarn.bins().contains(&"yarnpkg"));
-    assert!(!PackageManager::Npm.bins().contains(&"yarn"));
+    assert!(
+        PackageManager::Npm
+            .bins()
+            .contains(&"npx")
+    );
+    assert!(
+        PackageManager::Yarn
+            .bins()
+            .contains(&"yarnpkg")
+    );
+    assert!(
+        !PackageManager::Npm
+            .bins()
+            .contains(&"yarn")
+    );
 }

@@ -577,7 +577,8 @@ fn a_router_serves_every_ecosystem_its_sources_speak() {
     .with_ecosystem("crates", Ecosystem::Cargo)
     .with_ecosystem("crates-io", Ecosystem::Cargo)
     .with_ecosystem("python", Ecosystem::Pypi);
-    set.validate().expect("a mixed router is valid");
+    set.validate()
+        .expect("a mixed router is valid");
     assert_eq!(
         set.resolve("main", Ecosystem::Npm, "demo"),
         Resolved::Concrete { registry: "npmjs", kind: ConcreteKind::Upstream },
@@ -610,7 +611,8 @@ fn shadowing_is_decided_within_one_ecosystem() {
         None,
     )
     .with_ecosystem("crates-io", Ecosystem::Cargo);
-    set.validate().expect("catch-all sources of different ecosystems do not shadow each other");
+    set.validate()
+        .expect("catch-all sources of different ecosystems do not shadow each other");
 
     let set = registries(
         vec![
@@ -789,13 +791,19 @@ fn the_base_path_is_empty_only_where_the_ecosystem_serves_alone() {
 fn a_refused_pattern_names_the_shapes_its_own_ecosystem_takes() {
     // An operator sent to `@scope/*` on an image registry is sent to a shape
     // that registry always refuses.
-    let image = PackagePattern::parse("ac*me/*", Ecosystem::Oci).unwrap_err().to_string();
+    let image = PackagePattern::parse("ac*me/*", Ecosystem::Oci)
+        .unwrap_err()
+        .to_string();
     assert!(image.contains("`<namespace>/*`"), "{image}");
     assert!(!image.contains("@scope"), "{image}");
 
-    let npm = PackagePattern::parse("foo*", Ecosystem::Npm).unwrap_err().to_string();
+    let npm = PackagePattern::parse("foo*", Ecosystem::Npm)
+        .unwrap_err()
+        .to_string();
     assert!(npm.contains("`@scope/*`"), "{npm}");
 
-    let crates = PackagePattern::parse("foo*", Ecosystem::Cargo).unwrap_err().to_string();
+    let crates = PackagePattern::parse("foo*", Ecosystem::Cargo)
+        .unwrap_err()
+        .to_string();
     assert!(crates.contains("nothing narrower"), "{crates}");
 }

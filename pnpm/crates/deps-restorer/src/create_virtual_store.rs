@@ -156,8 +156,8 @@ impl CasPrefetch {
         // Install-scoped `verifiedFilesCache`: one `Arc<DashSet>` for
         // the duration of the install, so a CAFS path verified for one
         // snapshot is not re-stat'd for another.
-        let verified_files_cache =
-            store_context.map_or_else(SharedVerifiedFilesCache::default, |context| {
+        let verified_files_cache = store_context
+            .map_or_else(SharedVerifiedFilesCache::default, |context| {
                 Arc::clone(context.verified_files_cache)
             });
         let cache_keys =
@@ -378,8 +378,12 @@ fn removed_child_aliases(
 ) -> Vec<PkgName> {
     fn child_aliases(snapshot: &SnapshotEntry) -> impl Iterator<Item = &PkgName> {
         let deps = snapshot.dependencies.iter().flatten();
-        let opt_deps = snapshot.optional_dependencies.iter().flatten();
-        deps.chain(opt_deps).map(|(alias, _)| alias)
+        let opt_deps = snapshot
+            .optional_dependencies
+            .iter()
+            .flatten();
+        deps.chain(opt_deps)
+            .map(|(alias, _)| alias)
     }
     let wanted_aliases: HashSet<&PkgName> = child_aliases(wanted).collect();
     let mut seen: HashSet<&PkgName> = HashSet::new();
@@ -466,13 +470,22 @@ fn planned_canonical_fetch(
     let metadata_key = snapshot_key.without_peer();
     let metadata = packages.get(&metadata_key)?;
     if !matches!(metadata.resolution, LockfileResolution::Registry(_))
-        || metadata.resolution.checkable_integrity().is_none()
+        || metadata
+            .resolution
+            .checkable_integrity()
+            .is_none()
     {
         return None;
     }
     let (registry_alias, version) = match metadata_key.suffix.registry_qualified() {
         Some((alias, version)) => (Some(alias.to_string()), version.to_string()),
-        None => (None, metadata_key.suffix.version().to_string()),
+        None => (
+            None,
+            metadata_key
+                .suffix
+                .version()
+                .to_string(),
+        ),
     };
     Some((metadata_key.name.to_string(), version, registry_alias))
 }

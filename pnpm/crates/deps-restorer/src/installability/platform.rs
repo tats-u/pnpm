@@ -134,7 +134,9 @@ pub fn platform_manifest_from_resolve_result(
 ) -> PackageInstallabilityManifest {
     let manifest = result.package.manifest.as_deref();
     PackageInstallabilityManifest {
-        name: result.package.name_ver
+        name: result
+            .package
+            .name_ver
             .as_ref()
             .map(|name_ver| name_ver.name.to_string())
             .or_else(|| {
@@ -182,7 +184,9 @@ pub fn any_installability_constraint(
     snapshots: &HashMap<PackageKey, SnapshotEntry>,
     packages: &HashMap<PackageKey, PackageMetadata>,
 ) -> bool {
-    packages.values().any(metadata_has_meaningful_constraint)
+    packages
+        .values()
+        .any(metadata_has_meaningful_constraint)
         || snapshots
             .iter()
             .any(|(snapshot_key, snapshot)| {
@@ -235,7 +239,8 @@ pub fn any_optional_installability_constraint(
 /// True if a single metadata row carries a constraint pacquet would
 /// actually evaluate.
 pub(super) fn metadata_has_meaningful_constraint(metadata: &PackageMetadata) -> bool {
-    let engines_meaningful = metadata.engines
+    let engines_meaningful = metadata
+        .engines
         .as_ref()
         .is_some_and(|engines| engines.contains_key("node") || engines.contains_key("pnpm"));
     engines_meaningful
@@ -259,7 +264,8 @@ pub(super) fn manifest_from_metadata(
 ) -> PackageInstallabilityManifest {
     PackageInstallabilityManifest {
         name: metadata_key.name.to_string(),
-        engines: metadata.engines
+        engines: metadata
+            .engines
             .as_ref()
             .map(|map| WantedEngine {
                 node: map.get("node").cloned(),
@@ -267,6 +273,9 @@ pub(super) fn manifest_from_metadata(
             }),
         cpu: metadata.cpu.clone(),
         os: metadata.os.clone(),
-        libc: metadata.libc.as_deref().map(<[String]>::to_vec),
+        libc: metadata
+            .libc
+            .as_deref()
+            .map(<[String]>::to_vec),
     }
 }

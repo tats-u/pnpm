@@ -32,13 +32,25 @@ fn extract_separates_config_tokens_from_argv() {
     let mut config = Config::default();
     overrides.apply(&mut config, Path::new("/workspace"));
     assert_eq!(config.registry, "https://example.test/");
-    assert_eq!(config.package_manager_bootstrap.registry, "https://example.test/");
     assert_eq!(
-        config.registries_by_scope.get("default").map(String::as_str),
+        config
+            .package_manager_bootstrap
+            .registry,
+        "https://example.test/"
+    );
+    assert_eq!(
+        config
+            .registries_by_scope
+            .get("default")
+            .map(String::as_str),
         Some("https://example.test/"),
     );
     assert_eq!(
-        config.package_manager_bootstrap.registries.get("default").map(String::as_str),
+        config
+            .package_manager_bootstrap
+            .registries
+            .get("default")
+            .map(String::as_str),
         Some("https://example.test/"),
     );
 }
@@ -100,12 +112,24 @@ fn registry_cli_override_normalizes_and_sets_every_registry_slot() {
     apply_registry_override(&mut config, "https://cli.example");
     assert_eq!(config.registry, "https://cli.example/");
     assert_eq!(
-        config.registries_by_scope.get("default").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("default")
+            .map(String::as_str),
         Some("https://cli.example/"),
     );
-    assert_eq!(config.package_manager_bootstrap.registry, "https://cli.example/");
     assert_eq!(
-        config.package_manager_bootstrap.registries.get("default").map(String::as_str),
+        config
+            .package_manager_bootstrap
+            .registry,
+        "https://cli.example/"
+    );
+    assert_eq!(
+        config
+            .package_manager_bootstrap
+            .registries
+            .get("default")
+            .map(String::as_str),
         Some("https://cli.example/"),
     );
 }
@@ -121,11 +145,18 @@ fn extract_applies_scoped_registry_overrides() {
     let mut config = Config::default();
     overrides.apply(&mut config, Path::new("/workspace"));
     assert_eq!(
-        config.registries_by_scope.get("@private").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@private")
+            .map(String::as_str),
         Some("https://private.example/npm/"),
     );
     assert_eq!(
-        config.package_manager_bootstrap.registries.get("@private").map(String::as_str),
+        config
+            .package_manager_bootstrap
+            .registries
+            .get("@private")
+            .map(String::as_str),
         Some("https://private.example/npm/"),
     );
 }
@@ -135,21 +166,27 @@ fn scoped_registry_override_wins_over_existing_config() {
     let (overrides, _) =
         ConfigOverrides::extract(argv(["--config.@private:registry=https://cli.example/npm/"]));
     let mut config = Config::default();
-    config.registries_by_scope.insert(
-        "@private".to_string(),
-        "https://workspace.example/npm/".to_string(),
-    );
-    config.package_manager_bootstrap.registries.insert(
-        "@private".to_string(),
-        "https://json-env.example/npm/".to_string(),
-    );
+    config
+        .registries_by_scope
+        .insert("@private".to_string(), "https://workspace.example/npm/".to_string());
+    config
+        .package_manager_bootstrap
+        .registries
+        .insert("@private".to_string(), "https://json-env.example/npm/".to_string());
     overrides.apply(&mut config, Path::new("/workspace"));
     assert_eq!(
-        config.registries_by_scope.get("@private").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@private")
+            .map(String::as_str),
         Some("https://cli.example/npm/"),
     );
     assert_eq!(
-        config.package_manager_bootstrap.registries.get("@private").map(String::as_str),
+        config
+            .package_manager_bootstrap
+            .registries
+            .get("@private")
+            .map(String::as_str),
         Some("https://cli.example/npm/"),
     );
 }
@@ -184,7 +221,11 @@ fn extract_applies_the_minimum_release_age_overrides() {
     assert_eq!(config.minimum_release_age, Some(0));
     assert!(!config.minimum_release_age_ignore_missing_time);
     assert_eq!(config.minimum_release_age_strict, Some(false));
-    assert!(config.explicit_settings.contains_key("minimumReleaseAge"));
+    assert!(
+        config
+            .explicit_settings
+            .contains_key("minimumReleaseAge")
+    );
 }
 
 #[test]
@@ -233,7 +274,12 @@ fn extract_applies_ignore_scripts_override() {
     assert!(!config.ignore_scripts);
     overrides.apply(&mut config, Path::new("/workspace"));
     assert!(config.ignore_scripts);
-    assert_eq!(config.explicit_settings.get("ignoreScripts"), Some(&serde_json::Value::Bool(true)));
+    assert_eq!(
+        config
+            .explicit_settings
+            .get("ignoreScripts"),
+        Some(&serde_json::Value::Bool(true))
+    );
 
     let (overrides, _) =
         ConfigOverrides::extract(argv(["pacquet", "--config.ignore-scripts=false", "pack"]));
@@ -241,7 +287,9 @@ fn extract_applies_ignore_scripts_override() {
     overrides.apply(&mut config, Path::new("/workspace"));
     assert!(!config.ignore_scripts);
     assert_eq!(
-        config.explicit_settings.get("ignoreScripts"),
+        config
+            .explicit_settings
+            .get("ignoreScripts"),
         Some(&serde_json::Value::Bool(false)),
     );
 }
@@ -267,7 +315,9 @@ fn extract_applies_allow_unused_patches_override() {
         overrides.apply(&mut config, Path::new("/workspace"));
         assert_eq!(config.allow_unused_patches, expected);
         assert_eq!(
-            config.explicit_settings.get("allowUnusedPatches"),
+            config
+                .explicit_settings
+                .get("allowUnusedPatches"),
             Some(&serde_json::Value::Bool(expected)),
         );
     }
@@ -286,7 +336,11 @@ fn extract_leaves_invalid_allow_unused_patches_values_for_clap() {
 
         let mut config = Config::default();
         overrides.apply(&mut config, Path::new("/workspace"));
-        assert!(!config.explicit_settings.contains_key("allowUnusedPatches"));
+        assert!(
+            !config
+                .explicit_settings
+                .contains_key("allowUnusedPatches")
+        );
     }
 }
 
@@ -398,7 +452,12 @@ fn last_value_wins_for_repeated_keys() {
     let mut config = Config::default();
     overrides.apply(&mut config, Path::new("/workspace"));
     assert_eq!(config.registry, "https://second.test/");
-    assert_eq!(config.package_manager_bootstrap.registry, "https://second.test/");
+    assert_eq!(
+        config
+            .package_manager_bootstrap
+            .registry,
+        "https://second.test/"
+    );
 }
 
 #[test]
@@ -456,11 +515,15 @@ fn a_boolean_or_keyword_setting_takes_both_spellings() {
     assert_eq!(config.link_workspace_packages, LinkWorkspacePackages::DirectOnly);
     assert_eq!(config.save_workspace_protocol, SaveWorkspaceProtocol::Rolling);
     assert_eq!(
-        config.explicit_settings.get("linkWorkspacePackages"),
+        config
+            .explicit_settings
+            .get("linkWorkspacePackages"),
         Some(&serde_json::Value::Bool(true)),
     );
     assert_eq!(
-        config.explicit_settings.get("saveWorkspaceProtocol"),
+        config
+            .explicit_settings
+            .get("saveWorkspaceProtocol"),
         Some(&serde_json::Value::String("rolling".to_string())),
     );
 
@@ -552,7 +615,9 @@ fn a_side_effects_cache_flag_replaces_the_object_form_and_keeps_its_remote_tier(
         assert_eq!(config.side_effects_cache_read(), expected);
         assert_eq!(config.side_effects_cache_write(), expected);
         assert_eq!(
-            config.remote_side_effects_cache.map(|remote| remote.org),
+            config
+                .remote_side_effects_cache
+                .map(|remote| remote.org),
             Some("acme".to_string()),
         );
     }

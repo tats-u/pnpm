@@ -24,10 +24,18 @@ fn filtered_install_with_dedicated_lockfiles_installs_only_selected_project() {
     assert_full_wanted(&selected_lockfile, &["."]);
     assert!(has_snapshot(&selected_lockfile, HELLO, "1.0.0"));
     assert!(has_link(&selected, HELLO));
-    assert!(!unselected.join("pnpm-lock.yaml").exists(), "unselected must not be installed");
+    assert!(
+        !unselected
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "unselected must not be installed"
+    );
     assert!(!unselected.join("node_modules").exists(), "unselected node_modules must be absent");
     assert!(
-        !fixture.workspace.join("pnpm-lock.yaml").exists(),
+        !fixture
+            .workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "dedicated lockfiles must not write a shared workspace lockfile",
     );
 }
@@ -54,5 +62,10 @@ fn recursive_install_with_dedicated_lockfiles_installs_every_project() {
         assert_full_wanted(&lockfile, &["."]);
         assert!(has_link(project, dependency));
     }
-    assert!(!fixture.workspace.join("pnpm-lock.yaml").exists());
+    assert!(
+        !fixture
+            .workspace
+            .join("pnpm-lock.yaml")
+            .exists()
+    );
 }

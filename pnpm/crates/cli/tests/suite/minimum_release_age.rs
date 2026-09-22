@@ -13,13 +13,8 @@ use std::{fs, process::Command};
 
 #[test]
 fn approval_prints_the_version_list_once_and_persists_excludes() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     fs::write(workspace.join("package.json"), r#"{"name":"approval-test","version":"1.0.0"}"#)
         .expect("write package.json");
     set_minimum_release_age(&workspace, 60 * 24 * 365 * 100);
@@ -45,13 +40,17 @@ fn approval_prints_the_version_list_once_and_persists_excludes() {
     eprintln!("{stdout}");
     assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
     assert_eq!(
-        stdout.matches("2 versions do not meet the minimumReleaseAge constraint:").count(),
+        stdout
+            .matches("2 versions do not meet the minimumReleaseAge constraint:")
+            .count(),
         1,
     );
 
     let question =
         "Add to minimumReleaseAgeExclude in pnpm-workspace.yaml and proceed with the install?";
-    let prompt_output = &stdout[..stdout.rfind(question).expect("approval question is rendered")];
+    let prompt_output = &stdout[..stdout
+        .rfind(question)
+        .expect("approval question is rendered")];
     let versions = ["@pnpm.e2e/bravo-dep@1.0.0", "@pnpm.e2e/hello-world-js-bin@1.0.0"];
     for version in versions {
         assert_eq!(
@@ -66,7 +65,12 @@ fn approval_prints_the_version_list_once_and_persists_excludes() {
     let settings = WorkspaceSettings::load_at(&workspace)
         .expect("read workspace manifest")
         .expect("workspace manifest exists");
-    assert_eq!(settings.minimum_release_age_exclude.unwrap(), versions);
+    assert_eq!(
+        settings
+            .minimum_release_age_exclude
+            .unwrap(),
+        versions
+    );
 
     drop((root, npmrc_info));
 }

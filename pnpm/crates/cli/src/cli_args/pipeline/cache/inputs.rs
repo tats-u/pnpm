@@ -144,21 +144,19 @@ fn hash_tracked_inputs(project: &Path) -> miette::Result<Vec<HashedFile>> {
         if rel_path.is_empty() {
             continue;
         }
-        let rel_path = std::str::from_utf8(rel_path)
-            .map_err(|error| {
-                let display_path = String::from_utf8_lossy(rel_path);
-                miette::miette!(
-                    "non-UTF-8 cache input path {display_path:?} in {project_display}: {error}",
-                )
-            })?;
+        let rel_path = std::str::from_utf8(rel_path).map_err(|error| {
+            let display_path = String::from_utf8_lossy(rel_path);
+            miette::miette!(
+                "non-UTF-8 cache input path {display_path:?} in {project_display}: {error}",
+            )
+        })?;
         if rel_path == "node_modules" || rel_path.starts_with("node_modules/") {
             continue;
         }
         check_input_directories(project, Path::new(rel_path)).into_diagnostic()?;
-        let hash = hash_input(&project.join(rel_path))
-            .map_err(|error| {
-                miette::miette!("hashing cache input {rel_path:?} in {project_display}: {error}")
-            })?;
+        let hash = hash_input(&project.join(rel_path)).map_err(|error| {
+            miette::miette!("hashing cache input {rel_path:?} in {project_display}: {error}")
+        })?;
         let Some(hash) = hash else { continue };
         files.push(HashedFile { rel_path: rel_path.to_string(), hash });
     }
@@ -172,7 +170,12 @@ impl TaskCache {
         let mut components: Vec<String> = vec![
             "pnpm-pipeline-task:v1".to_string(),
             format!("platform:{}:{}", env::consts::OS, env::consts::ARCH),
-            format!("outputs:{:?}", inputs.settings.and_then(|settings| settings.outputs.as_ref())),
+            format!(
+                "outputs:{:?}",
+                inputs
+                    .settings
+                    .and_then(|settings| settings.outputs.as_ref())
+            ),
             self.project_rel(&inputs.node.project),
             inputs.node.task_name.clone(),
             format!("lockfile:{}", self.lockfile_hash),
@@ -181,9 +184,13 @@ impl TaskCache {
         for (stage, body) in inputs.script_bodies {
             components.push(format!("script:{stage}={body}"));
         }
-        for name in inputs.settings.and_then(|settings| settings.env.as_deref()).unwrap_or_default()
+        for name in inputs
+            .settings
+            .and_then(|settings| settings.env.as_deref())
+            .unwrap_or_default()
         {
-            let value = inputs.environment
+            let value = inputs
+                .environment
                 .get(name)
                 .cloned()
                 .or_else(|| env::var(name).ok());
@@ -201,7 +208,10 @@ impl TaskCache {
 
     fn project_rel(&self, project: &Path) -> String {
         pathdiff::diff_paths(project, &self.workspace_root)
-            .map(|path| path.to_string_lossy().replace(std::path::MAIN_SEPARATOR, "/"))
+            .map(|path| {
+                path.to_string_lossy()
+                    .replace(std::path::MAIN_SEPARATOR, "/")
+            })
             .filter(|path| !path.is_empty())
             .unwrap_or_else(|| ".".to_string())
     }
@@ -218,7 +228,9 @@ impl TaskCache {
     ) -> miette::Result<ProjectInputHashes> {
         let Some(all) = self.hashed_project_files(&node.project)? else { return Ok(None) };
         let output_globs = compile_globs(
-            settings.and_then(|settings| settings.outputs.as_deref()).unwrap_or_default(),
+            settings
+                .and_then(|settings| settings.outputs.as_deref())
+                .unwrap_or_default(),
         )?;
         let (replace_globs, add_globs) =
             input_globs(settings.and_then(|settings| settings.inputs.as_deref()))?;
@@ -248,7 +260,8 @@ impl TaskCache {
         &self,
         project: &Path,
     ) -> miette::Result<ProjectInputHashes> {
-        if let Some(files) = self.project_files
+        if let Some(files) = self
+            .project_files
             .lock()
             .expect("project-files lock is not poisoned")
             .get(project)

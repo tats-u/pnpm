@@ -12,7 +12,10 @@ fn config_with_pypi_indexes(indexes: &[&str]) -> Config {
                 .collect(),
         );
     }
-    if let Some(indexes) = config.indexes_by_ecosystem.get_mut(&Ecosystem::Pypi) {
+    if let Some(indexes) = config
+        .indexes_by_ecosystem
+        .get_mut(&Ecosystem::Pypi)
+    {
         for (i, index) in indexes.iter_mut().enumerate().skip(1) {
             index.packages = Some(vec![format!("package{i}")]);
         }
@@ -37,7 +40,9 @@ fn package_routes_select_one_index_independent_of_declaration_order() {
         if reverse {
             indexes.reverse();
         }
-        config.indexes_by_ecosystem.insert(Ecosystem::Pypi, indexes);
+        config
+            .indexes_by_ecosystem
+            .insert(Ecosystem::Pypi, indexes);
         let index = python_index(&config).unwrap();
         assert_eq!(
             index
@@ -95,10 +100,17 @@ fn an_index_credential_reaches_the_index_it_was_configured_for_and_no_other_orig
     )]));
     let index = python_index(&config).unwrap();
     assert_eq!(
-        index.auth.for_secure_url("https://example.test/simple/alpha/"),
+        index
+            .auth
+            .for_secure_url("https://example.test/simple/alpha/"),
         Some("Bearer index-token".to_string()),
     );
-    assert_eq!(index.auth.for_secure_url("https://other.test/simple/alpha/"), None);
+    assert_eq!(
+        index
+            .auth
+            .for_secure_url("https://other.test/simple/alpha/"),
+        None
+    );
 }
 
 #[test]
@@ -109,7 +121,12 @@ fn a_credential_is_not_sent_over_an_insecure_transport() {
         "Bearer index-token".to_string(),
     )]));
     let index = python_index(&config).unwrap();
-    assert_eq!(index.auth.for_secure_url("http://example.test/simple/alpha/"), None);
+    assert_eq!(
+        index
+            .auth
+            .for_secure_url("http://example.test/simple/alpha/"),
+        None
+    );
 }
 
 /// Every Simple API request joins the distribution onto the index, which
@@ -126,7 +143,9 @@ fn an_index_without_a_trailing_slash_keeps_its_path() {
 #[test]
 fn an_index_that_is_not_a_credentialless_http_url_is_refused() {
     for index in ["ftp://example.test/simple/", "https://user:secret@example.test/simple/"] {
-        let error = parse_index(index).unwrap_err().to_string();
+        let error = parse_index(index)
+            .unwrap_err()
+            .to_string();
         assert!(error.contains("HTTP(S) URLs without embedded credentials"), "{index}: {error}");
         assert!(!error.contains("secret"), "{index}: {error}");
     }

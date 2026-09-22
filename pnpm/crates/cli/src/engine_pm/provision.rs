@@ -120,11 +120,10 @@ async fn provision_from_registry<Reporter: self::Reporter + 'static>(
     ))
     .await?;
 
-    let program = engine_bin(&bin_dir, name)
-        .ok_or_else(|| EngineError::MissingEngineBin {
-            name,
-            dir: bin_dir.display().to_string(),
-        })?;
+    let program = engine_bin(&bin_dir, name).ok_or_else(|| EngineError::MissingEngineBin {
+        name,
+        dir: bin_dir.display().to_string(),
+    })?;
 
     let mut bin_dirs = vec![bin_dir];
     let packages = pm

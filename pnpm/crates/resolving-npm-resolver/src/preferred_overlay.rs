@@ -18,11 +18,17 @@ pub(crate) fn overlay_merged_selectors(
     opts: &ResolveOptions,
     name: &str,
 ) -> Option<VersionSelectors> {
-    let versions = opts.version.preferred_versions_overlay.as_ref()?.versions_for(name);
+    let versions = opts
+        .version
+        .preferred_versions_overlay
+        .as_ref()?
+        .versions_for(name);
     if versions.is_empty() {
         return None;
     }
-    let mut selectors = opts.version.preferred_versions
+    let mut selectors = opts
+        .version
+        .preferred_versions
         .get(name)
         .cloned()
         .unwrap_or_default();
@@ -72,7 +78,9 @@ pub(crate) fn warn_once_on_held_back_update(
         return;
     };
     let key = format!("{}@{}:{picked_version}<{preferred}", spec.name, spec.fetch_spec);
-    let mut warned = WARNED_HELD_BACK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut warned = WARNED_HELD_BACK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     if warned.contains(&key) {
         return;
     }
@@ -119,8 +127,13 @@ fn held_back_preferred(
     // the filtered view.
     let baseline_meta: &Package = match opts.policy.published_by {
         Some(cutoff) => {
-            view =
-                apply_published_by_policy(meta, cutoff, opts.policy.published_by_exclude.as_ref());
+            view = apply_published_by_policy(
+                meta,
+                cutoff,
+                opts.policy
+                    .published_by_exclude
+                    .as_ref(),
+            );
             view.filtered.as_deref().unwrap_or(meta)
         }
         None => meta,

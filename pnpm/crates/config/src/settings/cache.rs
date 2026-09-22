@@ -51,7 +51,9 @@ impl Config {
             }
         }
         if set_any {
-            self.remote_side_effects_cache.get_or_insert_default().overlay(settings);
+            self.remote_side_effects_cache
+                .get_or_insert_default()
+                .overlay(settings);
         }
     }
 
@@ -79,9 +81,8 @@ impl Config {
     /// `sideEffectsCacheReadonly: true` with `sideEffectsCache: false`
     /// and get a read-only view.
     pub fn side_effects_cache_read(&self) -> bool {
-        self.side_effects_cache_read_setting.unwrap_or(
-            self.side_effects_cache || self.side_effects_cache_readonly,
-        )
+        self.side_effects_cache_read_setting
+            .unwrap_or(self.side_effects_cache || self.side_effects_cache_readonly)
     }
 
     /// Whether the install is allowed to populate the side-effects
@@ -92,8 +93,7 @@ impl Config {
     /// flags are explicitly set, but `readonly` as a flag name only makes
     /// sense if it really does block writes.
     pub fn side_effects_cache_write(&self) -> bool {
-        self.side_effects_cache_write_setting.unwrap_or(
-            self.side_effects_cache && !self.side_effects_cache_readonly,
-        )
+        self.side_effects_cache_write_setting
+            .unwrap_or(self.side_effects_cache && !self.side_effects_cache_readonly)
     }
 }

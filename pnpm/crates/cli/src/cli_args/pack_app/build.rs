@@ -65,8 +65,9 @@ pub(super) fn resolve_builder_binary(runtime: &EmbeddedRuntime) -> miette::Resul
         }
         .into());
     }
-    let pacquet_bin =
-        std::env::current_exe().into_diagnostic().wrap_err("resolving the pnpm executable path")?;
+    let pacquet_bin = std::env::current_exe()
+        .into_diagnostic()
+        .wrap_err("resolving the pnpm executable path")?;
     ensure_node_runtime(
         &pacquet_bin,
         runtime,
@@ -125,7 +126,9 @@ pub(super) fn ensure_node_runtime(
         .collect::<Vec<_>>()
         .join("-");
     let install_dir = build_root.join(format!("{target_id}-{version}"));
-    let node_dir = install_dir.join("node_modules").join("node");
+    let node_dir = install_dir
+        .join("node_modules")
+        .join("node");
     let binary_path = node_binary_path(&node_dir, platform);
     if binary_path.exists() {
         return Ok(binary_path);
@@ -170,7 +173,9 @@ pub(super) async fn resolve_version(config: &Config, specifier: &str) -> miette:
     let channels = config.tool_channel_mirrors(pnpm_config::Tool::Node);
     let mirror = get_node_mirror(
         config.tool_mirror(pnpm_config::Tool::Node),
-        channels.get(&parsed.release_channel).map(String::as_str),
+        channels
+            .get(&parsed.release_channel)
+            .map(String::as_str),
         None,
         &parsed.release_channel,
     );
@@ -248,10 +253,15 @@ pub(super) fn ad_hoc_sign_mac_binary(
         ),
         "linux" => {
             let ldid = resolve_trusted_signer("ldid", dir, output_file)?;
-            run_command(Command::new(&ldid).arg("-S").arg(output_file), "ldid")
-                .map_err(|_| {
-                    PackAppError::MacosSignFailed { path: output_file.display().to_string() }.into()
-                })
+            run_command(
+                Command::new(&ldid)
+                    .arg("-S")
+                    .arg(output_file),
+                "ldid",
+            )
+            .map_err(|_| {
+                PackAppError::MacosSignFailed { path: output_file.display().to_string() }.into()
+            })
         }
         host => Err(PackAppError::MacosSignUnsupportedHost {
             path: output_file.display().to_string(),

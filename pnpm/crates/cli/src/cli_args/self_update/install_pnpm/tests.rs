@@ -34,8 +34,12 @@ async fn run_install_ignores_an_ambient_workspace_manifest_above_the_install_dir
     // root. A later self-update must succeed with them in place (each
     // update installs into a fresh slot) and must not touch that lockfile
     // — it is the env lockfile's home.
-    fs::create_dir_all(global_pkg_dir.join("node_modules").join(".pnpm"))
-        .expect("create leftover node_modules");
+    fs::create_dir_all(
+        global_pkg_dir
+            .join("node_modules")
+            .join(".pnpm"),
+    )
+    .expect("create leftover node_modules");
     let leftover_lockfile = "lockfileVersion: '9.0'\n";
     fs::write(global_pkg_dir.join("pnpm-lock.yaml"), leftover_lockfile)
         .expect("write leftover lockfile");
@@ -133,7 +137,9 @@ fn fake_engine_install_for(
     if with_native_binary {
         let platform_dir =
             exe_platform_pkg_dir_name_next(host_platform(), host_arch(), host_libc());
-        let src_dir = node_modules.join("@pnpm").join(platform_dir);
+        let src_dir = node_modules
+            .join("@pnpm")
+            .join(platform_dir);
         fs::create_dir_all(&src_dir).expect("create platform dir");
         fs::write(src_dir.join("pnpm"), b"#!/bin/sh\necho pnpm\n").expect("write native binary");
     }
@@ -188,7 +194,9 @@ fn fake_gvs_wrapper_slot(
 ) -> std::path::PathBuf {
     let slot = match wrapper_pkg_name.split_once('/') {
         Some((scope, name)) => links_dir.join(scope).join(name),
-        None => links_dir.join("@").join(wrapper_pkg_name),
+        None => links_dir
+            .join("@")
+            .join(wrapper_pkg_name),
     }
     .join("12.0.0-alpha.7")
     .join("cafe0123");
@@ -261,7 +269,11 @@ fn links_native_binary_from_a_sibling_slot_into_the_scoped_wrapper() {
 
     link_exe_platform_binary(&slot, PNPM_EXE_PACKAGE_NAME).expect("linking should succeed");
 
-    assert!(package_dir(&slot, PNPM_EXE_PACKAGE_NAME).join("pnpm").exists());
+    assert!(
+        package_dir(&slot, PNPM_EXE_PACKAGE_NAME)
+            .join("pnpm")
+            .exists()
+    );
 }
 
 /// A platform-package symlink that leaves `links` entirely must still be
@@ -286,8 +298,16 @@ fn rejects_native_binary_that_escapes_the_global_virtual_store() {
     .expect("symlink platform package outside the store");
 
     let err = link_exe_platform_binary(&slot, "pnpm").expect_err("escaped native source rejected");
-    assert!(err.to_string().contains("resolves outside"), "unexpected error: {err:?}");
-    assert!(!package_dir(&slot, "pnpm").join("pnpm").exists());
+    assert!(
+        err.to_string()
+            .contains("resolves outside"),
+        "unexpected error: {err:?}"
+    );
+    assert!(
+        !package_dir(&slot, "pnpm")
+            .join("pnpm")
+            .exists()
+    );
 }
 
 #[cfg(unix)]
@@ -310,7 +330,11 @@ fn rejects_wrapper_symlink_that_escapes_the_install_dir() {
 
     let err = link_exe_platform_binary(temp.path(), PNPM_EXE_PACKAGE_NAME)
         .expect_err("escaped wrapper must be rejected");
-    assert!(err.to_string().contains("resolves outside"), "unexpected error: {err:?}");
+    assert!(
+        err.to_string()
+            .contains("resolves outside"),
+        "unexpected error: {err:?}"
+    );
     assert_eq!(fs::read(outside_wrapper.join("pnpm")).expect("read outside file"), b"outside");
 }
 
@@ -336,7 +360,11 @@ fn rejects_native_binary_symlink_that_escapes_the_install_dir() {
     let err =
         link_exe_platform_binary(temp.path(), "pnpm").expect_err("escaped native source rejected");
     assert!(err.to_string().contains("is a symlink"), "unexpected error: {err:?}");
-    assert!(!package_dir(temp.path(), "pnpm").join("pnpm").exists());
+    assert!(
+        !package_dir(temp.path(), "pnpm")
+            .join("pnpm")
+            .exists()
+    );
     assert_eq!(fs::read(outside_binary).expect("read outside file"), b"outside");
 }
 
@@ -362,8 +390,16 @@ fn rejects_native_binary_scope_symlink_that_escapes_the_install_dir() {
 
     let err =
         link_exe_platform_binary(temp.path(), "pnpm").expect_err("escaped native source rejected");
-    assert!(err.to_string().contains("resolves outside"), "unexpected error: {err:?}");
-    assert!(!package_dir(temp.path(), "pnpm").join("pnpm").exists());
+    assert!(
+        err.to_string()
+            .contains("resolves outside"),
+        "unexpected error: {err:?}"
+    );
+    assert!(
+        !package_dir(temp.path(), "pnpm")
+            .join("pnpm")
+            .exists()
+    );
 }
 
 #[test]
@@ -393,7 +429,11 @@ fn reuse_cached_engine_accepts_a_healthy_slot() {
 
     assert!(reuse_cached_engine(temp.path(), pnpm_package_to_install("11.10.0"), "11.10.0"));
     // The relink repaired the slot in place: the native binary is now linked.
-    assert!(package_dir(temp.path(), PNPM_EXE_PACKAGE_NAME).join("pnpm").exists());
+    assert!(
+        package_dir(temp.path(), PNPM_EXE_PACKAGE_NAME)
+            .join("pnpm")
+            .exists()
+    );
 }
 
 /// `pnpm_package_to_install` resolves v12 to `pnpm`, but the standalone
@@ -471,7 +511,11 @@ fn reuse_cached_engine_rejects_a_version_mismatch() {
 fn assert_release_is_installable_refuses_the_broken_releases() {
     for version in ["11.12.0", "11.13.0"] {
         let err = assert_release_is_installable(version).unwrap_err();
-        assert!(err.to_string().contains("broken release"), "{err}");
+        assert!(
+            err.to_string()
+                .contains("broken release"),
+            "{err}"
+        );
     }
 }
 

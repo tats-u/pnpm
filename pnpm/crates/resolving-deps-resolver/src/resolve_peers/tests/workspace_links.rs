@@ -60,14 +60,17 @@ fn pruned_hoisted_provider_falls_back_in_workspace_pass() {
     );
 
     assert_eq!(
-        result.direct_dependencies_by_importer
+        result
+            .direct_dependencies_by_importer
             .get(".")
             .and_then(|deps| deps.get("prov")),
         Some(&DepPath::from("prov@1.0.0")),
         "the pruned provider must get a depPath from the fallback",
     );
     assert!(
-        result.graph.contains_key(&DepPath::from("consumer@1.0.0(prov@1.0.0)")),
+        result
+            .graph
+            .contains_key(&DepPath::from("consumer@1.0.0(prov@1.0.0)")),
         "the consumer must bind the fallback-resolved provider: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );

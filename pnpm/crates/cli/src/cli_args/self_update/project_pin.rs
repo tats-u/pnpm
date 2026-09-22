@@ -22,7 +22,10 @@ pub(super) async fn update_project_pin(
     // Implicit `latest` must not downgrade a project pinned to a newer
     // version than the registry's `latest`. The env lockfile lives at the
     // workspace root, not necessarily the command's `--dir`.
-    let lockfile_dir = config.workspace_dir.as_deref().unwrap_or(dir);
+    let lockfile_dir = config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(dir);
     if is_implicit_latest
         && let Some(current) = read_project_pinned_pnpm_version(lockfile_dir, pm.version.as_deref())
         && version_lt(target_version, &current)
@@ -46,10 +49,8 @@ pub(super) async fn update_project_pin(
     if has_dev_engines {
         update_dev_engines_pin(config, dir, pm, &mut manifest, target_version).await?;
     } else if let Some(object) = manifest.value_mut().as_object_mut() {
-        object.insert(
-            "packageManager".to_string(),
-            Value::String(format!("pnpm@{target_version}")),
-        );
+        object
+            .insert("packageManager".to_string(), Value::String(format!("pnpm@{target_version}")));
         manifest
             .save()
             .map_err(miette::Report::new)
@@ -80,7 +81,9 @@ fn write_dev_engines_pin(
     // to update; `package_manager_pin_specifier` supplies it otherwise.
     let mut pin_specifier = target_version.to_string();
     if let Some(entry) = dev_engines_pnpm_entry_mut(manifest.value_mut()) {
-        let current = entry.get("version").and_then(Value::as_str);
+        let current = entry
+            .get("version")
+            .and_then(Value::as_str);
         let updated = package_manager_pin_specifier(legacy_pins_pnpm, current, target_version);
         changed |= insert_string_if_changed(entry, "version", &updated);
         pin_specifier = updated;
@@ -111,14 +114,20 @@ fn insert_string_if_changed(object: &mut Value, key: &str, value: &str) -> bool 
 }
 
 fn dev_engines_pnpm_entry_mut(manifest: &mut Value) -> Option<&mut Value> {
-    let package_manager = manifest.get_mut("devEngines")?.get_mut("packageManager")?;
+    let package_manager = manifest
+        .get_mut("devEngines")?
+        .get_mut("packageManager")?;
     if package_manager.is_array() {
         return package_manager
             .as_array_mut()?
             .iter_mut()
             .find(|item| item.get("name").and_then(Value::as_str) == Some("pnpm"));
     }
-    if package_manager.get("name").and_then(Value::as_str) == Some("pnpm") {
+    if package_manager
+        .get("name")
+        .and_then(Value::as_str)
+        == Some("pnpm")
+    {
         return Some(package_manager);
     }
     None
@@ -189,7 +198,11 @@ pub(super) fn read_project_pinned_pnpm_version(
         .and_then(|env| {
             env.importers
                 .get(EnvLockfile::ROOT_IMPORTER_KEY)
-                .and_then(|importer| importer.package_manager_dependencies.as_ref())
+                .and_then(|importer| {
+                    importer
+                        .package_manager_dependencies
+                        .as_ref()
+                })
                 .and_then(|deps| deps.get("pnpm"))
                 .map(|dep| dep.version.clone())
         });
@@ -211,7 +224,10 @@ async fn update_dev_engines_pin(
 ) -> miette::Result<()> {
     let pin_specifier = write_dev_engines_pin(manifest, target_version)?;
     if super::super::package_manager::should_persist_package_manager_lockfile(&pm_for_persist(pm)) {
-        let root_dir = config.workspace_dir.clone().unwrap_or_else(|| dir.to_path_buf());
+        let root_dir = config
+            .workspace_dir
+            .clone()
+            .unwrap_or_else(|| dir.to_path_buf());
         Box::pin(config_deps::sync_package_manager_dependencies(
             config,
             &root_dir,

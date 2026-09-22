@@ -21,9 +21,13 @@ fn update_latest_preserves_workspace_local_path_specifier() {
     add_workspace_package(&workspace, "local-dep", "1.0.0");
 
     write_manifest(&workspace, r#"{ "local-dep": "workspace:./local-dep" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "local-dep").as_deref(), Some("workspace:./local-dep"));
 
@@ -37,9 +41,13 @@ fn update_patches_preserves_an_implicit_workspace_dependency() {
     add_workspace_package(&workspace, "workspace-only", "1.0.0");
     append_workspace_yaml_key(&workspace, "linkWorkspacePackages", true);
     write_manifest(&workspace, r#"{ "workspace-only": "^1.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--patches"]).assert().success();
+    pacquet(&workspace, ["update", "--patches"])
+        .assert()
+        .success();
 
     let dependency = workspace.join("node_modules/workspace-only");
     assert!(dependency.exists(), "workspace dependency should remain linked");
@@ -66,7 +74,9 @@ fn update_workspace_links_to_the_local_package() {
     add_workspace_package(&workspace, "sibling", "2.0.0");
     write_manifest(&workspace, r#"{ "sibling": "0.0.0" }"#);
 
-    pacquet(&workspace, ["update", "--workspace"]).assert().success();
+    pacquet(&workspace, ["update", "--workspace"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "sibling").as_deref(), Some("workspace:*"));
 
@@ -81,7 +91,9 @@ fn update_workspace_keeps_the_declared_range_operator() {
     add_workspace_package(&workspace, "sibling", "2.0.0");
     write_manifest(&workspace, r#"{ "sibling": "^1.0.0" }"#);
 
-    pacquet(&workspace, ["update", "--workspace", "sibling"]).assert().success();
+    pacquet(&workspace, ["update", "--workspace", "sibling"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "sibling").as_deref(), Some("workspace:^"));
 
@@ -99,7 +111,9 @@ fn update_workspace_writes_the_version_when_not_rolling() {
     append_workspace_yaml_key(&workspace, "saveWorkspaceProtocol", false);
     write_manifest(&workspace, r#"{ "sibling": "0.0.0" }"#);
 
-    pacquet(&workspace, ["update", "--workspace"]).assert().success();
+    pacquet(&workspace, ["update", "--workspace"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "sibling").as_deref(), Some("workspace:2.0.0"));
 
@@ -115,7 +129,9 @@ fn update_workspace_leaves_registry_dependencies_alone() {
     add_workspace_package(&workspace, "sibling", "2.0.0");
     write_manifest(&workspace, &format!(r#"{{ "sibling": "0.0.0", "{DEP}": "^100.0.0" }}"#));
 
-    pacquet(&workspace, ["update", "--workspace"]).assert().success();
+    pacquet(&workspace, ["update", "--workspace"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "sibling").as_deref(), Some("workspace:*"));
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("^100.0.0"));
@@ -144,10 +160,14 @@ fn update_workspace_that_links_nothing_still_runs_project_scripts() {
     )
     .expect("write package.json");
 
-    pacquet(&workspace, ["update", "--workspace"]).assert().success();
+    pacquet(&workspace, ["update", "--workspace"])
+        .assert()
+        .success();
 
     assert!(
-        workspace.join("postinstall-ran").exists(),
+        workspace
+            .join("postinstall-ran")
+            .exists(),
         "a --workspace update with nothing to link should run the project's own scripts",
     );
 
@@ -178,9 +198,13 @@ fn update_workspace_with_an_unmatched_selector_links_nothing() {
     add_workspace_package(&workspace, "sibling", "2.0.0");
     append_workspace_yaml_key(&workspace, "linkWorkspacePackages", true);
     write_manifest(&workspace, r#"{ "sibling": "^2.0.0" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--workspace", "@pnpm.e2e/not-a-dependency"]).assert().success();
+    pacquet(&workspace, ["update", "--workspace", "@pnpm.e2e/not-a-dependency"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "sibling").as_deref(), Some("^2.0.0"));
 
@@ -231,7 +255,9 @@ fn update_latest_unmatched_selector_does_not_read_catalogs() {
 
     // The selector matches no direct dependency, so the update returns early
     // without ever reading the (malformed) catalogs.
-    pacquet(&workspace, ["update", "--latest", "not-a-dependency"]).assert().success();
+    pacquet(&workspace, ["update", "--latest", "not-a-dependency"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -246,9 +272,13 @@ fn update_latest_catalog_preserves_reference_and_operator() {
 
     set_named_catalog(&workspace, "grp1", &[(DEP, "~100.0.0")]);
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "catalog:grp1" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     // The manifest still references the catalog, untouched.
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("catalog:grp1"));
@@ -270,14 +300,20 @@ fn update_catalog_bumps_the_entry_within_its_range() {
 
     set_named_catalog(&workspace, "grp1", &[(DEP, "^100.0.0")]);
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "catalog:grp1" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("catalog:grp1"));
     let yaml = read_workspace_yaml(&workspace);
     assert!(yaml.contains("^100.1.0"), "catalog entry should be bumped to ^100.1.0: {yaml}");
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -293,16 +329,22 @@ fn update_keeps_the_catalog_reference_of_an_overridden_dependency() {
     set_named_catalog(&workspace, "grp1", &[(DEP, "^100.0.0")]);
     set_overrides(&workspace, &[(DEP, "^100.0.0"), (FOO, "100.0.0")]);
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "catalog:grp1", "{FOO}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     // Both declarations are the overrides' input, not their output: neither
     // the `catalog:` reference nor the declared range may be replaced by the
     // version the override resolved to.
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("catalog:grp1"));
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("^100.0.0"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -317,12 +359,18 @@ fn update_keeps_a_declared_range_an_override_repeats() {
 
     set_overrides(&workspace, &[(DEP, "^100.0.0")]);
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("^100.0.0"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -336,12 +384,18 @@ fn update_latest_keeps_the_catalog_reference_of_an_overridden_dependency() {
     set_named_catalog(&workspace, "grp1", &[(DEP, "^100.0.0")]);
     set_overrides(&workspace, &[(DEP, "^100.0.0")]);
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "catalog:grp1" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("catalog:grp1"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -356,14 +410,18 @@ fn update_latest_no_save_catalog_bumps_lockfile_only() {
 
     set_named_catalog(&workspace, "grp1", &[(DEP, "100.0.0")]);
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "catalog:grp1" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0"));
 
     let yaml_path = workspace.join("pnpm-workspace.yaml");
     let widened = read_workspace_yaml(&workspace).replace(r#""100.0.0""#, r#""^100.0.0""#);
     fs::write(&yaml_path, widened).expect("widen the catalog entry");
 
-    pacquet(&workspace, ["update", "--latest", "--no-save"]).assert().success();
+    pacquet(&workspace, ["update", "--latest", "--no-save"])
+        .assert()
+        .success();
 
     // package.json and the workspace catalog are untouched...
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("catalog:grp1"));
@@ -375,7 +433,9 @@ fn update_latest_no_save_catalog_bumps_lockfile_only() {
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"));
     assert!(!virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@101.0.0"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -387,9 +447,13 @@ fn update_latest_catalog_npm_alias_resolves_aliased_package() {
 
     set_named_catalog(&workspace, "grp1", &[("dep-alias", &format!("npm:{DEP}@~100.0.0"))]);
     write_manifest(&workspace, r#"{ "dep-alias": "catalog:grp1" }"#);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "dep-alias").as_deref(), Some("catalog:grp1"));
 
@@ -410,9 +474,13 @@ fn update_latest_default_catalog_preserves_reference() {
 
     set_named_catalog(&workspace, "default", &[(DEP, "^100.0.0")]);
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "catalog:" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("catalog:"));
 
@@ -462,7 +530,9 @@ fn update_strict_catalog_range_covering_the_wanted_version_succeeds() {
     let (root, workspace, anchor) = setup();
     set_strict_catalog(&workspace, &[(DEP, "^100.0.0")]);
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "catalog:" }}"#));
-    pacquet(&workspace, ["install", "--lockfile-only"]).assert().success();
+    pacquet(&workspace, ["install", "--lockfile-only"])
+        .assert()
+        .success();
 
     pacquet(&workspace, ["update", "--lockfile-only", &format!("{DEP}@100.1.0")])
         .assert()
@@ -498,7 +568,9 @@ fn update_no_save_applies_read_package_to_workspace_projects() {
         format!(r#"{{ "name": "@test/a", "version": "1.0.0", "dependencies": {{ "{DEP}": "100.0.0" }} }}"#),
     )
     .expect("write packages/a/package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
     fs::write(
         workspace.join(".pnpmfile.cjs"),
@@ -528,7 +600,9 @@ fn update_no_save_applies_read_package_to_workspace_projects() {
         lock.contains("specifier: 100.1.0"),
         "the workspace project's importer entry must follow readPackage's rewrite: {lock}",
     );
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -543,7 +617,9 @@ fn update_selectors_override_ignore_dependencies() {
 
     write_manifest(&workspace, &format!(r#"{{ "{FOO}": "100.0.0", "{BAR}": "^100.0.0" }}"#));
     set_ignore_dependencies(&workspace, &[FOO]);
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let packages = lockfile_package_keys(&workspace);
     assert!(packages.contains(&format!("{FOO}@100.0.0")), "{packages:?}");
@@ -574,20 +650,26 @@ fn update_tag_selector_preserves_catalog_reference() {
     anchor.set_dist_tag(FOO, "100.0.0", "latest");
     set_named_catalog(&workspace, "grp1", &[(FOO, "^100.0.0")]);
     write_manifest(&workspace, &format!(r#"{{ "{FOO}": "catalog:grp1" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let packages = lockfile_package_keys(&workspace);
     assert!(packages.contains(&format!("{FOO}@100.0.0")), "{packages:?}");
 
     anchor.set_dist_tag(FOO, "100.1.0", "latest");
-    pacquet(&workspace, ["update", &format!("{FOO}@latest")]).assert().success();
+    pacquet(&workspace, ["update", &format!("{FOO}@latest")])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("catalog:grp1"));
     let yaml = read_workspace_yaml(&workspace);
     assert!(yaml.contains("^100.0.0"), "catalog entry should be untouched: {yaml}");
     let packages = lockfile_package_keys(&workspace);
     assert!(packages.contains(&format!("{FOO}@100.1.0")), "{packages:?}");
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }

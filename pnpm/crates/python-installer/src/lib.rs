@@ -74,7 +74,8 @@ pub fn plan<Reporter: self::Reporter + 'static>(
     selection: DependencySelection,
     selected: BTreeSet<PathBuf>,
 ) -> pnpm_install_coordinator::InstallTask<'static> {
-    let metadata = discovery.workspace
+    let metadata = discovery
+        .workspace
         .memberships(&selected)
         .iter()
         .map(|membership| membership.root.join("pylock.toml"))
@@ -129,7 +130,10 @@ async fn prepare<Reporter: self::Reporter + 'static>(
     report_platforms_without_python::<Reporter>(config);
     let Discovery { roots, workspace, .. } = discovery;
     let index = python_index(config)?;
-    config.store_dir.init().into_diagnostic()?;
+    config
+        .store_dir
+        .init()
+        .into_diagnostic()?;
     let store_index = StoreIndex::shared_for(&config.store_dir, config.frozen_store);
     let (writer, writer_task) = StoreIndexWriter::spawn_for(&config.store_dir, config.frozen_store);
     let shared = Shared {
@@ -142,7 +146,8 @@ async fn prepare<Reporter: self::Reporter + 'static>(
     };
     let result = projects::prepare::<Reporter>(&shared, workspace, roots, &selected).await;
     drop(writer);
-    writer_task.await
+    writer_task
+        .await
         .into_diagnostic()
         .wrap_err("join Python artifact store index writer")?
         .into_diagnostic()
@@ -165,26 +170,28 @@ impl PythonPrepare<'_> {
         inputs.set_members(recorded_members);
         workspace::offer(&mut registry.resolution.packages, &local);
         let lock_path = root.join("pylock.toml");
-        let lock = self.project_lock::<Reporter>(
-            &mut registry,
-            LockfileInputs {
-                existing: None,
-                lock_path: &lock_path,
-                requirements: &requirements.all,
-                inputs,
-                requires_python: projects::requires_python_of(&members)?,
-                local: Arc::clone(&local),
-                members: &members,
-            },
-        )
-        .await?;
-        let environment = self.environment::<Reporter>(
-            &mut registry,
-            EnvironmentProject { root: &root, members: &members, local: &local },
-            &lock,
-            &requirements.selected,
-        )
-        .await?;
+        let lock = self
+            .project_lock::<Reporter>(
+                &mut registry,
+                LockfileInputs {
+                    existing: None,
+                    lock_path: &lock_path,
+                    requirements: &requirements.all,
+                    inputs,
+                    requires_python: projects::requires_python_of(&members)?,
+                    local: Arc::clone(&local),
+                    members: &members,
+                },
+            )
+            .await?;
+        let environment = self
+            .environment::<Reporter>(
+                &mut registry,
+                EnvironmentProject { root: &root, members: &members, local: &local },
+                &lock,
+                &requirements.selected,
+            )
+            .await?;
         Ok(Prepared {
             root,
             members: members
@@ -202,14 +209,16 @@ impl PythonPrepare<'_> {
         registry: &mut Registry<'_>,
         mut inputs: LockfileInputs<'_>,
     ) -> Result<Lockfile> {
-        inputs.existing = self.replayable_lockfile(
-            inputs.lock_path,
-            &inputs.inputs,
-            inputs.requires_python.as_deref(),
-            &inputs.local,
-        )
-        .await?;
-        self.shared_lockfile::<Reporter>(registry, inputs).await
+        inputs.existing = self
+            .replayable_lockfile(
+                inputs.lock_path,
+                &inputs.inputs,
+                inputs.requires_python.as_deref(),
+                &inputs.local,
+            )
+            .await?;
+        self.shared_lockfile::<Reporter>(registry, inputs)
+            .await
     }
 
     fn registry(&self) -> Registry<'_> {
@@ -223,8 +232,14 @@ impl PythonPrepare<'_> {
                 dir: &self.context.config.store_dir,
                 index: self.store.index.clone(),
                 index_writer: Some(Arc::clone(self.store.writer)),
-                verify_integrity: self.context.config.verify_store_integrity,
-                strict_pkg_content_check: self.context.config.strict_store_pkg_content_check,
+                verify_integrity: self
+                    .context
+                    .config
+                    .verify_store_integrity,
+                strict_pkg_content_check: self
+                    .context
+                    .config
+                    .strict_store_pkg_content_check,
                 verified_files_cache: Arc::default(),
                 prefetched_cas_paths: None,
             },
@@ -251,7 +266,10 @@ impl PythonPrepare<'_> {
         };
         let specifiers: pep440_rs::VersionSpecifiers = specifiers.parse().into_diagnostic()?;
         for environment in &self.environments.list {
-            let version = environment.target.environment.python_full_version();
+            let version = environment
+                .target
+                .environment
+                .python_full_version();
             if !specifiers.contains(version) {
                 bail!(
                     "{} requires Python {specifiers}, but {version} was selected",
@@ -266,7 +284,11 @@ impl PythonPrepare<'_> {
 impl pnpm_install_coordinator::PreparedInstall for Prepared {
     fn publish(&mut self) -> Result<()> {
         if let Some(generation) = &self.environment {
-            self.previous_environment = Some(generation.store.validate_link(&self.root)?);
+            self.previous_environment = Some(
+                generation
+                    .store
+                    .validate_link(&self.root)?,
+            );
             publish_link(&self.root, generation.directory.path())?;
         }
         let lock_path = self.root.join("pylock.toml");

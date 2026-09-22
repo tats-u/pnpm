@@ -42,7 +42,13 @@ fn build_overlay_maps_supported_install_options() {
     });
 
     let overlay = build_overlay(&options, false).expect("overlay");
-    assert_eq!(overlay.external_dependencies.unwrap().len(), 1);
+    assert_eq!(
+        overlay
+            .external_dependencies
+            .unwrap()
+            .len(),
+        1
+    );
     assert_eq!(overlay.exclude_links_from_lockfile, Some(true));
     assert_eq!(overlay.inject_workspace_packages, Some(true));
     assert_eq!(overlay.hoist_workspace_packages, Some(false));
@@ -74,7 +80,11 @@ fn build_overlay_maps_supported_install_options() {
     assert_eq!(tls.cert, Some("client-cert".to_string()));
     assert_eq!(tls.key, Some("client-key".to_string()));
     assert_eq!(tls.strict_ssl, Some(false));
-    assert_eq!(tls.local_address.map(|ip| ip.to_string()), Some("127.0.0.1".to_string()));
+    assert_eq!(
+        tls.local_address
+            .map(|ip| ip.to_string()),
+        Some("127.0.0.1".to_string())
+    );
 }
 
 #[test]
@@ -101,7 +111,12 @@ fn newly_supported_install_options_are_accepted() {
     options.pnpm_home_dir = Some("/home/user/.local/share/pnpm".to_string());
     options.network_config = Some(NetworkConfigInput { max_sockets: Some(20), ..network_config() });
     assert!(reject_unsupported_install_options(&options).is_ok());
-    assert_eq!(build_overlay(&options, false).expect("overlay").max_sockets, Some(20));
+    assert_eq!(
+        build_overlay(&options, false)
+            .expect("overlay")
+            .max_sockets,
+        Some(20)
+    );
 }
 
 /// An empty list and an uncomputed one are different answers. The first

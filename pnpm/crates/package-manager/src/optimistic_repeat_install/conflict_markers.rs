@@ -15,7 +15,9 @@ pub(crate) fn first_lockfile_requiring_conflict_safe_install(
     check: &OptimisticRepeatInstallCheck<'_>,
     last_validated_timestamp: i64,
 ) -> Option<(PathBuf, LockfileConflictCheckFailure)> {
-    let shared_lockfile = check.workspace_root.join(check.config.wanted_lockfile_name());
+    let shared_lockfile = check
+        .workspace_root
+        .join(check.config.wanted_lockfile_name());
     if let Some(failure) =
         lockfile_conflict_check_failure(&shared_lockfile, last_validated_timestamp)
     {

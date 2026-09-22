@@ -179,7 +179,9 @@ fn run_lifecycle_stages<Reporter: self::Reporter>(
 ) -> Result<bool, LifecycleScriptError> {
     let Some(manifest) = read_lifecycle_manifest(opts.pkg_root)? else { return Ok(false) };
 
-    let scripts = manifest.get("scripts").and_then(|v| v.as_object());
+    let scripts = manifest
+        .get("scripts")
+        .and_then(|v| v.as_object());
     let get_script = |name: &str| -> Option<&str> {
         scripts
             .and_then(|s| s.get(name))
@@ -200,7 +202,10 @@ fn run_lifecycle_stages<Reporter: self::Reporter>(
                 .map(String::from)
                 .or_else(|| {
                     (get_script("preinstall").is_none()
-                        && opts.pkg_root.join("binding.gyp").exists())
+                        && opts
+                            .pkg_root
+                            .join("binding.gyp")
+                            .exists())
                     .then_some("node-gyp rebuild")
                     .map(String::from)
                 })
@@ -223,14 +228,13 @@ fn run_lifecycle_stages<Reporter: self::Reporter>(
 fn read_lifecycle_manifest(
     pkg_root: &Path,
 ) -> Result<Option<serde_json::Value>, LifecycleScriptError> {
-    safe_read_package_json_from_dir(pkg_root)
-        .map_err(|source| LifecycleScriptError::ReadManifest {
-            path: pkg_root
-                .join("package.json")
-                .display()
-                .to_string(),
-            source,
-        })
+    safe_read_package_json_from_dir(pkg_root).map_err(|source| LifecycleScriptError::ReadManifest {
+        path: pkg_root
+            .join("package.json")
+            .display()
+            .to_string(),
+        source,
+    })
 }
 
 /// Run a single lifecycle hook and emit `pnpm:lifecycle` events.
@@ -255,7 +259,10 @@ pub fn run_lifecycle_hook<Reporter: self::Reporter>(
         pkg_root = %opts.pkg_root.display(),
     );
 
-    let pkg_root_str = opts.pkg_root.to_string_lossy().into_owned();
+    let pkg_root_str = opts
+        .pkg_root
+        .to_string_lossy()
+        .into_owned();
 
     Reporter::emit(&LogEvent::Lifecycle(LifecycleLog {
         level: LogLevel::Debug,
@@ -277,12 +284,13 @@ pub fn run_lifecycle_hook<Reporter: self::Reporter>(
     // shell pick anyway). The pick also runs when the emulator will
     // take over below, because pnpm rejects a `.bat` / `.cmd`
     // `scriptShell` regardless of `shellEmulator`.
-    let shell = select_shell(opts.execution.shell, cfg!(windows))
-        .map_err(|source| LifecycleScriptError::ScriptShell {
+    let shell = select_shell(opts.execution.shell, cfg!(windows)).map_err(|source| {
+        LifecycleScriptError::ScriptShell {
             dep_path: opts.dep_path.to_string(),
             stage: stage.to_string(),
             source,
-        })?;
+        }
+    })?;
 
     // Drop any inherited PATH-like key (`Path` on Windows, `PATH`
     // on POSIX) from the env map before spawning — otherwise on
@@ -362,13 +370,12 @@ fn prepare_lifecycle_path(
         // directories (it returns `Ok(())`), so no `EEXIST` swallow is
         // needed. Treat any error here — including `AlreadyExists`,
         // which signals a *file* at that path — as a real spawn failure.
-        fs::create_dir_all(tmpdir)
-            .map_err(|error| LifecycleScriptError::Spawn {
-                dep_path: opts.dep_path.to_string(),
-                stage: stage.to_string(),
-                dir: tmpdir.display().to_string(),
-                source: error,
-            })?;
+        fs::create_dir_all(tmpdir).map_err(|error| LifecycleScriptError::Spawn {
+            dep_path: opts.dep_path.to_string(),
+            stage: stage.to_string(),
+            dir: tmpdir.display().to_string(),
+            source: error,
+        })?;
     }
 
     // Set PATH via `extend_path`, with the original PATH coming from
@@ -438,8 +445,8 @@ fn run_in_shell<Reporter: self::Reporter>(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let mut child = spawn_in_pkg_root(&mut cmd, pkg_root)
-        .map_err(|error| LifecycleScriptError::Spawn {
+    let mut child =
+        spawn_in_pkg_root(&mut cmd, pkg_root).map_err(|error| LifecycleScriptError::Spawn {
             dep_path: opts.dep_path.to_string(),
             stage: stage.to_string(),
             dir: pkg_root.display().to_string(),

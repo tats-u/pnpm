@@ -113,13 +113,20 @@ pub struct BlobUploadWriter {
 
 impl BlobUploadWriter {
     pub async fn write_all(&mut self, bytes: &[u8]) -> Result<()> {
-        self.file.write_all(bytes).await.map_err(RegistryError::Io)
+        self.file
+            .write_all(bytes)
+            .await
+            .map_err(RegistryError::Io)
     }
 
     /// Flush to disk and report the upload's new length.
     pub async fn finish(self) -> Result<u64> {
-        self.file.sync_all().await.map_err(RegistryError::Io)?;
-        let size = self.file
+        self.file
+            .sync_all()
+            .await
+            .map_err(RegistryError::Io)?;
+        let size = self
+            .file
             .metadata()
             .await
             .map_err(RegistryError::Io)?
@@ -139,7 +146,9 @@ impl Storage {
             return remote.begin(repository).await;
         }
         let root = self.uploads_root();
-        fs::create_dir_all(&root).await.map_err(RegistryError::Io)?;
+        fs::create_dir_all(&root)
+            .await
+            .map_err(RegistryError::Io)?;
         let id = generate_upload_id();
         let path = root.join(&id);
         // `create_new` so a colliding id is an error rather than a silent
@@ -216,10 +225,14 @@ impl Storage {
         filename: &str,
     ) -> Result<BlobFinalize> {
         let remote = upload.remote.clone();
-        let slot = self.stage_uploaded_blob(upload, name, filename).await?;
+        let slot = self
+            .stage_uploaded_blob(upload, name, filename)
+            .await?;
         let _temp = tempfile::TempPath::try_from_path(slot.tmp_path.clone())?;
         if let Some(remote) = &remote {
-            remote.prepare_completion(filename).await?;
+            remote
+                .prepare_completion(filename)
+                .await?;
         }
         let outcome = self.finalize_blob_slot(slot).await?;
         if outcome != BlobFinalize::Conflict
@@ -242,18 +255,31 @@ impl Storage {
         filename: &str,
     ) -> Result<BlobSlot> {
         upload.materialize().await?;
-        let slot = self.reserve_hosted_blob(name, filename).await?;
+        let slot = self
+            .reserve_hosted_blob(name, filename)
+            .await?;
         if let Some(parent) = slot.tmp_path.parent() {
-            fs::create_dir_all(parent).await.map_err(RegistryError::Io)?;
+            fs::create_dir_all(parent)
+                .await
+                .map_err(RegistryError::Io)?;
         }
         // Both paths are under the backend's local scratch root, so this is a
         // rename rather than a copy through memory. A cross-device staging
         // root is the one case that needs the copy.
-        if fs::rename(&upload.path, &slot.tmp_path).await.is_err() {
-            fs::copy(&upload.path, &slot.tmp_path).await.map_err(RegistryError::Io)?;
+        if fs::rename(&upload.path, &slot.tmp_path)
+            .await
+            .is_err()
+        {
+            fs::copy(&upload.path, &slot.tmp_path)
+                .await
+                .map_err(RegistryError::Io)?;
             let _ = fs::remove_file(&upload.path).await;
         }
-        let _ = fs::remove_file(self.uploads_root().join(upload.repository_record())).await;
+        let _ = fs::remove_file(
+            self.uploads_root()
+                .join(upload.repository_record()),
+        )
+        .await;
         Ok(slot)
     }
 
@@ -272,7 +298,11 @@ impl Storage {
             return Ok(remote_swept);
         };
         let mut swept = remote_swept;
-        while let Some(entry) = entries.next_entry().await.map_err(RegistryError::Io)? {
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(RegistryError::Io)?
+        {
             if sweep_upload_entry(&root, &entry, max_age).await {
                 swept += 1;
             }
@@ -292,7 +322,8 @@ impl Storage {
     }
 
     fn uploads_root(&self) -> PathBuf {
-        self.hosted_scratch_root().join(UPLOADS_DIR)
+        self.hosted_scratch_root()
+            .join(UPLOADS_DIR)
     }
 }
 
@@ -334,7 +365,10 @@ async fn sweep_upload_entry(root: &Path, entry: &fs::DirEntry, max_age: Duration
     let name = entry.file_name();
     let name = name.to_string_lossy();
     if let Some(id) = name.strip_suffix(REPOSITORY_SUFFIX) {
-        if !fs::try_exists(root.join(id)).await.unwrap_or(true) {
+        if !fs::try_exists(root.join(id))
+            .await
+            .unwrap_or(true)
+        {
             let _ = fs::remove_file(entry.path()).await;
         }
         return false;
@@ -347,7 +381,9 @@ async fn sweep_upload_entry(root: &Path, entry: &fs::DirEntry, max_age: Duration
         .ok()
         .and_then(|at| at.elapsed().ok());
     if idle.is_none_or(|idle| idle <= max_age)
-        || fs::remove_file(entry.path()).await.is_err()
+        || fs::remove_file(entry.path())
+            .await
+            .is_err()
     {
         return false;
     }

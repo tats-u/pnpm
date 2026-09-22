@@ -130,13 +130,8 @@ fn external_lockfile_dir_supplies_packing_hooks() {
 
 #[test]
 fn pack_installs_config_dependencies_before_loading_hooks() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -155,7 +150,9 @@ fn pack_installs_config_dependencies_before_loading_hooks() {
         .success();
 
     assert!(
-        workspace.join("node_modules/.pnpm-config/@pnpm/plugin-pnpmfile/pnpmfile.cjs").is_file(),
+        workspace
+            .join("node_modules/.pnpm-config/@pnpm/plugin-pnpmfile/pnpmfile.cjs")
+            .is_file(),
         "pack must materialize config dependencies before loading their hooks",
     );
 
@@ -204,7 +201,9 @@ fn before_packing_hook_rewrites_the_packed_manifest() {
     let manifest = read_manifest_from_tarball(&out.join("pkg-1.0.0.tgz"));
     assert_eq!(manifest["packedByHook"], json!(true), "the hook's added field must be packed");
     assert!(
-        manifest.get("devDependencies").is_none(),
+        manifest
+            .get("devDependencies")
+            .is_none(),
         "the field the hook deleted must not be in the packed manifest",
     );
 
@@ -376,7 +375,9 @@ module.exports = {{
     let events = events.lines().collect::<Vec<_>>();
     assert_eq!(events.len(), 4);
     for pair in events.chunks_exact(2) {
-        let project = pair[0].strip_suffix(":start").expect("start event");
+        let project = pair[0]
+            .strip_suffix(":start")
+            .expect("start event");
         assert_eq!(pair[1], format!("{project}:end"));
     }
     assert!(workspace.join("artifact.tgz").exists());
@@ -433,8 +434,8 @@ fn recursive_pack_reports_results_in_dependency_order() {
         "recursive pack failed: {}",
         String::from_utf8_lossy(&output.stderr),
     );
-    let results: serde_json::Value = serde_json::from_slice(&output.stdout)
-        .unwrap_or_else(|error| {
+    let results: serde_json::Value =
+        serde_json::from_slice(&output.stdout).unwrap_or_else(|error| {
             panic!(
                 "parse recursive pack JSON: {error}; stdout={:?}; stderr={:?}",
                 String::from_utf8_lossy(&output.stdout),
@@ -445,7 +446,11 @@ fn recursive_pack_reports_results_in_dependency_order() {
         .as_array()
         .expect("recursive result array")
         .iter()
-        .map(|result| result["name"].as_str().expect("result name"))
+        .map(|result| {
+            result["name"]
+                .as_str()
+                .expect("result name")
+        })
         .collect::<Vec<_>>();
     assert_eq!(names, ["project-1", "project-2"]);
 
@@ -486,11 +491,7 @@ fn config_ignore_scripts_override_suppresses_prepack() {
     fs::remove_file(&marker).expect("remove marker");
     fs::remove_file(&tarball).expect("remove the first tarball");
 
-    let CommandTempCwd {
-        pacquet: ignoring,
-        root: ignoring_root,
-        ..
-    } = CommandTempCwd::init();
+    let CommandTempCwd { pacquet: ignoring, root: ignoring_root, .. } = CommandTempCwd::init();
     ignoring
         .with_current_dir(&workspace)
         .with_arg("pack")
@@ -512,11 +513,16 @@ fn read_manifest_from_tarball(tarball: &Path) -> serde_json::Value {
     let bytes = fs::read(tarball).expect("read tarball");
     let decoder = flate2::read::GzDecoder::new(bytes.as_slice());
     let mut archive = tar::Archive::new(decoder);
-    for entry in archive.entries().expect("iterate tarball entries") {
+    for entry in archive
+        .entries()
+        .expect("iterate tarball entries")
+    {
         let mut entry = entry.expect("read tarball entry");
         if entry.path().expect("entry path") == Path::new("package/package.json") {
             let mut contents = String::new();
-            entry.read_to_string(&mut contents).expect("read manifest");
+            entry
+                .read_to_string(&mut contents)
+                .expect("read manifest");
             return serde_json::from_str(&contents).expect("parse manifest");
         }
     }
@@ -587,22 +593,24 @@ process.exitCode = stage === process.env.FAILING_STAGE ? 1 : 0;
     let mut expected_stdout = String::new();
     let mut expected_stderr = String::new();
     for stage in stages {
-        writeln!(expected_stdout, "{{\"error\":{{\"code\":\"{stage}\"}}}}\n{stage} stdout").expect(
-            "write expected stdout",
-        );
-        writeln!(expected_stderr, "$ node lifecycle.cjs {stage}\n{stage} stderr").expect(
-            "write expected stderr",
-        );
+        writeln!(expected_stdout, "{{\"error\":{{\"code\":\"{stage}\"}}}}\n{stage} stdout")
+            .expect("write expected stdout");
+        writeln!(expected_stderr, "$ node lifecycle.cjs {stage}\n{stage} stderr")
+            .expect("write expected stderr");
         if Some(stage) == failing_stage {
             break;
         }
     }
     assert_eq!(stderr, expected_stderr);
-    let result = stdout.strip_prefix(&expected_stdout).expect("lifecycle stdout precedes JSON");
+    let result = stdout
+        .strip_prefix(&expected_stdout)
+        .expect("lifecycle stdout precedes JSON");
     let result: serde_json::Value = serde_json::from_str(result).expect("final JSON result");
     if let Some(stage) = failing_stage {
         assert_eq!(result["error"]["code"], "ERR_PNPM_EXECUTOR_LIFECYCLE_SCRIPT_FAILED");
-        let message = result["error"]["message"].as_str().expect("error message");
+        let message = result["error"]["message"]
+            .as_str()
+            .expect("error message");
         assert!(
             message.contains(&format!("{stage}: `node lifecycle.cjs {stage}` exited with")),
             "{message}",
@@ -610,7 +618,11 @@ process.exitCode = stage === process.env.FAILING_STAGE ? 1 : 0;
     } else {
         assert_eq!(result["name"], "pack-json-streams");
         assert_eq!(result["version"], "1.0.0");
-        assert!(workspace.join("pack-json-streams-1.0.0.tgz").is_file());
+        assert!(
+            workspace
+                .join("pack-json-streams-1.0.0.tgz")
+                .is_file()
+        );
     }
     drop(root);
 }

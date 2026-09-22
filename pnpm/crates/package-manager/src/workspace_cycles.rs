@@ -41,7 +41,8 @@ pub fn workspace_cycles<Pkg>(graph: &ProjectGraph<Pkg>) -> Option<Vec<Vec<PathBu
     let edges: HashMap<PathNode<'_>, Vec<PathNode<'_>>> = graph
         .iter()
         .map(|(dir, node)| {
-            let dependencies = node.dependencies
+            let dependencies = node
+                .dependencies
                 .iter()
                 .map(|dependency| PathNode(dependency))
                 .filter(|dependency| included.contains(dependency))
@@ -49,7 +50,8 @@ pub fn workspace_cycles<Pkg>(graph: &ProjectGraph<Pkg>) -> Option<Vec<Vec<PathBu
             (PathNode(dir), dependencies)
         })
         .collect();
-    let cycles = graph_sequencer(&edges, &dirs).cycles
+    let cycles = graph_sequencer(&edges, &dirs)
+        .cycles
         .into_iter()
         .filter(|cycle| cycle.len() > 1)
         .map(|cycle| {
@@ -118,7 +120,9 @@ pub fn report_workspace_cycles<Reporter: self::Reporter>(
     Reporter::emit(&LogEvent::Pnpm(PnpmLog {
         level: LogLevel::Warn,
         message,
-        prefix: workspace_dir.to_string_lossy().into_owned(),
+        prefix: workspace_dir
+            .to_string_lossy()
+            .into_owned(),
     }));
     Ok(())
 }

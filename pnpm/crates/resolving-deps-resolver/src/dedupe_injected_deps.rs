@@ -80,7 +80,9 @@ fn build_dedupe_map(
                 continue;
             };
             let target_direct = direct_by_importer.get(&target_project_id);
-            let children_match = node.edges.children
+            let children_match = node
+                .edges
+                .children
                 .iter()
                 .all(|(child_alias, child_dep_path)| {
                     child_matches_target(graph, target_direct, child_alias, child_dep_path)
@@ -144,10 +146,13 @@ fn injected_workspace_target(
     workspace_project_ids: &HashSet<String>,
 ) -> Option<String> {
     let raw = node.resolved_package_id.as_str();
-    let path = raw
-        .strip_prefix("file:")
-        .or_else(|| raw.split_once("@file:").map(|(_, path)| path))?;
-    workspace_project_ids.contains(path).then(|| path.to_string())
+    let path = raw.strip_prefix("file:").or_else(|| {
+        raw.split_once("@file:")
+            .map(|(_, path)| path)
+    })?;
+    workspace_project_ids
+        .contains(path)
+        .then(|| path.to_string())
 }
 
 fn apply_dedupe_map(
@@ -187,7 +192,9 @@ fn make_link_dep_path(source_root: &Path, target_root: &Path, lockfile_dir: &Pat
         // fallback keeps the helper total.
         let fallback = pathdiff::diff_paths(target_root, lockfile_dir)
             .unwrap_or_else(|| target_root.to_path_buf());
-        fallback.to_string_lossy().replace('\\', "/")
+        fallback
+            .to_string_lossy()
+            .replace('\\', "/")
     } else {
         rendered
     };

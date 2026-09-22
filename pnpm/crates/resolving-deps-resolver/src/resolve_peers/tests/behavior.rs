@@ -55,14 +55,23 @@ fn same_package_child_does_not_shadow_inherited_parent_and_bubbles_by_name() {
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
-    assert_eq!(result.direct_dependencies_by_alias.get("mid"), Some(&DepPath::from("mid@1.0.0")));
+    assert_eq!(
+        result
+            .direct_dependencies_by_alias
+            .get("mid"),
+        Some(&DepPath::from("mid@1.0.0"))
+    );
     assert!(
-        result.graph.contains_key(&DepPath::from("plugin@1.0.0(p@1.0.0(x@1.0.0))")),
+        result
+            .graph
+            .contains_key(&DepPath::from("plugin@1.0.0(p@1.0.0(x@1.0.0))")),
         "plugin should resolve p from the inherited root context: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
     assert!(
-        !result.graph.contains_key(&DepPath::from("plugin@1.0.0(p@1.0.0(x@2.0.0))")),
+        !result
+            .graph
+            .contains_key(&DepPath::from("plugin@1.0.0(p@1.0.0(x@2.0.0))")),
         "same-package child p must not shadow inherited p: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
@@ -115,12 +124,16 @@ fn pruned_hoisted_provider_falls_back_to_root_resolution() {
     );
 
     assert_eq!(
-        result.direct_dependencies_by_alias.get("prov"),
+        result
+            .direct_dependencies_by_alias
+            .get("prov"),
         Some(&DepPath::from("prov@1.0.0")),
         "the pruned provider must get a depPath from the fallback",
     );
     assert!(
-        result.graph.contains_key(&DepPath::from("consumer@1.0.0(prov@1.0.0)")),
+        result
+            .graph
+            .contains_key(&DepPath::from("consumer@1.0.0(prov@1.0.0)")),
         "the consumer must bind the fallback-resolved provider: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
@@ -148,13 +161,25 @@ fn the_first_resolvable_pending_edge_keeps_the_slot() {
     }
 
     let first_dep_path = DepPath::from("child@1.0.0");
-    walker.caches.node_dep_paths.insert(first_child, first_dep_path.clone());
-    walker.caches.node_dep_paths.insert(second_child, DepPath::from("child@2.0.0"));
-    walker.output.graph.insert(parent.clone(), graph_node(&parent));
+    walker
+        .caches
+        .node_dep_paths
+        .insert(first_child, first_dep_path.clone());
+    walker
+        .caches
+        .node_dep_paths
+        .insert(second_child, DepPath::from("child@2.0.0"));
+    walker
+        .output
+        .graph
+        .insert(parent.clone(), graph_node(&parent));
     walker.patch_pending_peer_edges();
 
     assert_eq!(
-        walker.output.graph[&parent].edges.children.get("child"),
+        walker.output.graph[&parent]
+            .edges
+            .children
+            .get("child"),
         Some(&first_dep_path),
         "`or_insert` leaves an already-filled slot alone",
     );
@@ -171,7 +196,8 @@ fn realized_children_are_shared_across_visits() {
     children.insert("child".to_string(), NodeId::leaf("child@1.0.0"));
 
     let mut tree = ResolvedTree::default();
-    tree.dependencies_tree.insert(parent.clone(), tree_node("parent@1.0.0", children, 0));
+    tree.dependencies_tree
+        .insert(parent.clone(), tree_node("parent@1.0.0", children, 0));
     let mut walker = walker_for_tests(&mut tree);
 
     let (first, first_undo) = walker.realize_children_with(&parent, None);
@@ -219,7 +245,9 @@ fn realizing_children_shares_the_edge_package_id() {
 
     let mut walker = walker_for_tests(&mut tree);
     let (children, _) = walker.realize_children_with(&parent, None);
-    let child_node_id = children.get("child").expect("the edge is realized into a child node");
+    let child_node_id = children
+        .get("child")
+        .expect("the edge is realized into a child node");
     let realized = &walker.tree.dependencies_tree[child_node_id];
 
     assert!(
@@ -293,13 +321,22 @@ fn a_backedge_dependency_stays_in_the_graph() {
     );
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
-    let (_, ring03) = result.graph
+    let (_, ring03) = result
+        .graph
         .iter()
-        .find(|(path, _)| path.as_str().starts_with("ring03@1.0.0"))
+        .find(|(path, _)| {
+            path.as_str()
+                .starts_with("ring03@1.0.0")
+        })
         .expect("ring03 is walked");
-    let next = ring03.edges.children.get("next").expect("the cut ring03 → ring00 edge is recorded");
+    let next = ring03
+        .edges
+        .children
+        .get("next")
+        .expect("the cut ring03 → ring00 edge is recorded");
     assert!(
-        next.as_str().starts_with("ring00@1.0.0"),
+        next.as_str()
+            .starts_with("ring00@1.0.0"),
         "the back-edge references a ring00 occurrence, got {next:?}",
     );
 }
@@ -332,17 +369,20 @@ fn a_backedge_cut_subtree_is_pure() {
     }
 
     assert!(
-        walker.caches.pure_pkgs.contains_key("ring02@1.0.0"),
+        walker
+            .caches
+            .pure_pkgs
+            .contains_key("ring02@1.0.0"),
         "ring02's canonical subtree reaches no peer consumer, so it is pure",
     );
-    let cached_mentions_w = walker.caches.peers_cache
+    let cached_mentions_w = walker
+        .caches
+        .peers_cache
         .get("ring02@1.0.0")
         .is_some_and(|items| {
-            items
-                .iter()
-                .any(|item| {
-                    item.resolved_peers.contains_key("w") || item.missing_peers.contains_key("w")
-                })
+            items.iter().any(|item| {
+                item.resolved_peers.contains_key("w") || item.missing_peers.contains_key("w")
+            })
         });
     assert!(!cached_mentions_w, "no cached ring02 verdict mentions the consumer behind the cut");
 }

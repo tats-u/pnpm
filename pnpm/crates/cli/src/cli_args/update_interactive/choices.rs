@@ -97,21 +97,23 @@ pub(crate) fn update_choices(
             &package.target,
             package.github_action,
         );
-        let index = *seen
-            .entry(key)
-            .or_insert_with(|| {
-                let index = choices.len();
-                choices.push(Choice { package, workspaces: Vec::new() });
-                group_choice(&mut grouped, package, index);
-                index
-            });
+        let index = *seen.entry(key).or_insert_with(|| {
+            let index = choices.len();
+            choices.push(Choice { package, workspaces: Vec::new() });
+            group_choice(&mut grouped, package, index);
+            index
+        });
         // Collect every project the collapsed entries came from, so the
         // `Workspace` column names all of them rather than whichever was
         // seen first — selecting the row updates the package in each.
         if let Some(workspace) = &package.metadata.workspace
-            && !choices[index].workspaces.contains(workspace)
+            && !choices[index]
+                .workspaces
+                .contains(workspace)
         {
-            choices[index].workspaces.push(workspace.clone());
+            choices[index]
+                .workspaces
+                .push(workspace.clone());
         }
     }
 
@@ -164,13 +166,19 @@ fn render_rows(choices: &[&Choice<'_>], workspaces_enabled: bool) -> Vec<ChoiceR
     header.push("URL".to_string());
 
     let mut cells = vec![header];
-    cells.extend(choices.iter().map(|choice| choice_cells(choice, workspaces_enabled)));
+    cells.extend(
+        choices
+            .iter()
+            .map(|choice| choice_cells(choice, workspaces_enabled)),
+    );
 
     let widths = column_widths(&cells);
     let mut rows = cells
         .into_iter()
         .map(|row| ChoiceRow { label: pad_row(&row, &widths), value: None });
-    let header = rows.next().expect("the header row is always pushed first");
+    let header = rows
+        .next()
+        .expect("the header row is always pushed first");
     std::iter::once(header)
         .chain(
             rows.zip(choices)
@@ -270,7 +278,8 @@ fn choice_cells(choice: &Choice<'_>, workspaces_enabled: bool) -> Vec<String> {
     ];
     if workspaces_enabled {
         row.push(
-            choice.workspaces
+            choice
+                .workspaces
                 .iter()
                 .map(|workspace| sanitize_inline(workspace))
                 .collect::<Vec<_>>()
@@ -278,7 +287,9 @@ fn choice_cells(choice: &Choice<'_>, workspaces_enabled: bool) -> Vec<String> {
         );
     }
     row.push(
-        package.metadata.homepage
+        package
+            .metadata
+            .homepage
             .as_deref()
             .map(sanitize_inline)
             .unwrap_or_default()

@@ -67,23 +67,40 @@ fn fresh_install_records_a_single_direct_dependency() {
 
     assert_eq!(lockfile.lockfile_version.major, 9);
 
-    let importer = lockfile.root_project().expect("root importer exists");
-    let dependencies = importer.dependencies.as_ref().expect("dependencies map exists");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer exists");
+    let dependencies = importer
+        .dependencies
+        .as_ref()
+        .expect("dependencies map exists");
     let react_key = PkgName::parse("react").unwrap();
-    let entry = dependencies.get(&react_key).expect("react entry");
+    let entry = dependencies
+        .get(&react_key)
+        .expect("react entry");
     assert_eq!(entry.specifier, "^17.0.2");
     assert!(matches!(&entry.version, ImporterDepVersion::Regular(_)));
 
-    let packages = lockfile.packages.as_ref().expect("packages map");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages map");
     let metadata_key: PackageKey = "react@17.0.2".parse().unwrap();
     assert!(packages.contains_key(&metadata_key));
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
     assert!(snapshots.contains_key(&metadata_key));
     let snapshot = &snapshots[&metadata_key];
     assert!(snapshot.dependencies.is_none());
     assert!(snapshot.optional_dependencies.is_none());
-    assert!(snapshot.transitive_peer_dependencies.is_none());
+    assert!(
+        snapshot
+            .transitive_peer_dependencies
+            .is_none()
+    );
 }
 #[test]
 fn fresh_install_records_string_libc_without_coercing_scalar_bundle_metadata() {
@@ -118,8 +135,13 @@ fn fresh_install_records_string_libc_without_coercing_scalar_bundle_metadata() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let package_key: PackageKey = "sass-embedded-linux-musl-x64@1.100.0".parse().unwrap();
-    let metadata = &lockfile.packages.as_ref().expect("packages")[&package_key];
+    let package_key: PackageKey = "sass-embedded-linux-musl-x64@1.100.0"
+        .parse()
+        .unwrap();
+    let metadata = &lockfile
+        .packages
+        .as_ref()
+        .expect("packages")[&package_key];
     assert_eq!(metadata.libc.as_deref(), Some(["musl".to_string()].as_slice()));
     assert!(metadata.bundled_dependencies.is_none());
 }
@@ -161,9 +183,14 @@ fn duplicate_manifest_alias_uses_pnpm_dependency_field_precedence() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let importer = lockfile.root_project().expect("root importer");
+    let importer = lockfile
+        .root_project()
+        .expect("root importer");
     assert!(importer.dev_dependencies.is_none(), "optionalDependencies wins over devDependencies");
-    let opt = importer.optional_dependencies.as_ref().expect("optional deps");
+    let opt = importer
+        .optional_dependencies
+        .as_ref()
+        .expect("optional deps");
     assert!(opt.contains_key(&PkgName::parse("duplicated").unwrap()));
 }
 /// A resolver that hands back no package name leaves a bare
@@ -227,9 +254,15 @@ fn snapshot_partitions_optional_children_by_manifest_optional_dependencies() {
     let outer_key: PackageKey = "outer@1.0.0".parse().unwrap();
     let outer_snap = &snapshots[&outer_key];
     assert!(outer_snap.dependencies.is_none(), "no regular dep for an optional-only child");
-    let opt = outer_snap.optional_dependencies.as_ref().expect("opt deps map");
+    let opt = outer_snap
+        .optional_dependencies
+        .as_ref()
+        .expect("opt deps map");
     let inner_key = PkgName::parse("inner").unwrap();
-    match opt.get(&inner_key).expect("inner under optionalDependencies") {
+    match opt
+        .get(&inner_key)
+        .expect("inner under optionalDependencies")
+    {
         SnapshotDepRef::Plain(ver) => assert_eq!(ver.to_string(), "1.0.0"),
         other => panic!("expected Plain, got {other:?}"),
     }
@@ -273,7 +306,10 @@ fn snapshot_optional_flag_round_trips_from_dependencies_graph_node() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
     let regular_key: PackageKey = "regular@1.0.0".parse().unwrap();
     let opt_key: PackageKey = "opt@1.0.0".parse().unwrap();
     assert!(!snapshots[&regular_key].optional, "non-optional snapshot stays optional: false");
@@ -338,7 +374,10 @@ fn transitive_optional_is_recomputed_for_packages_reachable_via_a_non_optional_p
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
     let a_key: PackageKey = "a@1.0.0".parse().unwrap();
     let b_key: PackageKey = "b@1.0.0".parse().unwrap();
     let c_key: PackageKey = "c@1.0.0".parse().unwrap();
@@ -440,7 +479,10 @@ fn file_dep_child_renders_as_bare_file_ref() {
 
     let child = make_file_node("nested-child", "child");
     let mut parent = make_file_node("nested-parent", "parent");
-    parent.edges.children.insert("nested-child".to_string(), child.dep_path.clone());
+    parent
+        .edges
+        .children
+        .insert("nested-child".to_string(), child.dep_path.clone());
 
     let mut graph = DependenciesGraph::default();
     let parent_dep_path = parent.dep_path.clone();
@@ -453,9 +495,17 @@ fn file_dep_child_renders_as_bare_file_ref() {
         &manifest, &graph, direct, false, false, None, None,
     ));
 
-    let snapshots = lockfile.snapshots.as_ref().expect("snapshots map");
-    let parent_key: PackageKey = "nested-parent@file:parent".parse().unwrap();
-    let deps = snapshots[&parent_key].dependencies.as_ref().expect("nested-parent dependencies");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("snapshots map");
+    let parent_key: PackageKey = "nested-parent@file:parent"
+        .parse()
+        .unwrap();
+    let deps = snapshots[&parent_key]
+        .dependencies
+        .as_ref()
+        .expect("nested-parent dependencies");
     let child_ref = deps
         .get(&PkgName::parse("nested-child").unwrap())
         .expect("nested-child child");
@@ -475,8 +525,8 @@ fn same_name_injected_dep_serializes_as_plain_file_ref() {
         resolved_package_id: "file:comp1".to_string(),
         resolve_result: std::sync::Arc::new(ResolveResult {
             id: "file:comp1".into(),
-            resolution: pnpm_lockfile::DirectoryResolution { directory: "comp1".to_string() }.into(
-            ),
+            resolution: pnpm_lockfile::DirectoryResolution { directory: "comp1".to_string() }
+                .into(),
             resolved_via: "local-filesystem".to_string(),
             normalized_bare_specifier: None,
             alias: Some("@scope/comp1".to_string()),
@@ -548,7 +598,8 @@ fn named_registry_package_keeps_the_format_and_drops_a_canonical_tarball() {
 
     let registries_by_prefix = named_registries_with("work", "https://npm.enterprise.example.com/");
     let mut opts = single_importer_opts(&manifest, &graph, direct, true, false, None, None);
-    opts.metadata_sources.registries_by_prefix = &registries_by_prefix;
+    opts.metadata_sources
+        .registries_by_prefix = &registries_by_prefix;
 
     let lockfile = dependencies_graph_to_lockfile(opts);
 
@@ -556,9 +607,14 @@ fn named_registry_package_keeps_the_format_and_drops_a_canonical_tarball() {
     assert_eq!(lockfile.lockfile_version.major, 9);
     assert_eq!(lockfile.lockfile_version.minor, 0);
 
-    let packages = lockfile.packages.as_ref().expect("packages map");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("packages map");
     let key: PackageKey = "foo@work:1.0.0".parse().unwrap();
-    let metadata = packages.get(&key).expect("registry-qualified entry");
+    let metadata = packages
+        .get(&key)
+        .expect("registry-qualified entry");
     assert!(
         matches!(metadata.resolution, LockfileResolution::Registry(_)),
         "a canonical named-registry tarball is rebuilt from the alias, so the URL is dropped: {:?}",
@@ -603,7 +659,9 @@ fn unchanged_resolutions_keep_their_previous_package_metadata() {
     let mut previous_entry = fresh;
     previous_entry.deprecated = Some("No longer maintained".to_string());
     let previous = std::collections::HashMap::from([(
-        "react@17.0.2".parse::<PackageKey>().unwrap(),
+        "react@17.0.2"
+            .parse::<PackageKey>()
+            .unwrap(),
         previous_entry.clone(),
     )]);
     assert_eq!(
@@ -621,7 +679,9 @@ fn unchanged_resolutions_keep_their_previous_package_metadata() {
         revision: None,
     });
     let previous = std::collections::HashMap::from([(
-        "react@17.0.2".parse::<PackageKey>().unwrap(),
+        "react@17.0.2"
+            .parse::<PackageKey>()
+            .unwrap(),
         republished,
     )]);
     assert_eq!(

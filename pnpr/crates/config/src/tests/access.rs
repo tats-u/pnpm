@@ -28,19 +28,46 @@ upstreams: {}
 ";
     let config = Config::from_yaml_str(yaml, Path::new("/etc/pnpr"), listen(), None).unwrap();
     assert_eq!(
-        config.identity.auth.htpasswd.file.as_deref(),
+        config
+            .identity
+            .auth
+            .htpasswd
+            .file
+            .as_deref(),
         Some(Path::new("/etc/pnpr/./htpasswd")),
     );
     // Tokens default to the htpasswd sibling.
-    assert_eq!(config.identity.auth.tokens.file.as_deref(), Some(Path::new("/etc/pnpr/tokens.db")));
+    assert_eq!(
+        config
+            .identity
+            .auth
+            .tokens
+            .file
+            .as_deref(),
+        Some(Path::new("/etc/pnpr/tokens.db"))
+    );
 }
 
 #[test]
 fn auth_block_absent_disables_registration_by_default() {
     let yaml = "storage: ./s\n";
     let config = Config::from_yaml_str(yaml, Path::new("/x"), listen(), None).unwrap();
-    assert!(config.identity.auth.htpasswd.file.is_none());
-    assert!(config.identity.auth.tokens.file.is_none());
+    assert!(
+        config
+            .identity
+            .auth
+            .htpasswd
+            .file
+            .is_none()
+    );
+    assert!(
+        config
+            .identity
+            .auth
+            .tokens
+            .file
+            .is_none()
+    );
     // Registration is opt-in: an omitted cap denies new sign-ups.
     assert_eq!(config.identity.auth.htpasswd.max_users, super::super::MaxUsers::Disabled);
 }
@@ -71,7 +98,12 @@ upstreams: {}
 ";
     let config = Config::from_yaml_str(yaml, Path::new("/etc/pnpr"), listen(), None).unwrap();
     assert_eq!(
-        config.identity.auth.tokens.file.as_deref(),
+        config
+            .identity
+            .auth
+            .tokens
+            .file
+            .as_deref(),
         Some(Path::new("/var/lib/pnpr/tokens.sqlite")),
     );
 }
@@ -133,7 +165,12 @@ registries:
             .allows(&user("carol")),
     );
     // ...while the more specific key overrides it.
-    assert!(rules.for_package("@team/open").access.allows(&Identity::Anonymous));
+    assert!(
+        rules
+            .for_package("@team/open")
+            .access
+            .allows(&Identity::Anonymous)
+    );
 }
 
 #[test]
@@ -142,7 +179,9 @@ fn rule_usernames_grant_per_user_access() {
     let config = hosted_rules_config(
         "      '@team/*':\n        access: [alice, bob]\n        publish: alice\n",
     );
-    let team = config.routing.hosted["local"].rules.for_package("@team/x");
+    let team = config.routing.hosted["local"]
+        .rules
+        .for_package("@team/x");
     assert!(team.access.allows(&user("alice")));
     assert!(team.access.allows(&user("bob")));
     assert!(!team.access.allows(&user("carol")));
@@ -200,7 +239,10 @@ registries:
         access: platform
 ";
     let config = Config::from_yaml_str(yaml, Path::new("/x"), listen(), None).unwrap();
-    let access = config.routing.hosted["local"].rules.for_package("@team/x").access;
+    let access = config.routing.hosted["local"]
+        .rules
+        .for_package("@team/x")
+        .access;
     assert!(access.allows(&Identity::user("platform")));
     assert!(!access.allows(&Identity::user("alice")));
 }
@@ -233,7 +275,10 @@ registries:
 #[test]
 fn rule_scalar_access_value_is_one_token() {
     let config = hosted_rules_config("      '@team/*':\n        access: alice\n");
-    let access = config.routing.hosted["local"].rules.for_package("@team/x").access;
+    let access = config.routing.hosted["local"]
+        .rules
+        .for_package("@team/x")
+        .access;
     assert!(access.allows(&user("alice")));
     assert!(!access.allows(&user("bob")));
 }

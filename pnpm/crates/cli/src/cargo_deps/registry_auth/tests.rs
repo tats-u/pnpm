@@ -56,8 +56,13 @@ fn offline_mode_does_not_read_cargo_credentials() {
 #[test]
 fn credentials_token_is_bare_and_preserves_other_routes() {
     let cargo_home = tempfile::tempdir().unwrap();
-    fs::write(cargo_home.path().join("credentials.toml"), "[registry]\ntoken = 'cargo-token'\n")
-        .unwrap();
+    fs::write(
+        cargo_home
+            .path()
+            .join("credentials.toml"),
+        "[registry]\ntoken = 'cargo-token'\n",
+    )
+    .unwrap();
 
     let resolved = crates_io_from_sources(&configured(), None, Some(cargo_home.path())).unwrap();
 
@@ -75,7 +80,13 @@ fn credentials_token_is_bare_and_preserves_other_routes() {
 #[test]
 fn environment_token_overrides_the_credentials_file() {
     let cargo_home = tempfile::tempdir().unwrap();
-    fs::write(cargo_home.path().join("credentials.toml"), "not valid TOML = [").unwrap();
+    fs::write(
+        cargo_home
+            .path()
+            .join("credentials.toml"),
+        "not valid TOML = [",
+    )
+    .unwrap();
 
     let resolved = crates_io_from_sources(
         &configured(),
@@ -94,7 +105,13 @@ fn environment_token_overrides_the_credentials_file() {
 fn legacy_credentials_file_wins_when_both_exist() {
     let cargo_home = tempfile::tempdir().unwrap();
     fs::write(cargo_home.path().join("credentials"), "[registry]\ntoken = 'legacy'\n").unwrap();
-    fs::write(cargo_home.path().join("credentials.toml"), "[registry]\ntoken = 'toml'\n").unwrap();
+    fs::write(
+        cargo_home
+            .path()
+            .join("credentials.toml"),
+        "[registry]\ntoken = 'toml'\n",
+    )
+    .unwrap();
 
     let resolved = crates_io_from_sources(&configured(), None, Some(cargo_home.path())).unwrap();
 
@@ -105,12 +122,16 @@ fn legacy_credentials_file_wins_when_both_exist() {
 fn malformed_credentials_do_not_leak_the_file_contents() {
     let cargo_home = tempfile::tempdir().unwrap();
     fs::write(
-        cargo_home.path().join("credentials.toml"),
+        cargo_home
+            .path()
+            .join("credentials.toml"),
         "[registry]\ntoken = 'do-not-print-this'\ninvalid = [",
     )
     .unwrap();
 
-    let error = token_from_credentials(cargo_home.path()).unwrap_err().to_string();
+    let error = token_from_credentials(cargo_home.path())
+        .unwrap_err()
+        .to_string();
 
     assert!(error.contains("credentials.toml"), "{error}");
     assert!(!error.contains("do-not-print-this"), "{error}");

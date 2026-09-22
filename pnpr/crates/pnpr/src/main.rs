@@ -142,7 +142,9 @@ async fn main() -> miette::Result<()> {
     init_logging(&config.logs);
     log_config_source(&source);
     if let Some(Command::OciGc { registry, dry_run, min_age_secs }) = args.command {
-        pnpr::recover_publish_journal(&config).await.map_err(|err| redacted_report(&err))?;
+        pnpr::recover_publish_journal(&config)
+            .await
+            .map_err(|err| redacted_report(&err))?;
         let (blobs, bytes) = pnpr::oci_maintenance::collect_oci_blobs(
             &config,
             &registry,
@@ -154,7 +156,9 @@ async fn main() -> miette::Result<()> {
         tracing::info!(blobs, bytes, dry_run, "OCI collection completed");
         return Ok(());
     }
-    serve(config).await.map_err(|err| redacted_report(&err))
+    serve(config)
+        .await
+        .map_err(|err| redacted_report(&err))
 }
 
 /// Fold the command-line overrides into the resolved config.
@@ -189,10 +193,22 @@ fn relocate_bundled_auth_state(config: &mut Config, storage: &Path, source: &Con
     if !matches!(source, ConfigSource::Bundled) {
         return;
     }
-    if config.identity.auth.htpasswd.file.is_some() {
+    if config
+        .identity
+        .auth
+        .htpasswd
+        .file
+        .is_some()
+    {
         config.identity.auth.htpasswd.file = Some(storage.join("htpasswd"));
     }
-    if config.identity.auth.tokens.file.is_some() {
+    if config
+        .identity
+        .auth
+        .tokens
+        .file
+        .is_some()
+    {
         config.identity.auth.tokens.file = Some(storage.join("tokens.db"));
     }
 }

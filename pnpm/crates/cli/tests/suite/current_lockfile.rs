@@ -15,11 +15,14 @@ use std::{fs, path::Path, process::Command};
 const CURRENT_LOCKFILE: &str = "node_modules/.pnpm/lock.yaml";
 
 fn rerun(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn package_names(lockfile: &pnpm_lockfile::Lockfile) -> Vec<String> {
-    let mut names: Vec<String> = lockfile.packages
+    let mut names: Vec<String> = lockfile
+        .packages
         .iter()
         .flat_map(|packages| packages.keys())
         .map(ToString::to_string)
@@ -49,13 +52,8 @@ fn assert_skipped_optional_is_retained(lockfile: &pnpm_lockfile::Lockfile) {
 /// the current-lockfile half.
 #[test]
 fn a_frozen_install_writes_the_current_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -69,7 +67,9 @@ fn a_frozen_install_writes_the_current_lockfile() {
         .assert()
         .success();
     assert!(
-        !workspace.join(CURRENT_LOCKFILE).exists(),
+        !workspace
+            .join(CURRENT_LOCKFILE)
+            .exists(),
         "--lockfile-only materializes nothing, so there is nothing to record",
     );
 
@@ -93,13 +93,8 @@ fn a_frozen_install_writes_the_current_lockfile() {
 /// none behind.
 #[test]
 fn a_failed_build_writes_no_current_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -130,7 +125,9 @@ fn a_failed_build_writes_no_current_lockfile() {
     assert!(!output.status.success(), "a failing postinstall must fail the install");
 
     assert!(
-        !workspace.join(CURRENT_LOCKFILE).exists(),
+        !workspace
+            .join(CURRENT_LOCKFILE)
+            .exists(),
         "a failed build must not leave a current lockfile claiming the install finished",
     );
 
@@ -144,13 +141,8 @@ fn a_failed_build_writes_no_current_lockfile() {
 /// and the wanted lockfile is regenerated from them.
 #[test]
 fn a_deleted_wanted_lockfile_is_regenerated_from_the_current_one() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -220,13 +212,8 @@ fn a_deleted_wanted_lockfile_is_regenerated_from_the_current_one() {
 /// (`deps-installer/test/lockfile.ts:1288`).
 #[test]
 fn a_broken_wanted_lockfile_is_ignored_and_regenerated() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -266,7 +253,10 @@ fn a_broken_wanted_lockfile_is_ignored_and_regenerated() {
             .any(|event| {
                 event["name"] == "pnpm"
                     && event["level"] == "warn"
-                    && event["prefix"] == canonical_workspace.to_string_lossy().as_ref()
+                    && event["prefix"]
+                        == canonical_workspace
+                            .to_string_lossy()
+                            .as_ref()
                     && event["message"]
                         .as_str()
                         .is_some_and(|message| message.starts_with("Ignoring broken lockfile at "))
@@ -294,13 +284,8 @@ fn a_broken_wanted_lockfile_is_ignored_and_regenerated() {
 /// frozen install must refuse it rather than silently take one branch.
 #[test]
 fn a_wanted_lockfile_with_duplicate_keys_fails_a_frozen_install() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -349,13 +334,8 @@ fn a_wanted_lockfile_with_duplicate_keys_fails_a_frozen_install() {
 /// `Lockfile::is_empty`, so no file is written.
 #[test]
 fn the_current_lockfile_is_filtered_to_the_installed_groups() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -404,13 +384,8 @@ fn the_current_lockfile_is_filtered_to_the_installed_groups() {
 /// already correct — the tree is re-derived from the wanted lockfile.
 #[test]
 fn stale_state_files_do_not_stop_node_modules_from_being_repaired() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let yaml_path = workspace.join("pnpm-workspace.yaml");
     let mut yaml = fs::read_to_string(&yaml_path).expect("read pnpm-workspace.yaml");
@@ -479,13 +454,8 @@ fn stale_state_files_do_not_stop_node_modules_from_being_repaired() {
 /// the packages it names live in the shared store.
 #[test]
 fn a_global_virtual_store_install_still_writes_the_current_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -521,13 +491,8 @@ fn a_global_virtual_store_install_still_writes_the_current_lockfile() {
 /// forever (<https://github.com/pnpm/pnpm/issues/13312>).
 #[test]
 fn a_skipped_optional_dependency_still_lets_a_repeat_frozen_install_be_a_no_op() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let package_json = serde_json::json!({
@@ -576,13 +541,8 @@ fn a_skipped_optional_dependency_still_lets_a_repeat_frozen_install_be_a_no_op()
 /// (`deps-installer/test/lockfile.ts:1351`).
 #[test]
 fn a_broken_current_lockfile_is_ignored_with_a_warning() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -628,7 +588,10 @@ fn a_broken_current_lockfile_is_ignored_with_a_warning() {
             .any(|event| {
                 event["name"] == "pnpm"
                     && event["level"] == "warn"
-                    && event["prefix"] == canonical_workspace.to_string_lossy().as_ref()
+                    && event["prefix"]
+                        == canonical_workspace
+                            .to_string_lossy()
+                            .as_ref()
                     && event["message"]
                         .as_str()
                         .is_some_and(|message| message.starts_with("Ignoring broken lockfile at "))

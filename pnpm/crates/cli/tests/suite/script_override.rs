@@ -39,9 +39,12 @@ fn workspace_with_member_scripts(workspace: &Path, scripts: &serde_json::Value) 
 }
 
 fn run(workspace: &Path, args: &[&str]) -> std::process::Output {
-    let mut command =
-        Command::cargo_bin("pnpm").expect("find the pnpm binary").without_ambient_pnpm_config();
-    command.current_dir(workspace).args(args);
+    let mut command = Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .without_ambient_pnpm_config();
+    command
+        .current_dir(workspace)
+        .args(args);
     command.output().expect("spawn pnpm")
 }
 
@@ -94,7 +97,9 @@ fn deploy_from_a_workspace_subdirectory_refuses_when_the_root_declares_the_scrip
 fn ci_cleans_node_modules_when_the_project_declares_a_clean_script() {
     let CommandTempCwd { root, workspace, .. } = CommandTempCwd::init();
     write_manifest(&workspace, "ci-pkg", &serde_json::json!({ "clean": "echo clean-script-ran" }));
-    let installed = workspace.join("node_modules").join("left-over");
+    let installed = workspace
+        .join("node_modules")
+        .join("left-over");
     fs::create_dir_all(&installed).expect("seed node_modules");
 
     let output = run(&workspace, &["ci", "--offline"]);
@@ -184,8 +189,9 @@ mod scripts {
             &workspace,
             &serde_json::json!({ "setup": "echo setup-script-executed" }),
         );
-        let mut command =
-            Command::cargo_bin("pnpm").expect("find the pnpm binary").without_ambient_pnpm_config();
+        let mut command = Command::cargo_bin("pnpm")
+            .expect("find the pnpm binary")
+            .without_ambient_pnpm_config();
         command
             .current_dir(&workspace)
             .env("HOME", root.path())

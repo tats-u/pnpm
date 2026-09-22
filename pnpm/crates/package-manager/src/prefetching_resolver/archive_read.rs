@@ -27,7 +27,9 @@ impl<Reporter: self::Reporter + 'static> PrefetchingResolver<Reporter> {
         let Some((missing, tarball)) = MissingTarballMetadata::of(result) else {
             return Ok(());
         };
-        let metadata = self.read_archive_once(result, tarball, lockfile_dir).await?;
+        let metadata = self
+            .read_archive_once(result, tarball, lockfile_dir)
+            .await?;
         if self.ctx.policy.custom_session.is_some() {
             // A fetcher can select different content for the same URL, and
             // the manifest below was read out of whatever it chose. Record
@@ -60,11 +62,18 @@ impl<Reporter: self::Reporter + 'static> PrefetchingResolver<Reporter> {
         let package_url = tarball.tarball.clone();
         // Scope credentials are selected from `name@version` when the
         // resolver knows it; direct URL tarballs fall back to URL identity.
-        let package_id = result.package.name_ver
+        let package_id = result
+            .package
+            .name_ver
             .as_ref()
             .map_or_else(|| package_url.clone(), |nv| format!("{}@{}", nv.name, nv.suffix));
         let cache_key = self.tarball_metadata_cache_key(result, tarball, &package_id)?;
-        let cell = Arc::clone(&self.tarball_metadata_cache.entry(cache_key).or_default());
+        let cell = Arc::clone(
+            &self
+                .tarball_metadata_cache
+                .entry(cache_key)
+                .or_default(),
+        );
         cell.get_or_try_init(|| async {
             match self.ctx.policy.custom_session.as_ref() {
                 Some(session) => {
@@ -76,7 +85,10 @@ impl<Reporter: self::Reporter + 'static> PrefetchingResolver<Reporter> {
                     )
                     .await
                 }
-                None => self.read_archive(tarball, &package_url, &package_id).await,
+                None => {
+                    self.read_archive(tarball, &package_url, &package_id)
+                        .await
+                }
             }
         })
         .await
@@ -123,7 +135,9 @@ impl<Reporter: self::Reporter + 'static> PrefetchingResolver<Reporter> {
         lockfile_dir: &Path,
     ) -> Result<ResolvedTarballMetadata, ResolveError> {
         let (package_url, package_id) = package;
-        let download = self.ctx.tarball_download(package_url, package_id, None, None, None);
+        let download = self
+            .ctx
+            .tarball_download(package_url, package_id, None, None, None);
         let opts = serde_json::json!({
             "pkg": result.package.name_ver.as_ref().map_or_else(
                 || serde_json::json!({}),

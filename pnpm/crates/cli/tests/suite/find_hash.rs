@@ -9,10 +9,15 @@ fn find_hash_fixture(store_index: &StoreIndex) -> (String, String, String) {
     let entries = store_index.get_many(&keys).unwrap();
     for (_key, data) in entries {
         let Some(manifest) = &data.manifest else { continue };
-        let Some(expected_name) = manifest.get("name").and_then(|value| value.as_str()) else {
+        let Some(expected_name) = manifest
+            .get("name")
+            .and_then(|value| value.as_str())
+        else {
             continue;
         };
-        let Some(expected_version) = manifest.get("version").and_then(|value| value.as_str())
+        let Some(expected_version) = manifest
+            .get("version")
+            .and_then(|value| value.as_str())
         else {
             continue;
         };
@@ -26,13 +31,8 @@ fn find_hash_fixture(store_index: &StoreIndex) -> (String, String, String) {
 
 #[test]
 fn find_hash_works() {
-    let CommandTempCwd {
-        mut pacquet,
-        workspace,
-        root: _root,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, workspace, root: _root, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     // 1. Install a package to populate the store index
     pacquet
@@ -67,9 +67,8 @@ fn find_hash_works() {
 
 #[test]
 fn should_fail_on_missing_hash() {
-    let CommandTempCwd {
-        mut pacquet, workspace, root: _root, ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     // Install a package first so the store index exists.
     pacquet
         .arg("add")
@@ -114,13 +113,8 @@ fn should_fail_on_oversized_base64() {
 
 #[test]
 fn find_hash_works_with_base64() {
-    let CommandTempCwd {
-        mut pacquet,
-        workspace,
-        root: _root,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, workspace, root: _root, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .arg("add")

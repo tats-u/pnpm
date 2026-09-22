@@ -66,13 +66,8 @@ fn an_unrecognized_task_setting_warns_without_a_pin() {
 /// version that answers is the pinned one, not this one.
 #[test]
 fn an_unrecognized_task_setting_does_not_stop_the_switch_to_the_pinned_version() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(workspace.join("package.json"), r#"{"packageManager":"pnpm@9.3.0"}"#)
         .expect("write package.json");

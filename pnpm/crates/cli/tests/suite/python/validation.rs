@@ -42,8 +42,12 @@ fn failed_publication_restores_prior_cargo_workspaces_and_discards_python_genera
         cargo_project(&directory, name);
         fs::create_dir(directory.join(".cargo")).unwrap();
     }
-    let first_config = root.path().join("rust-a/.cargo/config.toml");
-    let second_config = root.path().join("rust-b/.cargo/config.toml");
+    let first_config = root
+        .path()
+        .join("rust-a/.cargo/config.toml");
+    let second_config = root
+        .path()
+        .join("rust-b/.cargo/config.toml");
     fs::write(&first_config, "# preserve user settings\n").unwrap();
     fs::write(&second_config, "# >>> pnpm-managed cargo sources >>>\n").unwrap();
     let output = pacquet_in(root.path())
@@ -219,7 +223,9 @@ fn rejects_oversized_python_index_cache_before_parsing() {
     let root = tempfile::tempdir().unwrap();
     let index = "https://unused.invalid";
     project(root.path(), index, &["alpha"]);
-    let cache = root.path().join("cache/python-index-v3");
+    let cache = root
+        .path()
+        .join("cache/python-index-v3");
     fs::create_dir_all(&cache).unwrap();
     fs::File::create(cache.join(format!(
         "{}.json",
@@ -243,7 +249,9 @@ fn refuses_to_replace_an_environment_behind_a_symlinked_pnpm_directory() {
     let outside = tempfile::tempdir().unwrap();
     let project_root = dunce::canonicalize(root.path()).unwrap();
     project(&project_root, "https://unused.invalid", &[]);
-    let environment = outside.path().join("python-envs/env-user");
+    let environment = outside
+        .path()
+        .join("python-envs/env-user");
     fs::create_dir_all(&environment).unwrap();
     fs::write(environment.join("owned-by-user"), "preserve").unwrap();
     std::os::unix::fs::symlink(outside.path(), project_root.join(".pnpm")).unwrap();
@@ -393,7 +401,9 @@ async fn installs_wheel_with_mismatched_record_hashes() {
             .start_file(entry.name(), SimpleFileOptions::default())
             .unwrap();
         if entry.name() == "alpha/__init__.py" {
-            altered.write_all(b"TAMPERED = True\n").unwrap();
+            altered
+                .write_all(b"TAMPERED = True\n")
+                .unwrap();
         } else {
             std::io::copy(&mut entry, &mut altered).unwrap();
         }

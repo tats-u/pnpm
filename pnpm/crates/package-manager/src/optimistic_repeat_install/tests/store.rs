@@ -38,7 +38,9 @@ fn returns_skipped_when_enable_global_virtual_store_drifts() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root.to_string_lossy().into_owned(),
+        workspace_root
+            .to_string_lossy()
+            .into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);

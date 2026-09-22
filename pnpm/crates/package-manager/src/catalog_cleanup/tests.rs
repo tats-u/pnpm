@@ -22,7 +22,12 @@ fn registers_non_semver_packages_by_name_only() {
 
     let resolved = resolved_package_versions(&lockfile);
 
-    assert_eq!(resolved.get("foo").map(std::collections::BTreeSet::len), Some(0));
+    assert_eq!(
+        resolved
+            .get("foo")
+            .map(std::collections::BTreeSet::len),
+        Some(0)
+    );
     assert_eq!(
         resolved
             .get("bar")
@@ -115,7 +120,9 @@ fn prunes_against_the_shared_workspace_lockfile() {
     post_install_prune(&config, Some(workspace_dir), &manifest).expect("cleanup runs");
 
     assert!(
-        !workspace_dir.join("pnpm-workspace.yaml").exists(),
+        !workspace_dir
+            .join("pnpm-workspace.yaml")
+            .exists(),
         "the pruned-to-empty manifest must be deleted",
     );
 }

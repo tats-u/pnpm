@@ -94,7 +94,9 @@ pub(crate) struct ReuseLockfileInputs<'a> {
 
 impl<'a> ImporterVersionSeeds<'a> {
     pub(super) fn for_importer(&self, id: &str) -> &'a Arc<PreferredVersions> {
-        self.by_importer.get(id).unwrap_or(self.shared)
+        self.by_importer
+            .get(id)
+            .unwrap_or(self.shared)
     }
 }
 

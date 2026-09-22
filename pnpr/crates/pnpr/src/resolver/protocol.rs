@@ -255,7 +255,8 @@ impl ResolveRequest {
     /// maps to a single root (`.`) importer; an empty/absent `projects`
     /// array falls back to it too.
     pub fn projects_normalized(&self) -> Vec<ProjectDeps> {
-        if let Some(projects) = self.projects
+        if let Some(projects) = self
+            .projects
             .as_ref()
             .filter(|projects| !projects.is_empty())
         {
@@ -275,9 +276,18 @@ impl ResolveRequest {
             dir: root_dir(),
             name: None,
             version: None,
-            dependencies: self.dependencies.clone().unwrap_or_default(),
-            dev_dependencies: self.dev_dependencies.clone().unwrap_or_default(),
-            optional_dependencies: self.optional_dependencies.clone().unwrap_or_default(),
+            dependencies: self
+                .dependencies
+                .clone()
+                .unwrap_or_default(),
+            dev_dependencies: self
+                .dev_dependencies
+                .clone()
+                .unwrap_or_default(),
+            optional_dependencies: self
+                .optional_dependencies
+                .clone()
+                .unwrap_or_default(),
         }]
     }
 }

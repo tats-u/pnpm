@@ -279,24 +279,23 @@ pub(super) fn resolve_upstream_config<Sys: EnvVar>(
     // Parse the verdaccio interval knobs, turning a typo'd value into a
     // config error (named for the offending field) rather than silently
     // falling back to the default.
-    let parse_field =
-        |field: &str, raw: &Option<Interval>| -> Result<Option<Duration>, RegistryError> {
-            raw.as_ref()
-                .map(|Interval(value)| {
-                    parse_interval(value)
-                        .ok_or_else(|| RegistryError::InvalidConfig {
-                            reason: format!(
-                                "upstream {name:?} has an invalid {field} interval {value:?}",
-                            ),
-                        })
+    let parse_field = |field: &str,
+                       raw: &Option<Interval>|
+     -> Result<Option<Duration>, RegistryError> {
+        raw.as_ref()
+            .map(|Interval(value)| {
+                parse_interval(value).ok_or_else(|| RegistryError::InvalidConfig {
+                    reason: format!("upstream {name:?} has an invalid {field} interval {value:?}",),
                 })
-                .transpose()
-        };
+            })
+            .transpose()
+    };
     let maxage = parse_field("maxage", &file.maxage)?;
     let timeout = parse_field("timeout", &file.timeout)?.unwrap_or(UpstreamConfig::DEFAULT_TIMEOUT);
     let fail_timeout = parse_field("fail_timeout", &file.fail_timeout)?
         .unwrap_or(UpstreamConfig::DEFAULT_FAIL_TIMEOUT);
-    let access = file.access
+    let access = file
+        .access
         .as_ref()
         .map(|spec| spec.to_access_list(teams))
         .transpose()
@@ -310,7 +309,9 @@ pub(super) fn resolve_upstream_config<Sys: EnvVar>(
         maxage,
         requests: UpstreamRequestPolicy {
             timeout,
-            max_fails: file.max_fails.unwrap_or(UpstreamConfig::DEFAULT_MAX_FAILS),
+            max_fails: file
+                .max_fails
+                .unwrap_or(UpstreamConfig::DEFAULT_MAX_FAILS),
             fail_timeout,
         },
         cache: file.cache.unwrap_or(true),
@@ -331,8 +332,8 @@ fn upstream_headers<Sys: EnvVar>(
 ) -> Result<HeaderMap, RegistryError> {
     let mut headers = HeaderMap::new();
     if let Some(auth) = &file.auth {
-        let token = resolve_upstream_token::<Sys>(auth)
-            .ok_or_else(|| RegistryError::InvalidConfig {
+        let token =
+            resolve_upstream_token::<Sys>(auth).ok_or_else(|| RegistryError::InvalidConfig {
                 reason: format!(
                     "upstream {name:?} has an auth block but no token could be resolved \
                      (set auth.token or point auth.token_env at a set env var)",
@@ -342,19 +343,19 @@ fn upstream_headers<Sys: EnvVar>(
             UpstreamAuthType::Bearer => format!("Bearer {token}"),
             UpstreamAuthType::Basic => format!("Basic {token}"),
         };
-        let value = HeaderValue::from_str(&value)
-            .map_err(|_| RegistryError::InvalidConfig {
-                reason: format!("upstream {name:?} auth token is not a valid header value"),
-            })?;
+        let value = HeaderValue::from_str(&value).map_err(|_| RegistryError::InvalidConfig {
+            reason: format!("upstream {name:?} auth token is not a valid header value"),
+        })?;
         headers.insert(AUTHORIZATION, value);
     }
     for (raw_name, raw_value) in &file.headers {
-        let header_name = HeaderName::from_bytes(raw_name.as_bytes())
-            .map_err(|_| RegistryError::InvalidConfig {
+        let header_name = HeaderName::from_bytes(raw_name.as_bytes()).map_err(|_| {
+            RegistryError::InvalidConfig {
                 reason: format!("upstream {name:?} has an invalid header name {raw_name:?}"),
-            })?;
-        let header_value = HeaderValue::from_str(raw_value)
-            .map_err(|_| RegistryError::InvalidConfig {
+            }
+        })?;
+        let header_value =
+            HeaderValue::from_str(raw_value).map_err(|_| RegistryError::InvalidConfig {
                 reason: format!("upstream {name:?} header {raw_name:?} has an invalid value"),
             })?;
         headers.insert(header_name, header_value);

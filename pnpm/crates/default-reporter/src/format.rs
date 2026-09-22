@@ -170,7 +170,9 @@ pub fn format_prefix(cwd: &str, prefix: &str) -> String {
     if chars.len() <= PREFIX_MAX_LENGTH {
         return prefix;
     }
-    let short: String = chars[chars.len() - (PREFIX_MAX_LENGTH - 3)..].iter().collect();
+    let short: String = chars[chars.len() - (PREFIX_MAX_LENGTH - 3)..]
+        .iter()
+        .collect();
     match short.find('/') {
         Some(sep) if sep > 0 => format!("...{}", &short[sep..]),
         _ => format!("...{short}"),

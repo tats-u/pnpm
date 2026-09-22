@@ -173,7 +173,10 @@ pub async fn resolve_from_local_scheme(
     opts: &LocalResolverOptions,
 ) -> Result<Option<LocalResolveResult>, ResolveLocalError> {
     let project_dir = opts.project_dir.as_path();
-    let lockfile_dir = opts.lockfile_dir.as_deref().unwrap_or(project_dir);
+    let lockfile_dir = opts
+        .lockfile_dir
+        .as_deref()
+        .unwrap_or(project_dir);
     let parse_opts = ParseOptions { preserve_absolute_paths: ctx.preserve_absolute_paths };
     let spec = match parse_local_scheme(wanted_dependency, project_dir, lockfile_dir, parse_opts) {
         Ok(maybe) => maybe,
@@ -191,7 +194,10 @@ pub async fn resolve_from_local_path(
     opts: &LocalResolverOptions,
 ) -> Result<Option<LocalResolveResult>, ResolveLocalError> {
     let project_dir = opts.project_dir.as_path();
-    let lockfile_dir = opts.lockfile_dir.as_deref().unwrap_or(project_dir);
+    let lockfile_dir = opts
+        .lockfile_dir
+        .as_deref()
+        .unwrap_or(project_dir);
     let parse_opts = ParseOptions { preserve_absolute_paths: ctx.preserve_absolute_paths };
     let spec = parse_local_path(wanted_dependency, project_dir, lockfile_dir, parse_opts);
     resolve_spec(spec, opts).await
@@ -203,7 +209,10 @@ pub async fn resolve_from_local_path(
 /// alias of the same name.
 #[must_use]
 pub fn resolve_latest_from_local(query: &LatestQuery) -> Option<LatestInfo> {
-    let bare = query.wanted_dependency.bare_specifier.as_deref()?;
+    let bare = query
+        .wanted_dependency
+        .bare_specifier
+        .as_deref()?;
     if bare.starts_with("link:") || bare.starts_with("file:") || bare.starts_with("workspace:") {
         return Some(LatestInfo::default());
     }
@@ -219,7 +228,9 @@ async fn resolve_spec(
     };
 
     if matches!(spec.kind, LocalSpecKind::File) {
-        return resolve_local_tarball(spec).await.map(Some);
+        return resolve_local_tarball(spec)
+            .await
+            .map(Some);
     }
 
     // Directory branch. Short-circuit when the lockfile already has
@@ -260,19 +271,16 @@ async fn resolve_local_tarball(
     // A missing tarball file raises the same `ERR_PNPM_LINKED_PKG_DIR_NOT_FOUND`
     // code the directory branch uses for a missing `file:` target, so both
     // kinds of missing `file:` target share one error code.
-    let LocalTarballMetadata {
-        integrity,
-        manifest,
-        has_manifest_entry,
-    } = match read_local_tarball_metadata(&spec.fetch_spec).await {
-        Ok(metadata) => metadata,
-        Err(err) if is_missing_tarball(&err) => {
-            return Err(ResolveLocalError::LinkedPkgDirNotFound {
-                path: spec.fetch_spec.display().to_string(),
-            });
-        }
-        Err(err) => return Err(ResolveLocalError::ReadTarball(err)),
-    };
+    let LocalTarballMetadata { integrity, manifest, has_manifest_entry } =
+        match read_local_tarball_metadata(&spec.fetch_spec).await {
+            Ok(metadata) => metadata,
+            Err(err) if is_missing_tarball(&err) => {
+                return Err(ResolveLocalError::LinkedPkgDirNotFound {
+                    path: spec.fetch_spec.display().to_string(),
+                });
+            }
+            Err(err) => return Err(ResolveLocalError::ReadTarball(err)),
+        };
     if has_manifest_entry {
         check_bundled_package_name(manifest.as_ref(), &spec.normalized_bare_specifier)?;
     }
@@ -349,7 +357,8 @@ fn synthesize_fallback_manifest(
             path: spec.fetch_spec.display().to_string(),
         });
     }
-    let name = spec.fetch_spec
+    let name = spec
+        .fetch_spec
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_default();

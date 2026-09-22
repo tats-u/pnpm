@@ -7,8 +7,12 @@ use super::{Ipv4Addr, PnprClient, TcpListener, capture_one_request, deps, option
 /// canned 500 just short-circuits the client after the capture.
 #[tokio::test]
 async fn sends_the_identity_header_but_no_upstream_credentials() {
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.expect("bind capture");
-    let addr = listener.local_addr().expect("capture addr");
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+        .await
+        .expect("bind capture");
+    let addr = listener
+        .local_addr()
+        .expect("capture addr");
     let capture = tokio::spawn(capture_one_request(listener));
 
     let client = PnprClient::new(format!("http://{addr}/"));
@@ -19,7 +23,9 @@ async fn sends_the_identity_header_but_no_upstream_credentials() {
 
     let request = capture.await.expect("capture task");
     assert!(
-        request.to_lowercase().contains("authorization: bearer pnpr-token"),
+        request
+            .to_lowercase()
+            .contains("authorization: bearer pnpr-token"),
         "the identity header must be sent, got:\n{request}",
     );
     assert!(

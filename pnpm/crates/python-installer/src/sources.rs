@@ -56,7 +56,9 @@ pub(super) fn declaration_url(source: &Source) -> Result<Option<String>> {
         .flatten()
         .next()
         .map_or("HEAD", String::as_str);
-    let fragment = source.revision.subdirectory
+    let fragment = source
+        .revision
+        .subdirectory
         .as_ref()
         .map_or_else(String::new, |directory| {
             format!("#subdirectory={}", pnpm_network::encode_uri_component(directory))
@@ -72,7 +74,10 @@ impl Registry<'_> {
         let key = (name.clone(), version.clone());
         let Some(fetched) = self.sources.fetched.get(&key) else { return false };
         let Some(wheel) = self.wheels.get(&key) else { return false };
-        let Some(selected) = self.resolution.packages.candidates
+        let Some(selected) = self
+            .resolution
+            .packages
+            .candidates
             .get(name)
             .and_then(|versions| versions.get(version))
         else {
@@ -86,10 +91,16 @@ impl Registry<'_> {
                     && a.wheel.hashes == b.wheel.hashes
             }
             (Candidate::Vcs(a), Candidate::Vcs(b)) => {
-                a == b && self.check_source_wheel(wheel, name, version).is_ok()
+                a == b
+                    && self
+                        .check_source_wheel(wheel, name, version)
+                        .is_ok()
             }
             (Candidate::Sdist(a), Candidate::Sdist(b)) => {
-                a == b && self.check_source_wheel(wheel, name, version).is_ok()
+                a == b
+                    && self
+                        .check_source_wheel(wheel, name, version)
+                        .is_ok()
             }
             _ => false,
         }
@@ -103,14 +114,20 @@ impl Registry<'_> {
         name: &PackageName,
         version: &Version,
     ) -> Result<()> {
-        if self.resolution.packages.candidates
+        if self
+            .resolution
+            .packages
+            .candidates
             .get(name)
             .and_then(|versions| versions.get(version))
             .is_some_and(|candidate| candidate.sdist().is_some())
         {
-            return self.build_sdist::<Reporter>(name, version).await;
+            return self
+                .build_sdist::<Reporter>(name, version)
+                .await;
         }
-        self.fetch_wheel::<Reporter>(name, version).await
+        self.fetch_wheel::<Reporter>(name, version)
+            .await
     }
 
     /// Build every source distribution the selected candidates hold that
@@ -118,7 +135,8 @@ impl Registry<'_> {
     /// is each release it pins no wheel for.
     pub(super) async fn build_sdists<Reporter: self::Reporter + 'static>(&mut self) -> Result<()> {
         for (name, version) in self.wanted_sdists() {
-            self.build_sdist::<Reporter>(&name, &version).await?;
+            self.build_sdist::<Reporter>(&name, &version)
+                .await?;
         }
         Ok(())
     }
@@ -140,15 +158,22 @@ impl Registry<'_> {
         name: &PackageName,
         source: &str,
     ) -> Result<()> {
-        self.resolution.packages.direct_urls.insert(name.clone(), source.to_string());
+        self.resolution
+            .packages
+            .direct_urls
+            .insert(name.clone(), source.to_string());
         let parsed = pnpm_python_resolver::Source::parse(source)?;
         if self.reuse_source(name, &parsed)? {
             return Ok(());
         }
         match parsed {
-            pnpm_python_resolver::Source::Git(vcs) => self.fetch_git::<Reporter>(name, vcs).await?,
+            pnpm_python_resolver::Source::Git(vcs) => {
+                self.fetch_git::<Reporter>(name, vcs)
+                    .await?
+            }
             pnpm_python_resolver::Source::Wheel { .. } => {
-                self.fetch_url_wheel::<Reporter>(name, source).await?;
+                self.fetch_url_wheel::<Reporter>(name, source)
+                    .await?;
             }
         }
         Ok(())
@@ -159,7 +184,9 @@ impl Registry<'_> {
         name: &PackageName,
         source: &pnpm_python_resolver::Source,
     ) -> Result<bool> {
-        let Some((key, candidate)) = self.sources.fetched
+        let Some((key, candidate)) = self
+            .sources
+            .fetched
             .iter()
             .find(|((distribution, _), candidate)| {
                 distribution == name && candidate.matches_source(source)
@@ -173,10 +200,10 @@ impl Registry<'_> {
         if let Some(artifact) = candidate.wheel() {
             artifact.check_installable(&self.resolution.target.tags, name, &key.1)?;
         }
-        self.resolution.packages.candidates.insert(
-            name.clone(),
-            BTreeMap::from([(key.1.clone(), candidate)]),
-        );
+        self.resolution
+            .packages
+            .candidates
+            .insert(name.clone(), BTreeMap::from([(key.1.clone(), candidate)]));
         self.remember(name.clone(), key.1, wheel);
         Ok(true)
     }
@@ -204,7 +231,10 @@ impl Registry<'_> {
     ) -> Result<()> {
         let mut wanted = self.wanted_vcs();
         for (name, version, _) in &wanted {
-            self.resolution.packages.metadata.remove(&(name.clone(), version.clone()));
+            self.resolution
+                .packages
+                .metadata
+                .remove(&(name.clone(), version.clone()));
         }
         while !wanted.is_empty() {
             let active = pnpm_python_resolver::active_locked_sources(
@@ -219,7 +249,8 @@ impl Registry<'_> {
                 bail!("Python lockfile selected an inactive source");
             };
             let (name, version, vcs) = wanted.remove(position);
-            self.fetch_git::<Reporter>(&name, vcs).await?;
+            self.fetch_git::<Reporter>(&name, vcs)
+                .await?;
             if !self.has_wheel(&name, &version) {
                 bail!("the Python git source built a different version of {name}=={version}");
             }
@@ -245,20 +276,30 @@ impl Registry<'_> {
     pub(super) fn record_sources(&mut self, requirements: &[Requirement]) -> Result<()> {
         let mut declared = requirements.to_vec();
         for ((name, version), metadata) in &self.resolution.packages.metadata {
-            if !self.resolution.packages.candidates
+            if !self
+                .resolution
+                .packages
+                .candidates
                 .get(name)
                 .is_some_and(|versions| versions.contains_key(version))
             {
                 continue;
             }
             for requirement in &metadata.requires_dist {
-                declared.push(requirement.parse::<Requirement>().into_diagnostic()?);
+                declared.push(
+                    requirement
+                        .parse::<Requirement>()
+                        .into_diagnostic()?,
+                );
             }
         }
         for requirement in declared {
             let Some(VersionOrUrl::Url(url)) = &requirement.version_or_url else { continue };
             let source = pnpm_python_resolver::Source::parse(url.as_str())?;
-            if self.resolution.packages.candidates
+            if self
+                .resolution
+                .packages
+                .candidates
                 .get(&requirement.name)
                 .is_some_and(|versions| {
                     versions
@@ -266,7 +307,9 @@ impl Registry<'_> {
                         .all(|candidate| candidate.matches_source(&source))
                 })
             {
-                self.resolution.packages.direct_urls
+                self.resolution
+                    .packages
+                    .direct_urls
                     .entry(requirement.name)
                     .or_insert_with(|| url.to_string());
             }
@@ -275,11 +318,18 @@ impl Registry<'_> {
     }
 
     pub(super) fn source_provenance(&self, name: &PackageName) -> Option<host::DirectUrl> {
-        let source = self.resolution.packages.direct_urls.get(name)?;
+        let source = self
+            .resolution
+            .packages
+            .direct_urls
+            .get(name)?;
         if source.starts_with("git+") {
             return None;
         }
-        let candidate = self.resolution.packages.candidates
+        let candidate = self
+            .resolution
+            .packages
+            .candidates
             .get(name)?
             .values()
             .next()?

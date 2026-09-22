@@ -68,13 +68,8 @@ fn pm_on_fail_ignore_bypasses_the_package_manager_version_mismatch() {
 
 #[test]
 fn a_package_manager_field_with_an_integrity_hash_matches_the_running_version() {
-    let CommandTempCwd {
-        mut pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
+    let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
     let pinned = format!("pnpm@{}+sha256.123456789", pnpm_config::PNPM_VERSION);
     write_manifest(&workspace, &serde_json::json!({ "packageManager": pinned }));
     pacquet.env("PNPM_CONFIG_REGISTRY", npmrc_info.mock_instance.url());
@@ -211,13 +206,8 @@ fn dev_engines_package_manager_array_defaults_on_fail_to_ignore_before_the_last_
 /// must not leave `packageManagerDependencies` unwritten.
 #[test]
 fn a_command_outside_the_install_family_records_the_pinned_package_manager() {
-    let CommandTempCwd {
-        mut pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
+    let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
     write_dev_engines_package_manager(&workspace, "pnpm", pnpm_config::PNPM_VERSION, None);
     pacquet.env("PNPM_CONFIG_REGISTRY", npmrc_info.mock_instance.url());
 
@@ -237,13 +227,8 @@ fn a_command_outside_the_install_family_records_the_pinned_package_manager() {
 /// while every `--frozen-lockfile` run failed on the entry it never wrote.
 #[test]
 fn adding_a_pin_to_an_up_to_date_project_records_the_package_manager() {
-    let CommandTempCwd {
-        mut pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
+    let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
     write_manifest(
         &workspace,
         &serde_json::json!({ "dependencies": { "@pnpm.e2e/foo": "100.0.0" } }),
@@ -444,13 +429,8 @@ fn env_document(workspace: &Path) -> String {
 /// the install reads would never carry the pin.
 #[test]
 fn a_pinned_package_manager_is_recorded_in_the_lockfile_directory() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let lockfile_dir = workspace.join("lf");
     fs::create_dir_all(&lockfile_dir).expect("create the lockfile directory");
@@ -468,7 +448,9 @@ fn a_pinned_package_manager_is_recorded_in_the_lockfile_directory() {
 
     assert_success(&output);
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "the workspace root should carry no lockfile of its own",
     );
     let env_lockfile = EnvLockfile::read(&lockfile_dir)
@@ -488,13 +470,8 @@ fn a_pinned_package_manager_is_recorded_in_the_lockfile_directory() {
 /// there does not bring the file back (pnpm/pnpm#14728).
 #[test]
 fn a_pinned_package_manager_writes_no_lockfile_when_the_lockfile_is_turned_off() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(workspace.join("pnpm-workspace.yaml"), "lockfile: false\n")
         .expect("write the workspace manifest");
@@ -513,7 +490,9 @@ fn a_pinned_package_manager_writes_no_lockfile_when_the_lockfile_is_turned_off()
 
     assert_success(&output);
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "lockfile: false must leave the project without a pnpm-lock.yaml",
     );
 
@@ -663,13 +642,8 @@ fn a_project_pinned_to_another_package_manager_can_still_be_repinned() {
 /// install saves, not into one of its own.
 #[test]
 fn a_mixed_add_writes_the_declaration_with_the_dependency() {
-    let CommandTempCwd {
-        mut pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_manifest(&workspace, &serde_json::json!({}));
     pacquet.env("PNPM_CONFIG_REGISTRY", npmrc_info.mock_instance.url());
 
@@ -697,13 +671,8 @@ fn a_mixed_add_writes_the_declaration_with_the_dependency() {
 /// anything for.
 #[test]
 fn a_failed_add_leaves_the_declaration_unwritten() {
-    let CommandTempCwd {
-        mut pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let original = serde_json::json!({ "name": "project", "version": "1.0.0" });
     write_manifest(&workspace, &original);
     pacquet.env("PNPM_CONFIG_REGISTRY", npmrc_info.mock_instance.url());
@@ -776,7 +745,9 @@ fn a_yarn_pin_is_recorded_as_the_exact_version_corepack_requires() {
     assert_success(&output);
     let manifest: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(workspace.join("package.json")).unwrap()).unwrap();
-    let pin = manifest["packageManager"].as_str().expect("a recorded package manager");
+    let pin = manifest["packageManager"]
+        .as_str()
+        .expect("a recorded package manager");
     let reference = pin
         .strip_prefix("yarn@")
         .unwrap_or_else(|| panic!("expected a Yarn pin, got {pin}"));

@@ -131,7 +131,9 @@ fn a_destination_with_no_parent_directory_keeps_the_source() {
     let src = tmp.path().join("file.txt");
     fs::write(&src, b"contents").unwrap();
 
-    let dst = tmp.path().join("absent-parent/file.txt");
+    let dst = tmp
+        .path()
+        .join("absent-parent/file.txt");
     rename_even_across_devices::<CrossDevice>(&src, &dst).unwrap_err();
 
     assert_eq!(fs::read(&src).unwrap(), b"contents");

@@ -59,7 +59,10 @@ pub(super) async fn prepare_single_add<Reporter: self::Reporter>(
 ) -> Result<(AddCatalogCtx, Catalogs), AddError> {
     let resolution = AddResolution::new();
     let catalog_ctx = read_catalog_ctx(manifest, add.config)?;
-    let workspace_packages = (add.config.link_workspace_packages.enabled_at_depth(0)
+    let workspace_packages = (add
+        .config
+        .link_workspace_packages
+        .enabled_at_depth(0)
         || add.config.save_workspace_protocol != SaveWorkspaceProtocol::Rolling)
         .then(|| workspace_packages_for_add(add.config))
         .flatten();
@@ -171,7 +174,9 @@ pub(super) async fn prepare_selected_manifests<Reporter: self::Reporter>(
     add: AddOptions<'_>,
     owned: &AddOwned,
 ) -> Result<SelectedAddPreparation, AddError> {
-    let first_index = *selected_indices.first().expect("selected add requires a project");
+    let first_index = *selected_indices
+        .first()
+        .expect("selected add requires a project");
     let catalog_ctx = read_catalog_ctx(&projects[first_index].manifest, add.config)?;
     let mut catalogs = catalog_ctx.catalogs;
     let mut updated_catalogs = Catalogs::new();
@@ -328,12 +333,16 @@ pub(super) fn read_catalog_ctx(
             .map_err(AddError::InvalidCatalogsConfiguration)?
     };
     let workspace_dir = workspace_dir_opt.unwrap_or(manifest_dir);
-    let prefix = workspace_dir.to_string_lossy().into_owned();
+    let prefix = workspace_dir
+        .to_string_lossy()
+        .into_owned();
     Ok(AddCatalogCtx { catalogs, workspace_dir, prefix })
 }
 pub(super) fn merge_catalogs(target: &mut Catalogs, updates: &Catalogs) {
     for (catalog_name, entries) in updates {
-        let catalog = target.entry(catalog_name.clone()).or_default();
+        let catalog = target
+            .entry(catalog_name.clone())
+            .or_default();
         for (dependency, specifier) in entries {
             catalog.insert(dependency.clone(), specifier.clone());
         }
@@ -351,7 +360,9 @@ pub(super) fn persist_selected_manifests<Reporter: self::Reporter>(
 pub(super) fn persist_manifest<Reporter: self::Reporter>(
     manifest: &mut PackageManifest,
 ) -> Result<(), AddError> {
-    let updated = manifest.save_and_get_written_value().map_err(AddError::SaveManifest)?;
+    let updated = manifest
+        .save_and_get_written_value()
+        .map_err(AddError::SaveManifest)?;
     let prefix = package_manifest_prefix(manifest);
     Reporter::emit(&LogEvent::PackageManifest(PackageManifestLog {
         level: LogLevel::Debug,

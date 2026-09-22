@@ -47,13 +47,16 @@ impl Buffer {
         if self.exceeded {
             return;
         }
-        self.bytes = self.bytes.saturating_add(line.len() + std::mem::size_of::<CapturedLine>());
+        self.bytes = self
+            .bytes
+            .saturating_add(line.len() + std::mem::size_of::<CapturedLine>());
         if self.bytes > MAX_CAPTURE_BYTES {
             self.exceeded = true;
             self.lines.clear();
             return;
         }
-        self.lines.push(CapturedLine { stdio: stdio_name(stdio), line: line.to_string() });
+        self.lines
+            .push(CapturedLine { stdio: stdio_name(stdio), line: line.to_string() });
     }
 }
 
@@ -97,7 +100,9 @@ pub fn drain_task(
     } else {
         vec![script.to_string()]
     };
-    let mut buffers = BUFFERS.lock().expect("capture buffer lock is not poisoned");
+    let mut buffers = BUFFERS
+        .lock()
+        .expect("capture buffer lock is not poisoned");
     let mut exceeded = false;
     let scripts = stages
         .into_iter()
@@ -118,7 +123,9 @@ pub fn drain_task(
 /// Re-emit a stored task's lifecycle events, so a cache hit renders the
 /// way the original run did.
 pub fn replay(scripts: &[CapturedScript], project_dir: &Path, emit: fn(&LogEvent)) {
-    let dep_path = project_dir.to_string_lossy().into_owned();
+    let dep_path = project_dir
+        .to_string_lossy()
+        .into_owned();
     for script in scripts {
         emit(&LogEvent::Lifecycle(LifecycleLog {
             level: LogLevel::Debug,
@@ -156,7 +163,9 @@ pub fn replay(scripts: &[CapturedScript], project_dir: &Path, emit: fn(&LogEvent
 }
 
 fn with_buffer(dep_path: &str, stage: &str, mutate: impl FnOnce(&mut Buffer)) {
-    let mut buffers = BUFFERS.lock().expect("capture buffer lock is not poisoned");
+    let mut buffers = BUFFERS
+        .lock()
+        .expect("capture buffer lock is not poisoned");
     mutate(
         buffers
             .entry((dep_path.to_string(), stage.to_string()))

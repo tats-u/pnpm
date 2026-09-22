@@ -71,10 +71,21 @@ fn deserializes_optional_dependencies_and_peer_dependencies_meta() {
     let pkg: PackageVersion =
         serde_json::from_str(body).expect("deserialize PackageVersion fixture");
 
-    let optional = pkg.optional_dependencies.as_ref().expect("optionalDependencies present");
-    assert_eq!(optional.get("sharp").map(String::as_str), Some("^0.34.0"));
+    let optional = pkg
+        .optional_dependencies
+        .as_ref()
+        .expect("optionalDependencies present");
+    assert_eq!(
+        optional
+            .get("sharp")
+            .map(String::as_str),
+        Some("^0.34.0")
+    );
 
-    let peer_meta = pkg.peer_dependencies_meta.as_ref().expect("peerDependenciesMeta present");
+    let peer_meta = pkg
+        .peer_dependencies_meta
+        .as_ref()
+        .expect("peerDependenciesMeta present");
     assert_eq!(peer_meta["@vercel/kv"].optional, Some(true));
     assert_eq!(peer_meta["ioredis"].optional, Some(true));
 
@@ -82,8 +93,16 @@ fn deserializes_optional_dependencies_and_peer_dependencies_meta() {
     // `extract_children` / `extract_peer_dependencies` downstream;
     // both consume the camelCase keys verbatim.
     let value = serde_json::to_value(&pkg).expect("serialize PackageVersion");
-    assert!(value.get("optionalDependencies").is_some_and(serde_json::Value::is_object));
-    assert!(value.get("peerDependenciesMeta").is_some_and(serde_json::Value::is_object));
+    assert!(
+        value
+            .get("optionalDependencies")
+            .is_some_and(serde_json::Value::is_object)
+    );
+    assert!(
+        value
+            .get("peerDependenciesMeta")
+            .is_some_and(serde_json::Value::is_object)
+    );
 }
 
 /// A minimal decodable manifest with fragments spliced into `dist`,

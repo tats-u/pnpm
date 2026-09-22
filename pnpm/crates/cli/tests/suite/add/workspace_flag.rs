@@ -20,7 +20,9 @@ fn pnpm_add(dir: &Path, args: &[&str]) -> Command {
 }
 
 fn assert_add_fails(dir: &Path, args: &[&str], needle: &str) {
-    let output = pnpm_add(dir, args).output().expect("run pnpm add");
+    let output = pnpm_add(dir, args)
+        .output()
+        .expect("run pnpm add");
     let stderr = String::from_utf8_lossy(&output.stderr);
     eprintln!("STDERR:\n{stderr}");
     assert!(!output.status.success(), "`pnpm add {}` should fail", args.join(" "));
@@ -33,7 +35,9 @@ fn assert_add_fails(dir: &Path, args: &[&str], needle: &str) {
 fn links_the_workspace_package_under_the_rolling_protocol() {
     let (root, app_dir) = workspace("");
 
-    pnpm_add(&app_dir, &["--workspace", LIB]).assert().success();
+    pnpm_add(&app_dir, &["--workspace", LIB])
+        .assert()
+        .success();
 
     assert_eq!(saved_spec(&app_dir, LIB).as_deref(), Some("workspace:*"));
     let linked = app_dir
@@ -48,7 +52,9 @@ fn links_the_workspace_package_under_the_rolling_protocol() {
 fn writes_the_version_when_linking_and_the_protocol_are_off() {
     let (root, app_dir) = workspace("linkWorkspacePackages: false\nsaveWorkspaceProtocol: false\n");
 
-    pnpm_add(&app_dir, &["--workspace", LIB, "--lockfile-only"]).assert().success();
+    pnpm_add(&app_dir, &["--workspace", LIB, "--lockfile-only"])
+        .assert()
+        .success();
 
     assert_eq!(saved_spec(&app_dir, LIB).as_deref(), Some("workspace:^2.0.0"));
     drop(root);
@@ -58,7 +64,9 @@ fn writes_the_version_when_linking_and_the_protocol_are_off() {
 fn writes_the_version_when_linking_is_on_and_the_protocol_is_off() {
     let (root, app_dir) = workspace("linkWorkspacePackages: true\nsaveWorkspaceProtocol: false\n");
 
-    pnpm_add(&app_dir, &["--workspace", LIB, "--lockfile-only"]).assert().success();
+    pnpm_add(&app_dir, &["--workspace", LIB, "--lockfile-only"])
+        .assert()
+        .success();
 
     assert_eq!(saved_spec(&app_dir, LIB).as_deref(), Some("workspace:^2.0.0"));
     drop(root);
@@ -190,7 +198,9 @@ fn is_rejected_outside_a_workspace() {
     );
 
     assert!(
-        !workspace.join("pnpm-workspace.yaml").exists(),
+        !workspace
+            .join("pnpm-workspace.yaml")
+            .exists(),
         "a rejected add must not persist --allow-build",
     );
     drop(root);

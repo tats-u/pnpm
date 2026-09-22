@@ -73,9 +73,10 @@ pub fn filter_pkg_metadata_by_publish_date(
     trusted_versions: Option<&[String]>,
 ) -> Arc<Package> {
     let policy_key = publish_date_policy_key(cutoff, trusted_versions);
-    meta.derived.get_or_derive(&policy_key, || {
-        filter_pkg_metadata_by_publish_date_uncached(meta, cutoff, trusted_versions)
-    })
+    meta.derived
+        .get_or_derive(&policy_key, || {
+            filter_pkg_metadata_by_publish_date_uncached(meta, cutoff, trusted_versions)
+        })
 }
 
 /// Every input the filter's output depends on, in one string: the same
@@ -103,12 +104,10 @@ pub(super) fn filter_pkg_metadata_by_publish_date_uncached(
     cutoff: chrono::DateTime<chrono::Utc>,
     trusted_versions: Option<&[String]>,
 ) -> Package {
-    let time = meta.time
-        .as_ref()
-        .expect(
-            "filter_pkg_metadata_by_publish_date called without `time`; \
+    let time = meta.time.as_ref().expect(
+        "filter_pkg_metadata_by_publish_date called without `time`; \
          caller must check before invoking",
-        );
+    );
 
     filter_pkg_metadata_versions_with_dist_tag_bound(
         meta,
@@ -147,7 +146,9 @@ pub(super) fn filter_pkg_metadata_versions_with_dist_tag_bound(
 ) -> Package {
     // Decide on version strings alone; slots move as raw fragments, so
     // the filter never hydrates a manifest.
-    let filtered_versions = meta.versions.filtered(|version| keep(version));
+    let filtered_versions = meta
+        .versions
+        .filtered(|version| keep(version));
     let dist_tags = repopulate_dist_tags(meta, &filtered_versions, bound_dist_tags);
 
     Package {
@@ -218,7 +219,9 @@ pub(super) fn best_tag_candidate<'a>(
 ) -> Option<&'a String> {
     let original_is_prerelease = !original.pre_release.is_empty();
     let deprecated = |slot: &TagCandidate<'a>| -> bool {
-        *slot.2.get_or_init(|| filtered_versions.is_deprecated(slot.1))
+        *slot
+            .2
+            .get_or_init(|| filtered_versions.is_deprecated(slot.1))
     };
     let eligible = candidates
         .iter()

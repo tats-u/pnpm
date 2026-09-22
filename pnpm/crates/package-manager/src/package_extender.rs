@@ -129,7 +129,9 @@ impl PackageExtender {
             .get("version")
             .and_then(Value::as_str)
             .and_then(|raw| raw.parse::<Version>().ok());
-        entries.iter().any(|entry| entry_matches(&entry.range, version.as_ref()))
+        entries
+            .iter()
+            .any(|entry| entry_matches(&entry.range, version.as_ref()))
     }
 
     /// Apply extensions in place to a single manifest.
@@ -215,7 +217,10 @@ fn merge_extension(manifest: &mut Map<String, Value>, extension: &PackageExtensi
     if let Some(deps) = extension.peer_dependencies.as_ref() {
         merge_string_map(manifest, "peerDependencies", deps);
     }
-    if let Some(meta) = extension.peer_dependencies_meta.as_ref() {
+    if let Some(meta) = extension
+        .peer_dependencies_meta
+        .as_ref()
+    {
         merge_peer_meta(manifest, meta);
     }
 }

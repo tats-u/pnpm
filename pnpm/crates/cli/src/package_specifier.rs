@@ -239,7 +239,10 @@ fn purl_python_specifier(purl: &Purl, source: Shown<'_>) -> Result<String> {
     let Some(version) = &purl.version else {
         return python_requirement(name);
     };
-    if version.parse::<pep440_rs::Version>().is_err() {
+    if version
+        .parse::<pep440_rs::Version>()
+        .is_err()
+    {
         return Err(miette::miette!("{source} does not carry a valid PyPI version"));
     }
     python_requirement(&format!("{name}=={version}"))

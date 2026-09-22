@@ -30,17 +30,20 @@ fn discovers_and_locks_weak_dependencies_recursively_across_targets() {
     let encoded = resolve_lockfile(METADATA, &files, CRATES_IO_SOURCE).unwrap();
     eprintln!("LOCKFILE:\n{encoded}");
     let lockfile = Lockfile::from_str(&encoded).unwrap();
-    let names = lockfile.packages
+    let names = lockfile
+        .packages
         .iter()
         .map(|package| package.name.as_str())
         .collect::<Vec<_>>();
     assert_eq!(names, ["app", "bar", "baz", "foo"]);
-    let foo = lockfile.packages
+    let foo = lockfile
+        .packages
         .iter()
         .find(|package| package.name.as_str() == "foo")
         .unwrap();
     assert_eq!(foo.dependencies[0].name.as_str(), "bar");
-    let bar = lockfile.packages
+    let bar = lockfile
+        .packages
         .iter()
         .find(|package| package.name.as_str() == "bar")
         .unwrap();

@@ -18,7 +18,9 @@ fn injected_copies(workspace: &Path) -> Vec<std::path::PathBuf> {
     let mut copies: Vec<_> = fs::read_dir(&virtual_store)
         .expect("read the virtual store")
         .filter_map(|entry| {
-            let slot = entry.expect("read a virtual-store entry").path();
+            let slot = entry
+                .expect("read a virtual-store entry")
+                .path();
             let candidate = slot.join("node_modules/project-1");
             candidate.is_dir().then_some(candidate)
         })
@@ -75,13 +77,8 @@ fn write_workspace(workspace: &Path, sync_after: &str) {
 
 #[test]
 fn a_listed_script_refreshes_every_injected_copy() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace(&workspace, "syncInjectedDepsAfterScripts:\n  - build\n");
@@ -113,13 +110,8 @@ fn a_listed_script_refreshes_every_injected_copy() {
 
 #[test]
 fn an_unlisted_script_leaves_the_injected_copies_alone() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace(&workspace, "");
@@ -139,7 +131,9 @@ fn an_unlisted_script_leaves_the_injected_copies_alone() {
 
     for copy in &copies {
         assert!(
-            !copy.join("distribution/generated.js").exists(),
+            !copy
+                .join("distribution/generated.js")
+                .exists(),
             "the injected copy at {copy:?} should not have gained the generated file",
         );
     }
@@ -155,13 +149,8 @@ fn an_unlisted_script_leaves_the_injected_copies_alone() {
 /// fails on the missing directory.
 #[test]
 fn a_copy_no_project_reaches_is_not_recorded_for_the_sync() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace(&workspace, "syncInjectedDepsAfterScripts:\n  - build\n");
@@ -189,7 +178,8 @@ fn a_copy_no_project_reaches_is_not_recorded_for_the_sync() {
     )
     .expect("read .modules.yaml")
     .expect(".modules.yaml must exist after an install");
-    let recorded: Vec<_> = modules.injected_deps
+    let recorded: Vec<_> = modules
+        .injected_deps
         .expect("the install injected project-1")
         .into_values()
         .flatten()
@@ -276,13 +266,8 @@ fn bin_dirs_holding(dir: &Path, bin_name: &str) -> Vec<std::path::PathBuf> {
 
 #[test]
 fn a_listed_script_removes_the_link_of_a_bin_it_dropped() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace(&workspace, "syncInjectedDepsAfterScripts:\n  - build\n");

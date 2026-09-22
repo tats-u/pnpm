@@ -60,7 +60,9 @@ pub(super) fn record_task_outcome(
     let status = match outcome {
         Ok(status) => status,
         Err(error) => {
-            let mut abort = abort.lock().expect("abort slot lock is not poisoned");
+            let mut abort = abort
+                .lock()
+                .expect("abort slot lock is not poisoned");
             if abort.is_none() {
                 *abort = Some(error);
             }
@@ -68,7 +70,9 @@ pub(super) fn record_task_outcome(
         }
     };
     let failed = status.status == Status::Failure;
-    statuses.lock().expect("status lock is not poisoned")[summary_key] = status;
+    statuses
+        .lock()
+        .expect("status lock is not poisoned")[summary_key] = status;
     if failed { TaskCompletion::Failed } else { TaskCompletion::Passed }
 }
 
@@ -83,9 +87,14 @@ pub(super) fn compute_task_keys(
     let mut keys: HashMap<TaskKey, Option<String>> = HashMap::with_capacity(task_graph.len());
     for key in sequenced_tasks {
         let node = &task_graph[key];
-        let manifest = graph[node.project.as_path()].package.project.manifest.value();
+        let manifest = graph[node.project.as_path()]
+            .package
+            .project
+            .manifest
+            .value();
         let script_bodies = task_script_bodies(node, manifest, config.enable_pre_post_scripts);
-        let Some(mut dependency_keys) = node.dependencies
+        let Some(mut dependency_keys) = node
+            .dependencies
             .iter()
             .map(|dependency| keys[dependency].as_deref())
             .collect::<Option<Vec<&str>>>()

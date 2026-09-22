@@ -111,7 +111,9 @@ fn streaming_extract_rejects_manifest_beyond_prealloc_cap() {
     let (tempdir, store_path) = tempdir_with_leaked_path();
 
     let mut header = tar::Header::new_gnu();
-    header.set_path("package/package.json").expect("set tar entry path");
+    header
+        .set_path("package/package.json")
+        .expect("set tar entry path");
     header.set_size(MAX_UNTRUSTED_PREALLOC_BYTES as u64 + 1);
     header.set_mode(0o644);
     header.set_entry_type(tar::EntryType::Regular);
@@ -145,12 +147,25 @@ async fn read_local_tarball_metadata_reads_a_manifest_past_the_eager_ceiling() {
     );
     std::fs::write(&tarball_path, &archive).unwrap();
 
-    let metadata = read_local_tarball_metadata(&tarball_path).await
+    let metadata = read_local_tarball_metadata(&tarball_path)
+        .await
         .expect("an archive past the eager ceiling must still resolve");
 
-    let manifest = metadata.manifest.expect("bundled manifest");
-    assert_eq!(manifest.get("name").and_then(serde_json::Value::as_str), Some("huge"));
-    assert_eq!(manifest.get("version").and_then(serde_json::Value::as_str), Some("1.0.0"));
+    let manifest = metadata
+        .manifest
+        .expect("bundled manifest");
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("huge")
+    );
+    assert_eq!(
+        manifest
+            .get("version")
+            .and_then(serde_json::Value::as_str),
+        Some("1.0.0")
+    );
     assert!(metadata.has_manifest_entry);
 }
 
@@ -163,7 +178,8 @@ async fn read_local_tarball_metadata_rejects_an_unparsable_manifest() {
     let tarball_path = local_dir.path().join("pkg.tgz");
     std::fs::write(&tarball_path, gzipped_tar(&[("package/package.json", b"{ BROKEN")])).unwrap();
 
-    let err = read_local_tarball_metadata(&tarball_path).await
+    let err = read_local_tarball_metadata(&tarball_path)
+        .await
         .expect_err("an unparsable bundled manifest must fail the read");
     match err {
         TarballError::ParseBundledManifest { tarball, .. } => {
@@ -189,10 +205,18 @@ async fn read_local_tarball_metadata_lets_a_later_manifest_supersede_a_malformed
     )
     .unwrap();
 
-    let metadata = read_local_tarball_metadata(&tarball_path).await
+    let metadata = read_local_tarball_metadata(&tarball_path)
+        .await
         .expect("the surviving manifest parses, so the read succeeds");
-    let manifest = metadata.manifest.expect("bundled manifest");
-    assert_eq!(manifest.get("name").and_then(serde_json::Value::as_str), Some("dup-pkg"));
+    let manifest = metadata
+        .manifest
+        .expect("bundled manifest");
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("dup-pkg")
+    );
 }
 
 /// An archive with no `package.json` at all is a different shape from a
@@ -204,7 +228,8 @@ async fn read_local_tarball_metadata_tolerates_an_archive_with_no_manifest() {
     let tarball_path = local_dir.path().join("pkg.tgz");
     std::fs::write(&tarball_path, gzipped_tar(&[("package/README.md", b"hi")])).unwrap();
 
-    let metadata = read_local_tarball_metadata(&tarball_path).await
+    let metadata = read_local_tarball_metadata(&tarball_path)
+        .await
         .expect("an archive without a manifest still reads");
     assert!(metadata.manifest.is_none(), "got {:?}", metadata.manifest);
 }
@@ -255,10 +280,14 @@ async fn mem_cache_partitions_synthesized_package_manifests_by_content() {
     let first_manifest = br#"{"name":"first"}"#;
     let second_manifest = br#"{"name":"second"}"#;
 
-    let first =
-        ingest(first_manifest).run_with_mem_cache::<SilentReporter>(&mem_cache).await.unwrap();
-    let second =
-        ingest(second_manifest).run_with_mem_cache::<SilentReporter>(&mem_cache).await.unwrap();
+    let first = ingest(first_manifest)
+        .run_with_mem_cache::<SilentReporter>(&mem_cache)
+        .await
+        .unwrap();
+    let second = ingest(second_manifest)
+        .run_with_mem_cache::<SilentReporter>(&mem_cache)
+        .await
+        .unwrap();
 
     assert_eq!(std::fs::read(&first["package.json"]).unwrap(), first_manifest);
     assert_eq!(std::fs::read(&second["package.json"]).unwrap(), second_manifest);
@@ -320,7 +349,10 @@ async fn store_index_partitions_synthesized_package_manifests_by_content() {
         .await
         .expect("each synthesized manifest should be ingested independently");
         drop(writer);
-        writer_task.await.expect("writer task").expect("writer flushed");
+        writer_task
+            .await
+            .expect("writer task")
+            .expect("writer flushed");
     }
 
     std::fs::remove_file(&tarball_path).unwrap();
@@ -465,8 +497,18 @@ async fn fetch_for_resolution_reads_manifest_from_subdirectory() {
     .expect("subdirectory manifest should be readable from the extracted archive");
 
     let manifest = dbg!(resolved.manifest).expect("subdirectory manifest");
-    assert_eq!(manifest.get("name").and_then(serde_json::Value::as_str), Some("foo"));
-    assert_eq!(manifest.get("version").and_then(serde_json::Value::as_str), Some("1.2.3"));
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("foo")
+    );
+    assert_eq!(
+        manifest
+            .get("version")
+            .and_then(serde_json::Value::as_str),
+        Some("1.2.3")
+    );
     mock.assert_async().await;
     drop(store_dir_keep);
 }
@@ -537,12 +579,17 @@ fn apply_append_manifest_folds_the_synthesized_manifest_into_the_row() {
     // This install's slot materializes the manifest...
     assert!(cas_paths.contains_key("package.json"), "cas_paths gains package.json");
     // ...and so does the persisted row, so warm reinstalls get it too.
-    let file = idx.files.get("package.json").expect("row records the package.json file");
+    let file = idx
+        .files
+        .get("package.json")
+        .expect("row records the package.json file");
     assert_eq!(file.size, manifest_bytes.len() as u64);
     assert!(!file.digest.is_empty(), "the synthesized file is content-addressed");
     // The bundled manifest carries the runtime's bin so the warm-batch
     // bin linker links it without stat-ing the slot's package.json.
-    let manifest = idx.manifest.expect("row records the bundled manifest");
+    let manifest = idx
+        .manifest
+        .expect("row records the bundled manifest");
     assert_eq!(manifest.get("bin"), Some(&serde_json::json!({ "node": "bin/node" })));
 }
 
@@ -556,7 +603,8 @@ fn apply_append_manifest_is_a_noop_when_the_archive_ships_a_package_json() {
     let existing =
         CafsFileInfo { digest: "kept".to_string(), mode: 0o644, size: 3, checked_at: None };
     let mut idx = PackageFilesIndex { algo: "sha512".to_string(), ..Default::default() };
-    idx.files.insert("package.json".to_string(), existing);
+    idx.files
+        .insert("package.json".to_string(), existing);
     let mut cas_paths = HashMap::new();
 
     apply_append_manifest(store_path, br#"{"name":"node"}"#, &mut cas_paths, &mut idx)
@@ -581,7 +629,10 @@ fn apply_placeholder_manifest_marks_an_archive_that_ships_no_package_json() {
         .expect("write the placeholder into the CAS");
 
     assert!(cas_paths.contains_key("package.json"), "cas_paths gains package.json");
-    let file = idx.files.get("package.json").expect("row records the placeholder file");
+    let file = idx
+        .files
+        .get("package.json")
+        .expect("row records the placeholder file");
     assert!(!file.digest.is_empty(), "the placeholder is content-addressed");
     let written =
         std::fs::read_to_string(&cas_paths["package.json"]).expect("read the placeholder");
@@ -595,7 +646,8 @@ fn apply_placeholder_manifest_is_a_noop_when_a_package_json_is_already_recorded(
     let existing =
         CafsFileInfo { digest: "kept".to_string(), mode: 0o644, size: 3, checked_at: None };
     let mut idx = PackageFilesIndex { algo: "sha512".to_string(), ..Default::default() };
-    idx.files.insert("package.json".to_string(), existing);
+    idx.files
+        .insert("package.json".to_string(), existing);
     let mut cas_paths = HashMap::new();
 
     apply_placeholder_manifest(store_path, &mut cas_paths, &mut idx)
@@ -621,20 +673,34 @@ async fn read_local_tarball_metadata_reads_a_manifest_at_the_archive_root() {
     ]);
     std::fs::write(&tarball_path, gzip_bytes(&tar_bytes)).unwrap();
 
-    let metadata = read_local_tarball_metadata(&tarball_path).await
+    let metadata = read_local_tarball_metadata(&tarball_path)
+        .await
         .expect("read the local tarball's metadata");
 
     assert!(metadata.has_manifest_entry);
-    let manifest = metadata.manifest.expect("bundled manifest");
-    assert_eq!(manifest.get("name").and_then(serde_json::Value::as_str), Some("real-name"));
-    assert_eq!(manifest.get("version").and_then(serde_json::Value::as_str), Some("9.9.9"));
+    let manifest = metadata
+        .manifest
+        .expect("bundled manifest");
+    assert_eq!(
+        manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("real-name")
+    );
+    assert_eq!(
+        manifest
+            .get("version")
+            .and_then(serde_json::Value::as_str),
+        Some("9.9.9")
+    );
 
     // The extraction the resolve-time read has to agree with.
     let (tempdir, store_path) = tempdir_with_leaked_path();
     let (_, pkg_files_idx) =
         extract_tarball_entries(&tar_bytes, store_path, None).expect("extract the tarball");
     assert_eq!(
-        pkg_files_idx.manifest
+        pkg_files_idx
+            .manifest
             .as_ref()
             .and_then(|manifest| manifest["name"].as_str()),
         Some("real-name"),
@@ -650,7 +716,9 @@ async fn read_local_tarball_metadata_reads_a_manifest_at_the_archive_root() {
 #[tokio::test]
 async fn read_local_tarball_metadata_ignores_a_manifest_below_the_package_root() {
     let local_dir = tempdir().unwrap();
-    let tarball_path = local_dir.path().join("dot-prefixed.tgz");
+    let tarball_path = local_dir
+        .path()
+        .join("dot-prefixed.tgz");
 
     let tar_bytes = tar_with_raw_entry_name(
         b"./package/package.json",
@@ -658,7 +726,8 @@ async fn read_local_tarball_metadata_ignores_a_manifest_below_the_package_root()
     );
     std::fs::write(&tarball_path, gzip_bytes(&tar_bytes)).unwrap();
 
-    let metadata = read_local_tarball_metadata(&tarball_path).await
+    let metadata = read_local_tarball_metadata(&tarball_path)
+        .await
         .expect("read the local tarball's metadata");
 
     assert!(!metadata.has_manifest_entry);

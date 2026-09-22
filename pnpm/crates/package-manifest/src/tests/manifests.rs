@@ -15,7 +15,9 @@ fn save_preserves_the_existing_package_json_permissions() {
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o640)).unwrap();
 
     let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
-    manifest.add_dependency("fastify", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("fastify", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     // The atomic temp-file-then-rename must keep the original mode, not leave
@@ -96,7 +98,12 @@ fn init_should_create_package_json_if_not_exist() {
     eprintln!("tmp={tmp:?} exists={} is_file={}", tmp.exists(), tmp.is_file());
     assert!(tmp.exists());
     assert!(tmp.is_file());
-    assert_eq!(PackageManifest::from_path(tmp.clone()).unwrap().path, tmp);
+    assert_eq!(
+        PackageManifest::from_path(tmp.clone())
+            .unwrap()
+            .path,
+        tmp
+    );
 }
 
 #[test]
@@ -138,9 +145,13 @@ fn save_and_get_written_value_returns_saved_manifest() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(path.clone()).unwrap();
-    manifest.add_dependency("node", "runtime:22", DependencyGroup::Dev).unwrap();
+    manifest
+        .add_dependency("node", "runtime:22", DependencyGroup::Dev)
+        .unwrap();
 
-    let written = manifest.save_and_get_written_value().unwrap();
+    let written = manifest
+        .save_and_get_written_value()
+        .unwrap();
     let saved: serde_json::Value =
         serde_json::from_str(&read_to_string(path).unwrap()).expect("parse saved manifest");
 
@@ -169,9 +180,17 @@ fn new_manifests_end_with_a_final_newline() {
     let dir = tempdir().unwrap();
     let tmp = dir.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(tmp.clone()).unwrap();
-    assert!(read_to_string(&tmp).unwrap().ends_with('\n'));
+    assert!(
+        read_to_string(&tmp)
+            .unwrap()
+            .ends_with('\n')
+    );
     manifest.save().unwrap();
-    assert!(read_to_string(&tmp).unwrap().ends_with('\n'));
+    assert!(
+        read_to_string(&tmp)
+            .unwrap()
+            .ends_with('\n')
+    );
 }
 
 /// Editors on Windows — and published packages such as Vite's
@@ -204,7 +223,9 @@ fn saving_a_bom_prefixed_manifest_keeps_the_bom_until_something_changes() {
     manifest.save().unwrap();
     assert_eq!(read_to_string(&path).unwrap(), original);
 
-    manifest.add_dependency("fastify", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("fastify", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
     let saved = read_to_string(&path).unwrap();
     eprintln!("SAVED:\n{saved}");
@@ -217,7 +238,9 @@ fn safe_read_package_json_from_dir_reads_a_manifest_that_starts_with_a_utf8_bom(
     let dir = tempdir().unwrap();
     std::fs::write(dir.path().join("package.json"), "\u{feff}{\"name\":\"fixture\"}").unwrap();
 
-    let manifest = safe_read_package_json_from_dir(dir.path()).unwrap().unwrap();
+    let manifest = safe_read_package_json_from_dir(dir.path())
+        .unwrap()
+        .unwrap();
     assert_eq!(manifest.get("name").unwrap(), &json!("fixture"));
 }
 

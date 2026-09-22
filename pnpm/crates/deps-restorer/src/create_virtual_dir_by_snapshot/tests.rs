@@ -47,11 +47,18 @@ impl LinkConcurrencyProbe {
     }
 
     pub(super) fn enter(&self) -> LinkConcurrencyGuard<'_> {
-        self.total.fetch_add(1, Ordering::SeqCst);
-        let current = self.current.fetch_add(1, Ordering::SeqCst) + 1;
+        self.total
+            .fetch_add(1, Ordering::SeqCst);
+        let current = self
+            .current
+            .fetch_add(1, Ordering::SeqCst)
+            + 1;
         let mut max = self.max.load(Ordering::SeqCst);
         while current > max {
-            match self.max.compare_exchange_weak(max, current, Ordering::SeqCst, Ordering::SeqCst) {
+            match self
+                .max
+                .compare_exchange_weak(max, current, Ordering::SeqCst, Ordering::SeqCst)
+            {
                 Ok(_) => {
                     self.condvar.notify_all();
                     break;
@@ -60,10 +67,18 @@ impl LinkConcurrencyProbe {
             }
         }
 
-        if self.wait_for_overlap && current == 1 && !self.wait_started.swap(true, Ordering::SeqCst)
+        if self.wait_for_overlap
+            && current == 1
+            && !self
+                .wait_started
+                .swap(true, Ordering::SeqCst)
         {
-            let guard = self.mutex.lock().expect("lock link-concurrency probe");
-            let _ = self.condvar
+            let guard = self
+                .mutex
+                .lock()
+                .expect("lock link-concurrency probe");
+            let _ = self
+                .condvar
                 .wait_timeout_while(guard, OVERLAP_TIMEOUT, |()| {
                     self.max.load(Ordering::SeqCst) < 2
                 })
@@ -94,7 +109,9 @@ pub(super) struct LinkConcurrencyGuard<'a> {
 
 impl Drop for LinkConcurrencyGuard<'_> {
     fn drop(&mut self) {
-        self.probe.current.fetch_sub(1, Ordering::SeqCst);
+        self.probe
+            .current
+            .fetch_sub(1, Ordering::SeqCst);
         self.probe.condvar.notify_all();
     }
 }
@@ -138,7 +155,9 @@ async fn run_emits_imported_event_after_import_indexed_dir() {
     let cas_paths: HashMap<String, std::path::PathBuf> = HashMap::new();
     let logged_methods = AtomicU8::new(0);
     let snapshot = SnapshotEntry::default();
-    let package_key: PackageKey = "react@18.0.0".parse().expect("valid v9 snapshot key");
+    let package_key: PackageKey = "react@18.0.0"
+        .parse()
+        .expect("valid v9 snapshot key");
 
     EVENTS.lock().unwrap().clear();
 
@@ -181,15 +200,13 @@ async fn run_emits_imported_event_after_import_indexed_dir() {
     .expect("empty-cas-paths run should succeed");
 
     let captured = EVENTS.lock().unwrap();
-    let imported = captured
-        .iter()
-        .find_map(|event| {
-            let LogEvent::Progress(log) = event else { return None };
-            let ProgressMessage::Imported { method, requester, to } = &log.message else {
-                return None;
-            };
-            Some((*method, requester.clone(), to.clone()))
-        });
+    let imported = captured.iter().find_map(|event| {
+        let LogEvent::Progress(log) = event else { return None };
+        let ProgressMessage::Imported { method, requester, to } = &log.message else {
+            return None;
+        };
+        Some((*method, requester.clone(), to.clone()))
+    });
     let (method, requester, to) =
         imported.unwrap_or_else(|| panic!("imported must fire; got {captured:?}"));
     assert_eq!(method, WireImportMethod::Hardlink);
@@ -220,7 +237,9 @@ fn run_imports_needs_build_marker_with_a_fresh_package() {
     let cas_paths = HashMap::from([("package.json".to_string(), package_json)]);
     let logged_methods = AtomicU8::new(0);
     let snapshot = SnapshotEntry::default();
-    let package_key: PackageKey = "react@18.0.0".parse().expect("valid snapshot key");
+    let package_key: PackageKey = "react@18.0.0"
+        .parse()
+        .expect("valid snapshot key");
     let layout = crate::VirtualStoreLayout::legacy(
         dir.path().join("virtual-store"),
         pnpm_config::default_virtual_store_dir_max_length() as usize,
@@ -257,9 +276,19 @@ fn run_imports_needs_build_marker_with_a_fresh_package() {
     .run::<pnpm_reporter::SilentReporter>()
     .expect("import package with build marker");
 
-    let package_dir = layout.slot_dir(&package_key).join("node_modules/react");
-    assert!(package_dir.join("package.json").exists());
-    assert!(package_dir.join(crate::NEEDS_BUILD_MARKER).is_file());
+    let package_dir = layout
+        .slot_dir(&package_key)
+        .join("node_modules/react");
+    assert!(
+        package_dir
+            .join("package.json")
+            .exists()
+    );
+    assert!(
+        package_dir
+            .join(crate::NEEDS_BUILD_MARKER)
+            .is_file()
+    );
 }
 
 #[test]
@@ -270,12 +299,16 @@ fn force_import_replaces_an_existing_package_at_the_same_snapshot_key() {
     let source = cas_dir.join("index.js");
     std::fs::write(&source, "module.exports = 'new'\n").expect("write CAS source");
 
-    let package_key: PackageKey = "revision-pkg@1.0.0".parse().expect("package key");
+    let package_key: PackageKey = "revision-pkg@1.0.0"
+        .parse()
+        .expect("package key");
     let layout = crate::VirtualStoreLayout::legacy(
         dir.path().join("virtual-store"),
         pnpm_config::default_virtual_store_dir_max_length() as usize,
     );
-    let package_dir = layout.slot_dir(&package_key).join("node_modules/revision-pkg");
+    let package_dir = layout
+        .slot_dir(&package_key)
+        .join("node_modules/revision-pkg");
     std::fs::create_dir_all(&package_dir).expect("create existing package");
     std::fs::write(package_dir.join("index.js"), "module.exports = 'old'\n")
         .expect("write old package");
@@ -324,8 +357,9 @@ fn run_rejects_traversal_package_name() {
     let cas_paths: HashMap<String, std::path::PathBuf> = HashMap::new();
     let logged_methods = AtomicU8::new(0);
     let snapshot = SnapshotEntry::default();
-    let package_key: PackageKey =
-        "../../escaped@1.0.0".parse().expect("parse traversal snapshot key");
+    let package_key: PackageKey = "../../escaped@1.0.0"
+        .parse()
+        .expect("parse traversal snapshot key");
 
     let layout = crate::VirtualStoreLayout::legacy(
         virtual_store_dir,
@@ -375,8 +409,12 @@ async fn run_removes_obsolete_child_links() {
         dir.path().to_path_buf(),
         pnpm_config::default_virtual_store_dir_max_length() as usize,
     );
-    let package_key: PackageKey = "react@18.0.0".parse().expect("valid snapshot key");
-    let node_modules = layout.slot_dir(&package_key).join("node_modules");
+    let package_key: PackageKey = "react@18.0.0"
+        .parse()
+        .expect("valid snapshot key");
+    let node_modules = layout
+        .slot_dir(&package_key)
+        .join("node_modules");
     std::fs::create_dir_all(&node_modules).expect("create slot node_modules");
 
     let target = dir.path().join("target");
@@ -417,7 +455,12 @@ async fn run_removes_obsolete_child_links() {
     .run::<SilentReporter>()
     .expect("run should succeed");
 
-    assert!(!node_modules.join("is-positive").exists(), "obsolete child must be unlinked");
+    assert!(
+        !node_modules
+            .join("is-positive")
+            .exists(),
+        "obsolete child must be unlinked"
+    );
     assert!(!node_modules.join("@scope").exists(), "now-empty scope directory must be removed");
     assert!(
         node_modules

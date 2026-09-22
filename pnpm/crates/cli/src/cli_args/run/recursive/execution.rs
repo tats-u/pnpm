@@ -30,13 +30,22 @@ impl RunSlots {
     }
 
     pub(super) fn into_results(self, bail: bool) -> miette::Result<RunResults> {
-        if let Some(error) = self.abort.into_inner().expect("abort slot lock is not poisoned") {
+        if let Some(error) = self
+            .abort
+            .into_inner()
+            .expect("abort slot lock is not poisoned")
+        {
             return Err(error);
         }
-        let first_failure =
-            self.first_failure.into_inner().expect("first-failure lock is not poisoned");
+        let first_failure = self
+            .first_failure
+            .into_inner()
+            .expect("first-failure lock is not poisoned");
         Ok(RunResults {
-            statuses: self.result.into_inner().expect("summary lock is not poisoned"),
+            statuses: self
+                .result
+                .into_inner()
+                .expect("summary lock is not poisoned"),
             ran_a_command: self.has_command.load(Ordering::Relaxed) > 0,
             first_failure: bail.then_some(first_failure).flatten(),
         })
@@ -60,7 +69,10 @@ impl TaskRunner<'_, '_, '_> {
     pub(super) fn run_task(&self, node: &TaskNode) -> TaskCompletion {
         let summary_key = task_summary_key(node);
         let on_started = || {
-            self.outcome.result.lock().expect("summary lock is not poisoned")[&summary_key]
+            self.outcome
+                .result
+                .lock()
+                .expect("summary lock is not poisoned")[&summary_key]
                 .status = Status::Running;
         };
         let execution = run_project(&RunProjectOptions {
@@ -82,7 +94,8 @@ impl TaskRunner<'_, '_, '_> {
                 on_started: &on_started,
             },
         });
-        self.outcome.record(node, &summary_key, execution)
+        self.outcome
+            .record(node, &summary_key, execution)
     }
 }
 
@@ -109,20 +122,29 @@ impl RunOutcome<'_> {
             Err(error) => return self.abort(error),
         };
         if node.requested {
-            self.has_command.fetch_add(execution.has_command, Ordering::Relaxed);
+            self.has_command
+                .fetch_add(execution.has_command, Ordering::Relaxed);
         }
         let failed = execution.status.status == Status::Failure;
         let cancelled = execution.cancelled;
         let recursion_guarded = execution.recursion_guarded;
-        self.result.lock().expect("summary lock is not poisoned")[summary_key] = execution.status;
+        self.result
+            .lock()
+            .expect("summary lock is not poisoned")[summary_key] = execution.status;
         if cancelled {
             return TaskCompletion::Cancelled;
         }
         if failed {
-            let mut first_failure =
-                self.first_failure.lock().expect("first-failure slot lock is not poisoned");
+            let mut first_failure = self
+                .first_failure
+                .lock()
+                .expect("first-failure slot lock is not poisoned");
             if first_failure.is_none() {
-                *first_failure = Some(node.project.to_string_lossy().into_owned());
+                *first_failure = Some(
+                    node.project
+                        .to_string_lossy()
+                        .into_owned(),
+                );
             }
             return TaskCompletion::Failed;
         }
@@ -132,7 +154,10 @@ impl RunOutcome<'_> {
             return TaskCompletion::Passed;
         }
         let key = TaskKey { project: node.project.clone(), task_name: node.task_name.clone() };
-        match self.task_run_state.record_passed(&key, node, self.workspace_root) {
+        match self
+            .task_run_state
+            .record_passed(&key, node, self.workspace_root)
+        {
             Ok(()) => TaskCompletion::Passed,
             Err(error) => self.abort(error),
         }
@@ -141,7 +166,10 @@ impl RunOutcome<'_> {
     /// A run that cannot record its own state aborts: continuing would
     /// build a summary nothing can act on.
     pub(super) fn abort(&self, error: miette::Report) -> TaskCompletion {
-        let mut abort = self.abort.lock().expect("abort slot lock is not poisoned");
+        let mut abort = self
+            .abort
+            .lock()
+            .expect("abort slot lock is not poisoned");
         if abort.is_none() {
             *abort = Some(error);
         }
@@ -192,7 +220,10 @@ pub(crate) struct RunProjectProcess<'a> {
 /// each script waits for a permit from the run's [`ScriptBudget`] first.
 fn run_project(options: &RunProjectOptions<'_, '_>) -> miette::Result<ProjectExecution> {
     let root = options.node.project.as_path();
-    let manifest = &options.graph[root].package.project.manifest;
+    let manifest = &options.graph[root]
+        .package
+        .project
+        .manifest;
     let extra_env = project_extra_env(options.config, root, options.extra_env);
 
     // pnpm names the project directory as the `depPath` of a recursive
@@ -281,7 +312,10 @@ fn apply_script_result(
     status: pnpm_executor::ScriptExit,
     duration: f64,
 ) -> bool {
-    if ctx.process_tracker.is_some_and(ProcessTracker::is_cancelled) {
+    if ctx
+        .process_tracker
+        .is_some_and(ProcessTracker::is_cancelled)
+    {
         state.cancelled_script();
         return false;
     }
@@ -291,7 +325,10 @@ fn apply_script_result(
         }
         return true;
     }
-    if ctx.process_tracker.is_some_and(|process_tracker| !process_tracker.cancel()) {
+    if ctx
+        .process_tracker
+        .is_some_and(|process_tracker| !process_tracker.cancel())
+    {
         state.cancelled_script();
         return false;
     }
@@ -307,7 +344,10 @@ fn apply_script_result(
 /// already unwinding.
 fn start_script<'a>(process: &RunProjectProcess<'a>) -> Option<ScriptPermit<'a>> {
     let permit = process.script_budget.acquire();
-    if process.process_tracker.is_some_and(ProcessTracker::is_cancelled) {
+    if process
+        .process_tracker
+        .is_some_and(ProcessTracker::is_cancelled)
+    {
         return None;
     }
     Some(permit)
@@ -339,14 +379,16 @@ fn project_extra_env(
 ) -> HashMap<String, String> {
     let mut extra_env = extra_env.clone();
     if let Some(pnp_path) = pnp_path_for_execution(config, root) {
-        let node_options = extra_env.get("NODE_OPTIONS").map(String::as_str);
-        extra_env.insert(
-            "NODE_OPTIONS".to_string(),
-            make_node_require_option(&pnp_path, node_options),
-        );
+        let node_options = extra_env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
+        extra_env
+            .insert("NODE_OPTIONS".to_string(), make_node_require_option(&pnp_path, node_options));
     }
     if let Some(package_map_path) = package_map_path_for_execution(config, root) {
-        let node_options = extra_env.get("NODE_OPTIONS").map(String::as_str);
+        let node_options = extra_env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
         extra_env.insert(
             "NODE_OPTIONS".to_string(),
             make_node_package_map_option(&package_map_path, node_options),

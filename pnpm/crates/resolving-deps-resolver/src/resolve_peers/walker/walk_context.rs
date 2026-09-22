@@ -87,17 +87,23 @@ impl ChildOutputs {
             subtree_missing_by_pkg,
         } = output;
         if let Some(summary) = subtree_missing_by_pkg
-            && !self.missing_summaries.iter().any(|existing| Arc::ptr_eq(existing, &summary))
+            && !self
+                .missing_summaries
+                .iter()
+                .any(|existing| Arc::ptr_eq(existing, &summary))
         {
             self.missing_summaries.push(summary);
         }
         if collect_dep_paths {
-            self.dep_paths.insert(alias.to_string(), dep_path);
+            self.dep_paths
+                .insert(alias.to_string(), dep_path);
         }
-        self.auto_install_resolved_peers.extend(auto_install_resolved_peers);
+        self.auto_install_resolved_peers
+            .extend(auto_install_resolved_peers);
         for (peer_alias, peer_node_id) in external_resolved_peers.iter() {
             if !child_aliases.contains(peer_alias) {
-                self.external_peers.insert(peer_alias.clone(), peer_node_id.clone());
+                self.external_peers
+                    .insert(peer_alias.clone(), peer_node_id.clone());
             }
         }
         self.missing_peers.extend(
@@ -142,20 +148,28 @@ pub(super) fn index_peer_provider_edge(
 ) {
     let Some(pkg) = tree.packages.get(&edge.pkg_id) else { return };
     let real_name = pkg_name_version(&pkg.result).0;
-    let alias_is_peer = tree.all_peer_dep_names.contains(&edge.alias);
-    let real_name_is_peer = tree.all_peer_dep_names.contains(&real_name);
+    let alias_is_peer = tree
+        .all_peer_dep_names
+        .contains(&edge.alias);
+    let real_name_is_peer = tree
+        .all_peer_dep_names
+        .contains(&real_name);
     if !alias_is_peer && !real_name_is_peer {
         return;
     }
-    providers.relevant_edge_indices.push(edge_index);
+    providers
+        .relevant_edge_indices
+        .push(edge_index);
     if alias_is_peer {
-        providers.edge_indices_by_name
+        providers
+            .edge_indices_by_name
             .entry(edge.alias.clone())
             .or_default()
             .push(edge_index);
     }
     if real_name_is_peer && real_name != edge.alias {
-        providers.edge_indices_by_name
+        providers
+            .edge_indices_by_name
             .entry(real_name)
             .or_default()
             .push(edge_index);

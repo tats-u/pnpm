@@ -97,16 +97,15 @@ fn finish_router(
 }
 
 fn cors_origins(config: &Config) -> pnpr_error::Result<Vec<HeaderValue>> {
-    config.http.cors
+    config
+        .http
+        .cors
         .allowed_origins()
         .iter()
         .map(|origin| {
-            HeaderValue::from_str(origin)
-                .map_err(|_| pnpr_error::RegistryError::InvalidConfig {
-                    reason: format!(
-                        "CORS allowed origin {origin:?} is not a valid HTTP header value",
-                    ),
-                })
+            HeaderValue::from_str(origin).map_err(|_| pnpr_error::RegistryError::InvalidConfig {
+                reason: format!("CORS allowed origin {origin:?} is not a valid HTTP header value",),
+            })
         })
         .collect()
 }
@@ -124,12 +123,11 @@ fn with_observability_layers(router: Router<AppState>) -> Router<AppState> {
         // would defeat the point of streaming — frames must flush to the
         // client as each package resolves, not wait for the encoder.
         .layer(
-            CompressionLayer::new()
-                .compress_when(
-                    DefaultPredicate::new()
-                        .and(NotForContentType::const_new("application/octet-stream"))
-                        .and(NotForContentType::const_new("application/x-ndjson")),
-                ),
+            CompressionLayer::new().compress_when(
+                DefaultPredicate::new()
+                    .and(NotForContentType::const_new("application/octet-stream"))
+                    .and(NotForContentType::const_new("application/x-ndjson")),
+            ),
         )
         // One structured access record per HTTP request: a span
         // carrying method + URI plus a single `finished processing
@@ -308,7 +306,9 @@ fn npm_registry_routes() -> Router<AppState> {
             .route(&path("/-/team/{scope}/{team}"), delete(delete_team))
             .route(
                 &path("/-/team/{scope}/{team}/user"),
-                get(get_team_users).put(put_team_user).delete(delete_team_user),
+                get(get_team_users)
+                    .put(put_team_user)
+                    .delete(delete_team_user),
             )
             // Package addresses. npm spells a scoped name either as two
             // literal segments (`/@scope/name`) or as one percent-encoded
@@ -340,19 +340,17 @@ fn resolver_routes(state: &AppState, router: Router<AppState>) -> Router<AppStat
     router
         .route(
             "/-/pnpr/v0/resolve",
-            post(serve_resolve)
-                .route_layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    require_resolver_caller,
-                )),
+            post(serve_resolve).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                require_resolver_caller,
+            )),
         )
         .route(
             "/-/pnpr/v0/verify-lockfile",
-            post(serve_verify_lockfile)
-                .route_layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    require_resolver_caller,
-                )),
+            post(serve_verify_lockfile).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                require_resolver_caller,
+            )),
         )
 }
 
@@ -401,11 +399,10 @@ fn pipeline_routes(state: &AppState, router: Router<AppState>) -> Router<AppStat
         )
         .route(
             "/-/pnpr/v0/pipeline/runs/{workspace}/{run_id}",
-            get(serve_get_pipeline_run)
-                .route_layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    require_pipeline_caller,
-                )),
+            get(serve_get_pipeline_run).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                require_pipeline_caller,
+            )),
         )
         // The viewer page is static HTML with no data of its own; the
         // reads it issues are what authenticate.

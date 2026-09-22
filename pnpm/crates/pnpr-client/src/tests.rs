@@ -13,7 +13,9 @@ use tokio::net::TcpListener;
 
 #[tokio::test]
 async fn artifact_handshake_times_out() {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let address = listener.local_addr().unwrap();
     let server = tokio::spawn(async move {
         let (_connection, _) = listener.accept().await.unwrap();
@@ -22,7 +24,10 @@ async fn artifact_handshake_times_out() {
     let mut client = PnprClient::new(format!("http://{address}"));
     client.artifact_request_timeout = Duration::from_millis(25);
 
-    let error = client.handshake_artifacts().await.unwrap_err();
+    let error = client
+        .handshake_artifacts()
+        .await
+        .unwrap_err();
 
     assert!(matches!(error, PnprClientError::Http(error) if error.is_timeout()));
     server.abort();
@@ -42,11 +47,18 @@ async fn lockfile_repair_rejects_a_server_without_the_capability() {
         .create_async()
         .await;
 
-    let Err(error) = PnprClient::new(server.url()).resolve_projects(options).await else {
+    let Err(error) = PnprClient::new(server.url())
+        .resolve_projects(options)
+        .await
+    else {
         panic!("an older server must not silently ignore repair mode");
     };
 
-    assert!(error.to_string().contains("does not advertise lockfile repair support"));
+    assert!(
+        error
+            .to_string()
+            .contains("does not advertise lockfile repair support")
+    );
     handshake_mock.assert_async().await;
 }
 
@@ -275,7 +287,11 @@ fn matching_transform_lockfile(options: &ResolveProjectsOptions) -> Value {
 
 fn package_extensions_checksum(options: &ResolveProjectsOptions) -> String {
     let package_extensions = serde_json::to_value(
-        options.transforms.package_extensions.as_ref().expect("package extensions are configured"),
+        options
+            .transforms
+            .package_extensions
+            .as_ref()
+            .expect("package extensions are configured"),
     )
     .expect("package extensions serialize");
     hash_object_nullable_with_prefix(&package_extensions)
@@ -312,15 +328,18 @@ async fn resolve_mock_frames(
         .collect::<Vec<_>>()
         .concat();
     let mut server = mockito::Server::new_async().await;
-    let mut resolve_mock = server.mock("POST", "/-/pnpr/v0/resolve").with_body(body);
+    let mut resolve_mock = server
+        .mock("POST", "/-/pnpr/v0/resolve")
+        .with_body(body);
     if supports_project_transforms {
         resolve_mock =
             resolve_mock.with_header(PROJECT_TRANSFORMS_HEADER, PROJECT_TRANSFORMS_VERSION);
     }
     let resolve_mock = resolve_mock.create_async().await;
 
-    let result =
-        PnprClient::new(server.url()).resolve_projects_streaming(options, on_package).await;
+    let result = PnprClient::new(server.url())
+        .resolve_projects_streaming(options, on_package)
+        .await;
     resolve_mock.assert_async().await;
     result
 }
@@ -347,7 +366,12 @@ fn a_violations_frame_rebuilds_a_verify_error() {
         matches!(verify_err, VerifyError::MinimumReleaseAgeViolation { .. }),
         "got {verify_err:?}",
     );
-    assert!(verify_err.to_string().contains("@foo/no-deps@1.0.0"), "got {verify_err}");
+    assert!(
+        verify_err
+            .to_string()
+            .contains("@foo/no-deps@1.0.0"),
+        "got {verify_err}"
+    );
 }
 
 #[test]

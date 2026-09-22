@@ -22,7 +22,9 @@ use crate::suffix_index::index_of_dep_path_suffix;
 #[must_use]
 pub fn try_get_package_id(dep_path: &str) -> std::borrow::Cow<'_, str> {
     let suffix_index = index_of_dep_path_suffix(dep_path);
-    let sep_index = suffix_index.patch_hash_index.or(suffix_index.peers_index);
+    let sep_index = suffix_index
+        .patch_hash_index
+        .or(suffix_index.peers_index);
     let trimmed = match sep_index {
         Some(idx) => &dep_path[..idx],
         None => dep_path,

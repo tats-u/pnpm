@@ -130,8 +130,12 @@ fn slot_dir_prefixes_unscoped_with_at_slash_under_gvs() {
 #[test]
 fn gvs_version_dir_requires_exact_name_and_version_components() {
     let root = PathBuf::from("store").join("links");
-    let scoped: PackageKey = "@scope/foo@1.2.3".parse().expect("parse scoped key");
-    let unscoped: PackageKey = "foo@1.2.3".parse().expect("parse unscoped key");
+    let scoped: PackageKey = "@scope/foo@1.2.3"
+        .parse()
+        .expect("parse scoped key");
+    let unscoped: PackageKey = "foo@1.2.3"
+        .parse()
+        .expect("parse unscoped key");
     assert_eq!(
         global_virtual_store_version_dir(&root, &scoped, None),
         Some(
@@ -146,7 +150,9 @@ fn gvs_version_dir_requires_exact_name_and_version_components() {
     );
 
     for key in ["../other@1.2.3", "@scope/../other@1.2.3", r"@scope\evil/foo@1.2.3"] {
-        let key: PackageKey = key.parse().expect("parse unsafe package name");
+        let key: PackageKey = key
+            .parse()
+            .expect("parse unsafe package name");
         assert_eq!(global_virtual_store_version_dir(&root, &key, None), None);
     }
 
@@ -225,7 +231,9 @@ fn missing_metadata_keeps_source_dep_path_untrusted_for_gvs() {
         PathBuf::from("/tmp/proj/node_modules/.pnpm"),
         PathBuf::from("/tmp/store/links"),
     );
-    let key: PackageKey = "spoofed@git-hosted#abc123".parse().unwrap();
+    let key: PackageKey = "spoofed@git-hosted#abc123"
+        .parse()
+        .unwrap();
     let mut snapshots = HashMap::new();
     snapshots.insert(key.clone(), SnapshotEntry::default());
     let packages = HashMap::new();
@@ -296,7 +304,9 @@ fn cross_pinning_siblings_get_distinct_slots() {
             key,
             PackageMetadata {
                 resolution: LockfileResolution::Registry(RegistryResolution {
-                    integrity: integrity_str.parse().expect("parse integrity"),
+                    integrity: integrity_str
+                        .parse()
+                        .expect("parse integrity"),
                     revision: None,
                 }),
                 version: None,
@@ -320,7 +330,11 @@ fn cross_pinning_siblings_get_distinct_slots() {
     let mut pins_22_deps = HashMap::new();
     pins_22_deps.insert(
         PkgName::parse("node").expect("parse pkg name"),
-        SnapshotDepRef::Plain("runtime:22.11.0".parse().expect("parse ver-peer")),
+        SnapshotDepRef::Plain(
+            "runtime:22.11.0"
+                .parse()
+                .expect("parse ver-peer"),
+        ),
     );
     let pins_22_snapshot =
         SnapshotEntry { dependencies: Some(pins_22_deps), ..SnapshotEntry::default() };
@@ -328,7 +342,11 @@ fn cross_pinning_siblings_get_distinct_slots() {
     let mut pins_20_deps = HashMap::new();
     pins_20_deps.insert(
         PkgName::parse("node").expect("parse pkg name"),
-        SnapshotDepRef::Plain("runtime:20.18.0".parse().expect("parse ver-peer")),
+        SnapshotDepRef::Plain(
+            "runtime:20.18.0"
+                .parse()
+                .expect("parse ver-peer"),
+        ),
     );
     let pins_20_snapshot =
         SnapshotEntry { dependencies: Some(pins_20_deps), ..SnapshotEntry::default() };
@@ -341,8 +359,9 @@ fn cross_pinning_siblings_get_distinct_slots() {
 
     // Both siblings are approved builders so the engine portion
     // of the hash isn't dropped by the engine-agnostic gating.
-    let allowed: std::collections::HashSet<String> =
-        ["pins-22".to_string(), "pins-20".to_string()].into_iter().collect();
+    let allowed: std::collections::HashSet<String> = ["pins-22".to_string(), "pins-20".to_string()]
+        .into_iter()
+        .collect();
     let policy = crate::AllowBuildPolicy::new(allowed, std::collections::HashSet::new(), false);
 
     // Same install-wide fallback for both layout queries — the
@@ -379,7 +398,9 @@ fn gvs_version_segment_anchors_directory_deps() {
     );
 
     // A local tarball is content-addressed and does carry a version.
-    let tarball_dep: PackageKey = "tar-dep@file:vendor/dep.tgz".parse().unwrap();
+    let tarball_dep: PackageKey = "tar-dep@file:vendor/dep.tgz"
+        .parse()
+        .unwrap();
     let tarball_metadata = package_metadata(
         LockfileResolution::Tarball(TarballResolution {
             tarball: "file:vendor/dep.tgz".to_string(),
@@ -404,7 +425,9 @@ fn gvs_version_segment_anchors_directory_deps() {
 /// symlink was written first.
 #[test]
 fn snapshots_with_link_deps_get_a_slot_per_link_target() {
-    let key: PackageKey = "react-dom@18.3.1(react@fake-react)".parse().unwrap();
+    let key: PackageKey = "react-dom@18.3.1(react@fake-react)"
+        .parse()
+        .unwrap();
     let mut packages = HashMap::new();
     packages.insert(
         key.without_peer(),
@@ -446,7 +469,9 @@ fn snapshots_with_link_deps_get_a_slot_per_link_target() {
 #[test]
 fn link_targets_propagate_through_transitive_ancestor_slots() {
     let parent_key: PackageKey = "wrapper@1.0.0".parse().unwrap();
-    let child_key: PackageKey = "react-dom@18.3.1(react@fake-react)".parse().unwrap();
+    let child_key: PackageKey = "react-dom@18.3.1(react@fake-react)"
+        .parse()
+        .unwrap();
     let packages = HashMap::from([
         (parent_key.without_peer(), registry_metadata("PARENT")),
         (child_key.without_peer(), registry_metadata("CHILD")),
@@ -558,11 +583,19 @@ fn collect_injected_deps_maps_file_snapshots_to_slots() {
     let lockfile_dir = std::path::Path::new("/ws");
     let layout = super::super::VirtualStoreLayout::legacy("/ws/node_modules/.pnpm", 120);
 
-    let variant_a: PackageKey = "@scope/comp2@file:comp2(react@16.14.0)".parse().unwrap();
-    let variant_b: PackageKey = "@scope/comp2@file:comp2(react@17.0.2)".parse().unwrap();
-    let other: PackageKey = "@scope/comp3@file:./comp3".parse().unwrap();
+    let variant_a: PackageKey = "@scope/comp2@file:comp2(react@16.14.0)"
+        .parse()
+        .unwrap();
+    let variant_b: PackageKey = "@scope/comp2@file:comp2(react@17.0.2)"
+        .parse()
+        .unwrap();
+    let other: PackageKey = "@scope/comp3@file:./comp3"
+        .parse()
+        .unwrap();
     let registry: PackageKey = "react@16.14.0".parse().unwrap();
-    let skipped_key: PackageKey = "@scope/skipped@file:skipped".parse().unwrap();
+    let skipped_key: PackageKey = "@scope/skipped@file:skipped"
+        .parse()
+        .unwrap();
 
     let mut snapshots = HashMap::new();
     for key in [&variant_a, &variant_b, &other, &registry, &skipped_key] {
@@ -570,7 +603,9 @@ fn collect_injected_deps_maps_file_snapshots_to_slots() {
     }
     // A `file:` tarball snapshot: present in `snapshots` but with a
     // tarball resolution — must NOT be treated as an injected project.
-    let tarball_key: PackageKey = "tar-dep@file:vendor/dep.tgz".parse().unwrap();
+    let tarball_key: PackageKey = "tar-dep@file:vendor/dep.tgz"
+        .parse()
+        .unwrap();
     snapshots.insert(tarball_key, SnapshotEntry::default());
     let mut packages = HashMap::new();
     for key in [&variant_a, &variant_b, &other, &skipped_key] {

@@ -103,7 +103,9 @@ impl ExplicitPaths {
     /// Record what one settings layer pinned.
     fn note(&mut self, settings: &WorkspaceSettings) {
         self.virtual_store_dir |= settings.virtual_store_dir.is_some();
-        self.global_virtual_store_dir |= settings.global_virtual_store_dir.is_some();
+        self.global_virtual_store_dir |= settings
+            .global_virtual_store_dir
+            .is_some();
         self.store_dir |= settings.store_dir.is_some();
     }
 }
@@ -160,7 +162,9 @@ fn collect_explicit_settings(
         target.insert(key, value);
     }
     let virtual_store_type = settings.virtual_store_type.or_else(|| {
-        settings.enable_global_virtual_store.map(VirtualStoreType::from_enable_global)
+        settings
+            .enable_global_virtual_store
+            .map(VirtualStoreType::from_enable_global)
     });
     if let Some(virtual_store_type) = virtual_store_type {
         let Ok(named) = serde_json::to_value(virtual_store_type) else { return };
@@ -172,7 +176,11 @@ fn collect_explicit_settings(
     }
     // `audit.level` supersedes the deprecated `auditLevel` spelling; mirror it
     // there so `config get audit-level` answers the way pnpm does.
-    if let Some(level) = settings.audit.as_ref().and_then(|audit| audit.level) {
+    if let Some(level) = settings
+        .audit
+        .as_ref()
+        .and_then(|audit| audit.level)
+    {
         let Ok(level) = serde_json::to_value(level) else { return };
         target.insert("auditLevel".to_string(), level);
     }
@@ -195,8 +203,12 @@ fn build_package_manager_bootstrap<Sys: EnvVar>(
     let mut declared_registries = crate::npmrc_auth::DeclaredRegistries::default();
     trusted_auth.apply_registry_and_warn(&mut config, &mut declared_registries);
     trusted_auth.apply_json_env_registries(&mut config, &declared_registries);
-    trusted_auth.proxy.apply_proxy_cascade::<Sys>(&mut config);
-    trusted_auth.tls.apply_tls_and_local_address(&mut config);
+    trusted_auth
+        .proxy
+        .apply_proxy_cascade::<Sys>(&mut config);
+    trusted_auth
+        .tls
+        .apply_tls_and_local_address(&mut config);
     trusted_auth.build_auth_headers(&mut config)?;
     Ok(PackageManagerBootstrap {
         registry: config.registry,

@@ -112,7 +112,12 @@ fn an_unparsable_npm_lockfile_names_the_file() {
     write(tmp.path(), "package-lock.json", "{ not json");
 
     let error = read_foreign_lockfile_versions(tmp.path()).expect_err("invalid json");
-    assert!(error.to_string().contains("package-lock.json"), "got {error}");
+    assert!(
+        error
+            .to_string()
+            .contains("package-lock.json"),
+        "got {error}"
+    );
 }
 
 #[test]

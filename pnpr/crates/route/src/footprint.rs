@@ -27,18 +27,10 @@ impl PrivateAccessDescriptor {
     /// policy of the same text).
     pub(super) fn key_input(&self) -> String {
         match self {
-            PrivateAccessDescriptor::Alias {
-                alias,
-                credential_digest,
-                package: None,
-            } => {
+            PrivateAccessDescriptor::Alias { alias, credential_digest, package: None } => {
                 format!("alias\0{alias}\0{credential_digest}")
             }
-            PrivateAccessDescriptor::Alias {
-                alias,
-                credential_digest,
-                package: Some(package),
-            } => {
+            PrivateAccessDescriptor::Alias { alias, credential_digest, package: Some(package) } => {
                 format!("alias\0{alias}\0{credential_digest}\0{package}")
             }
             PrivateAccessDescriptor::Hosted { policy_id } => format!("hosted\0{policy_id}"),

@@ -45,21 +45,27 @@ async fn a_full_doc_served_for_an_abbreviated_request_is_normalized_before_cachi
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("200 → ok");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("200 → ok");
     assert_eq!(pkg.name, "acme");
     mock.assert_async().await;
 
     let mirror_path = get_pkg_mirror_path(cache.path(), ABBREVIATED_META_DIR, &registry, "acme")
         .expect("abbreviated path");
     let persisted = load_meta(&mirror_path).expect("mirror readable");
-    let manifest = persisted.versions.get("1.0.0").expect("manifest");
+    let manifest = persisted
+        .versions
+        .get("1.0.0")
+        .expect("manifest");
     // Install-irrelevant fields dropped.
     assert!(!manifest.other.contains_key("readme"));
     assert!(!manifest.other.contains_key("scripts"));
     assert!(!manifest.other.contains_key("exports"));
     // Install-relevant fields kept, so resolution is unchanged.
     assert_eq!(
-        manifest.dependencies
+        manifest
+            .dependencies
             .as_ref()
             .and_then(|deps| deps.get("bar"))
             .map(String::as_str),

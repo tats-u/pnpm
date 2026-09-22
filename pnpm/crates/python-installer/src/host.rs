@@ -165,10 +165,16 @@ pub(super) async fn run_program<Output: DeserializeOwned>(
         .spawn()
         .into_diagnostic()
         .wrap_err_with(|| format!("start Python interpreter {executable}"))?;
-    let mut stdin = child.stdin.take().expect("child stdin was piped");
+    let mut stdin = child
+        .stdin
+        .take()
+        .expect("child stdin was piped");
     let input = serde_json::to_vec(&input).into_diagnostic()?;
     let write = async move {
-        stdin.write_all(&input).await.into_diagnostic()?;
+        stdin
+            .write_all(&input)
+            .await
+            .into_diagnostic()?;
         drop(stdin);
         Ok::<_, miette::Report>(())
     };

@@ -60,16 +60,14 @@ pub fn main() -> ExitCode {
 }
 
 fn is_reported_error(error: &miette::Report) -> bool {
-    error
-        .code()
-        .is_some_and(|code| {
-            matches!(
-                code.to_string().as_str(),
-                "ERR_PNPM_DEDUPE_CHECK_ISSUES"
-                    | "ERR_PNPM_PEER_DEP_ISSUES"
-                    | cli_args::recursive::NO_MATCHING_PROJECTS_CODE,
-            )
-        })
+    error.code().is_some_and(|code| {
+        matches!(
+            code.to_string().as_str(),
+            "ERR_PNPM_DEDUPE_CHECK_ISSUES"
+                | "ERR_PNPM_PEER_DEP_ISSUES"
+                | cli_args::recursive::NO_MATCHING_PROJECTS_CODE,
+        )
+    })
 }
 
 /// Parse and execute the CLI, including shim dispatch and startup fast paths.
@@ -136,14 +134,13 @@ fn parse_cli_args(command: clap::Command, argv: Vec<OsString>) -> Result<CliArgs
         .and_then(|matches| {
             let dir_from_command_line =
                 matches.value_source("dir") == Some(clap::parser::ValueSource::CommandLine);
-            CliArgs::from_arg_matches(&matches)
-                .map(|args| CliArgs {
-                    paths: crate::cli_args::cli_command::CliPathArgs {
-                        dir_from_command_line,
-                        ..args.paths
-                    },
-                    ..args
-                })
+            CliArgs::from_arg_matches(&matches).map(|args| CliArgs {
+                paths: crate::cli_args::cli_command::CliPathArgs {
+                    dir_from_command_line,
+                    ..args.paths
+                },
+                ..args
+            })
         })
 }
 
@@ -332,7 +329,9 @@ fn configure_rayon_pool() {
         // "rayon worker stalls on `clonefile` while the next snapshot
         // can't start" regime. See the function-level doc.
         .max(4);
-    let _ = rayon::ThreadPoolBuilder::new().num_threads(n).build_global();
+    let _ = rayon::ThreadPoolBuilder::new()
+        .num_threads(n)
+        .build_global();
 }
 
 #[cfg(test)]

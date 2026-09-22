@@ -25,12 +25,16 @@ fn assert_frozen_replay_installs_local_overrides(target_dir: &str) {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
     write_project_manifest(&workspace, "root", ManifestDeps::default());
     write_project_manifest(
-        &workspace.join(target_dir).join("linked"),
+        &workspace
+            .join(target_dir)
+            .join("linked"),
         "linked",
         ManifestDeps::default(),
     );
     fs::write(
-        workspace.join(target_dir).join("vendored.tgz"),
+        workspace
+            .join(target_dir)
+            .join("vendored.tgz"),
         minimal_tarball("vendored", "1.0.0"),
     )
     .expect("write local tarball");

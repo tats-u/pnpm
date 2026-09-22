@@ -24,7 +24,12 @@ pub(in super::super) fn finish_single_update<Reporter: self::Reporter>(
     bumps: Option<ManifestSpecBumps>,
     ignored_builds: Option<InstallError>,
 ) -> Result<(), UpdateError> {
-    let applied = bumps.map(|bumps| bumps.applied.into_inner().expect("never poisoned"));
+    let applied = bumps.map(|bumps| {
+        bumps
+            .applied
+            .into_inner()
+            .expect("never poisoned")
+    });
     settle_update_manifest::<Reporter>(
         manifest,
         update.config,
@@ -33,7 +38,9 @@ pub(in super::super) fn finish_single_update<Reporter: self::Reporter>(
             should_persist_manifest: prepared.persist_manifest,
             importer_id,
             applied: applied.as_ref(),
-            workspace_dir_for_catalogs: prepared.workspace_dir_for_catalogs.as_deref(),
+            workspace_dir_for_catalogs: prepared
+                .workspace_dir_for_catalogs
+                .as_deref(),
         },
     )?;
 
@@ -52,7 +59,12 @@ pub(in super::super) fn settle_selected_update<Reporter: self::Reporter>(
     prepared: SelectedUpdatePreparation,
     bumps: Option<ManifestSpecBumps>,
 ) -> Result<(), UpdateError> {
-    let applied = bumps.map(|bumps| bumps.applied.into_inner().expect("never poisoned"));
+    let applied = bumps.map(|bumps| {
+        bumps
+            .applied
+            .into_inner()
+            .expect("never poisoned")
+    });
     let persist_indices = bumped_persist_indices::<Reporter>(
         projects,
         &site.workspace_root,
@@ -60,7 +72,11 @@ pub(in super::super) fn settle_selected_update<Reporter: self::Reporter>(
         prepared.persist_indices,
     );
     persist_selected_manifests::<Reporter>(projects, &persist_indices)?;
-    let workspace_dir = site.catalogs_dir(prepared.workspace_dir_for_catalogs.as_deref());
+    let workspace_dir = site.catalogs_dir(
+        prepared
+            .workspace_dir_for_catalogs
+            .as_deref(),
+    );
     if update.version.save
         && let Some(applied) = applied
             .as_ref()
@@ -96,8 +112,13 @@ pub(in super::super) fn settle_update_manifest<Reporter: self::Reporter>(
     config: &Config,
     settle: SettleUpdate<'_>,
 ) -> Result<(), UpdateError> {
-    let bumped_manifest = settle.applied
-        .and_then(|applied| applied.manifests.get(settle.importer_id))
+    let bumped_manifest = settle
+        .applied
+        .and_then(|applied| {
+            applied
+                .manifests
+                .get(settle.importer_id)
+        })
         .is_some_and(|bumped| {
             apply_bumped_manifest_specs::<Reporter>(
                 manifest,
@@ -109,7 +130,9 @@ pub(in super::super) fn settle_update_manifest<Reporter: self::Reporter>(
         persist_manifest::<Reporter>(manifest)?;
     }
     if settle.save
-        && let Some(applied) = settle.applied.filter(|applied| !applied.catalogs.is_empty())
+        && let Some(applied) = settle
+            .applied
+            .filter(|applied| !applied.catalogs.is_empty())
     {
         write_workspace_catalogs(
             config,
@@ -198,7 +221,9 @@ pub(in super::super) fn persist_selected_manifests<Reporter: self::Reporter>(
 pub(in super::super) fn persist_manifest<Reporter: self::Reporter>(
     manifest: &mut PackageManifest,
 ) -> Result<(), UpdateError> {
-    let updated = manifest.save_and_get_written_value().map_err(UpdateError::SaveManifest)?;
+    let updated = manifest
+        .save_and_get_written_value()
+        .map_err(UpdateError::SaveManifest)?;
     let prefix = package_manifest_prefix(manifest);
     Reporter::emit(&LogEvent::PackageManifest(PackageManifestLog {
         level: LogLevel::Debug,

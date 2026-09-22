@@ -49,8 +49,12 @@ pub(crate) fn is_abbreviated_content_type(headers: &header::HeaderMap) -> bool {
         .get(header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .is_some_and(|value| {
-            let media_type = value.split_once(';').map_or(value, |(media_type, _)| media_type);
-            media_type.trim().eq_ignore_ascii_case(ABBREVIATED_META_CONTENT_TYPE)
+            let media_type = value
+                .split_once(';')
+                .map_or(value, |(media_type, _)| media_type);
+            media_type
+                .trim()
+                .eq_ignore_ascii_case(ABBREVIATED_META_CONTENT_TYPE)
         })
 }
 
@@ -132,7 +136,11 @@ pub(crate) async fn send_metadata_request<'a>(
     // The route policy decides whether this origin may be reached at all,
     // here rather than when the request that named it was read: a registry a
     // caller configures but never resolves from costs nothing.
-    if !opts.http.auth_headers.allows_fetch(opts.url) {
+    if !opts
+        .http
+        .auth_headers
+        .allows_fetch(opts.url)
+    {
         return Err(FetchMetadataError::OffAllowlist { url: redact_url_credentials(opts.url) });
     }
     let validators = Validators::for_request(opts);
@@ -170,8 +178,11 @@ impl<'a> Validators<'a> {
             return Validators { etag: None, modified: None };
         }
         Validators {
-            etag: opts.etag.filter(|value| !value.is_empty()),
-            modified: opts.modified
+            etag: opts
+                .etag
+                .filter(|value| !value.is_empty()),
+            modified: opts
+                .modified
                 .filter(|value| !value.is_empty())
                 .and_then(to_http_date),
         }
@@ -193,9 +204,13 @@ async fn send_once<'a>(
         opts.priority,
         opts.http.retry_opts,
         |client| {
-            let mut request = client.get(opts.url).header(header::ACCEPT, opts.accept);
-            if let Some(value) =
-                opts.http.auth_headers.for_url_with_package(opts.url, Some(opts.pkg_name))
+            let mut request = client
+                .get(opts.url)
+                .header(header::ACCEPT, opts.accept);
+            if let Some(value) = opts
+                .http
+                .auth_headers
+                .for_url_with_package(opts.url, Some(opts.pkg_name))
             {
                 request = request.header(header::AUTHORIZATION, value);
             }
@@ -225,7 +240,9 @@ fn to_http_date(value: &str) -> Option<String> {
     if let Ok(datetime) = chrono::DateTime::parse_from_rfc3339(value) {
         return Some(httpdate::fmt_http_date(datetime.into()));
     }
-    httpdate::parse_http_date(value).ok().map(httpdate::fmt_http_date)
+    httpdate::parse_http_date(value)
+        .ok()
+        .map(httpdate::fmt_http_date)
 }
 
 /// Fetch the registry metadata document for `pkg_name`. The
@@ -284,7 +301,11 @@ pub async fn fetch_full_metadata(
 
 pub(crate) fn warn_if_request_is_slow(http_client: &ThrottledClient, elapsed: Duration, url: &str) {
     let elapsed_ms = elapsed.as_millis();
-    if elapsed_ms > http_client.fetch_warn_timeout().as_millis() {
+    if elapsed_ms
+        > http_client
+            .fetch_warn_timeout()
+            .as_millis()
+    {
         http_client.warn(&format!("Request took {elapsed_ms}ms: {}", redact_url_for_display(url)));
     }
 }
@@ -328,11 +349,9 @@ async fn decode_full_metadata(
     let task_url = url.to_string();
     let (meta, elapsed) =
         tokio::task::spawn_blocking(move || -> Result<(Package, Duration), FetchMetadataError> {
-            let mut meta = serde_json::from_str::<Package>(&raw_body)
-                .map_err(|error| FetchMetadataError::Decode {
-                    url: redact_url_credentials(&task_url),
-                    error,
-                })?;
+            let mut meta = serde_json::from_str::<Package>(&raw_body).map_err(|error| {
+                FetchMetadataError::Decode { url: redact_url_credentials(&task_url), error }
+            })?;
             meta.drop_incomplete_publish_times();
             let elapsed = started_at.elapsed();
             let meta =

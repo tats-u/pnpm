@@ -39,7 +39,9 @@ async fn frozen_lockfile_disables_optimistic_short_circuit() {
     std::fs::create_dir_all(&dirs.project_root).expect("create project root");
     let manifest_path = dirs.project_root.join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("sibling", "link:../sibling", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("sibling", "link:../sibling", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -91,7 +93,9 @@ async fn frozen_lockfile_disables_optimistic_short_circuit() {
 
     let mut projects = std::collections::BTreeMap::new();
     projects.insert(
-        dirs.project_root.to_string_lossy().into_owned(),
+        dirs.project_root
+            .to_string_lossy()
+            .into_owned(),
         workspace_state::ProjectEntry {
             name: Some("project".to_string()),
             version: Some("1.0.0".to_string()),
@@ -173,12 +177,10 @@ async fn frozen_lockfile_disables_optimistic_short_circuit() {
 
     let captured = EVENTS.lock().unwrap();
     assert!(
-        !captured
-            .iter()
-            .any(|event| matches!(
-                event,
-                LogEvent::Pnpm(log) if log.message == "Already up to date"
-            )),
+        !captured.iter().any(|event| matches!(
+            event,
+            LogEvent::Pnpm(log) if log.message == "Already up to date"
+        )),
         "the optimistic 'Already up to date' log MUST NOT fire under --frozen-lockfile; got events: {captured:#?}",
     );
     // The existing no-op short-circuit still does fire on the frozen
@@ -275,9 +277,7 @@ async fn frozen_lockfile_errors_when_package_extensions_drift_from_lockfile() {
 
     let err = result.expect_err("packageExtensions drift must surface as a config mismatch");
     match err {
-        InstallError::LockfileConfigMismatch {
-            setting: "packageExtensionsChecksum",
-        } => {}
+        InstallError::LockfileConfigMismatch { setting: "packageExtensionsChecksum" } => {}
         other => {
             panic!("expected LockfileConfigMismatch for `packageExtensionsChecksum`, got {other:?}")
         }

@@ -164,7 +164,10 @@ impl WebAuthFetch for Host {
         if let Some(timeout) = options.timeout {
             request = request.timeout(Duration::from_millis(timeout));
         }
-        let response = request.send().await.map_err(|_| WebAuthFetchError)?;
+        let response = request
+            .send()
+            .await
+            .map_err(|_| WebAuthFetchError)?;
         let ok = response.status().is_success();
         let status = response.status().as_u16();
         let retry_after = response
@@ -289,7 +292,8 @@ impl Future for HostEnterHandle {
 
 impl Drop for HostEnterHandle {
     fn drop(&mut self) {
-        self.cancel.store(true, Ordering::Relaxed);
+        self.cancel
+            .store(true, Ordering::Relaxed);
     }
 }
 

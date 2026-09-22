@@ -27,7 +27,9 @@ use std::{
 };
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 /// An empty user-level `.npmrc`, returned for `--npmrc-auth-file`, so the
@@ -285,10 +287,9 @@ fn json_flag_prints_errors_to_stdout_for_all_aliases() {
             String::from_utf8_lossy(&output.stderr),
         );
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let parsed: Value = serde_json::from_str(&stdout)
-            .unwrap_or_else(|error| {
-                panic!("stdout must be a JSON error envelope: {error}; stdout: {stdout}")
-            });
+        let parsed: Value = serde_json::from_str(&stdout).unwrap_or_else(|error| {
+            panic!("stdout must be a JSON error envelope: {error}; stdout: {stdout}")
+        });
         assert_eq!(
             parsed,
             serde_json::json!({

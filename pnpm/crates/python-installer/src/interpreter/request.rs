@@ -27,7 +27,8 @@ impl VersionRequest {
     pub(super) fn accepts(&self, version: &pep440_rs::Version) -> bool {
         let release = version.release();
         self.release.len() <= release.len()
-            && self.release
+            && self
+                .release
                 .iter()
                 .zip(release)
                 .all(|(requested, actual)| requested == actual)
@@ -91,7 +92,9 @@ pub(super) fn version_request<Reporter: self::Reporter + 'static>(
             }
             return Ok(request);
         }
-        directory = (Some(current) != stop).then(|| current.parent()).flatten();
+        directory = (Some(current) != stop)
+            .then(|| current.parent())
+            .flatten();
     }
     Ok(None)
 }

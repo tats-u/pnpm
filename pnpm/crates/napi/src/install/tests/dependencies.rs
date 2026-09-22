@@ -43,14 +43,26 @@ fn peer_issues_options_preserve_shared_engine_options() {
     assert_eq!(install_options.store_dir.as_deref(), Some("/store"));
     assert_eq!(install_options.cache_dir.as_deref(), Some("/cache"));
     assert_eq!(
-        install_options.registries.as_ref().unwrap()["default"],
+        install_options
+            .registries
+            .as_ref()
+            .unwrap()["default"],
         "https://registry.example.com",
     );
     assert_eq!(
-        install_options.auth_header_by_uri.as_ref().unwrap()["//registry.example.com/"],
+        install_options
+            .auth_header_by_uri
+            .as_ref()
+            .unwrap()["//registry.example.com/"],
         "Bearer token",
     );
-    assert_eq!(install_options.overrides.as_ref().unwrap()["foo"], "1.0.0");
+    assert_eq!(
+        install_options
+            .overrides
+            .as_ref()
+            .unwrap()["foo"],
+        "1.0.0"
+    );
     assert_eq!(install_options.peers_suffix_max_length, Some(1_000));
     assert_eq!(install_options.virtual_store_dir_max_length, Some(120));
     assert_eq!(install_options.auto_install_peers, Some(true));
@@ -66,7 +78,8 @@ fn peer_issues_options_preserve_shared_engine_options() {
 #[test]
 fn peer_issues_options_disable_auto_install_peers_by_default() {
     assert_eq!(
-        peer_issues_install_options(peer_issues_options()).expect("valid peer issues options")
+        peer_issues_install_options(peer_issues_options())
+            .expect("valid peer issues options")
             .auto_install_peers,
         Some(false),
     );
@@ -100,7 +113,9 @@ fn safe_intersect_matches_merge_peers_semantics() {
 
     // Overlapping ranges intersect to a non-empty range.
     let merged = safe_intersect(["^16.8.0", "16 || 17"].into_iter()).expect("ranges overlap");
-    let range: node_semver::Range = merged.parse().expect("intersection parses");
+    let range: node_semver::Range = merged
+        .parse()
+        .expect("intersection parses");
     assert!(range.satisfies(&"16.9.1".parse().unwrap()));
     assert!(!range.satisfies(&"17.0.0".parse().unwrap()));
 
@@ -113,7 +128,9 @@ fn safe_intersect_matches_merge_peers_semantics() {
     assert_eq!(safe_intersect(["1.2.3", "<1.2.3"].into_iter()), None);
     // An upper bound that leaves a component out reaches the whole line.
     let merged = safe_intersect(["<=16", "^16.8.0"].into_iter()).expect("ranges overlap");
-    let range: node_semver::Range = merged.parse().expect("intersection parses");
+    let range: node_semver::Range = merged
+        .parse()
+        .expect("intersection parses");
     assert!(range.satisfies(&"16.9.1".parse().unwrap()));
 }
 
@@ -133,12 +150,16 @@ fn peer_issues_to_json_derives_conflicts_and_intersections() {
         parents: ParentChain::from_names(["comp1".to_string()]),
     };
     let mut issues = PeerDependencyIssues::default();
-    issues.missing.insert("react".to_string(), vec![missing_entry("^16.8.0", false)]);
+    issues
+        .missing
+        .insert("react".to_string(), vec![missing_entry("^16.8.0", false)]);
     issues.missing.insert(
         "conflicted".to_string(),
         vec![missing_entry("^1.0.0", false), missing_entry("^2.0.0", false)],
     );
-    issues.missing.insert("optional-only".to_string(), vec![missing_entry("*", true)]);
+    issues
+        .missing
+        .insert("optional-only".to_string(), vec![missing_entry("*", true)]);
     issues.bad.insert(
         "styled".to_string(),
         vec![PeerDependencyIssue {
@@ -157,7 +178,11 @@ fn peer_issues_to_json_derives_conflicts_and_intersections() {
     let json = super::super::peer_issues::peer_issues_to_json(&issues);
     assert_eq!(json["intersections"]["react"], "^16.8.0");
     assert_eq!(json["conflicts"], serde_json::json!(["conflicted"]));
-    assert!(json["intersections"].get("optional-only").is_none());
+    assert!(
+        json["intersections"]
+            .get("optional-only")
+            .is_none()
+    );
     assert_eq!(json["missing"]["react"][0]["wantedRange"], "^16.8.0");
     assert_eq!(json["missing"]["react"][0]["parents"][0]["name"], "comp1");
     assert_eq!(

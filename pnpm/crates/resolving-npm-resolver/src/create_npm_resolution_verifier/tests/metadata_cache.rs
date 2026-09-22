@@ -58,12 +58,10 @@ async fn private_scope_verifier_ignores_public_mirror_and_writes_private_mirror(
 
     let mut opts = default_opts(&registry);
     opts.metadata.cache_dir = Some(cache.path().to_path_buf());
-    opts.metadata.auth_headers = Arc::new(
-        AuthHeaders::default()
-            .with_route_hook(Arc::new(ScopeHook {
-                scope: MetadataCacheScope::Private { descriptor_id: "private-scope".to_string() },
-            }) as Arc<dyn UpstreamRouteHook>),
-    );
+    opts.metadata.auth_headers =
+        Arc::new(AuthHeaders::default().with_route_hook(Arc::new(ScopeHook {
+            scope: MetadataCacheScope::Private { descriptor_id: "private-scope".to_string() },
+        }) as Arc<dyn UpstreamRouteHook>));
     let verifier = create_npm_resolution_verifier(opts);
     let resolution = LockfileResolution::Tarball(TarballResolution {
         tarball: public_tarball.clone(),
@@ -73,7 +71,9 @@ async fn private_scope_verifier_ignores_public_mirror_and_writes_private_mirror(
         path: None,
     });
     let name: PkgName = "acme".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
 
     let ResolutionVerification::Err { code, .. } = result else {
         panic!("expected private metadata mismatch, got {result:?}");
@@ -88,13 +88,19 @@ async fn private_scope_verifier_ignores_public_mirror_and_writes_private_mirror(
     )
     .expect("private mirror path");
     let private_meta = load_meta(&private_path).expect("private mirror written");
-    let private_version = private_meta.versions.get("1.0.0").expect("private version");
+    let private_version = private_meta
+        .versions
+        .get("1.0.0")
+        .expect("private version");
     assert_eq!(private_version.dist.tarball, private_tarball);
 
     let public_path =
         get_pkg_mirror_path(cache.path(), ABBREVIATED_META_DIR, &registry, "acme").expect("path");
     let public_meta = load_meta(&public_path).expect("public mirror remains readable");
-    let public_version = public_meta.versions.get("1.0.0").expect("public version");
+    let public_version = public_meta
+        .versions
+        .get("1.0.0")
+        .expect("public version");
     assert_eq!(public_version.dist.tarball, public_tarball);
 }
 
@@ -112,7 +118,9 @@ async fn registry_resolution_with_no_active_policy_skips_metadata_lookup() {
     let verifier = create_npm_resolution_verifier(opts);
     let name: PkgName = "acme".parse().expect("parse");
     assert!(!verifier.might_verify(&registry_resolution(), ctx(&name, "1.0.0")));
-    let result = verifier.verify(&registry_resolution(), ctx(&name, "1.0.0")).await;
+    let result = verifier
+        .verify(&registry_resolution(), ctx(&name, "1.0.0"))
+        .await;
 
     assert_eq!(result, ResolutionVerification::Ok);
 }
@@ -144,11 +152,17 @@ async fn planned_fetch_head_shortcut_skips_the_metadata_body() {
         .expect("first fill");
     opts.artifacts.canonical_fetches = Some(std::sync::Arc::clone(&planned));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier.verify(
-        &registry_resolution(),
-        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0"),
-    )
-    .await;
+    let result = verifier
+        .verify(
+            &registry_resolution(),
+            ctx(
+                &"acme"
+                    .parse::<PkgName>()
+                    .expect("parse"),
+                "1.0.0",
+            ),
+        )
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -178,7 +192,9 @@ async fn propagates_metadata_fetch_failure_instead_of_a_tampering_mismatch() {
         path: None,
     });
     let name: PkgName = "private-pkg".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
 
     // A transport failure aborts via FetchFailed, never a tampering-style
     // TARBALL_URL_MISMATCH.

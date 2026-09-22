@@ -63,7 +63,11 @@ async fn referrer_pages_bound_migration_and_keep_filter_and_registry() {
         let path = format!("/oci/~images/v2/acme/paged/referrers/{subject}?artifactType=absent");
         let response = get(&app, &path).await;
         assert_eq!(response.status(), StatusCode::OK);
-        assert!(response.headers().contains_key(header::LINK));
+        assert!(
+            response
+                .headers()
+                .contains_key(header::LINK)
+        );
         let payload: Value =
             serde_json::from_slice(&body_bytes(response.into_body()).await).unwrap();
         assert_eq!(payload["manifests"], json!([]));
@@ -88,7 +92,11 @@ async fn referrer_pages_bound_migration_and_keep_filter_and_registry() {
         let responses: [_; 2] = tokio::join!(first, second).into();
         for response in responses {
             assert_eq!(response.status(), StatusCode::OK);
-            assert!(!response.headers().contains_key(header::LINK));
+            assert!(
+                !response
+                    .headers()
+                    .contains_key(header::LINK)
+            );
         }
         let document = pnpr_oci::ImageDocument::parse(
             &storage

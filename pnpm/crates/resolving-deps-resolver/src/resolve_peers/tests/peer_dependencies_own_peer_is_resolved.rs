@@ -38,12 +38,25 @@ fn own_peer_is_resolved_from_peer_relevant_child() {
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
     let dep_path = DepPath::from("consumer@1.0.0(types@1.0.0)");
 
-    assert_eq!(result.direct_dependencies_by_alias.get("consumer"), Some(&dep_path));
     assert_eq!(
-        result.graph[&dep_path].edges.children.get("types"),
+        result
+            .direct_dependencies_by_alias
+            .get("consumer"),
+        Some(&dep_path)
+    );
+    assert_eq!(
+        result.graph[&dep_path]
+            .edges
+            .children
+            .get("types"),
         Some(&DepPath::from("types@1.0.0")),
     );
-    assert!(result.graph[&dep_path].edges.resolved_peer_names.contains("types"));
+    assert!(
+        result.graph[&dep_path]
+            .edges
+            .resolved_peer_names
+            .contains("types")
+    );
 }
 
 #[test]
@@ -52,8 +65,18 @@ fn named_registry_peer_is_matched_via_extracted_range() {
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
-    assert!(result.graph[&dep_path].edges.resolved_peer_names.contains("types"));
-    assert!(!result.peer_dependency_issues.bad.contains_key("types"));
+    assert!(
+        result.graph[&dep_path]
+            .edges
+            .resolved_peer_names
+            .contains("types")
+    );
+    assert!(
+        !result
+            .peer_dependency_issues
+            .bad
+            .contains_key("types")
+    );
 }
 
 #[test]
@@ -62,7 +85,12 @@ fn named_registry_peer_reports_bad_when_extracted_range_unmet() {
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
-    assert!(result.peer_dependency_issues.bad.contains_key("types"));
+    assert!(
+        result
+            .peer_dependency_issues
+            .bad
+            .contains_key("types")
+    );
 }
 
 #[test]
@@ -145,16 +173,25 @@ fn alias_child_resolves_peer_by_real_package_name() {
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
     assert!(
-        result.graph.contains_key(&DepPath::from("plugin@1.0.0(peer@1.0.0)")),
+        result
+            .graph
+            .contains_key(&DepPath::from("plugin@1.0.0(peer@1.0.0)")),
         "alias `not-peer` should satisfy peer `peer` by its real package name: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
     assert!(
-        !result.graph.contains_key(&DepPath::from("plugin@1.0.0")),
+        !result
+            .graph
+            .contains_key(&DepPath::from("plugin@1.0.0")),
         "plugin must not stay peer-less when a sibling provides the peer: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
-    assert!(!result.peer_dependency_issues.missing.contains_key("peer"));
+    assert!(
+        !result
+            .peer_dependency_issues
+            .missing
+            .contains_key("peer")
+    );
 }
 
 #[test]
@@ -261,7 +298,12 @@ fn resolved_peer_providers_from_direct_outputs_are_last_write_wins() {
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
-    assert_eq!(result.resolved_peer_providers_by_alias.get("peer"), Some(&second_peer));
+    assert_eq!(
+        result
+            .resolved_peer_providers_by_alias
+            .get("peer"),
+        Some(&second_peer)
+    );
 }
 
 #[test]
@@ -313,15 +355,21 @@ fn peer_name_cycle_collapses_provider_suffixes() {
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
 
     assert_eq!(
-        result.direct_dependencies_by_alias.get("source-map-loader"),
+        result
+            .direct_dependencies_by_alias
+            .get("source-map-loader"),
         Some(&DepPath::from("source-map-loader@1.0.0(webpack@5.0.0)")),
     );
     assert_eq!(
-        result.direct_dependencies_by_alias.get("webpack-cli"),
+        result
+            .direct_dependencies_by_alias
+            .get("webpack-cli"),
         Some(&DepPath::from("webpack-cli@6.0.0(webpack@5.0.0)")),
     );
     assert_eq!(
-        result.direct_dependencies_by_alias.get("webpack"),
+        result
+            .direct_dependencies_by_alias
+            .get("webpack"),
         Some(&DepPath::from("webpack@5.0.0(webpack-cli@6.0.0)")),
     );
 }
@@ -393,7 +441,10 @@ fn missing_names_by_pkg_records_only_children_context_missing_peers() {
     };
 
     let result = resolve_peers(&mut tree, ResolvePeersOptions::default());
-    let parent_missing = result.missing_names_by_pkg.get("parent@1.0.0").unwrap();
+    let parent_missing = result
+        .missing_names_by_pkg
+        .get("parent@1.0.0")
+        .unwrap();
 
     assert!(parent_missing.contains("child-peer"));
     assert!(!parent_missing.contains("own-peer"));
@@ -448,10 +499,18 @@ fn own_peer_is_resolved_from_aliased_sibling_real_name() {
         result.graph.keys().collect::<Vec<_>>(),
     );
     assert_eq!(
-        result.graph[&dep_path].edges.children.get("peer-c"),
+        result.graph[&dep_path]
+            .edges
+            .children
+            .get("peer-c"),
         Some(&DepPath::from("peer-c@2.0.0")),
     );
-    assert!(!result.peer_dependency_issues.missing.contains_key("peer-c"));
+    assert!(
+        !result
+            .peer_dependency_issues
+            .missing
+            .contains_key("peer-c")
+    );
 }
 
 #[test]
@@ -509,15 +568,41 @@ fn cached_optional_peer_resolution_does_not_match_later_parent_without_provider(
     let config_without_types = DepPath::from("config@1.0.0");
     let cli_dep_path = DepPath::from("cli@1.0.0");
 
-    assert_eq!(result.direct_dependencies_by_alias.get("core"), Some(&DepPath::from("core@1.0.0")));
-    assert_eq!(result.direct_dependencies_by_alias.get("cli"), Some(&cli_dep_path));
-    assert!(result.graph.contains_key(&config_with_types));
-    assert!(result.graph.contains_key(&config_without_types));
     assert_eq!(
-        result.graph[&cli_dep_path].edges.children.get("config"),
+        result
+            .direct_dependencies_by_alias
+            .get("core"),
+        Some(&DepPath::from("core@1.0.0"))
+    );
+    assert_eq!(
+        result
+            .direct_dependencies_by_alias
+            .get("cli"),
+        Some(&cli_dep_path)
+    );
+    assert!(
+        result
+            .graph
+            .contains_key(&config_with_types)
+    );
+    assert!(
+        result
+            .graph
+            .contains_key(&config_without_types)
+    );
+    assert_eq!(
+        result.graph[&cli_dep_path]
+            .edges
+            .children
+            .get("config"),
         Some(&config_without_types),
     );
-    assert!(!result.graph[&cli_dep_path].edges.resolved_peer_names.contains("types"));
+    assert!(
+        !result.graph[&cli_dep_path]
+            .edges
+            .resolved_peer_names
+            .contains("types")
+    );
 }
 
 #[test]
@@ -668,17 +753,32 @@ fn shared_package_optional_transitive_peer_resolves_deterministically() {
         // The shallow occurrence resolves the optional peer from its sibling; the
         // deeper occurrence, with no provider in scope, keeps the bare suffix.
         assert_eq!(
-            result.graph[&app_dep_path].edges.children.get("styled-jsx"),
+            result.graph[&app_dep_path]
+                .edges
+                .children
+                .get("styled-jsx"),
             Some(&styled_with_babel),
         );
         assert_eq!(
-            result.graph[&mid_dep_path].edges.children.get("styled-jsx"),
+            result.graph[&mid_dep_path]
+                .edges
+                .children
+                .get("styled-jsx"),
             Some(&styled_without_babel),
         );
-        assert!(result.graph.contains_key(&styled_with_babel));
-        assert!(result.graph.contains_key(&styled_without_babel));
+        assert!(
+            result
+                .graph
+                .contains_key(&styled_with_babel)
+        );
+        assert!(
+            result
+                .graph
+                .contains_key(&styled_without_babel)
+        );
 
-        let mut keys: Vec<String> = result.graph
+        let mut keys: Vec<String> = result
+            .graph
             .keys()
             .map(DepPath::to_string)
             .collect();

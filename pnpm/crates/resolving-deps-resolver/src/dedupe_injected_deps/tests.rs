@@ -85,10 +85,8 @@ fn rewrites_scoped_injected_dep_to_link() {
     graph.insert(injected.clone(), make_node("@test/pkg@file:fixtures/host/pkg", BTreeMap::new()));
 
     let mut direct: DirectByImporter = BTreeMap::new();
-    direct.insert(
-        "fixtures/host".to_string(),
-        BTreeMap::from([("@test/pkg".to_string(), injected)]),
-    );
+    direct
+        .insert("fixtures/host".to_string(), BTreeMap::from([("@test/pkg".to_string(), injected)]));
     direct.insert("fixtures/host/pkg".to_string(), BTreeMap::new());
 
     let mut roots = BTreeMap::new();
@@ -202,7 +200,10 @@ fn rewrites_when_shared_dep_differs_only_by_peer_suffix() {
         "debug@4.4.3(supports-color@8.1.1)",
         BTreeMap::from([("supports-color".to_string(), supports_color)]),
     );
-    debug_peer_node.edges.resolved_peer_names.insert("supports-color".to_string());
+    debug_peer_node
+        .edges
+        .resolved_peer_names
+        .insert("supports-color".to_string());
     graph.insert(debug_with_peer.clone(), debug_peer_node);
 
     let injected = DepPath::from("file:project-1".to_string());
@@ -212,10 +213,8 @@ fn rewrites_when_shared_dep_differs_only_by_peer_suffix() {
     );
 
     let mut direct: DirectByImporter = BTreeMap::new();
-    direct.insert(
-        "project-1".to_string(),
-        BTreeMap::from([("debug".to_string(), debug_with_peer)]),
-    );
+    direct
+        .insert("project-1".to_string(), BTreeMap::from([("debug".to_string(), debug_with_peer)]));
     direct.insert(
         "project-2".to_string(),
         BTreeMap::from([("project-1".to_string(), injected.clone())]),

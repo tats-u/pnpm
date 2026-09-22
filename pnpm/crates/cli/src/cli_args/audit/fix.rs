@@ -26,14 +26,17 @@ pub(crate) fn filter_advisories_for_fix(
     audit_level: ConfigAuditLevel,
     config: &Config,
 ) -> BTreeMap<String, AuditAdvisory> {
-    let ignore_set = config.audit_config.ignore_ghsas
+    let ignore_set = config
+        .audit_config
+        .ignore_ghsas
         .iter()
         .filter_map(|ghsa| {
             let ghsa = normalize_ghsa_id(ghsa);
             (!ghsa.is_empty()).then_some(ghsa)
         })
         .collect::<HashSet<_>>();
-    report.advisories
+    report
+        .advisories
         .iter()
         .filter(|(_, advisory)| severity_number(advisory.severity) >= severity_number(audit_level))
         .filter(|(_, advisory)| {
@@ -59,7 +62,8 @@ pub(crate) fn prune_ignored_ghsas(
     ignored_ghsas: &[String],
     report: &AuditReport,
 ) -> PruneIgnoredGhsasResult {
-    let advisory_ghsa_ids = report.advisories
+    let advisory_ghsa_ids = report
+        .advisories
         .values()
         .filter(|advisory| !advisory.github_advisory_id.is_empty())
         .map(|advisory| normalize_ghsa_id(&advisory.github_advisory_id))
@@ -118,10 +122,9 @@ pub(crate) async fn fix_override(
     let entries = overrides
         .iter()
         .map(|(key, value)| (key.as_str(), value.as_str()));
-    pnpm_workspace_manifest_writer::set_overrides(settings_dir, entries)
-        .map_err(|err| {
-            miette::Report::new(err).wrap_err("write overrides to pnpm-workspace.yaml")
-        })?;
+    pnpm_workspace_manifest_writer::set_overrides(settings_dir, entries).map_err(|err| {
+        miette::Report::new(err).wrap_err("write overrides to pnpm-workspace.yaml")
+    })?;
     let json = serde_json::to_string_pretty(&overrides).into_diagnostic()?;
     let mut output = format!(
         "{} overrides were added to pnpm-workspace.yaml to fix vulnerabilities.\nRun \"pnpm install\" to apply the fixes.\n\nThe added overrides:\n{json}",
@@ -211,11 +214,15 @@ pub(crate) async fn fetch_publish_times(
     // redacted form, like the audit request does, so retry diagnostics never
     // print them (auth travels in the header instead).
     let url = redact_url_userinfo(&url);
-    let authorization = config.auth_headers.for_url_with_package(&registry, Some(name));
+    let authorization = config
+        .auth_headers
+        .for_url_with_package(&registry, Some(name));
     let retry_opts = retry_opts_from_config(config);
     let (_guard, response) = send_with_retry(http_client, &url, retry_opts, |client| {
         // Full metadata: the abbreviated packument has no `time` field.
-        let mut request = client.get(&url).header("accept", "application/json; q=1.0, */*");
+        let mut request = client
+            .get(&url)
+            .header("accept", "application/json; q=1.0, */*");
         if let Some(value) = &authorization {
             request = request.header("authorization", value);
         }
@@ -234,7 +241,10 @@ pub(crate) async fn fetch_publish_times(
             .collect()
     }
 
-    let body = response.json::<PackumentTimes>().await.ok()?;
+    let body = response
+        .json::<PackumentTimes>()
+        .await
+        .ok()?;
     let time = body.time?;
     Some(PackumentPublishInfo {
         time,
@@ -285,12 +295,19 @@ pub(crate) fn minimum_release_age_excludes(
                 .strip_prefix(">=")
                 .and_then(|version| version.trim().parse::<Version>().ok())?;
             let name = advisory.module_name.trim();
-            let Some(info) = publish_infos.get(name).and_then(Option::as_ref) else {
+            let Some(info) = publish_infos
+                .get(name)
+                .and_then(Option::as_ref)
+            else {
                 return Some(format!("{name}@{min}"));
             };
             let range = patched.parse::<Range>().ok()?;
             let (key, lowest) = info.lowest_non_deprecated_version(&range)?;
-            match info.time.get(key).and_then(|raw| parse_packument_timestamp(raw)) {
+            match info
+                .time
+                .get(key)
+                .and_then(|raw| parse_packument_timestamp(raw))
+            {
                 Some(published_at) if published_at <= cutoff => None,
                 // A present-but-unparsable timestamp fails open like unknown
                 // publish times.
@@ -333,7 +350,12 @@ pub(crate) fn ignore_vulnerabilities(
 ) -> miette::Result<String> {
     let mut ordered: Vec<String> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
-    for ghsa in config.audit_config.ignore_ghsas.iter().map(|ghsa| normalize_ghsa_id(ghsa)) {
+    for ghsa in config
+        .audit_config
+        .ignore_ghsas
+        .iter()
+        .map(|ghsa| normalize_ghsa_id(ghsa))
+    {
         if !ghsa.is_empty() && seen.insert(ghsa.clone()) {
             ordered.push(ghsa);
         }
@@ -355,11 +377,12 @@ pub(crate) fn ignore_vulnerabilities(
         }
     }
 
-    pnpm_workspace_manifest_writer::set_audit_ignore_ghsas(settings_dir, &ordered)
-        .map_err(|err| {
+    pnpm_workspace_manifest_writer::set_audit_ignore_ghsas(settings_dir, &ordered).map_err(
+        |err| {
             miette::Report::new(err)
                 .wrap_err("write auditConfig.ignoreGhsas to pnpm-workspace.yaml")
-        })?;
+        },
+    )?;
 
     Ok(ignored_summary(&new_ignores))
 }
@@ -375,7 +398,8 @@ fn ignored_summary(new_ignores: &[String]) -> String {
 /// that carries no GHSA id cannot be ignored, so it is an error rather
 /// than a silent omission.
 fn unfixable_ghsa_ids(report: &AuditReport) -> miette::Result<Vec<String>> {
-    report.advisories
+    report
+        .advisories
         .values()
         .filter(|advisory| advisory.patched_versions.is_none())
         .map(|advisory| {
@@ -433,10 +457,10 @@ pub(crate) fn interactive_select(
         advisories
             .into_iter()
             .filter(|(_, advisory)| {
-                chosen.contains(&format!(
-                    "{}@{}",
-                    advisory.module_name, advisory.vulnerable_versions,
-                ))
+                chosen
+                    .contains(
+                        &format!("{}@{}", advisory.module_name, advisory.vulnerable_versions,),
+                    )
             })
             .collect(),
     ))

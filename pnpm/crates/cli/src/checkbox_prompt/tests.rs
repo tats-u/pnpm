@@ -137,10 +137,20 @@ fn a_required_prompt_refuses_an_empty_selection() {
     );
 
     press(&mut prompt, &[Key::ArrowDown]);
-    assert!(!prompt.render_frame().contains("At least one"), "moving clears the error");
+    assert!(
+        !prompt
+            .render_frame()
+            .contains("At least one"),
+        "moving clears the error"
+    );
 
     press(&mut prompt, &[Key::Enter, Key::Char('a')]);
-    assert!(!prompt.render_frame().contains("At least one"), "toggling all clears the error");
+    assert!(
+        !prompt
+            .render_frame()
+            .contains("At least one"),
+        "toggling all clears the error"
+    );
     press(&mut prompt, &[Key::Char('a')]);
 
     assert_eq!(press(&mut prompt, &[Key::Char(' '), Key::Enter]), KeyOutcome::Submit);
@@ -170,12 +180,11 @@ fn the_answer_names_the_selection_by_its_short_form() {
 
 #[test]
 fn the_theme_picks_the_icons() {
-    let mut prompt = grouped_prompt()
-        .theme(CheckboxTheme {
-            checked: "●".to_string(),
-            unchecked: "○".to_string(),
-            highlight_active: false,
-        });
+    let mut prompt = grouped_prompt().theme(CheckboxTheme {
+        checked: "●".to_string(),
+        unchecked: "○".to_string(),
+        highlight_active: false,
+    });
 
     press(&mut prompt, &[Key::Char(' ')]);
 
@@ -218,6 +227,8 @@ fn the_page_follows_the_cursor_and_keeps_the_headings_above_it() {
 fn a_prompt_without_choices_cannot_run() {
     let prompt: CheckboxPrompt<&str> = CheckboxPrompt::new("Choose", vec![separator("── none ──")]);
 
-    let error = prompt.interact().expect_err("no choice to make");
+    let error = prompt
+        .interact()
+        .expect_err("no choice to make");
     assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
 }

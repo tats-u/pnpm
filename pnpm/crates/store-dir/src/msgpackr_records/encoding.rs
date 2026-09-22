@@ -250,7 +250,10 @@ fn pkg_files_index_fields(idx: &PackageFilesIndex) -> Vec<&'static str> {
     if idx.side_effects.is_some() {
         fields.push("sideEffects");
     }
-    if idx.remote_side_effects_quarantine.is_some() {
+    if idx
+        .remote_side_effects_quarantine
+        .is_some()
+    {
         fields.push("remoteSideEffectsQuarantine");
     }
     fields
@@ -334,7 +337,9 @@ fn encode_json_object(
             .map(String::as_str)
             .collect();
         write_record_def_header(writer, slot, &field_refs);
-        state.json_object_slots.insert(fields, slot);
+        state
+            .json_object_slots
+            .insert(fields, slot);
     }
     for value in obj.values() {
         encode_json_value(writer, state, value)?;

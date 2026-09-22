@@ -36,7 +36,8 @@ pub(crate) fn package_key(
             name: name.to_string(),
             requirement: requirement.to_string(),
             default_features: dependency.default_features,
-            features: dependency.features
+            features: dependency
+                .features
                 .iter()
                 .cloned()
                 .collect(),

@@ -78,7 +78,8 @@ pub(crate) struct SignalRelay {
 impl SignalRelay {
     /// Whether pnpm has relayed a signal to this child.
     pub(crate) fn relayed(&self) -> bool {
-        self.entry.is_some_and(|entry| entry.relays.load(Ordering::Relaxed) > 0)
+        self.entry
+            .is_some_and(|entry| entry.relays.load(Ordering::Relaxed) > 0)
     }
 }
 
@@ -116,7 +117,8 @@ fn claim_entry(target: i32) -> &'static RelayEntry {
         // each line exclusively, which is what a wide parallel run would
         // pay for on every spawn.
         if entry.target.load(Ordering::Relaxed) == 0
-            && entry.target
+            && entry
+                .target
                 .compare_exchange(0, CLAIMING, Ordering::AcqRel, Ordering::Relaxed)
                 .is_ok()
         {
@@ -125,7 +127,9 @@ fn claim_entry(target: i32) -> &'static RelayEntry {
             // taking the entry would let a thread that lost the race wipe
             // the escalation of whichever child won it.
             entry.relays.store(0, Ordering::Relaxed);
-            entry.target.store(target, Ordering::Release);
+            entry
+                .target
+                .store(target, Ordering::Release);
             return entry;
         }
         next = entry.next.load(Ordering::Acquire);
@@ -144,7 +148,9 @@ fn push_entry(target: i32) -> &'static RelayEntry {
     }));
     let mut head = RELAY_HEAD.load(Ordering::Acquire);
     loop {
-        entry.next.store(head, Ordering::Release);
+        entry
+            .next
+            .store(head, Ordering::Release);
         match RELAY_HEAD.compare_exchange_weak(
             head,
             ptr::from_ref(entry).cast_mut(),
@@ -270,7 +276,9 @@ fn relay_to(entry: &RelayEntry, target: i32, signal: libc::c_int, shared_with_gr
     if entry.target.load(Ordering::Acquire) != target {
         return false;
     }
-    let step = entry.relays.fetch_add(1, Ordering::Relaxed);
+    let step = entry
+        .relays
+        .fetch_add(1, Ordering::Relaxed);
     if step >= RELAYED_INTERRUPTS {
         return false;
     }
@@ -392,7 +400,11 @@ unsafe extern "system" fn relay_console_event(event: u32) -> windows_sys::core::
     }
     let mut still_listening = false;
     visit_targets(|entry, _| {
-        if entry.relays.fetch_add(1, Ordering::Relaxed) < RELAYED_INTERRUPTS {
+        if entry
+            .relays
+            .fetch_add(1, Ordering::Relaxed)
+            < RELAYED_INTERRUPTS
+        {
             still_listening = true;
         }
     });

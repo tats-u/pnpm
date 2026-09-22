@@ -47,7 +47,11 @@ fn generated_changesets(workspace: &Path) -> Vec<std::path::PathBuf> {
     let changeset_dir = workspace.join(".changeset");
     let Ok(entries) = fs::read_dir(changeset_dir) else { return Vec::new() };
     let mut paths = entries
-        .map(|entry| entry.expect("read changeset entry").path())
+        .map(|entry| {
+            entry
+                .expect("read changeset entry")
+                .path()
+        })
         .filter(|path| {
             path.file_name()
                 .and_then(OsStr::to_str)
@@ -108,8 +112,12 @@ fn update_changeset_records_only_publishable_production_dependency_changes() {
     );
     write_changeset_config(&workspace, json!({ "ignore": ["ignored-*"] }));
 
-    pacquet(&workspace, ["-r", "install"]).assert().success();
-    pacquet(&workspace, ["-r", "update", "--latest", "--changeset"]).assert().success();
+    pacquet(&workspace, ["-r", "install"])
+        .assert()
+        .success();
+    pacquet(&workspace, ["-r", "update", "--latest", "--changeset"])
+        .assert()
+        .success();
 
     assert_eq!(
         generated_changeset_text(&workspace),
@@ -133,8 +141,12 @@ fn update_changeset_records_peer_dependency_changes_as_major() {
     append_workspace_yaml(&workspace, &format!("catalog:\n  '{DEP}': '^100.0.0'\n"));
     write_changeset_config(&workspace, json!({}));
 
-    pacquet(&workspace, ["install"]).assert().success();
-    pacquet(&workspace, ["update", "--latest", "--changeset"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
+    pacquet(&workspace, ["update", "--latest", "--changeset"])
+        .assert()
+        .success();
 
     assert_eq!(
         generated_changeset_text(&workspace),
@@ -156,8 +168,12 @@ fn update_changeset_skips_dev_dependency_only_changes() {
     );
     write_changeset_config(&workspace, json!({}));
 
-    pacquet(&workspace, ["install"]).assert().success();
-    pacquet(&workspace, ["update", "--latest", "--changeset"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
+    pacquet(&workspace, ["update", "--latest", "--changeset"])
+        .assert()
+        .success();
 
     assert!(generated_changesets(&workspace).is_empty());
     drop((root, anchor));
@@ -191,7 +207,9 @@ fn update_changeset_records_every_consumer_of_a_changed_catalog_entry() {
     );
     write_changeset_config(&workspace, json!({}));
 
-    pacquet(&workspace, ["-r", "install"]).assert().success();
+    pacquet(&workspace, ["-r", "install"])
+        .assert()
+        .success();
     pacquet(&workspace, ["--filter", "project-1", "update", "--latest", "--changeset"])
         .assert()
         .success();
@@ -219,14 +237,18 @@ fn update_changeset_skips_resolution_only_catalog_movement() {
     );
     append_workspace_yaml(&workspace, &format!("catalog:\n  '{DEP}': '100.0.0'\n"));
     write_changeset_config(&workspace, json!({}));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
     let workspace_yaml = fs::read_to_string(&workspace_yaml_path)
         .expect("read workspace yaml")
         .replace("'100.0.0'", "'^100.0.0'");
     fs::write(&workspace_yaml_path, workspace_yaml).expect("widen catalog range");
-    pacquet(&workspace, ["update", "--no-save", "--changeset"]).assert().success();
+    pacquet(&workspace, ["update", "--no-save", "--changeset"])
+        .assert()
+        .success();
 
     assert!(generated_changesets(&workspace).is_empty());
     drop((root, anchor));
@@ -243,10 +265,13 @@ fn update_changeset_warns_and_skips_when_config_is_missing() {
             "dependencies": { (DEP): "^100.0.0" },
         }),
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    let output =
-        pacquet(&workspace, ["update", "--latest", "--changeset"]).output().expect("run update");
+    let output = pacquet(&workspace, ["update", "--latest", "--changeset"])
+        .output()
+        .expect("run update");
     assert!(output.status.success(), "update failed: {}", String::from_utf8_lossy(&output.stderr));
     let rendered = format!(
         "{}{}",
@@ -275,8 +300,12 @@ fn update_changeset_setting_enables_generation_by_default() {
     append_workspace_yaml(&workspace, "update:\n  changeset: true\n");
     write_changeset_config(&workspace, json!({}));
 
-    pacquet(&workspace, ["install"]).assert().success();
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(
         generated_changeset_text(&workspace),
@@ -299,8 +328,12 @@ fn no_changeset_overrides_the_update_changeset_setting() {
     append_workspace_yaml(&workspace, "update:\n  changeset: true\n");
     write_changeset_config(&workspace, json!({}));
 
-    pacquet(&workspace, ["install"]).assert().success();
-    pacquet(&workspace, ["update", "--latest", "--no-changeset"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
+    pacquet(&workspace, ["update", "--latest", "--no-changeset"])
+        .assert()
+        .success();
 
     assert!(generated_changesets(&workspace).is_empty());
     drop((root, anchor));
@@ -317,13 +350,16 @@ fn update_changeset_reports_malformed_config_with_a_stable_error() {
             "dependencies": { (DEP): "^100.0.0" },
         }),
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     let changeset_dir = workspace.join(".changeset");
     fs::create_dir(&changeset_dir).expect("create .changeset");
     fs::write(changeset_dir.join("config.json"), "{").expect("write malformed config");
 
-    let output =
-        pacquet(&workspace, ["update", "--latest", "--changeset"]).output().expect("run update");
+    let output = pacquet(&workspace, ["update", "--latest", "--changeset"])
+        .output()
+        .expect("run update");
     assert!(!output.status.success(), "malformed config must fail the update");
     let stderr = String::from_utf8_lossy(&output.stderr);
     // miette wraps long diagnostic lines at the terminal width, which on
@@ -353,20 +389,25 @@ fn update_changeset_refuses_a_symlinked_changeset_directory() {
             "dependencies": { (DEP): "^100.0.0" },
         }),
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     let outside_changeset_dir = root.path().join("outside-changeset");
     fs::create_dir(&outside_changeset_dir).expect("create outside changeset directory");
     fs::write(outside_changeset_dir.join("config.json"), "{}").expect("write changeset config");
     pnpm_fs::symlink_dir(&outside_changeset_dir, &workspace.join(".changeset"))
         .expect("link changeset directory outside workspace");
 
-    let output =
-        pacquet(&workspace, ["update", "--latest", "--changeset"]).output().expect("run update");
+    let output = pacquet(&workspace, ["update", "--latest", "--changeset"])
+        .output()
+        .expect("run update");
     assert!(!output.status.success(), "symlinked changeset directory must fail the update");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("ERR_PNPM_UNSAFE_CHANGESET_DIR"), "unexpected error: {stderr}");
     assert_eq!(
-        fs::read_dir(&outside_changeset_dir).expect("read outside changeset directory").count(),
+        fs::read_dir(&outside_changeset_dir)
+            .expect("read outside changeset directory")
+            .count(),
         1,
     );
     drop((root, anchor));
@@ -386,8 +427,12 @@ fn update_changeset_supports_a_package_outside_a_workspace() {
     );
     write_changeset_config(&workspace, json!({}));
 
-    pacquet(&workspace, ["install"]).assert().success();
-    pacquet(&workspace, ["update", "--latest", "--changeset"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
+    pacquet(&workspace, ["update", "--latest", "--changeset"])
+        .assert()
+        .success();
 
     assert_eq!(
         generated_changeset_text(&workspace),

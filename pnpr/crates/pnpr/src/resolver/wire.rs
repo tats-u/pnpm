@@ -156,9 +156,15 @@ fn frozen_package_frame(
         return None;
     };
     let name = inputs.package_key.name.to_string();
-    let version = inputs.package_key.suffix.version().to_string();
+    let version = inputs
+        .package_key
+        .suffix
+        .version()
+        .to_string();
     let upstream_tarball_url = tarball_url;
-    let tarball_url = inputs.router.route_url(&name, &version, &upstream_tarball_url);
+    let tarball_url = inputs
+        .router
+        .route_url(&name, &version, &upstream_tarball_url);
     if !seen_urls.insert(tarball_url.clone()) {
         return None;
     }
@@ -211,8 +217,12 @@ fn pnpr_served_revision(
         return None;
     }
     match resolution {
-        LockfileResolution::Tarball(tarball) => tarball.revision.map(TarballRevision::get),
-        LockfileResolution::Registry(registry) => registry.revision.map(TarballRevision::get),
+        LockfileResolution::Tarball(tarball) => tarball
+            .revision
+            .map(TarballRevision::get),
+        LockfileResolution::Registry(registry) => registry
+            .revision
+            .map(TarballRevision::get),
         _ => None,
     }
 }
@@ -220,16 +230,18 @@ fn pnpr_served_revision(
 /// Terminal `done` frame: the full resolved lockfile + stats. The client
 /// writes the lockfile and fetches every tarball itself.
 pub(super) fn done_frame(lockfile: &Lockfile) -> Vec<u8> {
-    let total_packages = lockfile.packages.as_ref().map_or(0, std::collections::HashMap::len);
+    let total_packages = lockfile
+        .packages
+        .as_ref()
+        .map_or(0, std::collections::HashMap::len);
     let frame = serde_json::json!({
         "type": "done",
         "lockfile": serde_json::to_value(lockfile).unwrap_or(serde_json::Value::Null),
         "stats": { "totalPackages": total_packages },
     });
-    ndjson_line(&frame)
-        .unwrap_or_else(|_| {
-            br#"{"type":"error","message":"failed to serialize lockfile"}"#.to_vec()
-        })
+    ndjson_line(&frame).unwrap_or_else(|_| {
+        br#"{"type":"error","message":"failed to serialize lockfile"}"#.to_vec()
+    })
 }
 
 /// Terminal `done` frame of a Cargo resolve: the rendered `Cargo.lock`
@@ -237,10 +249,9 @@ pub(super) fn done_frame(lockfile: &Lockfile) -> Vec<u8> {
 /// than a structure the server rewrites, so it rides the frame as text.
 pub(super) fn cargo_done_frame(lockfile: &str) -> Vec<u8> {
     let frame = serde_json::json!({ "type": "done", "lockfile": lockfile });
-    ndjson_line(&frame)
-        .unwrap_or_else(|_| {
-            br#"{"type":"error","message":"failed to serialize lockfile"}"#.to_vec()
-        })
+    ndjson_line(&frame).unwrap_or_else(|_| {
+        br#"{"type":"error","message":"failed to serialize lockfile"}"#.to_vec()
+    })
 }
 
 /// Terminal `done` frame of a Python resolve: the `pylock.toml` document
@@ -251,10 +262,9 @@ pub(super) fn pypi_done_frame(lockfile: &pnpm_python_resolver::Lockfile) -> Vec<
         return br#"{"type":"error","message":"failed to serialize lockfile"}"#.to_vec();
     };
     let frame = serde_json::json!({ "type": "done", "lockfile": lockfile });
-    ndjson_line(&frame)
-        .unwrap_or_else(|_| {
-            br#"{"type":"error","message":"failed to serialize lockfile"}"#.to_vec()
-        })
+    ndjson_line(&frame).unwrap_or_else(|_| {
+        br#"{"type":"error","message":"failed to serialize lockfile"}"#.to_vec()
+    })
 }
 
 /// Terminal `error` frame for a resolution that aborted mid-stream,
@@ -375,7 +385,9 @@ pub(super) fn tarball_url_version<'a>(url: &'a str, name: &str) -> Option<&'a st
         .unwrap_or(last);
     let stem = strip_tarball_suffix(last)?;
     let unscoped = name.rsplit('/').next().unwrap_or(name);
-    let version = stem.strip_prefix(unscoped)?.strip_prefix('-')?;
+    let version = stem
+        .strip_prefix(unscoped)?
+        .strip_prefix('-')?;
     (!version.is_empty()).then_some(version)
 }
 
@@ -388,7 +400,8 @@ fn strip_tarball_suffix(name: &str) -> Option<&str> {
         .find_map(|suffix| {
             let head_len = name.len().checked_sub(suffix.len())?;
             let (head, tail) = (name.get(..head_len)?, name.get(head_len..)?);
-            tail.eq_ignore_ascii_case(suffix).then_some(head)
+            tail.eq_ignore_ascii_case(suffix)
+                .then_some(head)
         })
 }
 
@@ -464,7 +477,8 @@ pub(super) fn ndjson_stream_response(
     rx: tokio::sync::mpsc::UnboundedReceiver<Vec<u8>>,
 ) -> Response {
     let stream = futures_util::stream::unfold(rx, |mut rx| async move {
-        rx.recv().await
+        rx.recv()
+            .await
             .map(|line| (Ok::<_, std::io::Error>(axum::body::Bytes::from(line)), rx))
     });
     Response::builder()

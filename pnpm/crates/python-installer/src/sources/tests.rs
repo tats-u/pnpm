@@ -6,7 +6,9 @@ fn git_declarations_put_revisions_before_repository_queries() {
     let declaration: Source =
         toml::from_str("git = 'https://example.test/repo.git?key=value'\nrev = 'release#fork'")
             .unwrap();
-    let url = declaration_url(&declaration).unwrap().unwrap();
+    let url = declaration_url(&declaration)
+        .unwrap()
+        .unwrap();
     let pnpm_python_resolver::Source::Git(git) = pnpm_python_resolver::Source::parse(&url).unwrap()
     else {
         panic!("git source expected")

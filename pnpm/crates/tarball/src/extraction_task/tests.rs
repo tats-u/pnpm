@@ -81,7 +81,9 @@ async fn extraction_returns_result_and_releases_capacity_on_error() {
 async fn extraction_releases_capacity_on_panic() {
     let semaphore = Box::leak(Box::new(Semaphore::new(1)));
     let permit = semaphore.acquire().await.unwrap();
-    let error = spawn_extraction(permit, || panic!("extraction failed")).await.unwrap_err();
+    let error = spawn_extraction(permit, || panic!("extraction failed"))
+        .await
+        .unwrap_err();
 
     assert!(error.is_panic(), "extraction result: {error:?}");
     assert_eq!(semaphore.available_permits(), 1);

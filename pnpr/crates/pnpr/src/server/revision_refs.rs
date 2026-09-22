@@ -89,14 +89,7 @@ pub(super) async fn serve_revision_ref(
     reference: RevisionRef<'_>,
     scan: &mut RevisionScan,
 ) -> Option<Response> {
-    let RevisionRef {
-        registry,
-        source,
-        storage,
-        original,
-        digest,
-        integrity,
-    } = reference;
+    let RevisionRef { registry, source, storage, original, digest, integrity } = reference;
     let package =
         match CanonicalPackageName::parse(&original.package, pnpr_package_name::Ecosystem::Npm) {
             Ok(package) => package,
@@ -119,7 +112,8 @@ pub(super) async fn serve_revision_ref(
         return None;
     }
     if !readable_here(state, &Identity::Anonymous, Routed { registry, source }, &package) {
-        scan.private_refs.push((storage.clone(), package, original.version));
+        scan.private_refs
+            .push((storage.clone(), package, original.version));
         return None;
     }
     let response =

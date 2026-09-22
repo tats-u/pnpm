@@ -8,7 +8,9 @@ fn purl(specifier: &str) -> Purl {
 
 fn error(specifier: &str) -> String {
     let body = strip_scheme(specifier).expect("recognize the purl scheme");
-    Purl::parse(body, Shown(specifier)).expect_err("reject the purl").to_string()
+    Purl::parse(body, Shown(specifier))
+        .expect_err("reject the purl")
+        .to_string()
 }
 
 fn expect(

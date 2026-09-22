@@ -7,7 +7,9 @@ use axum::response::IntoResponse;
 
 pub(super) fn insert_header(response: &mut Response, name: &'static str, value: &str) {
     let value = HeaderValue::from_str(value).expect("generated OCI response header is valid");
-    response.headers_mut().insert(name, value);
+    response
+        .headers_mut()
+        .insert(name, value);
 }
 
 /// Render a ranged blob read as its response.
@@ -55,7 +57,9 @@ impl Refusal {
     }
 
     pub(in super::super) fn respond(self) -> Response {
-        let status = self.original.map_or(self.status, |err| err.into_response().status());
+        let status = self
+            .original
+            .map_or(self.status, |err| err.into_response().status());
         respond(status, self.code, self.message)
     }
 }

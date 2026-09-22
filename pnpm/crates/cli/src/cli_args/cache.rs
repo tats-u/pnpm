@@ -48,7 +48,9 @@ impl CacheCommand {
     }
 
     fn cache_dir(config: &Config) -> PathBuf {
-        config.cache_dir.join(Self::meta_dir(config))
+        config
+            .cache_dir
+            .join(Self::meta_dir(config))
     }
 
     /// Lexically cleaned form of the configured cache directory, for
@@ -128,7 +130,11 @@ impl CacheCommand {
                 };
                 let mut registries: Vec<String> = entries
                     .filter_map(std::result::Result::ok)
-                    .filter(|entry| entry.file_type().is_ok_and(|file_type| file_type.is_dir()))
+                    .filter(|entry| {
+                        entry
+                            .file_type()
+                            .is_ok_and(|file_type| file_type.is_dir())
+                    })
                     .map(|entry| decode_registry_name(&entry.file_name().to_string_lossy()))
                     .collect();
                 registries.sort();
@@ -256,10 +262,11 @@ impl CacheCommand {
             // No cache directory at all is nothing to reclaim, as an absent
             // root is.
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-            Err(error) => outcome.failures.push(format!(
-                "Failed to resolve cache directory {:?}: {error}",
-                config.cache_dir,
-            )),
+            Err(error) => outcome
+                .failures
+                .push(
+                    format!("Failed to resolve cache directory {:?}: {error}", config.cache_dir,),
+                ),
         }
         outcome.report(dry_run)
     }
@@ -287,9 +294,9 @@ impl PruneOutcome {
             Ok(entries) => entries,
             Err(error) if error.kind() == io::ErrorKind::NotFound => return,
             Err(error) => {
-                return self.failures.push(format!(
-                    "Failed to read metadata cache directory {root:?}: {error}",
-                ));
+                return self
+                    .failures
+                    .push(format!("Failed to read metadata cache directory {root:?}: {error}",));
             }
         };
         for entry in entries {
@@ -322,9 +329,9 @@ impl PruneOutcome {
             Ok(_) => {}
             Err(error) if error.kind() == io::ErrorKind::NotFound => return,
             Err(error) => {
-                return self.failures.push(format!(
-                    "Failed to inspect metadata cache entry {path:?}: {error}",
-                ));
+                return self
+                    .failures
+                    .push(format!("Failed to inspect metadata cache entry {path:?}: {error}",));
             }
         }
         let registry_key = entry
@@ -335,7 +342,9 @@ impl PruneOutcome {
             return;
         }
         match remove_pruned_dir(&path, dry_run) {
-            Ok(()) => self.pruned.push(format!("{meta_dir}/{registry_key}")),
+            Ok(()) => self
+                .pruned
+                .push(format!("{meta_dir}/{registry_key}")),
             Err(error) => self.failures.push(error),
         }
     }
@@ -460,7 +469,9 @@ fn cache_registry_name(file_path: &str) -> String {
 
 /// The metadata file's modification time as an RFC 3339 timestamp.
 fn cached_at(full_path: &Path) -> Option<String> {
-    let mtime = fs::metadata(full_path).and_then(|meta| meta.modified()).ok()?;
+    let mtime = fs::metadata(full_path)
+        .and_then(|meta| meta.modified())
+        .ok()?;
     Some(
         chrono::DateTime::<chrono::Utc>::from(mtime)
             .to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
@@ -475,7 +486,10 @@ fn walk_metadata_files(
 ) -> miette::Result<Vec<(String, std::path::PathBuf)>> {
     let glob = wax::Glob::new(pattern).into_diagnostic()?;
     let mut matches = Vec::new();
-    for entry in glob.walk(cache_dir).filter_map(std::result::Result::ok) {
+    for entry in glob
+        .walk(cache_dir)
+        .filter_map(std::result::Result::ok)
+    {
         if !entry.file_type().is_file() {
             continue;
         }
@@ -505,7 +519,11 @@ fn split_cached_versions(
             &integrity,
             &format!("{}@{}", meta_object.name, version),
         );
-        let is_cached = store_index.is_some_and(|index| index.contains_key(&key).unwrap_or(false));
+        let is_cached = store_index.is_some_and(|index| {
+            index
+                .contains_key(&key)
+                .unwrap_or(false)
+        });
         if is_cached {
             cached.push(version.clone());
         } else {

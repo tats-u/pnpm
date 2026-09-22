@@ -57,7 +57,9 @@ async fn artifact_fetch_guard_rejects_initial_urls_and_redirects() {
         .expect(1)
         .create_async()
         .await;
-    let allowed = reqwest::Url::parse(&source.url()).unwrap().origin();
+    let allowed = reqwest::Url::parse(&source.url())
+        .unwrap()
+        .origin();
     let upstream = upstream(source.url(), HeaderMap::new())
         .with_fetch_guard(std::sync::Arc::new(move |url| url.origin() == allowed));
     assert!(
@@ -106,11 +108,18 @@ async fn approved_artifact_redirects_rebuild_headers_for_each_origin() {
         .expect(2)
         .create_async()
         .await;
-    let origins = [&source.url(), &cdn.url()].map(|url| reqwest::Url::parse(url).unwrap().origin());
+    let origins = [&source.url(), &cdn.url()].map(|url| {
+        reqwest::Url::parse(url)
+            .unwrap()
+            .origin()
+    });
     let upstream = upstream(source.url(), auth_and_custom_headers())
         .with_fetch_guard(std::sync::Arc::new(move |url| origins.contains(&url.origin())));
     for url in [format!("{}/artifact", source.url()), format!("{}/redirect", cdn.url())] {
-        let response = upstream.fetch_artifact_response(&url).await.unwrap();
+        let response = upstream
+            .fetch_artifact_response(&url)
+            .await
+            .unwrap();
         let FetchOutcome::Ok(response) = response else { panic!("expected the artifact") };
         assert_eq!(response.bytes().await.unwrap(), "artifact bytes");
     }
@@ -145,9 +154,21 @@ async fn artifact_and_npm_downloads_hold_permits_after_returning_headers() {
     let name = CanonicalPackageName::parse("foo", pnpr_package_name::Ecosystem::Npm).unwrap();
     for mode in 0..3 {
         let outcome = match mode {
-            0 => upstream.fetch_artifact_response(&server.url()).await,
-            1 => upstream.fetch_tarball_response(&name, "foo.tgz").await,
-            _ => upstream.fetch_revision_tarball_response("digest").await,
+            0 => {
+                upstream
+                    .fetch_artifact_response(&server.url())
+                    .await
+            }
+            1 => {
+                upstream
+                    .fetch_tarball_response(&name, "foo.tgz")
+                    .await
+            }
+            _ => {
+                upstream
+                    .fetch_revision_tarball_response("digest")
+                    .await
+            }
         };
         let FetchOutcome::Ok(response) = outcome.unwrap() else {
             panic!("expected artifact response")
@@ -155,7 +176,10 @@ async fn artifact_and_npm_downloads_hold_permits_after_returning_headers() {
         assert!(
             tokio::time::timeout(
                 Duration::from_millis(20),
-                upstream.http.client.acquire_for_url(&server.url())
+                upstream
+                    .http
+                    .client
+                    .acquire_for_url(&server.url())
             )
             .await
             .is_err(),
@@ -163,7 +187,10 @@ async fn artifact_and_npm_downloads_hold_permits_after_returning_headers() {
         drop(response);
         let guard = tokio::time::timeout(
             Duration::from_secs(1),
-            upstream.http.client.acquire_for_url(&server.url()),
+            upstream
+                .http
+                .client
+                .acquire_for_url(&server.url()),
         )
         .await
         .unwrap();
@@ -176,13 +203,18 @@ async fn artifact_and_npm_downloads_hold_permits_after_returning_headers() {
 async fn revision_download_budget_starts_after_waiting_for_a_permit() {
     use futures_util::StreamExt;
 
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move {
         let (mut socket, _) = listener.accept().await.unwrap();
         let mut request = [0u8; 4096];
         assert!(socket.read(&mut request).await.unwrap() > 0);
-        socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\n").await.unwrap();
+        socket
+            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\n")
+            .await
+            .unwrap();
         tokio::time::sleep(Duration::from_millis(50)).await;
         socket.write_all(b"body").await.unwrap();
     });
@@ -192,7 +224,11 @@ async fn revision_download_budget_starts_after_waiting_for_a_permit() {
     upstream.http.client = std::sync::Arc::new(
         pnpm_network::ThrottledClient::new_for_installs().with_max_sockets_per_host(Some(1)),
     );
-    let held = upstream.http.client.acquire_for_url(&url).await;
+    let held = upstream
+        .http
+        .client
+        .acquire_for_url(&url)
+        .await;
     let fetch = upstream.fetch_revision_tarball_response("digest");
     let release_permit = async {
         tokio::time::sleep(Duration::from_millis(400)).await;

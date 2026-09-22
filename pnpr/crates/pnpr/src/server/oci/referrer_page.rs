@@ -45,7 +45,9 @@ pub(super) struct ReferrerFilter {
 impl ReferrerFilter {
     pub(super) fn new(subject: Digest, query: &str) -> Self {
         let artifact_type = query_param(Some(query), "artifactType");
-        let artifact_type_digest = artifact_type.as_ref().map(|value| Digest::of(value.as_bytes()));
+        let artifact_type_digest = artifact_type
+            .as_ref()
+            .map(|value| Digest::of(value.as_bytes()));
         Self { subject, artifact_type, artifact_type_digest }
     }
 
@@ -55,15 +57,21 @@ impl ReferrerFilter {
     pub(super) fn needs_manifest(&self, indexed: Option<&ReferrerMetadata>) -> bool {
         indexed.is_none_or(|metadata| {
             metadata.subject.as_ref() == Some(&self.subject)
-                && self.artifact_type_digest
+                && self
+                    .artifact_type_digest
                     .as_ref()
                     .is_none_or(|filter| metadata.artifact_type_digest.as_ref() == Some(filter))
         })
     }
 
     pub(super) fn matches(&self, manifest: &Manifest) -> bool {
-        manifest.referrer_metadata().subject.as_ref() == Some(&self.subject)
-            && self.artifact_type
+        manifest
+            .referrer_metadata()
+            .subject
+            .as_ref()
+            == Some(&self.subject)
+            && self
+                .artifact_type
                 .as_deref()
                 .is_none_or(|filter| manifest.artifact_type() == Some(filter))
     }
@@ -208,7 +216,12 @@ pub(super) fn indexed_referrer<'a>(
     let Some(migrated) = migrated else {
         return Some(entry.referrer.as_ref());
     };
-    Some(migrated.manifest(&entry.digest)?.referrer.as_ref())
+    Some(
+        migrated
+            .manifest(&entry.digest)?
+            .referrer
+            .as_ref(),
+    )
 }
 
 /// Read the repository's image document as it stands now.

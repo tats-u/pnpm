@@ -43,13 +43,8 @@ fn install_output(command: Command) -> String {
 /// dependency, so a hoisted install reported none of them.
 #[test]
 fn hoisted_install_reports_the_version_a_dependency_resolved_to() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(&workspace, "nodeLinker: hoisted\n");
     write_manifest(&workspace, serde_json::json!({ "@pnpm.e2e/foo": "^100.0.0" }));
@@ -72,13 +67,8 @@ fn hoisted_install_reports_the_version_a_dependency_resolved_to() {
 
 #[test]
 fn hoisted_install_reports_both_sides_of_a_version_change() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(&workspace, "nodeLinker: hoisted\n");
     write_manifest(&workspace, serde_json::json!({ "@pnpm.e2e/foo": "100.0.0" }));
@@ -103,13 +93,8 @@ fn hoisted_install_reports_both_sides_of_a_version_change() {
 /// it has its own name, and the summary names both.
 #[test]
 fn hoisted_install_reports_an_aliased_dependency_under_its_alias() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(&workspace, "nodeLinker: hoisted\n");
     write_manifest(&workspace, serde_json::json!({ "aliased": "npm:@pnpm.e2e/foo@100.1.0" }));
@@ -126,13 +111,8 @@ fn hoisted_install_reports_an_aliased_dependency_under_its_alias() {
 /// uninstalled, so the summary must not claim otherwise.
 #[test]
 fn hoisted_install_does_not_report_an_optional_dependency_it_skipped() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace_yaml(&workspace, "nodeLinker: hoisted\n");
     fs::write(
@@ -145,7 +125,11 @@ fn hoisted_install_does_not_report_an_optional_dependency_it_skipped() {
     .expect("write package.json");
 
     assert_eq!(install_summary(pacquet), None);
-    assert!(!workspace.join("node_modules/@pnpm.e2e/not-compatible-with-any-os").exists());
+    assert!(
+        !workspace
+            .join("node_modules/@pnpm.e2e/not-compatible-with-any-os")
+            .exists()
+    );
 
     // The lockfile records what the last install resolved, so the entry is
     // still there for the next install that has work to do. Only the skip
@@ -173,13 +157,8 @@ fn hoisted_install_does_not_report_an_optional_dependency_it_skipped() {
 #[test]
 fn hoisted_install_reports_an_optional_dependency_it_stops_supporting() {
     const PKG: &str = "@pnpm.e2e/not-compatible-with-any-os";
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),

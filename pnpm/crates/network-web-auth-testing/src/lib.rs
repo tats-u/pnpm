@@ -368,7 +368,9 @@ pub fn ok_token(token: &str) -> WebAuthFetchResponse {
         ok: true,
         status: 200,
         retry_after: None,
-        body: json!({ "token": token }).to_string().into_bytes(),
+        body: json!({ "token": token })
+            .to_string()
+            .into_bytes(),
         truncated: false,
     }
 }
@@ -385,7 +387,9 @@ pub fn ok_truncated() -> WebAuthFetchResponse {
         retry_after: None,
         // A real token, to prove that a truncated response is discarded
         // *because* it was truncated, not because the body lacked a token.
-        body: json!({ "token": "web-token-123" }).to_string().into_bytes(),
+        body: json!({ "token": "web-token-123" })
+            .to_string()
+            .into_bytes(),
         truncated: true,
     }
 }

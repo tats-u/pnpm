@@ -23,7 +23,9 @@ pub struct WorkspaceInventory {
 impl WorkspaceInventory {
     /// Paths whose final component equals `basename`.
     pub fn manifests(&self, basename: &str) -> Option<&[PathBuf]> {
-        self.manifests.get(basename).map(Vec::as_slice)
+        self.manifests
+            .get(basename)
+            .map(Vec::as_slice)
     }
 }
 
@@ -136,11 +138,10 @@ fn find_workspace_inventory_with(
 }
 
 fn canonical_workspace_root(workspace_root: &Path) -> Result<PathBuf, FindWorkspaceInventoryError> {
-    fs::canonicalize(workspace_root)
-        .map_err(|source| FindWorkspaceInventoryError::ReadDirectory {
-            path: workspace_root.to_path_buf(),
-            source,
-        })
+    fs::canonicalize(workspace_root).map_err(|source| FindWorkspaceInventoryError::ReadDirectory {
+        path: workspace_root.to_path_buf(),
+        source,
+    })
 }
 
 fn compile_excluded_directories(
@@ -151,18 +152,19 @@ fn compile_excluded_directories(
         .filter_map(|pattern| negated_directory_pattern(pattern).transpose())
         .map(|directory| {
             directory.map(|directory| {
-                wax::Glob::new(&directory).expect("validated directory pattern").into_owned()
+                wax::Glob::new(&directory)
+                    .expect("validated directory pattern")
+                    .into_owned()
             })
         })
         .collect::<Result<Vec<_>, _>>()
         .map_err(FindWorkspaceInventoryError::InvalidPattern)?;
-    wax::any(globs)
-        .map_err(|error| {
-            FindWorkspaceInventoryError::InvalidPattern(FindWorkspaceProjectsError::InvalidGlob {
-                pattern: "<negated pattern>".to_string(),
-                message: error.to_string(),
-            })
+    wax::any(globs).map_err(|error| {
+        FindWorkspaceInventoryError::InvalidPattern(FindWorkspaceProjectsError::InvalidGlob {
+            pattern: "<negated pattern>".to_string(),
+            message: error.to_string(),
         })
+    })
 }
 
 /// The ignored directories that exist, relative to the canonical root.

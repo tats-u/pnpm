@@ -37,8 +37,9 @@ impl Walker<'_> {
         // The cache lookup uses the augmented view because a node's
         // own children count as parents for its own descendants' peer
         // resolution.
-        if let Some(cached) =
-            self.find_hit(&refs.refs, &entry.pkg.id).map(PeersCacheItem::to_cached_node_output)
+        if let Some(cached) = self
+            .find_hit(&refs.refs, &entry.pkg.id)
+            .map(PeersCacheItem::to_cached_node_output)
         {
             return self.finish_cache_hit(
                 cached,
@@ -111,8 +112,12 @@ impl Walker<'_> {
         };
         let realize_undo = merge_realize_undo(entry.preview_undo.take(), realize_undo);
         let chains = ChildChains {
-            names: walk.chain_names.pushed(entry.pkg_name.clone()),
-            node_ids: walk.parent_node_ids.pushed(node_id.clone()),
+            names: walk
+                .chain_names
+                .pushed(entry.pkg_name.clone()),
+            node_ids: walk
+                .parent_node_ids
+                .pushed(node_id.clone()),
             pkg_ids: chain_with_pkg_id(walk.parent_pkg_ids, &entry.pkg.id),
         };
         let outputs = self.resolve_children_of(
@@ -162,15 +167,21 @@ impl Walker<'_> {
             external_from_children: std::mem::take(&mut walked.outputs.external_peers),
             missing_from_children: &walked.outputs.missing_peers,
         });
-        walked.outputs.auto_install_resolved_peers.extend(
-            peers.own_resolved
-                .iter()
-                .map(|(peer_name, peer_node_id)| (peer_name.clone(), peer_node_id.clone())),
-        );
+        walked
+            .outputs
+            .auto_install_resolved_peers
+            .extend(
+                peers
+                    .own_resolved
+                    .iter()
+                    .map(|(peer_name, peer_node_id)| (peer_name.clone(), peer_node_id.clone())),
+            );
         let own_missing = (!walked.outputs.missing_peers.is_empty()).then(|| {
             (
                 entry.pkg.id.to_string(),
-                walked.outputs.missing_peers
+                walked
+                    .outputs
+                    .missing_peers
                     .keys()
                     .cloned()
                     .collect(),
@@ -241,7 +252,9 @@ impl Walker<'_> {
                 },
             });
         }
-        self.traversal.in_progress.remove(node_id);
+        self.traversal
+            .in_progress
+            .remove(node_id);
     }
 
     /// The node's output when a fast path answers it without a walk, marking
@@ -263,7 +276,11 @@ impl Walker<'_> {
             return Some(self.peerless_output(dep_path));
         }
 
-        if self.traversal.in_progress.contains(node_id) {
+        if self
+            .traversal
+            .in_progress
+            .contains(node_id)
+        {
             // Cycle: bottom out with the bare `pkgIdWithPatchHash` as
             // the depPath. The original visit (still on the stack) will
             // compute the real depPath and insert it into
@@ -275,7 +292,9 @@ impl Walker<'_> {
             let pkg_id = Arc::<str>::clone(&self.tree.packages[&tree_node.resolved_package_id].id);
             return Some(self.peerless_output(DepPath::from(pkg_id)));
         }
-        self.traversal.in_progress.insert(node_id.clone());
+        self.traversal
+            .in_progress
+            .insert(node_id.clone());
 
         let cached = {
             let tree_node = &self.tree.dependencies_tree[node_id];
@@ -307,20 +326,28 @@ impl Walker<'_> {
     /// `peerDependencies`, the depPath is the bare `pkgIdWithPatchHash` and
     /// the recursion can be skipped entirely.
     pub(super) fn context_free_dep_path(&self, node_id: &NodeId) -> Option<(i32, DepPath)> {
-        let tree_node = self.tree.dependencies_tree.get(node_id)?;
+        let tree_node = self
+            .tree
+            .dependencies_tree
+            .get(node_id)?;
         if tree_node.depth == -1 {
             return Some((
                 tree_node.depth,
                 DepPath::from(Arc::<str>::clone(&tree_node.resolved_package_id)),
             ));
         }
-        let dep_path = self.caches.pure_pkgs.get(&*tree_node.resolved_package_id)?;
+        let dep_path = self
+            .caches
+            .pure_pkgs
+            .get(&*tree_node.resolved_package_id)?;
         let own_peers_bind = !self.tree.packages[&tree_node.resolved_package_id]
             .peer_dependencies
             .is_empty();
         if own_peers_bind
             || (!self.traversal.discovery
-                && self.output.graph
+                && self
+                    .output
+                    .graph
                     .get(dep_path)
                     .is_none_or(|graph_node| graph_node.depth > tree_node.depth))
         {
@@ -358,13 +385,13 @@ impl Walker<'_> {
         } else {
             Arc::clone(parent_dep_paths)
         };
-        for child_node_id in
-            new_parent_refs.values().filter_map(|parent_ref| parent_ref.node_id.as_ref())
+        for child_node_id in new_parent_refs
+            .values()
+            .filter_map(|parent_ref| parent_ref.node_id.as_ref())
         {
-            self.caches.parent_pkgs_of_node.insert(
-                child_node_id.clone(),
-                Arc::clone(&parent_dep_paths),
-            );
+            self.caches
+                .parent_pkgs_of_node
+                .insert(child_node_id.clone(), Arc::clone(&parent_dep_paths));
         }
         parent_dep_paths
     }

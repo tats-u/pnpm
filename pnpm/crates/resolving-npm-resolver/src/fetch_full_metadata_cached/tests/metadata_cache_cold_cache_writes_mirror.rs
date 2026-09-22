@@ -37,7 +37,9 @@ async fn cold_cache_writes_mirror_on_200() {
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("200 → ok");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("200 → ok");
     assert_eq!(pkg.name, "acme");
     mock.assert_async().await;
 
@@ -78,7 +80,9 @@ async fn offline_with_mirror_reads_cache_without_registry() {
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("offline cache hit");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("offline cache hit");
     assert_eq!(pkg.name, "acme");
     no_network.assert_async().await;
 }
@@ -111,7 +115,9 @@ async fn offline_without_mirror_errors_without_registry() {
         },
     };
 
-    let error = fetch_full_metadata_cached("acme", &opts).await.expect_err("offline miss");
+    let error = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect_err("offline miss");
     assert!(matches!(
         error,
         FetchMetadataError::NoOfflineMeta { ref pkg_name, .. } if pkg_name == "acme"
@@ -160,7 +166,9 @@ async fn unsolicited_304_retries_without_cache() {
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("retry returns metadata");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("retry returns metadata");
     assert_eq!(pkg.name, "acme");
     first.assert_async().await;
     second.assert_async().await;
@@ -202,7 +210,9 @@ async fn repeated_unsolicited_304_reports_missing_cache() {
         },
     };
 
-    let error = fetch_full_metadata_cached("acme", &opts).await.expect_err("304 needs a cache");
+    let error = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect_err("304 needs a cache");
     dbg!(&error);
     assert!(matches!(
         error,
@@ -266,7 +276,9 @@ async fn cache_loss_after_304_stops_after_one_fallback() {
         },
     };
 
-    let error = fetch_full_metadata_cached("acme", &opts).await.expect_err("fallback 304 fails");
+    let error = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect_err("fallback 304 fails");
     assert!(matches!(
         error,
         FetchMetadataError::NotModifiedWithoutCache { ref pkg_name } if pkg_name == "acme"
@@ -332,7 +344,9 @@ async fn cache_loss_after_304_body_retry_remains_bypassed() {
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("body retry succeeds");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("body retry succeeds");
     assert_eq!(pkg.name, "acme");
     first.assert_async().await;
     broken.assert_async().await;
@@ -387,7 +401,9 @@ async fn cache_loss_after_304_registry_error_propagates() {
         },
     };
 
-    let error = fetch_full_metadata_cached("acme", &opts).await.expect_err("403 propagates");
+    let error = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect_err("403 propagates");
     assert!(matches!(
         error,
         FetchMetadataError::Network { ref error, .. }
@@ -442,7 +458,9 @@ async fn filtered_full_cache_writes_filtered_mirror_on_200() {
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("200 -> ok");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("200 -> ok");
     assert_eq!(pkg.name, "acme");
     mock.assert_async().await;
 
@@ -453,7 +471,10 @@ async fn filtered_full_cache_writes_filtered_mirror_on_200() {
         get_pkg_mirror_path(cache.path(), FULL_META_DIR, &registry, "acme").expect("full path");
     assert!(!unfiltered_path.exists(), "unfiltered mirror must not be written");
     let persisted = load_meta(&mirror_path).expect("mirror readable");
-    let manifest = persisted.versions.get("1.0.0").expect("manifest");
+    let manifest = persisted
+        .versions
+        .get("1.0.0")
+        .expect("manifest");
     assert!(!manifest.other.contains_key("readme"));
     assert!(!manifest.other.contains_key("scripts"));
 }
@@ -495,15 +516,24 @@ async fn a_doc_served_with_the_abbreviated_content_type_is_cached_verbatim() {
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("200 → ok");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("200 → ok");
     assert_eq!(pkg.name, "acme");
     mock.assert_async().await;
 
     let mirror_path = get_pkg_mirror_path(cache.path(), ABBREVIATED_META_DIR, &registry, "acme")
         .expect("abbreviated path");
     let persisted = load_meta(&mirror_path).expect("mirror readable");
-    let manifest = persisted.versions.get("1.0.0").expect("manifest");
-    assert!(manifest.other.contains_key("_cacheUntouchedMarker"));
+    let manifest = persisted
+        .versions
+        .get("1.0.0")
+        .expect("manifest");
+    assert!(
+        manifest
+            .other
+            .contains_key("_cacheUntouchedMarker")
+    );
 }
 
 #[tokio::test]
@@ -544,11 +574,14 @@ async fn warm_cache_serves_from_mirror_on_304() {
         },
     };
 
-    let _first_pkg = fetch_full_metadata_cached("acme", &opts).await.expect("200 populates cache");
+    let _first_pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("200 populates cache");
     first.assert_async().await;
 
-    let second_pkg =
-        fetch_full_metadata_cached("acme", &opts).await.expect("304 reads from mirror");
+    let second_pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("304 reads from mirror");
     second.assert_async().await;
     assert_eq!(second_pkg.name, "acme");
     assert_eq!(second_pkg.published_at("1.0.0"), Some("2025-01-10T08:30:00.000Z"));
@@ -591,7 +624,9 @@ async fn a_304_renews_the_mirror_mtime() {
         },
     };
 
-    fetch_full_metadata_cached("acme", &opts).await.expect("200 populates cache");
+    fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("200 populates cache");
     let mirror_path =
         get_pkg_mirror_path(cache.path(), FULL_META_DIR, &registry, "acme").expect("path");
 
@@ -604,13 +639,17 @@ async fn a_304_renews_the_mirror_mtime() {
         .set_modified(aged)
         .expect("age mirror");
 
-    fetch_full_metadata_cached("acme", &opts).await.expect("304 reads from mirror");
+    fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("304 reads from mirror");
 
     let renewed = std::fs::metadata(&mirror_path)
         .expect("stat mirror")
         .modified()
         .expect("mtime");
-    let age = std::time::SystemTime::now().duration_since(renewed).expect("mtime in the past");
+    let age = std::time::SystemTime::now()
+        .duration_since(renewed)
+        .expect("mtime in the past");
     assert!(
         age < std::time::Duration::from_mins(1),
         "mirror mtime must be renewed by the 304; still {age:?} old",
@@ -657,10 +696,14 @@ async fn stale_cache_refreshes_mirror_on_200() {
         },
     };
 
-    let _ = fetch_full_metadata_cached("acme", &opts).await.expect("populate");
+    let _ = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("populate");
     first.assert_async().await;
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("refresh");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("refresh");
     second.assert_async().await;
     assert_eq!(pkg.published_at("1.0.0"), Some("2025-03-01T00:00:00.000Z"));
     let mirror = get_pkg_mirror_path(cache.path(), FULL_META_DIR, &registry, "acme").expect("path");
@@ -697,7 +740,9 @@ async fn no_cache_dir_skips_mirror_io() {
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("200 → ok");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("200 → ok");
     assert_eq!(pkg.name, "acme");
     mock.assert_async().await;
 }
@@ -742,7 +787,9 @@ async fn read_only_cache_dir_does_not_fail_the_call() {
         },
     };
 
-    let pkg = fetch_full_metadata_cached("acme", &opts).await.expect("read-only must not fail");
+    let pkg = fetch_full_metadata_cached("acme", &opts)
+        .await
+        .expect("read-only must not fail");
     assert_eq!(pkg.name, "acme");
     mock.assert_async().await;
 

@@ -96,11 +96,16 @@ impl SearchArgs {
             return Err(SearchError::MissingQuery.into());
         }
 
-        let normalized_registry_url =
-            with_trailing_slash(self.registry.as_deref().unwrap_or(&config.registry));
+        let normalized_registry_url = with_trailing_slash(
+            self.registry
+                .as_deref()
+                .unwrap_or(&config.registry),
+        );
         let search_url = self.search_url(&normalized_registry_url, &query_string)?;
 
-        let auth_header = config.auth_headers.for_url(&normalized_registry_url);
+        let auth_header = config
+            .auth_headers
+            .for_url(&normalized_registry_url);
         let http_client = build_registry_client(config)?;
 
         let retry_opts = RetryOpts {
@@ -124,7 +129,9 @@ impl SearchArgs {
             })?;
 
         if !response.status().is_success() {
-            return Err(search_request_failed(response).await.into());
+            return Err(search_request_failed(response)
+                .await
+                .into());
         }
 
         let data = response
@@ -150,14 +157,21 @@ impl SearchArgs {
         search_url
             .query_pairs_mut()
             .append_pair("text", query_string)
-            .append_pair("size", &self.search_limit.unwrap_or(20).to_string());
+            .append_pair(
+                "size",
+                &self
+                    .search_limit
+                    .unwrap_or(20)
+                    .to_string(),
+            );
         Ok(search_url)
     }
 
     /// The results as JSON or as one block per package.
     fn render(&self, data: RegistrySearchResponse) -> miette::Result<String> {
         if self.json {
-            let packages: Vec<&serde_json::Value> = data.objects
+            let packages: Vec<&serde_json::Value> = data
+                .objects
                 .iter()
                 .map(|obj| &obj.package)
                 .collect();
@@ -209,7 +223,8 @@ async fn search_request_failed(response: reqwest::Response) -> SearchError {
 
 fn format_package(pkg: &SearchPackage) -> String {
     let author = author_name(pkg);
-    let date = pkg.date
+    let date = pkg
+        .date
         .as_deref()
         .and_then(|date_str| date_str.split('T').next())
         .unwrap_or_default()

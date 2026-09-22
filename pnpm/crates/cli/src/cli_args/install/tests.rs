@@ -13,8 +13,10 @@ use pretty_assertions::assert_eq;
 #[test]
 fn dependency_options_to_dependency_groups() {
     use DependencyGroup::{Dev, Optional, Prod};
-    let create_list =
-        |opts: InstallDependencyOptions| opts.dependency_groups(true).collect::<Vec<_>>();
+    let create_list = |opts: InstallDependencyOptions| {
+        opts.dependency_groups(true)
+            .collect::<Vec<_>>()
+    };
 
     assert_eq!(
         create_list(InstallDependencyOptions {
@@ -116,14 +118,26 @@ struct InstallArgsHarness {
 #[test]
 fn node_linker_default_is_none() {
     let parsed = InstallArgsHarness::try_parse_from(["pacquet-test"]).expect("parses");
-    assert!(parsed.args.materialization.node_linker.is_none(), "flag absent → field is None");
+    assert!(
+        parsed
+            .args
+            .materialization
+            .node_linker
+            .is_none(),
+        "flag absent → field is None"
+    );
 }
 
 #[test]
 fn node_linker_hoisted() {
     let parsed = InstallArgsHarness::try_parse_from(["pacquet-test", "--node-linker", "hoisted"])
         .expect("parses --node-linker hoisted");
-    let resolved = parsed.args.materialization.node_linker.expect("flag present").into_config();
+    let resolved = parsed
+        .args
+        .materialization
+        .node_linker
+        .expect("flag present")
+        .into_config();
     assert_eq!(resolved, NodeLinker::Hoisted);
 }
 
@@ -131,7 +145,12 @@ fn node_linker_hoisted() {
 fn node_linker_isolated() {
     let parsed = InstallArgsHarness::try_parse_from(["pacquet-test", "--node-linker", "isolated"])
         .expect("parses --node-linker isolated");
-    let resolved = parsed.args.materialization.node_linker.expect("flag present").into_config();
+    let resolved = parsed
+        .args
+        .materialization
+        .node_linker
+        .expect("flag present")
+        .into_config();
     assert_eq!(resolved, NodeLinker::Isolated);
 }
 
@@ -139,7 +158,12 @@ fn node_linker_isolated() {
 fn node_linker_pnp() {
     let parsed = InstallArgsHarness::try_parse_from(["pacquet-test", "--node-linker", "pnp"])
         .expect("parses --node-linker pnp");
-    let resolved = parsed.args.materialization.node_linker.expect("flag present").into_config();
+    let resolved = parsed
+        .args
+        .materialization
+        .node_linker
+        .expect("flag present")
+        .into_config();
     assert_eq!(resolved, NodeLinker::Pnp);
 }
 
@@ -154,11 +178,23 @@ fn node_linker_invalid_value_rejected() {
 #[test]
 fn ignore_manifest_check_flag_parses() {
     let parsed = InstallArgsHarness::try_parse_from(["pacquet-test"]).expect("parses");
-    assert!(!parsed.args.lockfile.ignore_manifest_check, "flag absent → false");
+    assert!(
+        !parsed
+            .args
+            .lockfile
+            .ignore_manifest_check,
+        "flag absent → false"
+    );
 
     let parsed = InstallArgsHarness::try_parse_from(["pacquet-test", "--ignore-manifest-check"])
         .expect("parses --ignore-manifest-check");
-    assert!(parsed.args.lockfile.ignore_manifest_check, "flag present → true");
+    assert!(
+        parsed
+            .args
+            .lockfile
+            .ignore_manifest_check,
+        "flag present → true"
+    );
 }
 
 #[test]

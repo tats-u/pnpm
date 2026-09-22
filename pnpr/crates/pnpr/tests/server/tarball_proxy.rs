@@ -30,8 +30,12 @@ async fn upstream_dist_tags_enforce_package_access() {
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
     // The gate lives on the upstream registry's own `packages:` rules: an
     // access-restricted name can't be read even through a public upstream.
-    config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream").rules =
-        PackageRules::new(vec![access_rule("restricted", "$authenticated")], None);
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream")
+        .rules = PackageRules::new(vec![access_rule("restricted", "$authenticated")], None);
     let app = router(config);
 
     let response = app
@@ -63,14 +67,26 @@ async fn upstream_auth_and_custom_headers_are_forwarded_upstream() {
 
     let tmp = TempDir::new().unwrap();
     let mut config = config_for(&upstream.url(), tmp.path().to_path_buf());
-    let upstream = config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream");
-    upstream.headers.insert("authorization", "Bearer secret-token".parse().unwrap());
-    upstream.headers.insert("x-org", "acme".parse().unwrap());
+    let upstream = config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream");
+    upstream
+        .headers
+        .insert("authorization", "Bearer secret-token".parse().unwrap());
+    upstream
+        .headers
+        .insert("x-org", "acme".parse().unwrap());
     // A credentialed upstream must be access-gated (server construction
     // enforces it), so the read authenticates as an admitted caller.
     upstream.access = Some(AccessList::from_tokens(["$authenticated"]));
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -155,7 +171,11 @@ async fn upstream_endpoint_serves_packument_with_endpoint_rewritten_tarballs() {
     let tmp = TempDir::new().unwrap();
     let config = upstream_endpoint_config(&upstream.url(), tmp.path().to_path_buf(), "alice");
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
 
     let response = app
@@ -245,7 +265,11 @@ async fn upstream_endpoint_tarball_is_verified_and_cached_per_upstream() {
     let tmp = TempDir::new().unwrap();
     let config = upstream_endpoint_config(&upstream.url(), tmp.path().to_path_buf(), "alice");
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
 
     for _ in 0..2 {
@@ -305,15 +329,24 @@ async fn upstream_cache_does_not_leak_to_the_public_path() {
 
     let tmp = TempDir::new().unwrap();
     let mut config = config_for(&public_upstream.url(), tmp.path().to_path_buf());
-    let mut corp = config.routing.upstreams
+    let mut corp = config
+        .routing
+        .upstreams
         .get("npmjs")
         .expect("default `npmjs` upstream")
         .clone();
     corp.url = private_upstream.url();
     corp.access = Some(AccessList::from_tokens(["alice"]));
-    config.routing.upstreams.insert("corp".to_string(), corp);
+    config
+        .routing
+        .upstreams
+        .insert("corp".to_string(), corp);
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
 
     // Prime the private cache via the `/~corp/` endpoint.
@@ -436,9 +469,18 @@ async fn upstream_endpoint_cache_false_streams_without_caching() {
 
     let tmp = TempDir::new().unwrap();
     let mut config = upstream_endpoint_config(&upstream.url(), tmp.path().to_path_buf(), "alice");
-    config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream").cache = false;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream")
+        .cache = false;
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
 
     for _ in 0..2 {
@@ -822,7 +864,9 @@ async fn non_canonical_upstream_tarball_basename_is_served() {
         .await
         .unwrap();
     let doc = body_json(served.into_body()).await;
-    let advertised = doc["versions"]["3001.1.0-exotic"]["dist"]["tarball"].as_str().unwrap();
+    let advertised = doc["versions"]["3001.1.0-exotic"]["dist"]["tarball"]
+        .as_str()
+        .unwrap();
     assert!(advertised.ends_with(&format!("/foo/-/{exotic}")), "got {advertised}");
 
     // And fetching that URL back serves the verified bytes.
@@ -909,8 +953,16 @@ async fn scoped_tarball_filename_is_canonicalized_before_fetch_and_cache() {
         .unwrap();
     assert_eq!(canonical.status(), StatusCode::OK);
     assert_eq!(body_bytes(canonical.into_body()).await, bytes);
-    assert!(public_cache_pkg(&storage, "@types/node").join("node-20.0.0.tgz").exists());
-    assert!(!public_cache_pkg(&storage, "@types/node").join("@types").exists());
+    assert!(
+        public_cache_pkg(&storage, "@types/node")
+            .join("node-20.0.0.tgz")
+            .exists()
+    );
+    assert!(
+        !public_cache_pkg(&storage, "@types/node")
+            .join("@types")
+            .exists()
+    );
     packument_mock.assert_async().await;
     mock.assert_async().await;
 }

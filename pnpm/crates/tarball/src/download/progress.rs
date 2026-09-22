@@ -66,5 +66,6 @@ pub fn download_priority(unpacked_size: Option<usize>, file_count: Option<usize>
     // `UNPRIORITIZED` and `BACKGROUND` are class sentinels; a hostile
     // registry publishing absurd `dist` stats must not be able to
     // saturate a download's priority into either class.
-    size.saturating_add(per_file).min(MAX_THROUGHPUT_PRIORITY)
+    size.saturating_add(per_file)
+        .min(MAX_THROUGHPUT_PRIORITY)
 }

@@ -10,7 +10,11 @@ impl Request {
     pub(super) fn page_size(&self) -> Result<Option<usize>, Refusal> {
         query_param(Some(&self.query), "n")
             .map(|value| {
-                if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+                if value.is_empty()
+                    || !value
+                        .bytes()
+                        .all(|byte| byte.is_ascii_digit())
+                {
                     return Err(Refusal::new(
                         ErrorCode::NameInvalid,
                         "n must be a non-negative integer",
@@ -69,7 +73,10 @@ impl Request {
         let last = query_param(Some(&self.query), "last");
         let mut repositories = Vec::new();
         for source in hosted_sources(&self.state, &target, ECOSYSTEM) {
-            match self.readable_repositories(&target, &source, last.as_deref()).await {
+            match self
+                .readable_repositories(&target, &source, last.as_deref())
+                .await
+            {
                 Ok(names) => repositories.extend(names),
                 Err(err) => return registry_error(err),
             }
@@ -129,10 +136,21 @@ impl Request {
         source: &str,
         last: Option<&str>,
     ) -> Result<Vec<String>, RegistryError> {
-        let Some(hosted) = self.state.inner.config.routing.hosted.get(source) else {
+        let Some(hosted) = self
+            .state
+            .inner
+            .config
+            .routing
+            .hosted
+            .get(source)
+        else {
             return Ok(Vec::new());
         };
-        let storage = self.state.inner.storage.for_hosted(&hosted.org);
+        let storage = self
+            .state
+            .inner
+            .storage
+            .for_hosted(&hosted.org);
         let names = storage.hosted_package_names().await?;
         // A listing may only name what this caller could have fetched.
         Ok(names

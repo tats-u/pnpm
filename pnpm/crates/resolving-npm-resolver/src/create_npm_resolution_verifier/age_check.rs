@@ -32,7 +32,10 @@ impl NpmResolutionVerifier {
         version: &str,
         registry_name: Option<&str>,
     ) -> Option<ResolutionVerification> {
-        let cutoff = self.release_age.cutoff.expect("cutoff is Some when age check is active");
+        let cutoff = self
+            .release_age
+            .cutoff
+            .expect("cutoff is Some when age check is active");
         // Cheapest layer: for an entry whose canonical tarball this
         // install fetches (existence fail-closed by the fetch itself),
         // a package-level `Last-Modified` older than the cutoff bounds
@@ -42,15 +45,22 @@ impl NpmResolutionVerifier {
         // send no extra request.
         let planned_key =
             (name.to_string(), version.to_string(), registry_name.map(str::to_string));
-        if self.artifacts.canonical_fetches
+        if self
+            .artifacts
+            .canonical_fetches
             .as_ref()
             .and_then(|cell| cell.get())
             .is_some_and(|planned| planned.contains(&planned_key))
-            && self.head_modified_is_before(registry, name, cutoff).await
+            && self
+                .head_modified_is_before(registry, name, cutoff)
+                .await
         {
             return None;
         }
-        let published = match self.fetch_published_at(registry, name, version).await {
+        let published = match self
+            .fetch_published_at(registry, name, version)
+            .await
+        {
             Ok(value) => value,
             // A transport failure propagates the registry's own fetch error so
             // the install aborts with it; a successful fetch that merely lacks a
@@ -58,7 +68,9 @@ impl NpmResolutionVerifier {
             Err(message) => return Some(ResolutionVerification::FetchFailed { message }),
         };
         let Some(published) = published else {
-            return self.missing_publish_time_verdict(registry, name).await;
+            return self
+                .missing_publish_time_verdict(registry, name)
+                .await;
         };
         let Some(parsed) = parse_packument_timestamp(&published) else {
             return Some(ResolutionVerification::Err {
@@ -102,14 +114,20 @@ impl NpmResolutionVerifier {
         }
         let key = package_key(registry, &name.to_string());
         let cell = {
-            let mut cache = self.lookup_context.head_modified.lock().await;
+            let mut cache = self
+                .lookup_context
+                .head_modified
+                .lock()
+                .await;
             Arc::clone(
                 cache
                     .entry(key)
                     .or_insert_with(|| Arc::new(OnceCell::new())),
             )
         };
-        let modified = cell.get_or_init(|| self.fetch_head_modified(registry, name)).await;
+        let modified = cell
+            .get_or_init(|| self.fetch_head_modified(registry, name))
+            .await;
         modified
             .as_deref()
             .and_then(|value| httpdate::parse_http_date(value).ok())
@@ -119,12 +137,16 @@ impl NpmResolutionVerifier {
 
     async fn fetch_head_modified(&self, registry: &str, name: &PkgName) -> Option<String> {
         let url = to_registry_url(registry, &name.to_string());
-        let guard =
-            self.metadata.http_client.acquire_for_url_with_priority(&url, pnpm_network::BACKGROUND)
-                .await;
+        let guard = self
+            .metadata
+            .http_client
+            .acquire_for_url_with_priority(&url, pnpm_network::BACKGROUND)
+            .await;
         let mut request = guard.head(&url);
-        if let Some(value) =
-            self.metadata.auth_headers.for_url_with_package(&url, Some(&name.to_string()))
+        if let Some(value) = self
+            .metadata
+            .auth_headers
+            .for_url_with_package(&url, Some(&name.to_string()))
         {
             request = request.header("authorization", value);
         }
@@ -148,16 +170,23 @@ impl NpmResolutionVerifier {
     ) -> Result<Option<String>, String> {
         let key = version_key(registry, &name.to_string(), version);
         let cell = {
-            let mut cache = self.lookup_context.published_at.lock().await;
+            let mut cache = self
+                .lookup_context
+                .published_at
+                .lock()
+                .await;
             Arc::clone(
                 cache
                     .entry(key)
                     .or_insert_with(|| Arc::new(OnceCell::new())),
             )
         };
-        cell.get_or_init(|| async { self.resolve_published_at(registry, name, version).await })
-            .await
-            .clone()
+        cell.get_or_init(|| async {
+            self.resolve_published_at(registry, name, version)
+                .await
+        })
+        .await
+        .clone()
     }
 
     /// Layered publish-timestamp lookup:
@@ -190,23 +219,37 @@ impl NpmResolutionVerifier {
         name: &PkgName,
         version: &str,
     ) -> Result<Option<String>, String> {
-        if let Some(value) = self.try_abbreviated_modified_shortcut(registry, name, version).await {
-            return Ok(Some(value));
-        }
-        if self.metadata.registry_supports_time_field
-            && let Some(value) = self.abbreviated_version_time(registry, name, version).await
+        if let Some(value) = self
+            .try_abbreviated_modified_shortcut(registry, name, version)
+            .await
         {
             return Ok(Some(value));
         }
-        if let Some(map) = self.read_local_meta_time(registry, name).await
+        if self
+            .metadata
+            .registry_supports_time_field
+            && let Some(value) = self
+                .abbreviated_version_time(registry, name, version)
+                .await
+        {
+            return Ok(Some(value));
+        }
+        if let Some(map) = self
+            .read_local_meta_time(registry, name)
+            .await
             && let Some(value) = map.get(version)
         {
             return Ok(Some(value.clone()));
         }
-        if let Some(value) = self.fetch_attestation_time(registry, name, version).await? {
+        if let Some(value) = self
+            .fetch_attestation_time(registry, name, version)
+            .await?
+        {
             return Ok(Some(value));
         }
-        let full_meta_time = self.fetch_full_meta_time(registry, name).await?;
+        let full_meta_time = self
+            .fetch_full_meta_time(registry, name)
+            .await?;
         Ok(full_meta_time.and_then(|map| map.get(version).cloned()))
     }
 
@@ -224,11 +267,17 @@ impl NpmResolutionVerifier {
         name: &PkgName,
         version: &str,
     ) -> Option<String> {
-        let cutoff = self.release_age.cutoff.expect("cutoff is Some when age check is active");
+        let cutoff = self
+            .release_age
+            .cutoff
+            .expect("cutoff is Some when age check is active");
         // A fetch failure here is fine: ignore the error and fall back to
         // per-version lookups, the same as a successful-but-uninformative
         // metadata response.
-        let Ok(meta) = self.fetch_abbreviated_meta(registry, name).await else {
+        let Ok(meta) = self
+            .fetch_abbreviated_meta(registry, name)
+            .await
+        else {
             return None;
         };
         let modified = meta.modified?;
@@ -236,7 +285,8 @@ impl NpmResolutionVerifier {
         if parsed >= cutoff {
             return None;
         }
-        if !meta.version_artifacts
+        if !meta
+            .version_artifacts
             .as_ref()
             .is_some_and(|map| map.contains_key(version))
         {
@@ -257,7 +307,10 @@ impl NpmResolutionVerifier {
         name: &PkgName,
         version: &str,
     ) -> Option<String> {
-        let meta = self.fetch_abbreviated_meta(registry, name).await.ok()?;
+        let meta = self
+            .fetch_abbreviated_meta(registry, name)
+            .await
+            .ok()?;
         meta.version_time
             .as_ref()?
             .get(version)

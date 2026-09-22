@@ -25,7 +25,8 @@ pub fn compatibility_rank_prevalidated(
             .iter()
             .enumerate()
             .flat_map(|(index, supported)| {
-                tags.iter().filter_map(move |artifact| rank_tag(index, supported, artifact))
+                tags.iter()
+                    .filter_map(move |artifact| rank_tag(index, supported, artifact))
             })
             .min(),
     }
@@ -47,12 +48,7 @@ fn rank_tag(index: usize, supported: &str, artifact: &str) -> Option<u64> {
 }
 
 pub fn linux_glibc_tag(platform: LinuxGlibcPlatform<'_>) -> Result<String, ArtifactProtocolError> {
-    let LinuxGlibcPlatform {
-        architecture,
-        node_major,
-        glibc_major,
-        glibc_minor,
-    } = platform;
+    let LinuxGlibcPlatform { architecture, node_major, glibc_major, glibc_minor } = platform;
     let tag = format!(
         "{COMPATIBILITY_TAG_SCHEMA}:linux-{architecture}-node{node_major}-glibc{glibc_major}.{glibc_minor}",
     );
@@ -63,12 +59,7 @@ pub fn linux_glibc_tag(platform: LinuxGlibcPlatform<'_>) -> Result<String, Artif
 pub fn linux_glibc_supported_tags(
     platform: LinuxGlibcPlatform<'_>,
 ) -> Result<Vec<String>, ArtifactProtocolError> {
-    let LinuxGlibcPlatform {
-        architecture,
-        node_major,
-        glibc_major,
-        glibc_minor,
-    } = platform;
+    let LinuxGlibcPlatform { architecture, node_major, glibc_major, glibc_minor } = platform;
     let count = usize::try_from(glibc_minor)
         .ok()
         .and_then(|minor| minor.checked_add(1))
@@ -90,12 +81,7 @@ pub fn linux_glibc_supported_tags(
 }
 
 pub fn macos_tag(platform: MacOsPlatform<'_>) -> Result<String, ArtifactProtocolError> {
-    let MacOsPlatform {
-        architecture,
-        node_major,
-        macos_major,
-        macos_minor,
-    } = platform;
+    let MacOsPlatform { architecture, node_major, macos_major, macos_minor } = platform;
     let tag = format!(
         "{COMPATIBILITY_TAG_SCHEMA}:darwin-{architecture}-node{node_major}-macos{macos_major}.{macos_minor}",
     );
@@ -110,13 +96,8 @@ pub fn macos_supported_tags(
 }
 
 pub fn windows_tag(platform: WindowsPlatform<'_>) -> Result<String, ArtifactProtocolError> {
-    let WindowsPlatform {
-        architecture,
-        node_major,
-        windows_major,
-        windows_minor,
-        windows_build,
-    } = platform;
+    let WindowsPlatform { architecture, node_major, windows_major, windows_minor, windows_build } =
+        platform;
     let tag = format!(
         "{COMPATIBILITY_TAG_SCHEMA}:win32-{architecture}-node{node_major}-windows{windows_major}.{windows_minor}.{windows_build}",
     );
@@ -212,7 +193,8 @@ fn split_compatibility_tag(tag: &str) -> Result<CompatibilityTagParts<'_>, Artif
         return Err(invalid_tag("v1 only defines x64 and arm64 tags"));
     }
     let node_major = parse_canonical_number(
-        node.strip_prefix("node").ok_or_else(|| invalid_tag("missing Node dimension"))?,
+        node.strip_prefix("node")
+            .ok_or_else(|| invalid_tag("missing Node dimension"))?,
         "Node major version",
         false,
     )?;
@@ -272,12 +254,7 @@ fn parse_compatibility_tag(tag: &str) -> Result<ParsedCompatibilityTag<'_>, Arti
 fn parse_tag_floor(
     parts: CompatibilityTagParts<'_>,
 ) -> Result<ParsedCompatibilityTag<'_>, ArtifactProtocolError> {
-    let CompatibilityTagParts {
-        os,
-        architecture,
-        node_major,
-        runtime,
-    } = parts;
+    let CompatibilityTagParts { os, architecture, node_major, runtime } = parts;
     match os {
         "linux" => parse_linux_floor(runtime),
         "darwin" => parse_macos_floor(runtime, architecture, node_major),
@@ -287,9 +264,12 @@ fn parse_tag_floor(
 }
 
 fn parse_linux_floor(runtime: &str) -> Result<ParsedCompatibilityTag<'_>, ArtifactProtocolError> {
-    let libc = runtime.strip_prefix("glibc").ok_or_else(|| invalid_tag("missing glibc floor"))?;
-    let (major, minor) =
-        libc.split_once('.').ok_or_else(|| invalid_tag("glibc floor must be major.minor"))?;
+    let libc = runtime
+        .strip_prefix("glibc")
+        .ok_or_else(|| invalid_tag("missing glibc floor"))?;
+    let (major, minor) = libc
+        .split_once('.')
+        .ok_or_else(|| invalid_tag("glibc floor must be major.minor"))?;
     parse_canonical_number(major, "glibc major version", false)?;
     parse_canonical_number(minor, "glibc minor version", true)?;
     Ok(ParsedCompatibilityTag::Linux)
@@ -300,9 +280,12 @@ fn parse_macos_floor<'tag>(
     architecture: &'tag str,
     node_major: u32,
 ) -> Result<ParsedCompatibilityTag<'tag>, ArtifactProtocolError> {
-    let macos = runtime.strip_prefix("macos").ok_or_else(|| invalid_tag("missing macOS floor"))?;
-    let (major, minor) =
-        macos.split_once('.').ok_or_else(|| invalid_tag("macOS floor must be major.minor"))?;
+    let macos = runtime
+        .strip_prefix("macos")
+        .ok_or_else(|| invalid_tag("missing macOS floor"))?;
+    let (major, minor) = macos
+        .split_once('.')
+        .ok_or_else(|| invalid_tag("macOS floor must be major.minor"))?;
     Ok(ParsedCompatibilityTag::MacOs(MacOsPlatform {
         architecture,
         node_major,
@@ -316,8 +299,9 @@ fn parse_windows_floor<'tag>(
     architecture: &'tag str,
     node_major: u32,
 ) -> Result<ParsedCompatibilityTag<'tag>, ArtifactProtocolError> {
-    let windows =
-        runtime.strip_prefix("windows").ok_or_else(|| invalid_tag("missing Windows floor"))?;
+    let windows = runtime
+        .strip_prefix("windows")
+        .ok_or_else(|| invalid_tag("missing Windows floor"))?;
     let mut components = windows.split('.');
     let (Some(major), Some(minor), Some(build), None) =
         (components.next(), components.next(), components.next(), components.next())

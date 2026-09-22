@@ -14,7 +14,9 @@ fn does_not_verify_a_revision_without_an_active_policy() {
         integrity: revision_integrity(REVISION_ONE_DIGEST),
         revision: Some(TarballRevision::try_from(1).unwrap()),
     });
-    let name = "revision-pkg".parse::<PkgName>().unwrap();
+    let name = "revision-pkg"
+        .parse::<PkgName>()
+        .unwrap();
     assert!(!verifier.might_verify(&resolution, ctx(&name, "1.0.0")));
 }
 
@@ -51,8 +53,12 @@ async fn rejects_an_explicit_zero_current_revision() {
         &format!("{registry}revision-pkg/-/revision-pkg-1.0.0.tgz"),
         Some(fake_integrity()),
     );
-    let name = "revision-pkg".parse::<PkgName>().unwrap();
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let name = "revision-pkg"
+        .parse::<PkgName>()
+        .unwrap();
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
     let ResolutionVerification::Err { code, .. } = result else {
         panic!("expected Err, got {result:?}");
     };
@@ -92,8 +98,12 @@ async fn rejects_a_non_numeric_current_revision() {
         &format!("{registry}revision-pkg/-/revision-pkg-1.0.0.tgz"),
         Some(fake_integrity()),
     );
-    let name = "revision-pkg".parse::<PkgName>().unwrap();
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let name = "revision-pkg"
+        .parse::<PkgName>()
+        .unwrap();
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
     let ResolutionVerification::Err { code, .. } = result else {
         panic!("expected Err, got {result:?}");
     };
@@ -144,8 +154,15 @@ async fn accepts_an_advertised_historical_revision() {
         integrity: revision_integrity(REVISION_ONE_DIGEST),
         revision: Some(TarballRevision::try_from(1).unwrap()),
     });
-    let name = "revision-pkg".parse::<PkgName>().unwrap();
-    assert_eq!(verifier.verify(&resolution, ctx(&name, "1.0.0")).await, ResolutionVerification::Ok);
+    let name = "revision-pkg"
+        .parse::<PkgName>()
+        .unwrap();
+    assert_eq!(
+        verifier
+            .verify(&resolution, ctx(&name, "1.0.0"))
+            .await,
+        ResolutionVerification::Ok
+    );
 }
 
 #[tokio::test]
@@ -157,7 +174,9 @@ async fn verify_short_circuits_non_registry_resolution() {
         directory: "/some/path".into(),
     });
     let name: PkgName = "acme".parse().expect("parse");
-    let result = verifier.verify(&directory, ctx(&name, "1.0.0")).await;
+    let result = verifier
+        .verify(&directory, ctx(&name, "1.0.0"))
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -172,7 +191,9 @@ async fn git_hosted_archive_url_stays_exempt_without_the_flag() {
     let resolution = tarball_resolution(tarball, None);
     let name: PkgName = "is-negative".parse().expect("parse");
     assert!(!verifier.might_verify(&resolution, ctx(&name, tarball)));
-    let result = verifier.verify(&resolution, ctx(&name, tarball)).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, tarball))
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -204,11 +225,17 @@ async fn unplanned_entry_sends_no_head_probe() {
         .expect("first fill");
     opts.artifacts.canonical_fetches = Some(std::sync::Arc::clone(&planned));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier.verify(
-        &registry_resolution(),
-        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0"),
-    )
-    .await;
+    let result = verifier
+        .verify(
+            &registry_resolution(),
+            ctx(
+                &"acme"
+                    .parse::<PkgName>()
+                    .expect("parse"),
+                "1.0.0",
+            ),
+        )
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -266,8 +293,17 @@ async fn verify_routes_via_named_registry_prefix() {
         git_hosted: None,
         path: None,
     });
-    let result =
-        verifier.verify(&tarball, ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0")).await;
+    let result = verifier
+        .verify(
+            &tarball,
+            ctx(
+                &"acme"
+                    .parse::<PkgName>()
+                    .expect("parse"),
+                "1.0.0",
+            ),
+        )
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -293,9 +329,24 @@ fn policy_snapshot_records_all_fields_sorted_and_deduped() {
     let policy = verifier.policy();
     // The two unconditional structural rules mark themselves in the
     // snapshot so a pre-rule cache record fails `can_trust_past_check`.
-    assert_eq!(policy.get("tarballUrlBinding").and_then(serde_json::Value::as_bool), Some(true));
-    assert_eq!(policy.get("integrityRequired").and_then(serde_json::Value::as_bool), Some(true));
-    assert_eq!(policy.get("minimumReleaseAge").and_then(serde_json::Value::as_u64), Some(60 * 24));
+    assert_eq!(
+        policy
+            .get("tarballUrlBinding")
+            .and_then(serde_json::Value::as_bool),
+        Some(true)
+    );
+    assert_eq!(
+        policy
+            .get("integrityRequired")
+            .and_then(serde_json::Value::as_bool),
+        Some(true)
+    );
+    assert_eq!(
+        policy
+            .get("minimumReleaseAge")
+            .and_then(serde_json::Value::as_u64),
+        Some(60 * 24)
+    );
     let min_age_excludes = policy
         .get("minimumReleaseAgeExclude")
         .and_then(|value| value.as_array())
@@ -308,13 +359,22 @@ fn policy_snapshot_records_all_fields_sorted_and_deduped() {
         vec!["acme".to_string(), "lodash".to_string()],
         "sorted + deduped",
     );
-    assert_eq!(policy.get("trustPolicy").and_then(|value| value.as_str()), Some("no-downgrade"));
     assert_eq!(
-        policy.get("trustPolicyIgnoreAfter").and_then(serde_json::Value::as_u64),
+        policy
+            .get("trustPolicy")
+            .and_then(|value| value.as_str()),
+        Some("no-downgrade")
+    );
+    assert_eq!(
+        policy
+            .get("trustPolicyIgnoreAfter")
+            .and_then(serde_json::Value::as_u64),
         Some(60 * 24 * 30),
     );
     assert_eq!(
-        policy.get("minimumReleaseAgeIgnoreMissingTime").and_then(serde_json::Value::as_bool),
+        policy
+            .get("minimumReleaseAgeIgnoreMissingTime")
+            .and_then(serde_json::Value::as_bool),
         Some(false),
     );
 }
@@ -348,9 +408,9 @@ async fn concurrent_verifications_share_one_fetch() {
     let verifier = create_npm_resolution_verifier(opts);
     let name: PkgName = "acme".parse().expect("parse");
     let resolution = registry_resolution();
-    let results = futures_util::future::join_all((0..16).map(|_| {
-        verifier.verify(&resolution, ctx(&name, "1.0.0"))
-    }))
+    let results = futures_util::future::join_all(
+        (0..16).map(|_| verifier.verify(&resolution, ctx(&name, "1.0.0"))),
+    )
     .await;
     for result in results {
         assert_eq!(result, ResolutionVerification::Ok);
@@ -414,7 +474,9 @@ async fn without_registry_supports_time_field_abbreviated_time_is_not_consulted(
         path: None,
     });
     let name: PkgName = "aged-pkg".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
     meta_mock.assert_async().await;
     attestation_mock.assert_async().await;

@@ -172,7 +172,11 @@ fn sorted_dependencies<Pkg>(
         if sorted.contains(dependency_dir) {
             dependencies.push(dependency_dir.to_path_buf());
         } else if let Some(node) = full_projects_graph.get(dependency_dir) {
-            stack.extend(node.dependencies.iter().map(PathBuf::as_path));
+            stack.extend(
+                node.dependencies
+                    .iter()
+                    .map(PathBuf::as_path),
+            );
         }
     }
     dependencies
@@ -246,7 +250,9 @@ impl<'a> RecursiveSelection<'a> {
     /// present, otherwise `selected`. See the `all` field for why `selected`
     /// suffices when nothing narrowed the run.
     pub fn full_graph(&self) -> &ProjectGraph<GraphPkg<'a>> {
-        self.all.as_ref().unwrap_or(&self.selected)
+        self.all
+            .as_ref()
+            .unwrap_or(&self.selected)
     }
 }
 
@@ -310,7 +316,9 @@ pub fn select_recursive_projects_deferring_no_match<'a>(
     let regular_selected = filter_against(
         &all,
         &config.filter,
-        root_selector.as_deref().filter(|_| !root_in_prod),
+        root_selector
+            .as_deref()
+            .filter(|_| !root_in_prod),
         false,
         prefix,
         &walk_opts,
@@ -319,7 +327,9 @@ pub fn select_recursive_projects_deferring_no_match<'a>(
         Some(prod_all) => filter_against(
             prod_all,
             &config.filter_prod,
-            root_selector.as_deref().filter(|_| root_in_prod),
+            root_selector
+                .as_deref()
+                .filter(|_| root_in_prod),
             true,
             prefix,
             &walk_opts,
@@ -391,7 +401,10 @@ fn merge_selected_graphs<'a>(
 /// The directory pnpm names in its empty-selection notices: the workspace
 /// root when the run found one, else where the command was invoked.
 pub fn notice_workspace_dir<'a>(config: &'a Config, prefix: &'a Path) -> &'a Path {
-    config.workspace_dir.as_deref().unwrap_or(prefix)
+    config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(prefix)
 }
 
 /// pnpm's notice for `--filter` / `--filter-prod` selectors that selected
@@ -410,7 +423,8 @@ pub fn selected_importer_ids(
     selection: &RecursiveSelection<'_>,
     lockfile_dir: &Path,
 ) -> Vec<String> {
-    selection.selected
+    selection
+        .selected
         .keys()
         .map(|project_dir| importer_id_from_root_dir(lockfile_dir, project_dir))
         .collect()
@@ -511,7 +525,8 @@ impl AutoExcludeRoot<'_> {
         }
         // An inclusion selector already pins the selected set, so the
         // root is kept only if it matches one.
-        if config.filter
+        if config
+            .filter
             .iter()
             .chain(config.filter_prod.iter())
             .any(|filter| !filter.starts_with('!'))
@@ -532,7 +547,10 @@ impl AutoExcludeRoot<'_> {
 /// The workspace root as a path selectors can resolve against `prefix`,
 /// which is where a `{<dir>}` selector is anchored.
 fn relative_workspace_dir(config: &Config, prefix: &Path) -> String {
-    let workspace_root = config.workspace_dir.as_deref().unwrap_or(prefix);
+    let workspace_root = config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(prefix);
     pathdiff::diff_paths(workspace_root, prefix)
         .map(|path| path.to_string_lossy().into_owned())
         .filter(|path| !path.is_empty())
@@ -555,12 +573,15 @@ pub fn recursive_filter_options(config: &Config, prefix: &Path) -> FilterWorkspa
         // generated `!{<workspace-root>}` selector pins itself to glob
         // matching instead — see `filter_against`.
         use_glob_dir_filtering: !config.legacy_dir_filtering,
-        workspace_dir: config.workspace_dir
+        workspace_dir: config
+            .workspace_dir
             .as_deref()
             .unwrap_or(prefix)
             .to_path_buf(),
         test_pattern: config.test_pattern.clone(),
-        changed_files_ignore_pattern: config.changed_files_ignore_pattern.clone(),
+        changed_files_ignore_pattern: config
+            .changed_files_ignore_pattern
+            .clone(),
     }
 }
 

@@ -136,8 +136,16 @@ pub(super) async fn resolve_graph<'a: 'm, 'm, Reporter: self::Reporter + 'static
         importer_manifests,
     )
     .await?;
-    collect_resolution::<Reporter>(install, owned.resolution.peer_issues_sink.as_ref(), prep, pass)
-        .await
+    collect_resolution::<Reporter>(
+        install,
+        owned
+            .resolution
+            .peer_issues_sink
+            .as_ref(),
+        prep,
+        pass,
+    )
+    .await
 }
 pub(super) struct ResolutionContext<'a, Reporter> {
     install: FreshInputs<'a>,
@@ -148,17 +156,28 @@ pub(super) struct ResolutionContext<'a, Reporter> {
 }
 impl<'a, Reporter: self::Reporter + 'static> ResolutionContext<'a, Reporter> {
     fn wanted_lockfile(&self) -> Option<&Lockfile> {
-        self.prep.fixed_wanted_lockfile.as_ref().or(self.install.lockfiles.wanted)
+        self.prep
+            .fixed_wanted_lockfile
+            .as_ref()
+            .or(self.install.lockfiles.wanted)
     }
 
     fn shared_options(&self) -> resolve::SharedResolveOptions<'a> {
         resolve::SharedResolveOptions {
             policy: pnpm_resolving_resolver_base::ResolutionPolicyOptions {
                 published_by: self.setup.policy.published_by,
-                published_by_exclude: self.setup.policy.published_by_exclude.clone(),
+                published_by_exclude: self
+                    .setup
+                    .policy
+                    .published_by_exclude
+                    .clone(),
                 trust_policy: self.prep.trust.policy,
                 trust_policy_exclude: self.prep.trust.exclude.clone(),
-                package_version_guard: self.setup.observer.package_version_guard.clone(),
+                package_version_guard: self
+                    .setup
+                    .observer
+                    .package_version_guard
+                    .clone(),
                 ..Default::default()
             },
             config: self.install.drivers.config,
@@ -192,32 +211,65 @@ impl<'a, Reporter: self::Reporter + 'static> ResolutionContext<'a, Reporter> {
         let pnpmfile_checksum = self.current_pnpmfile_checksum().await;
         resolve::lockfile_reuse_seed(resolve::ReuseSeedInputs {
             hooks: pnpm_resolving_deps_resolver::ManifestTransformHooks {
-                manifest_hook: self.prep.transforms.hooks.manifest_hook.clone(),
-                overrides_hook: self.prep.transforms.hooks.overrides_hook.clone(),
+                manifest_hook: self
+                    .prep
+                    .transforms
+                    .hooks
+                    .manifest_hook
+                    .clone(),
+                overrides_hook: self
+                    .prep
+                    .transforms
+                    .hooks
+                    .overrides_hook
+                    .clone(),
                 pnpmfile_hook: None,
             },
             lockfile: crate::install_with_fresh_lockfile::resolution_inputs::ReuseLockfileInputs {
                 wanted: self.wanted_lockfile(),
-                shared: self.prep.wanted_lockfile_shared.as_ref(),
-                extensions_checksum: self.prep.transforms
+                shared: self
+                    .prep
+                    .wanted_lockfile_shared
+                    .as_ref(),
+                extensions_checksum: self
+                    .prep
+                    .transforms
                     .package_extensions_checksum
                     .as_deref(),
                 pnpmfile_checksum: pnpmfile_checksum.as_deref(),
-                parsed_overrides: self.prep.transforms.parsed_overrides.as_deref(),
-                resolved_overrides: self.prep.transforms.resolved_overrides.as_ref(),
+                parsed_overrides: self
+                    .prep
+                    .transforms
+                    .parsed_overrides
+                    .as_deref(),
+                resolved_overrides: self
+                    .prep
+                    .transforms
+                    .resolved_overrides
+                    .as_ref(),
             },
             config: self.install.drivers.config,
             catalogs: &self.owned.projects.catalogs,
 
             fast_override_eligible: fast_override_eligible(FastOverrideFit {
                 has_pnpmfile_hook: self.prep.hooks.pnpmfile_hook.is_some(),
-                has_custom_resolvers: !self.setup.chain.custom_resolvers.is_empty(),
+                has_custom_resolvers: !self
+                    .setup
+                    .chain
+                    .custom_resolvers
+                    .is_empty(),
                 has_patches: self.prep.patches.record.is_some(),
-                can_fast_update_overrides: self.setup.observer.can_fast_update_overrides,
+                can_fast_update_overrides: self
+                    .setup
+                    .observer
+                    .can_fast_update_overrides,
             }),
             npm_resolver: &*self.setup.chain.npm_resolver,
             resolve_options: &shared_resolve_options.build(
-                self.install.projects.lockfile_dir.to_path_buf(),
+                self.install
+                    .projects
+                    .lockfile_dir
+                    .to_path_buf(),
                 Arc::clone(preferred_versions_seed),
             ),
             registries: &self.registries.by_scope,
@@ -233,7 +285,9 @@ impl<'a, Reporter: self::Reporter + 'static> ResolutionContext<'a, Reporter> {
             hooks: crate::install_with_fresh_lockfile::resolution_inputs::WorkspaceLifecycleHooks {
                 pnpmfile: self.prep.hooks.pnpmfile_hook.clone(),
                 read_package_log: self.prep.hooks.read_package_log.clone(),
-                finalized_package: self.prep.early_materializer
+                finalized_package: self
+                    .prep
+                    .early_materializer
                     .as_ref()
                     .map(crate::early_materializer::EarlyMaterializer::hook),
             },
@@ -249,9 +303,17 @@ impl<'a, Reporter: self::Reporter + 'static> ResolutionContext<'a, Reporter> {
                 subtrees: lockfile_reuse_seed.is_some(),
                 scope: self.prep.reuse.scope.clone(),
                 scopes_by_importer: self.prep.reuse.by_importer.clone(),
-                depth: self.owned.resolution.update_seed_policy.max_depth(),
+                depth: self
+                    .owned
+                    .resolution
+                    .update_seed_policy
+                    .max_depth(),
             },
-            share_workspace_resolutions: self.setup.chain.custom_resolvers.is_empty(),
+            share_workspace_resolutions: self
+                .setup
+                .chain
+                .custom_resolvers
+                .is_empty(),
 
             time_based: self.setup.policy.time_based,
 
@@ -271,7 +333,9 @@ impl<'a, Reporter: self::Reporter + 'static> ResolutionContext<'a, Reporter> {
             result: workspace_result,
             full_resolution: full_resolution_required(
                 has_reusable_seed,
-                importer_manifests.keys().map(String::as_str),
+                importer_manifests
+                    .keys()
+                    .map(String::as_str),
                 &self.prep.reuse.scope,
                 &self.prep.reuse.by_importer,
             ),
@@ -295,8 +359,18 @@ impl<'a, Reporter: self::Reporter + 'static> ResolutionContext<'a, Reporter> {
     ) -> resolve::ImporterInputs<'b> {
         resolve::ImporterInputs {
             hooks: pnpm_resolving_deps_resolver::ManifestTransformHooks {
-                manifest_hook: self.prep.transforms.hooks.manifest_hook.clone(),
-                overrides_hook: self.prep.transforms.hooks.overrides_hook.clone(),
+                manifest_hook: self
+                    .prep
+                    .transforms
+                    .hooks
+                    .manifest_hook
+                    .clone(),
+                overrides_hook: self
+                    .prep
+                    .transforms
+                    .hooks
+                    .overrides_hook
+                    .clone(),
                 pnpmfile_hook: None,
             },
             versions: crate::install_with_fresh_lockfile::resolution_inputs::ImporterVersionSeeds {
@@ -310,7 +384,10 @@ impl<'a, Reporter: self::Reporter + 'static> ResolutionContext<'a, Reporter> {
             lockfile_dir: self.install.projects.lockfile_dir,
             shared_resolve_options,
 
-            override_bare_specifier: self.prep.transforms.hooks
+            override_bare_specifier: self
+                .prep
+                .transforms
+                .hooks
                 .override_bare_specifier
                 .clone(),
             patched_dependencies: self.prep.patches.record.clone(),
@@ -324,18 +401,31 @@ pub(super) async fn run_prepared_resolve<'m, Reporter: self::Reporter + 'static>
     let wanted_lockfile = context.wanted_lockfile();
     let (preferred_versions_seed, preferred_versions_seeds_by_importer) =
         resolve::preferred_versions_seeds(
-            &context.owned.resolution.update_seed_policy,
+            &context
+                .owned
+                .resolution
+                .update_seed_policy,
             wanted_lockfile,
             &importer_manifests,
-            context.owned.resolution.preferred_versions_override.as_ref(),
+            context
+                .owned
+                .resolution
+                .preferred_versions_override
+                .as_ref(),
         );
     let shared_resolve_options = context.shared_options();
-    let lockfile_reuse_seed =
-        context.reuse_seed(&shared_resolve_options, &preferred_versions_seed).await;
+    let lockfile_reuse_seed = context
+        .reuse_seed(&shared_resolve_options, &preferred_versions_seed)
+        .await;
     let phase_start = std::time::Instant::now();
     Reporter::emit(&LogEvent::Stage(StageLog {
         level: LogLevel::Debug,
-        prefix: context.install.projects.lockfile_dir.display().to_string(),
+        prefix: context
+            .install
+            .projects
+            .lockfile_dir
+            .display()
+            .to_string(),
         stage: Stage::ResolutionStarted,
     }));
     let walk = context.workspace_walk(lockfile_reuse_seed.as_ref());

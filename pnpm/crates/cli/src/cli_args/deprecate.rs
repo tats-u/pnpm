@@ -199,10 +199,14 @@ impl DeprecateArgs {
     pub async fn run(self, config: &Config) -> miette::Result<Option<String>> {
         let context = DeprecateContext::new(config, self.registry.as_ref(), self.otp)?;
 
-        let spec = self.params.first().ok_or(DeprecateError::PackageRequired)?;
+        let spec = self
+            .params
+            .first()
+            .ok_or(DeprecateError::PackageRequired)?;
         let PackageSpec { name: package_name, version } = parse_package_spec(spec)?;
 
-        let message = self.params
+        let message = self
+            .params
             .get(1..)
             .map(|parts| parts.join(" "))
             .filter(|msg| !msg.is_empty())
@@ -250,7 +254,11 @@ pub(crate) async fn update_deprecation(
 
     for ver in &versions_to_update {
         if let Some(info) = package_meta.versions.get_mut(ver) {
-            info.deprecated = Some(deprecated_message.map(ToString::to_string).unwrap_or_default());
+            info.deprecated = Some(
+                deprecated_message
+                    .map(ToString::to_string)
+                    .unwrap_or_default(),
+            );
         }
     }
 
@@ -276,7 +284,8 @@ pub(crate) async fn update_deprecation(
 /// `NoMatchingVersions` rather than a distinct "invalid spec" error.
 fn versions_matching(package_meta: &PackageMeta, version_range: Option<&str>) -> Vec<String> {
     let Some(range_str) = version_range else {
-        return package_meta.versions
+        return package_meta
+            .versions
             .keys()
             .cloned()
             .collect();
@@ -284,7 +293,8 @@ fn versions_matching(package_meta: &PackageMeta, version_range: Option<&str>) ->
     let Ok(range) = Range::parse(range_str) else {
         return Vec::new();
     };
-    package_meta.versions
+    package_meta
+        .versions
         .keys()
         .filter(|ver_str| {
             node_semver::Version::parse(ver_str).is_ok_and(|ver| range.satisfies(&ver))
@@ -295,9 +305,12 @@ fn versions_matching(package_meta: &PackageMeta, version_range: Option<&str>) ->
 
 pub(crate) fn parse_package_spec(spec: &str) -> Result<PackageSpec, DeprecateError> {
     let parsed = parse_wanted_dependency(spec);
-    let name =
-        parsed.alias.ok_or_else(|| DeprecateError::InvalidPackageSpec { spec: spec.to_string() })?;
-    let version = parsed.bare_specifier.filter(|version| !version.is_empty());
+    let name = parsed
+        .alias
+        .ok_or_else(|| DeprecateError::InvalidPackageSpec { spec: spec.to_string() })?;
+    let version = parsed
+        .bare_specifier
+        .filter(|version| !version.is_empty());
     Ok(PackageSpec { name, version })
 }
 
@@ -312,7 +325,8 @@ fn validate_undeprecation(
     let has_deprecated = versions_to_update
         .iter()
         .any(|ver_str| {
-            package_meta.versions
+            package_meta
+                .versions
                 .get(ver_str)
                 .and_then(|info| info.deprecated.as_ref())
                 .is_some_and(|dep| !dep.is_empty())

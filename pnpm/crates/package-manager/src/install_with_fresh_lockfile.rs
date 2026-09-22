@@ -280,16 +280,28 @@ impl FreshInputs<'_> {
     fn resolve_widened_groups(&self) -> bool {
         self.resolved_groups()
             .iter()
-            .any(|group| !self.projects.dependency_groups.contains(group))
+            .any(|group| {
+                !self
+                    .projects
+                    .dependency_groups
+                    .contains(group)
+            })
     }
 
     fn included(&self) -> IncludedDependencies {
         IncludedDependencies {
-            dependencies: self.projects.dependency_groups.contains(&DependencyGroup::Prod),
-            dev_dependencies: self.projects.dependency_groups.contains(&DependencyGroup::Dev),
-            optional_dependencies: self.projects.dependency_groups.contains(
-                &DependencyGroup::Optional,
-            ),
+            dependencies: self
+                .projects
+                .dependency_groups
+                .contains(&DependencyGroup::Prod),
+            dev_dependencies: self
+                .projects
+                .dependency_groups
+                .contains(&DependencyGroup::Dev),
+            optional_dependencies: self
+                .projects
+                .dependency_groups
+                .contains(&DependencyGroup::Optional),
         }
     }
 }
@@ -476,7 +488,8 @@ fn skipped_optional_log_fn<Reporter: self::Reporter>()
                 bare_specifier: skipped.bare_specifier,
             },
             parents: Some(
-                skipped.parents
+                skipped
+                    .parents
                     .into_iter()
                     .map(|parent| SkippedOptionalParent {
                         id: parent.id,
@@ -504,12 +517,12 @@ fn deprecation_log_fn<Reporter: self::Reporter>() -> pnpm_resolving_deps_resolve
             pkg_id: deprecation.pkg_id,
             prefix: deprecation.prefix,
             depth: deprecation.depth,
-            non_deprecated_alternative: deprecation.non_deprecated_alternative.map(|alt| {
-                pnpm_reporter::NonDeprecatedAlternative {
+            non_deprecated_alternative: deprecation
+                .non_deprecated_alternative
+                .map(|alt| pnpm_reporter::NonDeprecatedAlternative {
                     version: alt.version,
                     outside_declared_range: alt.outside_declared_range,
-                }
-            }),
+                }),
         }));
     })
 }
@@ -559,9 +572,11 @@ fn check_patch_usage<Reporter: self::Reporter>(
         None => true,
         Some(selected_importer_ids) => {
             !is_partial_workspace_selection(scope.real_importer_ids, Some(selected_importer_ids))
-                && scope.merge_wanted_lockfile.is_some_and(|wanted_lockfile| {
-                    wanted_lockfile.importers.len() == selected_importer_ids.len()
-                })
+                && scope
+                    .merge_wanted_lockfile
+                    .is_some_and(|wanted_lockfile| {
+                        wanted_lockfile.importers.len() == selected_importer_ids.len()
+                    })
         }
     };
     if !verify {
@@ -594,7 +609,9 @@ fn report_peer_issues(
     issues_by_importer: &BTreeMap<String, pnpm_resolving_deps_resolver::PeerDependencyIssues>,
 ) {
     if let Some(sink) = sink {
-        *sink.lock().expect("peer-issues sink lock poisoned") = issues_by_importer.clone();
+        *sink
+            .lock()
+            .expect("peer-issues sink lock poisoned") = issues_by_importer.clone();
     }
     for (importer_id, issues) in issues_by_importer {
         tracing::warn!(

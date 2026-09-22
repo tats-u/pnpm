@@ -33,7 +33,8 @@ use serde_json::{Map, Value};
 /// asking for a released version of the package manager itself.
 pub(crate) fn declared_package_manager(request: &str) -> Option<(PackageManager, Option<String>)> {
     let parsed = parse_wanted_dependency(request);
-    if parsed.bare_specifier
+    if parsed
+        .bare_specifier
         .as_deref()
         .is_some_and(|spec| !is_version_request(spec))
     {
@@ -81,14 +82,19 @@ pub(crate) fn record_package_manager_pin(
     if !dev_engines.is_object() {
         *dev_engines = Value::Object(Map::new());
     }
-    let dev_engines = dev_engines.as_object_mut().expect("just made it an object");
+    let dev_engines = dev_engines
+        .as_object_mut()
+        .expect("just made it an object");
     dev_engines.insert("packageManager".to_string(), Value::Object(entry));
 }
 
 /// Drop the `devEngines.packageManager` declaration, and `devEngines`
 /// itself once it declares nothing else.
 fn clear_dev_engines_package_manager(manifest: &mut Map<String, Value>) {
-    let Some(dev_engines) = manifest.get_mut("devEngines").and_then(Value::as_object_mut) else {
+    let Some(dev_engines) = manifest
+        .get_mut("devEngines")
+        .and_then(Value::as_object_mut)
+    else {
         return;
     };
     dev_engines.remove("packageManager");
@@ -122,7 +128,9 @@ pub(crate) async fn resolve_project_pin(
     let spec = version_spec.unwrap_or("latest");
     let reference = match pm.channel(spec) {
         Channel::Registry { package } => {
-            resolve_release(config, pm, package, spec).await?.version
+            resolve_release(config, pm, package, spec)
+                .await?
+                .version
         }
         Channel::Binary(BinaryChannel::Bun | BinaryChannel::Yarn) => {
             resolve_yarn_binary_version(config, spec).await?

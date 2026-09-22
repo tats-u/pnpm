@@ -30,7 +30,9 @@ pub fn ensure_storage() -> &'static Path {
         let packages = workspace.join(PACKAGES_DIR);
         let generated = target_dir(&workspace).join(GENERATED_DIR);
         let fingerprint = fixture_fingerprint(&packages);
-        let storage = generated.join("storage").join(&fingerprint);
+        let storage = generated
+            .join("storage")
+            .join(&fingerprint);
         ensure_storage_for_fingerprint(&packages, &generated, &storage);
         storage
     });
@@ -77,11 +79,15 @@ pub fn build_storage_at_with_substitutions(
 /// Only call this on a tree the test owns, never on the process-global
 /// storage every other test reads — see [`build_storage_at`].
 pub fn set_dist_tag(storage: &Path, package: &str, version: &str, tag: &str) {
-    let path = storage.join(package).join("package.json");
+    let path = storage
+        .join(package)
+        .join("package.json");
     let bytes = fs::read(&path)
         .unwrap_or_else(|err| panic!("read fixture packument at {}: {err}", path.display()));
     let mut packument: Value = serde_json::from_slice(&bytes).expect("parse fixture packument");
-    let packument_object = packument.as_object_mut().expect("fixture packument is an object");
+    let packument_object = packument
+        .as_object_mut()
+        .expect("fixture packument is an object");
     assert!(
         packument_object
             .get("versions")
@@ -124,8 +130,12 @@ fn ensure_storage_for_fingerprint(packages: &Path, generated: &Path, storage: &P
     if storage.join(COMPLETE_FILE).exists() {
         return;
     }
-    fs::create_dir_all(storage.parent().expect("registry fixture storage has parent"))
-        .expect("create generated registry fixture storage dir");
+    fs::create_dir_all(
+        storage
+            .parent()
+            .expect("registry fixture storage has parent"),
+    )
+    .expect("create generated registry fixture storage dir");
     let temp = generated.join(scratch_name("storage.tmp"));
     if temp.exists() {
         fs::remove_dir_all(&temp).expect("remove stale temp registry fixture storage");
@@ -208,7 +218,9 @@ fn fixture_fingerprint(root: &Path) -> String {
     let mut hasher = Sha256::new();
     for entry in fixture_files(root) {
         let path = entry.path();
-        let relative = path.strip_prefix(root).expect("fixture entry under root");
+        let relative = path
+            .strip_prefix(root)
+            .expect("fixture entry under root");
         hasher.update(relative.to_string_lossy().as_bytes());
         hasher.update([0]);
         hasher.update(fs::read(path).expect("read registry fixture for fingerprint"));
@@ -261,7 +273,8 @@ impl Package {
     }
 
     fn packument(&self) -> Value {
-        let versions = self.versions
+        let versions = self
+            .versions
             .iter()
             .map(|(version, package)| (version.clone(), package.packument_manifest.clone()))
             .collect();
@@ -312,7 +325,9 @@ struct PackageVersion {
 
 impl PackageVersion {
     fn load(root: &Path, manifest_path: &Path, substitutions: &[(&str, &str)]) -> Self {
-        let package_dir = manifest_path.parent().expect("manifest has parent");
+        let package_dir = manifest_path
+            .parent()
+            .expect("manifest has parent");
         let manifest_text = substituted_manifest_text(manifest_path, substitutions);
         let manifest: Value =
             serde_json::from_str(&manifest_text).expect("parse fixture package.json");
@@ -341,12 +356,10 @@ fn fixture_manifests(root: &Path) -> Vec<PathBuf> {
 }
 
 fn substituted_manifest_text(manifest_path: &Path, substitutions: &[(&str, &str)]) -> String {
-    substitutions
-        .iter()
-        .fold(
-            fs::read_to_string(manifest_path).expect("read fixture package.json"),
-            |manifest, (from, to)| manifest.replace(from, to),
-        )
+    substitutions.iter().fold(
+        fs::read_to_string(manifest_path).expect("read fixture package.json"),
+        |manifest, (from, to)| manifest.replace(from, to),
+    )
 }
 
 fn manifest_string(manifest: &Value, key: &str) -> String {
@@ -360,17 +373,21 @@ fn manifest_string(manifest: &Value, key: &str) -> String {
 /// The manifest as a packument version entry: with its `dist` block, and
 /// with `bundleDependencies` mirrored from `bundledDependencies`.
 fn with_dist(mut packument_manifest: Value, tarball_url: &str, integrity: &str) -> Value {
-    let manifest_object =
-        packument_manifest.as_object_mut().expect("fixture package.json is an object");
-    manifest_object.insert(
-        "dist".to_string(),
-        json!({ "tarball": tarball_url, "integrity": integrity }),
-    );
+    let manifest_object = packument_manifest
+        .as_object_mut()
+        .expect("fixture package.json is an object");
+    manifest_object
+        .insert("dist".to_string(), json!({ "tarball": tarball_url, "integrity": integrity }));
     // Verdaccio's abbreviated metadata exposes `bundleDependencies` (no "d"),
     // and that is the key pnpm reads, so mirror `bundledDependencies` onto it
     // when only the longer spelling is present in the fixture manifest.
-    if let Some(bundled) = manifest_object.get("bundledDependencies").cloned() {
-        manifest_object.entry("bundleDependencies").or_insert(bundled);
+    if let Some(bundled) = manifest_object
+        .get("bundledDependencies")
+        .cloned()
+    {
+        manifest_object
+            .entry("bundleDependencies")
+            .or_insert(bundled);
     }
     packument_manifest
 }

@@ -132,7 +132,10 @@ async fn path_shaped_identifiers_are_refused() {
             "unexpected error for {workspace}/{run_id}: {rendered}",
         );
         assert!(
-            store.get(workspace, run_id).await.is_err(),
+            store
+                .get(workspace, run_id)
+                .await
+                .is_err(),
             "get must refuse {workspace}/{run_id}",
         );
     }
@@ -181,7 +184,10 @@ async fn listing_does_not_parse_records_outside_the_requested_page() {
         .publish(&run("demo", "200-default"))
         .await
         .unwrap();
-    storage.create_pipeline_run("demo", "100-default.json", b"invalid JSON").await.unwrap();
+    storage
+        .create_pipeline_run("demo", "100-default.json", b"invalid JSON")
+        .await
+        .unwrap();
     assert_eq!(store.list(&["demo"], 1).await.unwrap()[0].run_id, "200-default");
 }
 
@@ -196,7 +202,10 @@ async fn a_listing_is_scoped_to_the_workspaces_it_was_given() {
         .publish(&run("wanted", "100-default"))
         .await
         .unwrap();
-    storage.create_pipeline_run("ignored", "999-default.json", b"invalid JSON").await.unwrap();
+    storage
+        .create_pipeline_run("ignored", "999-default.json", b"invalid JSON")
+        .await
+        .unwrap();
 
     let listed = store
         .list(&["wanted"], 10)
@@ -234,7 +243,10 @@ async fn a_corrupt_record_on_the_page_is_named() {
     let root = TempDir::new().unwrap();
     let storage = storage_in(&HostedStoreConfig::Fs, &root);
     let store = PipelineRunStore::new(storage.clone());
-    storage.create_pipeline_run("demo", "100-default.json", b"invalid JSON").await.unwrap();
+    storage
+        .create_pipeline_run("demo", "100-default.json", b"invalid JSON")
+        .await
+        .unwrap();
 
     let error = store
         .list(&["demo"], 10)
@@ -253,13 +265,23 @@ async fn a_key_the_store_did_not_write_is_passed_over() {
         .publish(&run("demo", "100-default"))
         .await
         .unwrap();
-    std::fs::create_dir_all(root.path().join("storage/.pipeline-runs/v0/demo/nested")).unwrap();
+    std::fs::create_dir_all(
+        root.path()
+            .join("storage/.pipeline-runs/v0/demo/nested"),
+    )
+    .unwrap();
     std::fs::write(
-        root.path().join("storage/.pipeline-runs/v0/demo/nested/deeper.json"),
+        root.path()
+            .join("storage/.pipeline-runs/v0/demo/nested/deeper.json"),
         b"invalid JSON",
     )
     .unwrap();
-    std::fs::write(root.path().join("storage/.pipeline-runs/v0/demo/notes.txt"), b"notes").unwrap();
+    std::fs::write(
+        root.path()
+            .join("storage/.pipeline-runs/v0/demo/notes.txt"),
+        b"notes",
+    )
+    .unwrap();
 
     let listed = store
         .list(&["demo"], 10)

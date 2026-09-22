@@ -158,9 +158,15 @@ pub(in super::super) fn claim_children_owner(
         }
     };
     if owns_children {
-        let mut first_importer = lock_recoverable(&ctx.workspace.children.first_importer_by_pkg);
+        let mut first_importer = lock_recoverable(
+            &ctx.workspace
+                .children
+                .first_importer_by_pkg,
+        );
         if first_importer.map().get(pkg_id) != Some(&owner.importer_id) {
-            first_importer.map_mut().insert(pkg_id.to_string(), owner.importer_id.clone());
+            first_importer
+                .map_mut()
+                .insert(pkg_id.to_string(), owner.importer_id.clone());
         }
     }
     ChildrenOwnerClaim { owner, owns_children, peer_shadowed, children_context_unchanged }
@@ -190,8 +196,12 @@ pub(in super::super) fn recorded_children_match(
     lock_recoverable(&ctx.workspace.children.by_id)
         .get(pkg_id)
         .is_some_and(|recorded| {
-            recorded.context.produces_same_children_as(context)
-                || recorded.context.pins_children_over(context)
+            recorded
+                .context
+                .produces_same_children_as(context)
+                || recorded
+                    .context
+                    .pins_children_over(context)
         })
 }
 
@@ -279,26 +289,40 @@ pub(in super::super) fn record_children(
             // republishing even the same edges would carry this walk's
             // unpinned context onto the record, leaving the next fresh
             // walk to land on different edges nothing to hold it back.
-            Some(recorded) if recorded.context.pins_children_over(&context) => {
+            Some(recorded)
+                if recorded
+                    .context
+                    .pins_children_over(&context) =>
+            {
                 return ChildrenRecording::Declined;
             }
             Some(recorded) if *recorded.edges == edges => ChildrenRecording::Published,
             Some(_) => ChildrenRecording::PublishedOverStale,
         };
         let edges = Arc::new(edges);
-        if ctx.workspace.hooks.finalized_package.is_some() {
+        if ctx
+            .workspace
+            .hooks
+            .finalized_package
+            .is_some()
+        {
             update_parent_index(
                 &mut lock_recoverable(&ctx.workspace.finalization.parents_by_id),
                 pkg_id,
-                children.get(pkg_id).map(|recorded| recorded.edges.as_slice()),
+                children
+                    .get(pkg_id)
+                    .map(|recorded| recorded.edges.as_slice()),
                 &edges,
             );
         }
         children.insert(Arc::from(pkg_id.to_string()), RecordedChildren { edges, context });
         recording
     };
-    ctx.workspace.tree.record_children_by_id_write(pkg_id);
-    ctx.workspace.note_finalization_candidate(pkg_id);
+    ctx.workspace
+        .tree
+        .record_children_by_id_write(pkg_id);
+    ctx.workspace
+        .note_finalization_candidate(pkg_id);
     recording
 }
 
@@ -347,7 +371,9 @@ pub(in super::super) fn register_peer_dep_names(
     let mut all_peers = lock_recoverable(&ctx.workspace.tree.all_peer_dep_names);
     for name in peer_dependencies.keys() {
         if all_peers.insert(name.clone()) {
-            ctx.workspace.tree.record_peer_dep_name(name);
+            ctx.workspace
+                .tree
+                .record_peer_dep_name(name);
         }
     }
 }
@@ -401,7 +427,9 @@ pub(in super::super) fn insert_tree_node(
             }
         };
     if written {
-        ctx.workspace.tree.record_tree_node_write(&node_id);
+        ctx.workspace
+            .tree
+            .record_tree_node_write(&node_id);
     }
     if inserted {
         lock_recoverable(&ctx.workspace.tree.nodes_by_pkg_id)
@@ -452,9 +480,13 @@ pub(in super::super) fn make_non_owner_nodes_lazy(
     drop(tree);
     let rewrote_any = !rewritten.is_empty();
     for node_id in &rewritten {
-        ctx.workspace.tree.record_tree_node_write(node_id);
+        ctx.workspace
+            .tree
+            .record_tree_node_write(node_id);
     }
     if rewrote_any {
-        ctx.workspace.tree.record_children_rewrite();
+        ctx.workspace
+            .tree
+            .record_children_rewrite();
     }
 }

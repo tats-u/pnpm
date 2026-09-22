@@ -199,13 +199,19 @@ impl RuleIndex {
         for (position, rule) in rules.iter().enumerate() {
             match &rule.pattern {
                 PackagePattern::Exact(name) => {
-                    index.exact.insert(name.clone(), position);
+                    index
+                        .exact
+                        .insert(name.clone(), position);
                 }
                 PackagePattern::Scope(scope) => {
-                    index.scopes.insert(scope.clone(), position);
+                    index
+                        .scopes
+                        .insert(scope.clone(), position);
                 }
                 PackagePattern::Namespace(namespace) => {
-                    index.namespaces.insert(namespace.clone(), position);
+                    index
+                        .namespaces
+                        .insert(namespace.clone(), position);
                 }
                 PackagePattern::AnyScoped => index.any_scoped = Some(position),
                 PackagePattern::All => index.all = Some(position),
@@ -319,7 +325,9 @@ impl PackageRules {
     /// Whether any package carries an explicit access policy.
     #[must_use]
     pub fn refines_access(&self) -> bool {
-        self.rules.iter().any(|rule| rule.access.is_some())
+        self.rules
+            .iter()
+            .any(|rule| rule.access.is_some())
     }
 
     /// The effective permissions for `package`: the **most specific**
@@ -330,13 +338,16 @@ impl PackageRules {
     /// indexed, so it costs tier lookups rather than a scan of every rule.
     #[must_use]
     pub fn for_package(&self, package: &str) -> Effective<'_> {
-        let winner = self.index
+        let winner = self
+            .index
             .winner(package)
             .map(|position| &self.rules[position]);
         let explicit_access = winner.and_then(|rule| rule.access.as_ref());
         Effective {
             access: explicit_access.unwrap_or(&self.default_access),
-            publish: winner.and_then(|rule| rule.publish.as_ref()).unwrap_or(&self.default_publish),
+            publish: winner
+                .and_then(|rule| rule.publish.as_ref())
+                .unwrap_or(&self.default_publish),
             unpublish: winner
                 .and_then(|rule| rule.unpublish.as_ref())
                 .unwrap_or(&self.default_unpublish),
@@ -361,13 +372,11 @@ impl PackageRules {
     #[must_use]
     pub fn any_access_admits(&self, identity: &Identity) -> bool {
         self.default_access.allows(identity)
-            || self.rules
-                .iter()
-                .any(|rule| {
-                    rule.access
-                        .as_ref()
-                        .is_some_and(|access| access.allows(identity))
-                })
+            || self.rules.iter().any(|rule| {
+                rule.access
+                    .as_ref()
+                    .is_some_and(|access| access.allows(identity))
+            })
     }
 
     /// Whether every package-specific access refinement and the registry
@@ -375,13 +384,11 @@ impl PackageRules {
     #[must_use]
     pub fn all_access_admit(&self, identity: &Identity) -> bool {
         self.default_access.allows(identity)
-            && self.rules
-                .iter()
-                .all(|rule| {
-                    rule.access
-                        .as_ref()
-                        .is_none_or(|access| access.allows(identity))
-                })
+            && self.rules.iter().all(|rule| {
+                rule.access
+                    .as_ref()
+                    .is_none_or(|access| access.allows(identity))
+            })
     }
 }
 

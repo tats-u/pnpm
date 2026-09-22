@@ -186,7 +186,9 @@ fn resolution_observer_reports_skipped_packages_as_reused() {
 
 #[test]
 fn engine_incompatible_skipped_packages_are_not_reported_as_reused() {
-    let package_key = "engine-constrained@1.0.0".parse().unwrap();
+    let package_key = "engine-constrained@1.0.0"
+        .parse()
+        .unwrap();
     let metadata: PackageMetadata = serde_json::from_value(serde_json::json!({
         "resolution": {
             "integrity": "sha512-dGVzdA==",

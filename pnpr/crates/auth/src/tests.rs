@@ -83,7 +83,10 @@ fn username_validation_rejects_names_that_trim_differently() {
 async fn user_store_rejects_invalid_username_before_persisting() {
     let store = test_user_store();
     for username in INVALID_USERNAMES {
-        let err = store.add_or_login(username, "secret").await.unwrap_err();
+        let err = store
+            .add_or_login(username, "secret")
+            .await
+            .unwrap_err();
         assert_eq!(
             err.status_code(),
             axum::http::StatusCode::BAD_REQUEST,
@@ -91,7 +94,8 @@ async fn user_store_rejects_invalid_username_before_persisting() {
         );
     }
     assert!(
-        store.users
+        store
+            .users
             .lock()
             .expect("UserStore mutex poisoned")
             .is_empty(),
@@ -104,14 +108,20 @@ async fn user_store_rejects_invalid_username_before_lookup() {
     let store = test_user_store();
     let hash = bcrypt::hash("secret", TEST_COST).unwrap();
     {
-        let mut users = store.users.lock().expect("UserStore mutex poisoned");
+        let mut users = store
+            .users
+            .lock()
+            .expect("UserStore mutex poisoned");
         for username in INVALID_USERNAMES {
             users.insert((*username).to_string(), hash.clone());
         }
     }
 
     for username in INVALID_USERNAMES {
-        let err = store.add_or_login(username, "secret").await.unwrap_err();
+        let err = store
+            .add_or_login(username, "secret")
+            .await
+            .unwrap_err();
         assert_eq!(
             err.status_code(),
             axum::http::StatusCode::BAD_REQUEST,
@@ -123,24 +133,39 @@ async fn user_store_rejects_invalid_username_before_lookup() {
 #[tokio::test]
 async fn adduser_creates_then_validates() {
     let store = test_user_store();
-    let outcome = store.add_or_login("alice", "secret").await.unwrap();
+    let outcome = store
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap();
     assert!(matches!(outcome, (UpsertOutcome::Created, _)));
     assert_eq!(outcome.1, "alice");
 
-    let outcome = store.add_or_login("alice", "secret").await.unwrap();
+    let outcome = store
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap();
     assert!(matches!(outcome, (UpsertOutcome::LoggedIn, _)));
     assert_eq!(outcome.1, "alice");
 
     // A wrong password for an existing user is rejected.
-    let err = store.add_or_login("alice", "wrong").await.unwrap_err();
+    let err = store
+        .add_or_login("alice", "wrong")
+        .await
+        .unwrap_err();
     assert_eq!(err.status_code(), axum::http::StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]
 async fn adduser_rejects_existing_user_with_wrong_password() {
     let store = test_user_store();
-    store.add_or_login("alice", "secret").await.unwrap();
-    let err = store.add_or_login("alice", "different").await.unwrap_err();
+    store
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap();
+    let err = store
+        .add_or_login("alice", "different")
+        .await
+        .unwrap_err();
     assert_eq!(err.status_code(), axum::http::StatusCode::UNAUTHORIZED);
 }
 
@@ -162,7 +187,9 @@ async fn adduser_rejects_same_username_concurrent_registration_with_different_pa
         let barrier = Arc::clone(&barrier);
         tokio::spawn(async move {
             barrier.wait().await;
-            store.add_or_login("alice", password).await
+            store
+                .add_or_login("alice", password)
+                .await
         })
     };
 
@@ -190,8 +217,12 @@ async fn adduser_rejects_same_username_concurrent_registration_with_different_pa
     assert_eq!(unauthorized, 1, "the losing registration must be rejected");
     // Exactly one of the two passwords is the one that was stored: logging in
     // with it succeeds, the other is rejected as unauthorized.
-    let login_a = store.add_or_login("alice", "pw-a").await;
-    let login_b = store.add_or_login("alice", "pw-b").await;
+    let login_a = store
+        .add_or_login("alice", "pw-a")
+        .await;
+    let login_b = store
+        .add_or_login("alice", "pw-b")
+        .await;
     let logged_in = [login_a.as_ref(), login_b.as_ref()]
         .into_iter()
         .filter(|result| matches!(result, Ok((UpsertOutcome::LoggedIn, _))))
@@ -216,12 +247,18 @@ async fn adduser_persists_across_reopen() {
     let path = tmp.path().join("htpasswd");
 
     let store = UserStore::open_with_cost(path.clone(), MaxUsers::Unlimited, TEST_COST).unwrap();
-    store.add_or_login("alice", "secret").await.unwrap();
+    store
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap();
     drop(store);
 
     // Cold-load from disk; the hashed entry should still log in.
     let reopened = UserStore::open_with_cost(path.clone(), MaxUsers::Unlimited, TEST_COST).unwrap();
-    let outcome = reopened.add_or_login("alice", "secret").await.unwrap();
+    let outcome = reopened
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap();
     assert!(matches!(outcome, (UpsertOutcome::LoggedIn, _)));
 }
 
@@ -230,7 +267,10 @@ async fn adduser_writes_bcrypt_2y_format() {
     let tmp = tempfile::tempdir().unwrap();
     let path = tmp.path().join("htpasswd");
     let store = UserStore::open_with_cost(path.clone(), MaxUsers::Unlimited, TEST_COST).unwrap();
-    store.add_or_login("alice", "secret").await.unwrap();
+    store
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap();
 
     let raw = std::fs::read_to_string(&path).unwrap();
     let (user, hash) = raw
@@ -249,7 +289,10 @@ async fn max_users_minus_one_disables_registration() {
         max_users: MaxUsers::Disabled,
         bcrypt_cost: TEST_COST,
     };
-    let err = store.add_or_login("alice", "secret").await.unwrap_err();
+    let err = store
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap_err();
     assert_eq!(err.status_code(), axum::http::StatusCode::FORBIDDEN);
 }
 
@@ -258,7 +301,10 @@ async fn in_memory_store_honors_the_registration_cap() {
     // An unset `auth.htpasswd.file` must not re-open sign-ups that the
     // configured cap denied: the in-memory store enforces it too.
     let store = UserStore::in_memory_with_max_users(MaxUsers::Disabled);
-    let err = store.add_or_login("alice", "secret").await.unwrap_err();
+    let err = store
+        .add_or_login("alice", "secret")
+        .await
+        .unwrap_err();
     assert_eq!(err.status_code(), axum::http::StatusCode::FORBIDDEN);
 }
 
@@ -270,12 +316,24 @@ async fn max_users_caps_new_registrations() {
         max_users: MaxUsers::Limited(2),
         bcrypt_cost: TEST_COST,
     };
-    store.add_or_login("alice", "x").await.unwrap();
-    store.add_or_login("bob", "x").await.unwrap();
-    let err = store.add_or_login("carol", "x").await.unwrap_err();
+    store
+        .add_or_login("alice", "x")
+        .await
+        .unwrap();
+    store
+        .add_or_login("bob", "x")
+        .await
+        .unwrap();
+    let err = store
+        .add_or_login("carol", "x")
+        .await
+        .unwrap_err();
     assert_eq!(err.status_code(), axum::http::StatusCode::FORBIDDEN);
     // Existing users may still log in once the cap is hit.
-    store.add_or_login("alice", "x").await.unwrap();
+    store
+        .add_or_login("alice", "x")
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -333,7 +391,8 @@ async fn tokens_round_trip() {
 async fn lookup_record_surfaces_token_restrictions() {
     let tokens = TokenStore::in_memory();
     let raw = "restricted-token";
-    tokens.inner
+    tokens
+        .inner
         .lock()
         .expect("TokenStore mutex poisoned")
         .tokens
@@ -412,7 +471,10 @@ async fn tokens_clamp_negative_persisted_timestamps() {
     drop(conn);
 
     let store = TokenStore::open(path).unwrap();
-    let records = store.list_for_user("alice").await.unwrap();
+    let records = store
+        .list_for_user("alice")
+        .await
+        .unwrap();
 
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].1.created_at, 0);
@@ -429,7 +491,9 @@ async fn tokens_db_stores_hash_not_raw() {
     // Open the SQLite file directly and confirm the raw token
     // never appears in any row.
     let conn = rusqlite::Connection::open(&path).unwrap();
-    let mut stmt = conn.prepare("SELECT token_hash FROM tokens").unwrap();
+    let mut stmt = conn
+        .prepare("SELECT token_hash FROM tokens")
+        .unwrap();
     let mut rows = stmt.query([]).unwrap();
     let row = rows
         .next()
@@ -454,7 +518,8 @@ async fn token_issue_rolls_back_memory_when_sqlite_persistence_fails() {
 
     assert_eq!(err.status_code(), axum::http::StatusCode::INTERNAL_SERVER_ERROR);
     assert!(
-        store.inner
+        store
+            .inner
             .lock()
             .expect("TokenStore mutex poisoned")
             .tokens
@@ -469,15 +534,36 @@ async fn identify_recognizes_bearer_and_ignores_basic() {
     let token = tokens.issue("alice").await.unwrap();
 
     let header = format!("Bearer {token}");
-    assert_eq!(identify(Some(&header), &tokens).await.unwrap().as_deref(), Some("alice"));
+    assert_eq!(
+        identify(Some(&header), &tokens)
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("alice")
+    );
 
     // Basic credentials are no longer accepted on requests — the header is
     // ignored (treated as anonymous), so request handling never pays a bcrypt.
     let basic = "Basic YWxpY2U6c2VjcmV0";
-    assert!(identify(Some(basic), &tokens).await.unwrap().is_none());
+    assert!(
+        identify(Some(basic), &tokens)
+            .await
+            .unwrap()
+            .is_none()
+    );
 
-    assert!(identify(None, &tokens).await.unwrap().is_none());
-    assert!(identify(Some("Bearer total-nonsense"), &tokens).await.unwrap().is_none());
+    assert!(
+        identify(None, &tokens)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        identify(Some("Bearer total-nonsense"), &tokens)
+            .await
+            .unwrap()
+            .is_none()
+    );
 }
 
 /// RFC 7235 §2.1: "the scheme is case-insensitive". All of
@@ -492,7 +578,10 @@ async fn identify_parses_auth_scheme_case_insensitively() {
     for scheme in ["Bearer", "bearer", "BEARER", "BeArEr"] {
         let header = format!("{scheme} {token}");
         assert_eq!(
-            identify(Some(&header), &tokens).await.unwrap().as_deref(),
+            identify(Some(&header), &tokens)
+                .await
+                .unwrap()
+                .as_deref(),
             Some("alice"),
             "Bearer scheme {scheme:?} should be recognized",
         );
@@ -500,7 +589,10 @@ async fn identify_parses_auth_scheme_case_insensitively() {
     for scheme in ["Basic", "basic", "BASIC", "bAsIc"] {
         let header = format!("{scheme} YWxpY2U6c2VjcmV0");
         assert!(
-            identify(Some(&header), &tokens).await.unwrap().is_none(),
+            identify(Some(&header), &tokens)
+                .await
+                .unwrap()
+                .is_none(),
             "Basic scheme {scheme:?} must be ignored",
         );
     }

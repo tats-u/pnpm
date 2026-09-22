@@ -30,13 +30,8 @@ fn side_effects_materialized_on_warm_frozen_reinstall_with_hoisted_linker() {
 }
 
 fn assert_side_effects_materialized(hoisted: bool) {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // `allowBuilds` in `pnpm-workspace.yaml`, exactly like the report.
@@ -107,13 +102,8 @@ fn assert_side_effects_materialized(hoisted: bool) {
 /// Regression for <https://github.com/pnpm/pnpm/issues/14717>.
 #[test]
 fn a_build_with_nothing_to_restore_runs_on_every_install() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -139,7 +129,11 @@ fn a_build_with_nothing_to_restore_runs_on_every_install() {
     // inside the package, so the recorded diff is empty.
     let log = root.path().join("outside-log");
     fs::write(&log, "").expect("create the log");
-    let runs = || fs::read_to_string(&log).expect("read the log").len();
+    let runs = || {
+        fs::read_to_string(&log)
+            .expect("read the log")
+            .len()
+    };
 
     pacquet
         .with_arg("install")
@@ -173,7 +167,9 @@ fn a_build_with_nothing_to_restore_runs_on_every_install() {
 /// singleton kept alive by the caller, so this only needs its own
 /// command — no extra `CommandTempCwd` / registry.
 fn run_frozen_install(workspace: &Path) {
-    frozen_install_command(workspace).assert().success();
+    frozen_install_command(workspace)
+        .assert()
+        .success();
 }
 
 fn frozen_install_command(workspace: &Path) -> Command {
@@ -220,18 +216,15 @@ const BUILT_PACKAGE_DIR: &str = "node_modules/@pnpm/postinstall-modifies-source"
 /// package keeps whatever the re-import left.
 #[test]
 fn a_forced_install_does_not_revert_a_built_package_under_the_global_virtual_store() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_gvs_build_workspace(&workspace);
 
-    let built_file = workspace.join(BUILT_PACKAGE_DIR).join("empty-file.txt");
+    let built_file = workspace
+        .join(BUILT_PACKAGE_DIR)
+        .join("empty-file.txt");
 
     pacquet
         .with_arg("install")
@@ -270,13 +263,8 @@ fn a_forced_install_does_not_revert_a_built_package_under_the_global_virtual_sto
 /// marker had survived.
 #[test]
 fn a_forced_install_leaves_no_build_marker_behind_under_the_global_virtual_store() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_gvs_build_workspace(&workspace);

@@ -89,10 +89,14 @@ where
         Mutex::new(initial_scheduler_state(pending_dependencies, &scheduling.concurrency_limits));
     let progress = Condvar::new();
 
-    let workers = options.concurrency.max(1).min(graph.len());
+    let workers = options
+        .concurrency
+        .max(1)
+        .min(graph.len());
     std::thread::scope(|scope| -> Result<(), std::io::Error> {
         for _ in 0..workers {
-            std::thread::Builder::new().spawn_scoped(scope, || scheduling.work(&state, &progress))?;
+            std::thread::Builder::new()
+                .spawn_scoped(scope, || scheduling.work(&state, &progress))?;
         }
         Ok(())
     })
@@ -132,7 +136,9 @@ pub(super) fn node_edges<Node: Clone + Eq + std::hash::Hash>(
 }
 
 pub(super) fn task_concurrency(settings: &TaskSettings) -> Option<usize> {
-    settings.concurrency.map(|concurrency| usize::try_from(concurrency).unwrap_or(usize::MAX))
+    settings
+        .concurrency
+        .map(|concurrency| usize::try_from(concurrency).unwrap_or(usize::MAX))
 }
 
 fn sequenced_order<Node: Clone + Eq + std::hash::Hash>(
@@ -185,13 +191,16 @@ where
 {
     /// Run dispatched tasks until nothing is left for this worker to do.
     fn work(&self, state: &Mutex<SchedulerState>, progress: &Condvar) {
-        let mut guard = state.lock().expect("task scheduler state lock is not poisoned");
+        let mut guard = state
+            .lock()
+            .expect("task scheduler state lock is not poisoned");
         loop {
             let (returned, ready) = take_ready(guard, progress);
             guard = returned;
             let Some(index) = ready else { return };
 
-            let node = self.graph
+            let node = self
+                .graph
                 .get_index(index)
                 .expect("graph index exists")
                 .0
@@ -206,7 +215,9 @@ where
             let completion = (self.options.run_node)(node);
             drop(panic_guard);
 
-            guard = state.lock().expect("task scheduler state lock is not poisoned");
+            guard = state
+                .lock()
+                .expect("task scheduler state lock is not poisoned");
             guard.in_flight -= 1;
             guard.release_concurrency(index, &self.concurrency_limits);
             self.settle(&mut guard, index, completion);
@@ -235,7 +246,10 @@ where
     }
 
     fn node_at(&self, index: usize) -> &Node {
-        self.graph.get_index(index).expect("graph index exists").0
+        self.graph
+            .get_index(index)
+            .expect("graph index exists")
+            .0
     }
 }
 
@@ -257,6 +271,8 @@ fn take_ready<'state>(
             progress.notify_all();
             return (guard, None);
         }
-        guard = progress.wait(guard).expect("task scheduler state lock is not poisoned");
+        guard = progress
+            .wait(guard)
+            .expect("task scheduler state lock is not poisoned");
     }
 }

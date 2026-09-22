@@ -407,16 +407,27 @@ fn check_recorded_config(
 
     check_overrides(lockfile, check.overrides)?;
 
-    if lockfile.package_extensions_checksum.as_deref() != check.package_extensions_checksum {
+    if lockfile
+        .package_extensions_checksum
+        .as_deref()
+        != check.package_extensions_checksum
+    {
         return Err(StalenessReason::PackageExtensionsChecksumChanged {
-            lockfile: lockfile.package_extensions_checksum.clone(),
-            config: check.package_extensions_checksum.map(str::to_string),
+            lockfile: lockfile
+                .package_extensions_checksum
+                .clone(),
+            config: check
+                .package_extensions_checksum
+                .map(str::to_string),
         });
     }
 
-    let mut lockfile_set: Vec<String> =
-        lockfile.ignored_optional_dependencies.clone().unwrap_or_default();
-    let mut config_set: Vec<String> = check.ignored_optional_dependencies
+    let mut lockfile_set: Vec<String> = lockfile
+        .ignored_optional_dependencies
+        .clone()
+        .unwrap_or_default();
+    let mut config_set: Vec<String> = check
+        .ignored_optional_dependencies
         .unwrap_or(&[])
         .to_vec();
     lockfile_set.sort();
@@ -432,8 +443,13 @@ fn check_recorded_config(
     // invalidates a lockfile whose `(patch_hash=...)` depPath suffixes
     // would otherwise go stale.
     let empty_patches: BTreeMap<String, String> = BTreeMap::new();
-    let lockfile_patches = lockfile.patched_dependencies.as_ref().unwrap_or(&empty_patches);
-    let config_patches = check.patched_dependencies.unwrap_or(&empty_patches);
+    let lockfile_patches = lockfile
+        .patched_dependencies
+        .as_ref()
+        .unwrap_or(&empty_patches);
+    let config_patches = check
+        .patched_dependencies
+        .unwrap_or(&empty_patches);
     if lockfile_patches != config_patches {
         return Err(StalenessReason::PatchedDependenciesChanged {
             lockfile: lockfile_patches.clone(),
@@ -447,7 +463,8 @@ fn check_overrides(
     lockfile: &Lockfile,
     config_overrides: Option<&HashMap<String, String>>,
 ) -> Result<(), StalenessReason> {
-    let lockfile_overrides: BTreeMap<String, String> = lockfile.overrides
+    let lockfile_overrides: BTreeMap<String, String> = lockfile
+        .overrides
         .as_ref()
         .map(|map| {
             map.iter()
@@ -562,15 +579,16 @@ pub fn exclude_links_from_lockfile_changed(
     recorded: Option<&crate::LockfileSettings>,
     exclude_links_from_lockfile: bool,
 ) -> bool {
-    recorded.is_some_and(|settings| {
-        settings.exclude_links_from_lockfile != exclude_links_from_lockfile
-    })
+    recorded
+        .is_some_and(|settings| settings.exclude_links_from_lockfile != exclude_links_from_lockfile)
 }
 
 /// See [`auto_install_peers_changed`].
 #[must_use]
 pub fn recorded_dedupe_peers(recorded: Option<&crate::LockfileSettings>) -> bool {
-    recorded.and_then(|settings| settings.dedupe_peers).unwrap_or(false)
+    recorded
+        .and_then(|settings| settings.dedupe_peers)
+        .unwrap_or(false)
 }
 
 /// See [`auto_install_peers_changed`].
@@ -595,16 +613,14 @@ fn all_catalogs_are_up_to_date(
         .iter()
         .flat_map(|catalogs| catalogs.iter())
         .all(|(catalog_name, catalog)| {
-            catalog
-                .iter()
-                .all(|(alias, entry)| {
-                    catalogs_config
-                        .get(catalog_name)
-                        .and_then(|catalog| catalog.get(alias))
-                        .is_some_and(|specifier| {
-                            dependency_specifiers_equal(&entry.specifier, specifier)
-                        })
-                })
+            catalog.iter().all(|(alias, entry)| {
+                catalogs_config
+                    .get(catalog_name)
+                    .and_then(|catalog| catalog.get(alias))
+                    .is_some_and(|specifier| {
+                        dependency_specifiers_equal(&entry.specifier, specifier)
+                    })
+            })
         })
 }
 

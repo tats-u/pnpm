@@ -100,7 +100,11 @@ fn get(path: &str, accept: Option<&str>) -> Request<Body> {
 async fn uploads_a_wheel_and_serves_the_simple_pages_and_the_file() {
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app =
         router_with_auth(pypi_config(tmp.path().to_path_buf(), "http://upstream.invalid/"), auth);
     let wheel = b"PK\x03\x04 pretend wheel".to_vec();
@@ -247,7 +251,11 @@ async fn uploads_a_wheel_and_serves_the_simple_pages_and_the_file() {
 async fn upload_is_authenticated_and_validated() {
     let tmp = TempDir::new().unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app =
         router_with_auth(pypi_config(tmp.path().to_path_buf(), "http://upstream.invalid/"), auth);
     let wheel = b"wheel bytes".to_vec();
@@ -514,7 +522,11 @@ async fn an_upstream_without_the_json_api_is_a_gateway_error_and_a_bad_hash_is_n
         .oneshot(get(&format!("/pypi/files/lying/{filename}"), None))
         .await
         .unwrap();
-    assert!(axum::body::to_bytes(response.into_body(), usize::MAX).await.is_err());
+    assert!(
+        axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .is_err()
+    );
     assert!(find_file(&tmp.path().join(".pnpr-cache"), filename).is_none());
 }
 
@@ -565,7 +577,11 @@ async fn conflicting_object_store_upload_does_not_publish_metadata_or_leave_stag
         prefix: String::new(),
     };
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app = router_with_auth(config, auth);
     let response = app
         .clone()
@@ -587,7 +603,8 @@ async fn conflicting_object_store_upload_does_not_publish_metadata_or_leave_stag
         "winning artifact",
     );
     assert_eq!(
-        app.oneshot(get("/pypi/simple/demo-pkg/", Some(JSON))).await
+        app.oneshot(get("/pypi/simple/demo-pkg/", Some(JSON)))
+            .await
             .unwrap()
             .status(),
         StatusCode::NOT_FOUND,
@@ -658,10 +675,11 @@ async fn upstream_file_hosts_must_be_approved_by_the_operator() {
     artifact.assert_async().await;
     artifact.remove_async().await;
 
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some(files.url()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute { registry: Some(files.url()), package: None });
     let app = router_with_auth(config, AuthState::in_memory());
     let artifact = files
         .mock("GET", "/artifact")
@@ -683,11 +701,19 @@ async fn upstream_file_hosts_must_be_approved_by_the_operator() {
 async fn hosted_downloads_reject_files_absent_from_publication_metadata() {
     let tmp = TempDir::new().unwrap();
     let package_dir = tmp.path().join("python/demo-pkg");
-    tokio::fs::create_dir_all(&package_dir).await.unwrap();
+    tokio::fs::create_dir_all(&package_dir)
+        .await
+        .unwrap();
     let orphan = "demo_pkg-1.0.0-py3-none-any.whl";
-    tokio::fs::write(package_dir.join(orphan), b"unpublished wheel").await.unwrap();
+    tokio::fs::write(package_dir.join(orphan), b"unpublished wheel")
+        .await
+        .unwrap();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let app =
         router_with_auth(pypi_config(tmp.path().to_path_buf(), "http://upstream.invalid/"), auth);
     let orphan_path = format!("/pypi/files/demo-pkg/{orphan}");
@@ -731,7 +757,9 @@ fn fabricate_crashed_upload(storage: &Path, filename: &str, wheel: &[u8]) -> Pat
     let tmp_path = project_dir.join(format!("{filename}.tmp.999.0"));
     std::fs::write(&tmp_path, wheel).unwrap();
 
-    let txn_dir = storage.join(".pnpr-journal").join("0000000000000001-999-0");
+    let txn_dir = storage
+        .join(".pnpr-journal")
+        .join("0000000000000001-999-0");
     std::fs::create_dir_all(&txn_dir).unwrap();
     let document = json!({
         "name": "demo-pkg",
@@ -769,7 +797,9 @@ async fn a_crashed_upload_is_completed_on_startup() {
     let filename = "demo_pkg-1.0.0-py3-none-any.whl";
     let tmp_path = fabricate_crashed_upload(&storage, filename, &wheel);
 
-    recover_publish_journal(&config).await.unwrap();
+    recover_publish_journal(&config)
+        .await
+        .unwrap();
 
     assert!(!tmp_path.exists(), "the staged file should be promoted away");
     assert!(
@@ -803,7 +833,11 @@ async fn a_crashed_upload_keeps_what_was_uploaded_while_it_was_down() {
     let tmp = TempDir::new().unwrap();
     let storage = tmp.path().to_path_buf();
     let auth = AuthState::in_memory();
-    let token = auth.tokens.issue("alice").await.unwrap();
+    let token = auth
+        .tokens
+        .issue("alice")
+        .await
+        .unwrap();
     let config = pypi_config(storage.clone(), "http://upstream.invalid/");
     let published = "demo_pkg-2.0.0-py3-none-any.whl";
     let response = router_with_auth(config.clone(), auth)
@@ -816,7 +850,9 @@ async fn a_crashed_upload_keeps_what_was_uploaded_while_it_was_down() {
     assert_eq!(response.status(), StatusCode::OK);
     fabricate_crashed_upload(&storage, "demo_pkg-1.0.0-py3-none-any.whl", b"crashed wheel");
 
-    recover_publish_journal(&config).await.unwrap();
+    recover_publish_journal(&config)
+        .await
+        .unwrap();
 
     let response = router_with_auth(config, AuthState::in_memory())
         .oneshot(get("/pypi/simple/demo-pkg/", Some(JSON)))

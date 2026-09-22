@@ -84,7 +84,10 @@ pub async fn exec_recursive(
     emit: fn(&LogEvent),
 ) -> miette::Result<()> {
     let command = prepare_command(args.command.clone())?;
-    let workspace_root = config.workspace_dir.as_deref().unwrap_or(dir);
+    let workspace_root = config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(dir);
 
     let (projects, patterns) = discover_workspace_projects(workspace_root, config)?;
     // Empty workspace errors; an empty `--filter` selection (below) is a
@@ -139,7 +142,9 @@ fn resumed_exec_task_graph(
     full_task_graph: &TaskGraph,
     task_run_state_context: &TaskRunStateContext,
 ) -> miette::Result<TaskGraph> {
-    let resume_anchor = args.workspace.resume_from
+    let resume_anchor = args
+        .workspace
+        .resume_from
         .as_ref()
         .map(|resume_from| find_resume_root(resume_from, graph))
         .transpose()?;
@@ -213,13 +218,19 @@ impl ExecRun<'_> {
         };
         schedule_exec_tasks(&task_context, task_graph, concurrency, bail);
 
-        if let Some(error) = abort.into_inner().expect("abort slot lock is not poisoned") {
+        if let Some(error) = abort
+            .into_inner()
+            .expect("abort slot lock is not poisoned")
+        {
             return Err(error);
         }
 
-        let result = result.into_inner().expect("summary lock is not poisoned");
-        let first_failure =
-            first_failure.into_inner().expect("first-failure slot lock is not poisoned");
+        let result = result
+            .into_inner()
+            .expect("summary lock is not poisoned");
+        let first_failure = first_failure
+            .into_inner()
+            .expect("first-failure slot lock is not poisoned");
         report_recursive_outcome(
             self.args,
             self.workspace_root,
@@ -300,8 +311,14 @@ fn schedule_exec_tasks(
 ) {
     let run_task = |node: &TaskNode| run_exec_task(context, node);
     let on_task_skipped = |node: &TaskNode| {
-        context.progress.result.lock().expect("summary lock is not poisoned")
-            [&node.project.to_string_lossy().into_owned()]
+        context
+            .progress
+            .result
+            .lock()
+            .expect("summary lock is not poisoned")[&node
+            .project
+            .to_string_lossy()
+            .into_owned()]
             .status = Status::Skipped;
     };
     schedule_tasks(
@@ -319,7 +336,14 @@ fn queued_exec_results(task_graph: &TaskGraph) -> Mutex<IndexMap<String, Executi
     Mutex::new(
         task_graph
             .values()
-            .map(|node| (node.project.to_string_lossy().into_owned(), ExecutionStatus::queued()))
+            .map(|node| {
+                (
+                    node.project
+                        .to_string_lossy()
+                        .into_owned(),
+                    ExecutionStatus::queued(),
+                )
+            })
             .collect(),
     )
 }

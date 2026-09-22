@@ -332,13 +332,8 @@ fn the_ignore_pnpmfile_flag_wins_over_a_configured_false() {
 /// written and drops what a `readPackage` hook injected.
 #[test]
 fn ignore_pnpmfile_skips_the_read_package_hook() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_read_package_pnpmfile(&workspace);
@@ -376,13 +371,8 @@ fn ignore_pnpmfile_skips_the_read_package_hook() {
 /// on a dispatch path `install` never takes.
 #[test]
 fn ignore_pnpmfile_skips_the_read_package_hook_on_add_and_update() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_read_package_pnpmfile(&workspace);
@@ -429,13 +419,8 @@ fn ignore_pnpmfile_skips_the_read_package_hook_on_add_and_update() {
 /// install still runs on a hook-rewritten config.
 #[test]
 fn ignore_pnpmfile_skips_the_update_config_hook() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -639,13 +624,8 @@ fn a_global_pnpmfile_stays_out_of_the_pnpmfile_checksum() {
 /// (<https://github.com/pnpm/pnpm/issues/3735>).
 #[test]
 fn removing_a_read_package_hook_drops_the_dependency_it_added() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_read_package_pnpmfile(&workspace);

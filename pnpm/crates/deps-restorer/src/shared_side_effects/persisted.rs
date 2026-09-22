@@ -20,7 +20,11 @@ pub(super) fn take_persisted_remote_side_effects(
     for (snapshot_key, diffs) in side_effects_by_snapshot {
         let remote_keys: Vec<&String> = diffs
             .iter()
-            .filter_map(|(cache_key, diff)| diff.remote_origin.as_ref().map(|_| cache_key))
+            .filter_map(|(cache_key, diff)| {
+                diff.remote_origin
+                    .as_ref()
+                    .map(|_| cache_key)
+            })
             .collect();
         if remote_keys.is_empty() {
             continue;
@@ -105,7 +109,10 @@ pub(super) fn manifest_matches_diff(manifest: &ArtifactManifest, diff: &SideEffe
             return false;
         }
     }
-    let deleted = diff.deleted.as_deref().unwrap_or_default();
+    let deleted = diff
+        .deleted
+        .as_deref()
+        .unwrap_or_default();
     deleted.len() == manifest.deleted.len()
         && deleted
             .iter()
@@ -125,7 +132,8 @@ pub(super) async fn stored_remote_side_effects_blobs_are_valid(
         if !store_holds(path, &info.digest).await? {
             return Ok(false);
         }
-        let metadata = tokio::fs::metadata(path).await
+        let metadata = tokio::fs::metadata(path)
+            .await
             .map_err(|error| format!("failed to inspect {}: {error}", path.display()))?;
         if metadata.len() != info.size {
             return Ok(false);
@@ -164,7 +172,8 @@ pub(super) fn quarantine_remote_side_effects(
 pub(super) fn decoded_trusted_keys(
     settings: &pnpm_config::RemoteSideEffectsCacheSettings,
 ) -> Option<BTreeMap<String, Vec<u8>>> {
-    let encoded = settings.trusted_keys
+    let encoded = settings
+        .trusted_keys
         .as_ref()
         .filter(|keys| !keys.is_empty())?;
     let mut trusted_keys = BTreeMap::new();
@@ -223,7 +232,11 @@ pub(super) async fn store_holds(path: &Path, digest: &str) -> Result<bool, Strin
     let Ok(file) = options.open(path).await else {
         return Ok(false);
     };
-    if !file.metadata().await.is_ok_and(|metadata| metadata.is_file()) {
+    if !file
+        .metadata()
+        .await
+        .is_ok_and(|metadata| metadata.is_file())
+    {
         return Ok(false);
     }
     let mut reader = tokio::io::BufReader::with_capacity(STORE_READ_CHUNK, file);

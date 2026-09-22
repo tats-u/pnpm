@@ -75,10 +75,16 @@ fn serialize_shared_outputs(
     for root in dependency_order {
         let project = graph[root].package.project;
         let manifest = project.manifest.value();
-        let Some(name) = manifest.get("name").and_then(serde_json::Value::as_str) else {
+        let Some(name) = manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str)
+        else {
             continue;
         };
-        let Some(version) = manifest.get("version").and_then(serde_json::Value::as_str) else {
+        let Some(version) = manifest
+            .get("version")
+            .and_then(serde_json::Value::as_str)
+        else {
             continue;
         };
         let published_name = manifest
@@ -114,28 +120,26 @@ fn output_can_change_while_packing(
         return true;
     }
     let runs_pack_scripts = !config.ignore_scripts
-        && graph
-            .values()
-            .any(|node| {
-                let manifest = node.package.project.manifest.value();
-                ["prepack", "prepare"]
-                    .iter()
-                    .any(|script| {
-                        manifest
-                            .pointer(&format!("/scripts/{script}"))
-                            .and_then(serde_json::Value::as_str)
-                            .is_some_and(|body| !body.is_empty())
-                    })
-            });
+        && graph.values().any(|node| {
+            let manifest = node.package.project.manifest.value();
+            ["prepack", "prepare"]
+                .iter()
+                .any(|script| {
+                    manifest
+                        .pointer(&format!("/scripts/{script}"))
+                        .and_then(serde_json::Value::as_str)
+                        .is_some_and(|body| !body.is_empty())
+                })
+        });
     runs_pack_scripts
-        || graph
-            .values()
-            .any(|node| {
-                node.package.project.manifest
-                    .value()
-                    .pointer("/publishConfig/directory")
-                    .is_some()
-            })
+        || graph.values().any(|node| {
+            node.package
+                .project
+                .manifest
+                .value()
+                .pointer("/publishConfig/directory")
+                .is_some()
+        })
 }
 
 fn render_recursive_pack(
@@ -165,8 +169,13 @@ impl PackArgs {
         // `pack` is not in pnpm's root-auto-exclusion command set, so the
         // workspace root stays in the selection (its own name/version
         // eligibility check still applies below).
-        let (projects, _) =
-            discover_workspace_projects(config.workspace_dir.as_deref().unwrap_or(dir), config)?;
+        let (projects, _) = discover_workspace_projects(
+            config
+                .workspace_dir
+                .as_deref()
+                .unwrap_or(dir),
+            config,
+        )?;
         let selection =
             select_recursive_projects(&projects, config, dir, AutoExcludeRoot::Disabled)?;
         let graph = &selection.selected;
@@ -207,7 +216,8 @@ impl PackArgs {
             },
             results: PackResults::new(dependency_order),
         };
-        pack.execute::<Reporter>(self, &project_dependencies).await;
+        pack.execute::<Reporter>(self, &project_dependencies)
+            .await;
         let packed = pack.finish()?;
 
         render_recursive_pack(&packed, dir, self.json)

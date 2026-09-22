@@ -114,8 +114,7 @@ impl GitHostedTarballFetcher<'_> {
         // `cas_paths` covers the whole monorepo while `files` covers
         // only the sub-package — the count match is a coincidence
         // there, not equivalence.
-        let fast_path_eligible =
-            self.path.is_none() && files.len() == self.cas_paths.len();
+        let fast_path_eligible = self.path.is_none() && files.len() == self.cas_paths.len();
         if fast_path_eligible && (!prepared.should_be_built || prepared.ignored_build) {
             if self.store.index_writer.is_some()
                 && (!prepared.ignored_build || !self.scripts.ignore)

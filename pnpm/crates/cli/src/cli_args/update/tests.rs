@@ -164,7 +164,9 @@ fn pnpr_server_flag_applies_to_config() {
 fn patches_is_a_selectorless_update_mode() {
     let patches = update_args(&["--patches"]);
     assert!(patches.selection.patches);
-    patches.check_patches_options().expect("standalone --patches");
+    patches
+        .check_patches_options()
+        .expect("standalone --patches");
 
     for args in [
         &["--patches", "foo"][..],
@@ -172,8 +174,9 @@ fn patches_is_a_selectorless_update_mode() {
         &["--patches", "--interactive"][..],
         &["--patches", "--global"][..],
     ] {
-        let error =
-            update_args(args).check_patches_options().expect_err("--patches combination must fail");
+        let error = update_args(args)
+            .check_patches_options()
+            .expect_err("--patches combination must fail");
         assert_eq!(
             error.to_string(),
             "--patches cannot be combined with package selectors, --latest, --interactive, or --global",

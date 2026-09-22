@@ -51,7 +51,12 @@ async fn host_fetch_reads_a_token_body_within_the_cap() {
     assert!(response.ok, "got {response:?}");
     assert_eq!(response.status, 200);
     assert!(!response.truncated, "a within-cap body is not truncated");
-    assert_eq!(response.token().expect("parse the body"), Some("tok".to_owned()));
+    assert_eq!(
+        response
+            .token()
+            .expect("parse the body"),
+        Some("tok".to_owned())
+    );
 }
 
 #[tokio::test]
@@ -70,7 +75,12 @@ async fn host_fetch_marks_a_token_body_larger_than_the_cap_truncated() {
 
     assert!(response.ok, "got {response:?}");
     assert!(response.truncated, "an over-cap body must be reported truncated");
-    assert_eq!(response.token().expect("truncation short-circuits parsing"), None);
+    assert_eq!(
+        response
+            .token()
+            .expect("truncation short-circuits parsing"),
+        None
+    );
 }
 
 #[tokio::test]

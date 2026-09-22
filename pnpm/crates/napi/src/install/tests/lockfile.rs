@@ -14,7 +14,9 @@ fn lockfile_records_overrides_in_declaration_order() {
     std::fs::create_dir(&project_dir).expect("create project dir");
     std::fs::write(project_dir.join("package.json"), "{}\n").expect("write package.json");
 
-    let project_dir_string = project_dir.to_string_lossy().into_owned();
+    let project_dir_string = project_dir
+        .to_string_lossy()
+        .into_owned();
     let mut options = install_options();
     options.dir = project_dir_string.clone();
     options.projects = vec![NodeApiProject {
@@ -43,7 +45,11 @@ fn lockfile_records_overrides_in_declaration_order() {
 
     let lockfile =
         std::fs::read_to_string(project_dir.join("pnpm-lock.yaml")).expect("read lockfile");
-    let zzz = lockfile.find("zzz-unmatched").expect("zzz override recorded");
-    let aaa = lockfile.find("aaa-unmatched").expect("aaa override recorded");
+    let zzz = lockfile
+        .find("zzz-unmatched")
+        .expect("zzz override recorded");
+    let aaa = lockfile
+        .find("aaa-unmatched")
+        .expect("aaa override recorded");
     assert!(zzz < aaa, "overrides must keep declaration order (zzz before aaa), got:\n{lockfile}");
 }

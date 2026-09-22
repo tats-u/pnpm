@@ -8,10 +8,14 @@ pub(super) async fn get_status(
     context: &AccessContext<'_>,
     params: &[String],
 ) -> miette::Result<String> {
-    let package_name = params.first().ok_or(AccessError::GetStatusPackageRequired)?;
+    let package_name = params
+        .first()
+        .ok_or(AccessError::GetStatusPackageRequired)?;
 
-    let auth_header =
-        context.config.auth_headers.for_url_with_package(&context.registry, Some(package_name));
+    let auth_header = context
+        .config
+        .auth_headers
+        .for_url_with_package(&context.registry, Some(package_name));
 
     let url = format!(
         "{}-/package/{}/access",
@@ -52,7 +56,10 @@ pub(super) async fn get_status(
         return Ok(output);
     }
 
-    let access = status.access.as_deref().unwrap_or("public");
+    let access = status
+        .access
+        .as_deref()
+        .unwrap_or("public");
     Ok(format!("package: {package_name}\naccess: {access}"))
 }
 
@@ -72,14 +79,18 @@ pub(super) async fn set_status(
         other => return Err(AccessError::SetStatusInvalid { value: other.to_string() }.into()),
     };
 
-    let package_name = params.get(1).ok_or(AccessError::SetStatusPackageRequired)?;
+    let package_name = params
+        .get(1)
+        .ok_or(AccessError::SetStatusPackageRequired)?;
 
     if !package_name.starts_with('@') {
         return Err(AccessError::SetStatusUnscoped.into());
     }
 
-    let auth_header =
-        context.config.auth_headers.for_url_with_package(&context.registry, Some(package_name));
+    let auth_header = context
+        .config
+        .auth_headers
+        .for_url_with_package(&context.registry, Some(package_name));
 
     let url = format!(
         "{}-/package/{}/access",
@@ -124,10 +135,14 @@ pub(super) async fn set_mfa(
         other => return Err(AccessError::SetMfaInvalid { value: other.to_string() }.into()),
     };
 
-    let package_name = params.get(1).ok_or(AccessError::SetMfaPackageRequired)?;
+    let package_name = params
+        .get(1)
+        .ok_or(AccessError::SetMfaPackageRequired)?;
 
-    let auth_header =
-        context.config.auth_headers.for_url_with_package(&context.registry, Some(package_name));
+    let auth_header = context
+        .config
+        .auth_headers
+        .for_url_with_package(&context.registry, Some(package_name));
 
     let url = format!(
         "{}-/package/{}/access",
@@ -164,8 +179,10 @@ pub(super) async fn grant_access(
         .unwrap_or(parts[0]);
     let team = parts[1];
 
-    let auth_header =
-        context.config.auth_headers.for_url_with_package(&context.registry, Some(package_name));
+    let auth_header = context
+        .config
+        .auth_headers
+        .for_url_with_package(&context.registry, Some(package_name));
 
     let url = format!(
         "{}-/team/{}/{}/package",
@@ -210,7 +227,9 @@ pub(super) async fn revoke_access(
         return Err(AccessError::RevokeInvalidTeam { team: scope_team.clone() }.into());
     }
 
-    let package_name = params.get(1).ok_or(AccessError::RevokePackageRequired)?;
+    let package_name = params
+        .get(1)
+        .ok_or(AccessError::RevokePackageRequired)?;
 
     let parts: Vec<&str> = scope_team.splitn(2, ':').collect();
     let scope = parts[0]
@@ -218,8 +237,10 @@ pub(super) async fn revoke_access(
         .unwrap_or(parts[0]);
     let team = parts[1];
 
-    let auth_header =
-        context.config.auth_headers.for_url_with_package(&context.registry, Some(package_name));
+    let auth_header = context
+        .config
+        .auth_headers
+        .for_url_with_package(&context.registry, Some(package_name));
 
     let url = format!(
         "{}-/team/{}/{}/package",
@@ -264,7 +285,9 @@ fn grant_parameters(params: &[String]) -> miette::Result<(&str, &str, &str)> {
         return Err(AccessError::GrantInvalidTeam { team: scope_team.clone() }.into());
     }
 
-    let package_name = params.get(2).ok_or(AccessError::GrantPackageRequired)?;
+    let package_name = params
+        .get(2)
+        .ok_or(AccessError::GrantPackageRequired)?;
 
     Ok((permissions, scope_team, package_name))
 }

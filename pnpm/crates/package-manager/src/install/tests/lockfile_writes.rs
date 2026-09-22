@@ -25,7 +25,9 @@ async fn lockfile_only_routes_scoped_packages_to_configured_scoped_registry() {
 
     let manifest_path = project_root.join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("@private/foo", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("@private/foo", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut default_registry = mockito::Server::new_async().await;
@@ -52,7 +54,9 @@ async fn lockfile_only_routes_scoped_packages_to_configured_scoped_registry() {
     config.modules_dir = modules_dir;
     config.virtual_store_dir = virtual_store_dir;
     config.registry = format!("{}/", default_registry.url());
-    config.registries_by_scope.insert("@private".to_string(), scoped_registry_url);
+    config
+        .registries_by_scope
+        .insert("@private".to_string(), scoped_registry_url);
     let config = config.leak();
 
     Install {
@@ -127,7 +131,9 @@ pub(super) async fn warm_reinstall_skips_snapshot_when_current_lockfile_matches(
     // Manifest must match `PARTIAL_INSTALL_LOCKFILE` — the freshness
     // check (<https://github.com/pnpm/pacquet/issues/447>) rejects any drift between the on-disk manifest and
     // the lockfile importer entry.
-    manifest.add_dependency("placeholder", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("placeholder", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -218,7 +224,13 @@ pub(super) async fn warm_reinstall_skips_snapshot_when_current_lockfile_matches(
     let written = Lockfile::load_current_from_virtual_store_dir(&dirs.virtual_store_dir)
         .expect("read written current lockfile")
         .expect("current lockfile should be written");
-    assert_eq!(written.snapshots.as_ref().map(std::collections::HashMap::len), Some(1));
+    assert_eq!(
+        written
+            .snapshots
+            .as_ref()
+            .map(std::collections::HashMap::len),
+        Some(1)
+    );
 
     drop(dirs.dir);
 }
@@ -249,7 +261,9 @@ pub(super) async fn context_log_reflects_current_lockfile_after_first_install() 
     // Manifest must match the fixture lockfile below — the freshness
     // check (<https://github.com/pnpm/pacquet/issues/447>) rejects any drift between the on-disk manifest and
     // the lockfile importer entry.
-    manifest.add_dependency("placeholder", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("placeholder", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -351,7 +365,9 @@ pub(super) async fn context_log_reflects_current_lockfile_after_first_install() 
     // for non-empty lockfiles, this check fails — and so does the
     // false→true assertion below, which is the whole point of pinning
     // the read-after-write loop.
-    let lock_yaml = dirs.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME);
+    let lock_yaml = dirs
+        .virtual_store_dir
+        .join(Lockfile::CURRENT_FILE_NAME);
     assert!(
         lock_yaml.is_file(),
         "non-empty wanted lockfile must be persisted under <dirs.virtual_store_dir>/lock.yaml; found nothing at {lock_yaml:?}",
@@ -533,7 +549,8 @@ async fn hoisted_node_linker_empty_lockfile_writes_modules_yaml() {
     .await
     .expect("hoisted-linker install with empty lockfile should succeed");
 
-    let written = dirs.modules_dir
+    let written = dirs
+        .modules_dir
         .pipe_as_ref(read_modules_manifest::<Host>)
         .expect("read .modules.yaml")
         .expect("modules manifest exists");
@@ -640,8 +657,12 @@ async fn fresh_install_lockfile_round_trips_through_load_save_load() {
     let lockfile_path = dirs.path().join(Lockfile::FILE_NAME);
     let first = std::fs::read_to_string(&lockfile_path).expect("read first");
     let parsed: Lockfile = serde_saphyr::from_str(&first).expect("parse first");
-    let second_path = dirs.path().join("pnpm-lock.round-trip.yaml");
-    parsed.save_to_path(&second_path).expect("save round-trip lockfile");
+    let second_path = dirs
+        .path()
+        .join("pnpm-lock.round-trip.yaml");
+    parsed
+        .save_to_path(&second_path)
+        .expect("save round-trip lockfile");
     let second = std::fs::read_to_string(&second_path).expect("read second");
     let reparsed: Lockfile = serde_saphyr::from_str(&second).expect("parse second");
 
@@ -737,7 +758,9 @@ async fn fresh_install_with_lockfile_disabled_does_not_write_a_lockfile() {
     );
     // Sanity: materialization still happened.
     assert!(
-        dirs.project_root.join("node_modules/@pnpm.e2e/hello-world-js-bin").exists(),
+        dirs.project_root
+            .join("node_modules/@pnpm.e2e/hello-world-js-bin")
+            .exists(),
         "node_modules must still be populated even when the lockfile is skipped",
     );
 
@@ -825,7 +848,9 @@ async fn fresh_install_also_writes_current_lockfile_under_virtual_store() {
     .await
     .expect("install should succeed");
 
-    let current_lockfile_path = dirs.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME);
+    let current_lockfile_path = dirs
+        .virtual_store_dir
+        .join(Lockfile::CURRENT_FILE_NAME);
     assert!(
         current_lockfile_path.is_file(),
         "current-lockfile must be written under the virtual store dirs.dir",
@@ -835,10 +860,13 @@ async fn fresh_install_also_writes_current_lockfile_under_virtual_store() {
     let current_lockfile: Lockfile =
         serde_saphyr::from_str(&content).expect("parse current lockfile");
     assert_eq!(current_lockfile.lockfile_version.major, 9);
-    let importer = current_lockfile.root_project().expect("root importer");
+    let importer = current_lockfile
+        .root_project()
+        .expect("root importer");
     let key = pnpm_lockfile::PkgName::parse("@pnpm.e2e/hello-world-js-bin").unwrap();
     assert!(
-        importer.dependencies
+        importer
+            .dependencies
             .as_ref()
             .is_some_and(|deps| deps.contains_key(&key)),
         "current-lockfile reflects the resolved direct dep",
@@ -940,7 +968,10 @@ async fn fresh_install_with_lockfile_disabled_skips_current_lockfile_too() {
     .expect("install should succeed");
 
     assert!(
-        !dirs.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME).exists(),
+        !dirs
+            .virtual_store_dir
+            .join(Lockfile::CURRENT_FILE_NAME)
+            .exists(),
         "current-lockfile must also be skipped when config.lockfile = false",
     );
 

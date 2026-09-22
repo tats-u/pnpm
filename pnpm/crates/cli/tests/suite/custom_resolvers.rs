@@ -10,7 +10,9 @@ use pnpm_testing_utils::bin::{AddMockedRegistry, CommandTempCwd};
 use std::{fs, path::Path, process::Command};
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn write_manifest(workspace: &Path) {
@@ -93,13 +95,8 @@ fn installed_version(workspace: &Path) -> String {
 
 #[test]
 fn custom_resolver_takes_precedence_over_builtin_resolvers() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace);
@@ -123,13 +120,8 @@ fn custom_resolver_takes_precedence_over_builtin_resolvers() {
 
 #[test]
 fn should_refresh_resolution_forces_re_resolution_past_the_frozen_path() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace);
@@ -186,13 +178,8 @@ fn should_refresh_resolution_forces_re_resolution_past_the_frozen_path() {
 
 #[test]
 fn failing_should_refresh_resolution_aborts_the_install() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace);
@@ -239,13 +226,8 @@ fn failing_should_refresh_resolution_aborts_the_install() {
 /// registry, and echoing it back must keep the pinned version.
 #[test]
 fn custom_resolver_receives_current_pkg_on_subsequent_installs() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace);
@@ -303,7 +285,9 @@ module.exports = {
     // The on-disk entry is `{integrity}`-only; the payload must carry
     // the tarball URL re-derived from the registry, like pnpm's
     // `pkgSnapshotToResolution`.
-    let tarball = current_pkg["resolution"]["tarball"].as_str().expect("derived tarball URL");
+    let tarball = current_pkg["resolution"]["tarball"]
+        .as_str()
+        .expect("derived tarball URL");
     assert!(
         tarball.ends_with("/@pnpm.e2e/dep-of-pkg-with-1-dep/-/dep-of-pkg-with-1-dep-100.0.0.tgz"),
         "got: {tarball}",
@@ -319,13 +303,8 @@ module.exports = {
 /// Regression test for pnpm/pnpm#15000.
 #[test]
 fn custom_resolver_without_a_manifest_installs_the_package_with_its_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(

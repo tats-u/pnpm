@@ -34,7 +34,12 @@ fn clean_removes_packages_and_pnpm_entries_but_preserves_non_pnpm_dotfiles() {
     // Regular packages and pnpm hidden entries are gone.
     assert!(!node_modules.join("lodash").exists(), "lodash package should be removed");
     assert!(!node_modules.join(".pnpm").exists(), ".pnpm should be removed");
-    assert!(!node_modules.join(".modules.yaml").exists(), ".modules.yaml should be removed");
+    assert!(
+        !node_modules
+            .join(".modules.yaml")
+            .exists(),
+        ".modules.yaml should be removed"
+    );
 
     // Non-pnpm dotfiles (e.g. .cache) are preserved, along with the
     // node_modules directory itself.
@@ -156,7 +161,12 @@ fn clean_from_a_workspace_subdirectory_cleans_every_project() {
 
     write_workspace(&workspace, "");
     seed_package(&workspace.join("node_modules"), "a");
-    seed_package(&workspace.join("pkg1").join("node_modules"), "b");
+    seed_package(
+        &workspace
+            .join("pkg1")
+            .join("node_modules"),
+        "b",
+    );
 
     let output = pacquet
         .with_args(["clean", "--dir", "pkg1"])
@@ -244,8 +254,18 @@ fn clean_works_in_a_workspace() {
     // `pnpm` prints the module dir relative to the cwd with the platform's
     // path separator (via `path.relative`), so build the expected text the
     // same way rather than hard-coding a `/`.
-    let expected_pkg1 = format!("Removing {}", Path::new("pkg1").join("node_modules").display());
-    let expected_pkg2 = format!("Removing {}", Path::new("pkg2").join("node_modules").display());
+    let expected_pkg1 = format!(
+        "Removing {}",
+        Path::new("pkg1")
+            .join("node_modules")
+            .display()
+    );
+    let expected_pkg2 = format!(
+        "Removing {}",
+        Path::new("pkg2")
+            .join("node_modules")
+            .display()
+    );
     assert!(stdout.contains(&expected_pkg1), "expected pkg1: {stdout}");
     assert!(stdout.contains(&expected_pkg2), "expected pkg2: {stdout}");
     assert!(

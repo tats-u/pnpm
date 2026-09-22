@@ -58,7 +58,9 @@ fn build_mutability_and_force_each_disqualify_a_registry_slot() {
 
 #[test]
 fn a_snapshot_without_a_packages_entry_does_not_qualify() {
-    let key: PackageKey = "foo@1.0.0".parse().expect("parse package key");
+    let key: PackageKey = "foo@1.0.0"
+        .parse()
+        .expect("parse package key");
 
     assert!(!dir_clone_cacheable(&HashMap::new(), &key, false, false, false));
 }
@@ -66,7 +68,9 @@ fn a_snapshot_without_a_packages_entry_does_not_qualify() {
 fn packages_with(
     resolution: &serde_json::Value,
 ) -> (PackageKey, HashMap<PackageKey, PackageMetadata>) {
-    let key: PackageKey = "foo@1.0.0".parse().expect("parse package key");
+    let key: PackageKey = "foo@1.0.0"
+        .parse()
+        .expect("parse package key");
     let metadata = serde_json::from_value(serde_json::json!({ "resolution": resolution }))
         .expect("parse package metadata");
     (key.clone(), HashMap::from([(key, metadata)]))

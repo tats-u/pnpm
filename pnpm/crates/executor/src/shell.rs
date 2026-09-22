@@ -90,7 +90,9 @@ pub fn select_shell(
 /// upstream `isWindowsBatchFile` also gates on `process.platform === 'win32'`;
 /// here we factor that out and let the caller pass `is_windows`.
 fn is_windows_batch_file(path: &Path) -> bool {
-    let lowered = path.to_string_lossy().to_ascii_lowercase();
+    let lowered = path
+        .to_string_lossy()
+        .to_ascii_lowercase();
     lowered.ends_with(".cmd") || lowered.ends_with(".bat")
 }
 

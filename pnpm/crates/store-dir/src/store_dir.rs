@@ -89,7 +89,11 @@ impl From<PathBuf> for StoreDir {
     /// string in `.modules.yaml` and switching between them stops
     /// tripping `ERR_PNPM_UNEXPECTED_STORE`.
     fn from(root: PathBuf) -> Self {
-        let root = if root.file_name().and_then(|name| name.to_str()) == Some(STORE_VERSION) {
+        let root = if root
+            .file_name()
+            .and_then(|name| name.to_str())
+            == Some(STORE_VERSION)
+        {
             root
         } else {
             root.join(STORE_VERSION)
@@ -115,7 +119,8 @@ impl StoreDir {
     /// Fast-path check: did this process already ensure the shard dir for
     /// this byte exists? Returns `true` once, per shard, per process.
     pub(crate) fn shard_already_ensured(&self, shard_byte: u8) -> bool {
-        self.ensured_shards.contains(&shard_byte)
+        self.ensured_shards
+            .contains(&shard_byte)
     }
 
     /// Create an object that [displays](std::fmt::Display) the root of the store directory.
@@ -133,7 +138,8 @@ impl StoreDir {
     /// path saves one `PathBuf` allocation per call (~170k on the
     /// alotta-files clean install).
     pub(crate) fn files_dir(&self) -> &PathBuf {
-        self.cached_files_dir.get_or_init(|| self.root.join("files"))
+        self.cached_files_dir
+            .get_or_init(|| self.root.join("files"))
     }
 
     /// Path to a file in the store directory.

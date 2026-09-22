@@ -26,7 +26,9 @@ fn parse_https_url(url: &str) -> Option<(&str, &str, Option<&str>)> {
     }
     let rest = url.get(HTTPS_SCHEME.len()..)?;
     let (host, path_and_query) = rest.split_once('/')?;
-    let path_and_query = path_and_query.split_once('#').map_or(path_and_query, |(path, _)| path);
+    let path_and_query = path_and_query
+        .split_once('#')
+        .map_or(path_and_query, |(path, _)| path);
     let (path, query) = path_and_query
         .split_once('?')
         .map_or((path_and_query, None), |(path, query)| (path, Some(query)));
@@ -79,12 +81,10 @@ fn path_segments(path: &str) -> Vec<&str> {
 }
 
 fn query_param<'query>(query: Option<&'query str>, key: &str) -> Option<&'query str> {
-    query?
-        .split('&')
-        .find_map(|part| {
-            let (part_key, value) = part.split_once('=')?;
-            (part_key == key).then_some(value)
-        })
+    query?.split('&').find_map(|part| {
+        let (part_key, value) = part.split_once('=')?;
+        (part_key == key).then_some(value)
+    })
 }
 
 fn is_full_commit_sha(value: &str) -> bool {

@@ -403,7 +403,8 @@ async fn selected_update_no_save_mutates_in_memory_without_persisting() {
     assert_eq!(saved_dependency_specifier(&projects[0].manifest), "^1.0.0");
     assert!(prepared.persist_indices.is_empty());
     assert_eq!(
-        prepared.catalogs_override
+        prepared
+            .catalogs_override
             .as_ref()
             .and_then(|catalogs| catalogs.get("default"))
             .and_then(|catalog| catalog.get("foo"))

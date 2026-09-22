@@ -206,7 +206,11 @@ _auth:
             .expect("the document parses")
             .is_empty(),
     );
-    assert!(logout_fields(None, "https://registry.example/").expect("no document").is_empty());
+    assert!(
+        logout_fields(None, "https://registry.example/")
+            .expect("no document")
+            .is_empty()
+    );
 }
 
 /// The route outlives the credential: which registry a scope resolves from

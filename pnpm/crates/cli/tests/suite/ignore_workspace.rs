@@ -45,7 +45,9 @@ fn pacquet_in(workspace: &Path) -> Command {
 fn stdout_of(mut command: Command) -> String {
     let output = command.output().expect("spawn pacquet");
     assert!(output.status.success(), "command failed: {output:?}");
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stdout = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .to_string();
     eprintln!("STDOUT:\n{stdout}\n");
     stdout
 }
@@ -63,9 +65,12 @@ fn ignore_workspace_drops_the_workspace_manifest_settings() {
         "the workspace manifest's setting applies by default",
     );
     assert_eq!(
-        stdout_of(
-            pacquet_in(&workspace).with_args(["--ignore-workspace", "config", "get", "nodeLinker"])
-        ),
+        stdout_of(pacquet_in(&workspace).with_args([
+            "--ignore-workspace",
+            "config",
+            "get",
+            "nodeLinker"
+        ])),
         "undefined",
     );
 
@@ -139,11 +144,15 @@ fn assert_only_the_nested_project_is_installed(subcommand: &str) {
     assert!(nested.join("node_modules").is_dir(), "the nested project is the one installed");
     assert!(nested.join("pnpm-lock.yaml").is_file(), "the lockfile belongs to the nested project");
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "the lockfile must not be anchored on the ignored workspace root",
     );
     assert!(
-        !workspace.join("packages/alfa/node_modules").exists(),
+        !workspace
+            .join("packages/alfa/node_modules")
+            .exists(),
         "a sibling project of the ignored workspace must not be installed",
     );
     assert!(
@@ -315,18 +324,21 @@ fn a_project_the_workspace_leaves_out_runs_standalone() {
     );
 
     assert_eq!(
-        stdout_of(
-            pacquet_in(&workspace.join("packages/alfa"))
-                .with_args(["config", "get", "nodeLinker",])
-        ),
+        stdout_of(pacquet_in(&workspace.join("packages/alfa")).with_args([
+            "config",
+            "get",
+            "nodeLinker",
+        ])),
         "hoisted",
         "a project the workspace lists reads the workspace manifest's settings",
     );
     for left_out in ["examples/bravo", "docs"] {
         assert_eq!(
-            stdout_of(
-                pacquet_in(&workspace.join(left_out)).with_args(["config", "get", "nodeLinker"])
-            ),
+            stdout_of(pacquet_in(&workspace.join(left_out)).with_args([
+                "config",
+                "get",
+                "nodeLinker"
+            ])),
             "undefined",
             "{left_out} is not one of the workspace's projects",
         );

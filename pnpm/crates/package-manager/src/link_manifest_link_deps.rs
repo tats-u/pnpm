@@ -43,7 +43,9 @@ pub fn link_manifest_link_deps<Reporter: pnpm_reporter::Reporter>(
     );
     if !valid_name {
         return Err(LinkManifestLinkDepsError::InvalidModulesDirName {
-            modules_dir_name: modules_dir_name.to_string_lossy().into_owned(),
+            modules_dir_name: modules_dir_name
+                .to_string_lossy()
+                .into_owned(),
         });
     }
     for (project_dir, manifest) in project_manifests {
@@ -88,10 +90,15 @@ pub(crate) fn prune_manifest_link_deps(
     for (project_dir, manifest) in options.project_manifests {
         let importer_id =
             pnpm_workspace::importer_id_from_root_dir(options.workspace_root, project_dir);
-        if options.prunable_importer_ids.is_some_and(|ids| !ids.contains(&importer_id)) {
+        if options
+            .prunable_importer_ids
+            .is_some_and(|ids| !ids.contains(&importer_id))
+        {
             continue;
         }
-        let importer_snapshot = options.importers.and_then(|importers| importers.get(&importer_id));
+        let importer_snapshot = options
+            .importers
+            .and_then(|importers| importers.get(&importer_id));
         prune_project_manifest_link_deps(
             options,
             project_dir,
@@ -192,7 +199,10 @@ fn link_manifest_dep<Reporter: pnpm_reporter::Reporter>(
     alias: &str,
     spec: &str,
 ) -> Result<bool, LinkManifestLinkDepsError> {
-    if project.importer_snapshot.is_some_and(|snapshot| snapshot_has_alias(snapshot, alias)) {
+    if project
+        .importer_snapshot
+        .is_some_and(|snapshot| snapshot_has_alias(snapshot, alias))
+    {
         return Ok(false);
     }
     let Some(target_path) =
@@ -208,11 +218,9 @@ fn link_manifest_dep<Reporter: pnpm_reporter::Reporter>(
     // `node_modules/`.
     let symlink_path = safe_join_modules_dir(project.modules_dir, alias)
         .map_err(LinkManifestLinkDepsError::InvalidAlias)?;
-    let outcome = symlink_package(&target_path, &symlink_path)
-        .map_err(|source| LinkManifestLinkDepsError::Symlink {
-            alias: alias.to_string(),
-            source,
-        })?;
+    let outcome = symlink_package(&target_path, &symlink_path).map_err(|source| {
+        LinkManifestLinkDepsError::Symlink { alias: alias.to_string(), source }
+    })?;
     if !outcome.reused {
         // `pnpm:root added`: mirror the lockfile-driven pass's
         // per-dependency emit so manifest-linked deps show up
@@ -221,7 +229,10 @@ fn link_manifest_dep<Reporter: pnpm_reporter::Reporter>(
         Reporter::emit(&LogEvent::Root(RootLog {
             level: LogLevel::Debug,
             message: RootMessage::Added {
-                prefix: project.project_dir.display().to_string(),
+                prefix: project
+                    .project_dir
+                    .display()
+                    .to_string(),
                 added: AddedRoot {
                     name: alias.to_string(),
                     real_name: alias.to_string(),
@@ -266,7 +277,9 @@ pub(crate) fn workspace_link_target(
     let versions = workspace_packages.get(&parsed.name)?;
     let version =
         pnpm_resolving_npm_resolver::pick_matching_local_version_or_null(versions, &parsed)?;
-    versions.get(&version).map(pnpm_resolving_npm_resolver::resolve_workspace_package_dir)
+    versions
+        .get(&version)
+        .map(pnpm_resolving_npm_resolver::resolve_workspace_package_dir)
 }
 
 fn dependency_type_of(group: DependencyGroup) -> DependencyType {

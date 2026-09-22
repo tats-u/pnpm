@@ -17,7 +17,9 @@ const FAKE_INTEGRITY: &str = "sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 #[test]
 fn reserved_named_registry_is_an_error_not_a_panic() {
     let mut config = Config::default();
-    config.registries_by_prefix.insert("workspace".to_string(), "https://npm.example/".to_string());
+    config
+        .registries_by_prefix
+        .insert("workspace".to_string(), "https://npm.example/".to_string());
 
     let result = build_resolution_verifiers(
         &config,
@@ -66,17 +68,19 @@ async fn offline_config_threads_to_resolution_verifier() {
     let name: PkgName = "acme".parse().expect("parse name");
     let resolution = LockfileResolution::Tarball(TarballResolution {
         tarball: format!("{registry}acme/-/acme-1.0.0.tgz"),
-        integrity: Some(FAKE_INTEGRITY.parse::<Integrity>().expect("parse integrity")),
+        integrity: Some(
+            FAKE_INTEGRITY
+                .parse::<Integrity>()
+                .expect("parse integrity"),
+        ),
         revision: None,
         git_hosted: None,
         path: None,
     });
 
-    let result = verifiers[0].verify(
-        &resolution,
-        VerifyCtx { name: &name, version: "1.0.0", registry_name: None },
-    )
-    .await;
+    let result = verifiers[0]
+        .verify(&resolution, VerifyCtx { name: &name, version: "1.0.0", registry_name: None })
+        .await;
 
     let ResolutionVerification::FetchFailed { message } = result else {
         panic!("expected offline metadata failure, got {result:?}");

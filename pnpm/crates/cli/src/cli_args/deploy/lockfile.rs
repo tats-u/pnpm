@@ -46,7 +46,8 @@ pub(super) fn create_deploy_files(
     config: &Config,
     dependency_groups: &[DependencyGroup],
 ) -> miette::Result<DeployFiles> {
-    let input_snapshot = lockfile.importers
+    let input_snapshot = lockfile
+        .importers
         .get(project_id)
         .ok_or_else(|| DeployError::MissingImporter { project_id: project_id.to_string() })?;
     let deployed_project_root =
@@ -132,17 +133,24 @@ fn fill_target_dependencies(
         (
             DependencyGroup::Optional,
             &mut target_snapshot.optional_dependencies,
-            &deployed.input_snapshot.optional_dependencies,
+            &deployed
+                .input_snapshot
+                .optional_dependencies,
         ),
     ] {
-        let included = deployed.dependency_groups.contains(&group);
+        let included = deployed
+            .dependency_groups
+            .contains(&group);
         fill_target_dependency_map(
             target,
             source
                 .iter()
                 .flatten()
                 .filter(|(name, _)| {
-                    included || deployed.peer_only_dependencies.contains(&name.to_string())
+                    included
+                        || deployed
+                            .peer_only_dependencies
+                            .contains(&name.to_string())
                 }),
             deployed.ctx,
             &selected_bases,
@@ -288,7 +296,9 @@ fn deploy_workspace_settings(
     if lockfile.patched_dependencies.is_some()
         && let Some(patched_dependencies) = config.patched_dependencies.as_ref()
     {
-        deploy_lockfile.patched_dependencies.clone_from(&lockfile.patched_dependencies);
+        deploy_lockfile
+            .patched_dependencies
+            .clone_from(&lockfile.patched_dependencies);
         let rewritten = patched_dependencies
             .iter()
             .map(|(name, value)| {
@@ -311,14 +321,19 @@ fn deploy_workspace_settings(
             "allowBuilds".to_string(),
             serde_json::to_value(&config.allow_builds).into_diagnostic()?,
         );
-        workspace_config.allow_builds.clone_from(&config.allow_builds);
+        workspace_config
+            .allow_builds
+            .clone_from(&config.allow_builds);
     }
     Ok((workspace_manifest, workspace_config))
 }
 
 /// A lockfile importer records a dependency group only when it has entries.
 fn drop_empty_dependency_map(dependencies: &mut Option<ResolvedDependencyMap>) {
-    if dependencies.as_ref().is_some_and(HashMap::is_empty) {
+    if dependencies
+        .as_ref()
+        .is_some_and(HashMap::is_empty)
+    {
         *dependencies = None;
     }
 }
@@ -384,12 +399,16 @@ fn deploy_manifest(
     set_manifest_dependencies(
         &mut manifest,
         "devDependencies",
-        target_snapshot.dev_dependencies.as_ref(),
+        target_snapshot
+            .dev_dependencies
+            .as_ref(),
     );
     set_manifest_dependencies(
         &mut manifest,
         "optionalDependencies",
-        target_snapshot.optional_dependencies.as_ref(),
+        target_snapshot
+            .optional_dependencies
+            .as_ref(),
     );
     omit_peers_of_excluded_dependencies(&mut manifest, declared_dependencies, target_snapshot);
 
@@ -441,9 +460,8 @@ fn finish_deploy_files(
     Ok(DeployFiles {
         manifest,
         lockfile: deploy_lockfile,
-        workspace_manifest: (!workspace_manifest.is_empty()).then_some(Value::Object(
-            workspace_manifest,
-        )),
+        workspace_manifest: (!workspace_manifest.is_empty())
+            .then_some(Value::Object(workspace_manifest)),
         workspace_config,
     })
 }

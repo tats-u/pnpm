@@ -48,7 +48,9 @@ pub(crate) async fn fetch_and_extract_once<Reporter: self::Reporter>(
         ignore_file_pattern,
     };
     if let Some(path) = local_file_tarball_path(package_url) {
-        return download.fetch_local::<Reporter>(&path, attempt).await;
+        return download
+            .fetch_local::<Reporter>(&path, attempt)
+            .await;
     }
     let (client, response_head) = crate::archive_request::request_archive::<Reporter>(
         http_client,
@@ -60,7 +62,9 @@ pub(crate) async fn fetch_and_extract_once<Reporter: self::Reporter>(
         revision_addressed,
     )
     .await?;
-    download.extract_response::<Reporter, _>(client, response_head, attempt).await
+    download
+        .extract_response::<Reporter, _>(client, response_head, attempt)
+        .await
 }
 
 pub(super) struct TarballDownload<'a> {
@@ -171,14 +175,9 @@ impl TarballDownload<'_> {
             && let Ok(permit) = streaming_extract_semaphore().try_acquire()
         {
             progress.on_chunks::<Reporter>(&prefix.chunks);
-            return self.stream_body::<Reporter, _, _>(
-                prefix.chunks,
-                stream,
-                progress,
-                client,
-                permit,
-            )
-            .await;
+            return self
+                .stream_body::<Reporter, _, _>(prefix.chunks, stream, progress, client, permit)
+                .await;
         }
         let buffered = buffer_body::<Reporter, _>(BufferBody {
             stream: &mut stream,
@@ -191,7 +190,8 @@ impl TarballDownload<'_> {
             http_client: self.http_client,
         })
         .await?;
-        self.finish_body::<Reporter, _, _>(buffered, stream, progress, client).await
+        self.finish_body::<Reporter, _, _>(buffered, stream, progress, client)
+            .await
     }
 
     pub(super) async fn finish_body<Reporter, Body, Guard>(
@@ -212,14 +212,15 @@ impl TarballDownload<'_> {
                     .acquire()
                     .await
                     .expect("streaming-extract semaphore shouldn't be closed this soon");
-                return self.stream_body::<Reporter, _, _>(
-                    vec![bytes::Bytes::from(buffer)],
-                    stream,
-                    progress,
-                    client,
-                    permit,
-                )
-                .await;
+                return self
+                    .stream_body::<Reporter, _, _>(
+                        vec![bytes::Bytes::from(buffer)],
+                        stream,
+                        progress,
+                        client,
+                        permit,
+                    )
+                    .await;
             }
         };
         drop(stream);

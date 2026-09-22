@@ -33,23 +33,40 @@ ignoredBuiltDependencies: [core-js]
     let mut settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
     assert_eq!(settings.packages.as_deref(), Some(&[".".to_owned()][..]));
     assert_eq!(
-        settings.catalog
+        settings
+            .catalog
             .as_ref()
             .and_then(|c| c.get("react"))
             .map(String::as_str),
         Some("^19.0.0"),
     );
     assert_eq!(
-        settings.catalogs
+        settings
+            .catalogs
             .as_ref()
             .and_then(|c| c.get("react17"))
             .and_then(|c| c.get("react"))
             .map(String::as_str),
         Some("^17.0.0"),
     );
-    assert_eq!(settings.only_built_dependencies.as_deref(), Some(&["esbuild".to_owned()][..]));
-    assert_eq!(settings.never_built_dependencies.as_deref(), Some(&["fsevents".to_owned()][..]));
-    assert_eq!(settings.ignored_built_dependencies.as_deref(), Some(&["core-js".to_owned()][..]));
+    assert_eq!(
+        settings
+            .only_built_dependencies
+            .as_deref(),
+        Some(&["esbuild".to_owned()][..])
+    );
+    assert_eq!(
+        settings
+            .never_built_dependencies
+            .as_deref(),
+        Some(&["fsevents".to_owned()][..])
+    );
+    assert_eq!(
+        settings
+            .ignored_built_dependencies
+            .as_deref(),
+        Some(&["core-js".to_owned()][..])
+    );
 
     settings.clear_workspace_only_fields();
     assert_eq!(settings, WorkspaceSettings::default());
@@ -91,16 +108,25 @@ namedRegistries:
     assert_eq!(config.registry, "https://registry.npmjs.org/");
     assert_eq!(config.proxy, pnpm_network::ProxyConfig::default());
     assert_eq!(
-        config.registries_by_scope.get("@safe").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@safe")
+            .map(String::as_str),
         Some("https://safe.example.com/npm/"),
     );
     assert_eq!(config.registries_by_scope.get("@work"), None);
     assert_eq!(
-        config.registries_by_prefix.get("stable").map(String::as_str),
+        config
+            .registries_by_prefix
+            .get("stable")
+            .map(String::as_str),
         Some("https://registry.example.com/npm/"),
     );
     assert_eq!(
-        config.registries_by_prefix.get("literal").map(String::as_str),
+        config
+            .registries_by_prefix
+            .get("literal")
+            .map(String::as_str),
         Some("https://registry.example.com/${/npm/"),
     );
     assert_eq!(config.registries_by_prefix.get("work"), None);
@@ -171,8 +197,9 @@ scriptShell: ./ünicode-shell
 
     assert_eq!(config.store_dir, StoreDir::from(base.join("store-dir/café")));
     assert_eq!(config.cache_dir, base.join("日本語/cache-dir"));
-    let expected_script_shell =
-        pnpm_fs::lexical_normalize(&base.join("./ünicode-shell")).to_string_lossy().into_owned();
+    let expected_script_shell = pnpm_fs::lexical_normalize(&base.join("./ünicode-shell"))
+        .to_string_lossy()
+        .into_owned();
     assert_eq!(config.script_shell.as_deref(), Some(expected_script_shell.as_str()));
 }
 
@@ -224,8 +251,14 @@ patchedDependencies:
     settings.apply_to(&mut config, base);
 
     assert_eq!(config.workspace_dir.as_deref(), Some(base));
-    let map = config.patched_dependencies.expect("present");
-    assert_eq!(map.get("lodash@4.17.21").map(String::as_str), Some("patches/lodash@4.17.21.patch"));
+    let map = config
+        .patched_dependencies
+        .expect("present");
+    assert_eq!(
+        map.get("lodash@4.17.21")
+            .map(String::as_str),
+        Some("patches/lodash@4.17.21.patch")
+    );
 }
 
 #[test]
@@ -252,7 +285,11 @@ changedFilesIgnorePattern:
     let mut settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
     settings.clear_workspace_only_fields();
     assert!(settings.test_pattern.is_none());
-    assert!(settings.changed_files_ignore_pattern.is_none());
+    assert!(
+        settings
+            .changed_files_ignore_pattern
+            .is_none()
+    );
 }
 
 /// `versioning` is workspace-only: release plans must not be shaped by a
@@ -285,7 +322,11 @@ configDependencies:
     settings.clear_workspace_only_fields();
     assert!(settings.deploy_all_files.is_none());
     assert!(settings.force_legacy_deploy.is_none());
-    assert!(settings.shared_workspace_lockfile.is_none());
+    assert!(
+        settings
+            .shared_workspace_lockfile
+            .is_none()
+    );
     assert!(settings.config_dependencies.is_none());
 }
 
@@ -296,7 +337,13 @@ cargo:
   enabled: true
 ";
     let settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
-    assert_eq!(settings.cargo.as_ref().map(|cargo| cargo.enabled), Some(true));
+    assert_eq!(
+        settings
+            .cargo
+            .as_ref()
+            .map(|cargo| cargo.enabled),
+        Some(true)
+    );
     let mut config = Config::default();
     settings.apply_to(&mut config, Path::new("/workspace"));
 
@@ -402,8 +449,16 @@ fn a_tool_channel_is_read_beside_the_base_it_refines() {
             .map(String::as_str),
         Some("https://nightly.example.test"),
     );
-    assert!(!config.tool_channel_mirrors(crate::Tool::Node).contains_key("release"));
-    assert!(config.tool_channel_mirrors(crate::Tool::Bun).is_empty());
+    assert!(
+        !config
+            .tool_channel_mirrors(crate::Tool::Node)
+            .contains_key("release")
+    );
+    assert!(
+        config
+            .tool_channel_mirrors(crate::Tool::Bun)
+            .is_empty()
+    );
 }
 
 /// A caller joins a path onto what it is given.
@@ -453,12 +508,15 @@ fn rejects_workspace_controlled_trust_material_under_the_canonical_spelling() {
     ] {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
-            dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+            dir.path()
+                .join(WORKSPACE_MANIFEST_FILENAME),
             format!("sideEffectsCache:\n  remote:\n    org: acme\n    {trust_material}\n"),
         )
         .unwrap();
 
-        let error = WorkspaceSettings::load_at(dir.path()).unwrap_err().to_string();
+        let error = WorkspaceSettings::load_at(dir.path())
+            .unwrap_err()
+            .to_string();
         assert!(error.contains(&format!("sideEffectsCache.remote.{field}")), "{error}");
     }
 }
@@ -497,7 +555,8 @@ fn rejects_workspace_controlled_shared_side_effects_trust_material() {
 fn a_workspace_declaring_eligibility_keeps_the_machines_publication_settings() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(
-        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path()
+            .join(WORKSPACE_MANIFEST_FILENAME),
         "remoteSideEffectsCache:\n  organization: acme\n  packages:\n    - native-addon\n",
     )
     .unwrap();
@@ -517,7 +576,9 @@ remoteSideEffectsCache:
         .unwrap()
         .apply_to(&mut config, dir.path());
 
-    let shared = config.remote_side_effects_cache.expect("shared cache config");
+    let shared = config
+        .remote_side_effects_cache
+        .expect("shared cache config");
     assert_eq!(shared.org, "acme");
     assert_eq!(shared.packages, ["native-addon"]);
     assert_eq!(shared.publish, Some(true));
@@ -770,8 +831,9 @@ fn resolves_relative_script_shell_against_workspace_root() {
         settings.resolve_script_shell(base);
         let mut config = Config::new();
         settings.apply_to(&mut config, base);
-        let expected =
-            pnpm_fs::lexical_normalize(&base.join(script_shell)).to_string_lossy().into_owned();
+        let expected = pnpm_fs::lexical_normalize(&base.join(script_shell))
+            .to_string_lossy()
+            .into_owned();
         assert_eq!(config.script_shell.as_deref(), Some(expected.as_str()));
     }
 }
@@ -803,7 +865,10 @@ registries:
 ";
     let mut settings: WorkspaceSettings = serde_saphyr::from_str(yaml).unwrap();
     settings.clear_workspace_only_fields();
-    let entries = settings.registries.as_ref().expect("registries present");
+    let entries = settings
+        .registries
+        .as_ref()
+        .expect("registries present");
     let RegistryEntry::Declaration(declaration) = entries
         .values()
         .next()
@@ -836,7 +901,9 @@ fn reset_setting_to_default_keeps_virtual_store_only_hoisting_empty() {
     assert_eq!(config.hoist_pattern, Some(Vec::new()));
     assert_eq!(config.public_hoist_pattern, Some(Vec::new()));
 
-    config.explicit_settings.insert("hoistPattern".to_string(), serde_json::json!(["eslint-*"]));
+    config
+        .explicit_settings
+        .insert("hoistPattern".to_string(), serde_json::json!(["eslint-*"]));
     WorkspaceSettings::reset_setting_to_default::<crate::Host>(
         &mut config,
         &defaults,

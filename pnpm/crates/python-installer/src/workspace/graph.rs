@@ -55,9 +55,8 @@ impl Workspace {
         // distribution to run. A project that writes its own out says which
         // of them only a dependency group requires, and a production reader
         // leaves those out.
-        let development_only = matches!(scope, RequirementScope::Production).then(|| {
-            manifest.development_only_names()
-        });
+        let development_only = matches!(scope, RequirementScope::Production)
+            .then(|| manifest.development_only_names());
         let mut targets = BTreeSet::new();
         for (declared_by, name, declaration) in self.source_entries(root, manifest) {
             if required
@@ -93,7 +92,10 @@ impl Workspace {
             .collect::<Vec<_>>();
         if let Some((declared_in, inherited)) = self.inherited.get(root) {
             entries.extend(
-                inherited.tool.uv.sources
+                inherited
+                    .tool
+                    .uv
+                    .sources
                     .iter()
                     .filter(|(name, _)| !own.contains_key(*name))
                     .map(|(name, declaration)| (declared_in.as_path(), name, declaration)),

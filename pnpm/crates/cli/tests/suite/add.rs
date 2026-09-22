@@ -29,13 +29,8 @@ where
     Args: IntoIterator,
     Args::Item: AsRef<OsStr>,
 {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     pacquet
         .with_args(args)
         .assert()
@@ -86,13 +81,8 @@ fn cargo_add_project() -> (TempDir, PathBuf) {
 /// Regression test for the Tag release operator's invocation (pnpm/pnpm#13242).
 #[test]
 fn add_accepts_dir_allow_build_and_registry_after_the_subcommand() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let registry = mock_instance.url();
 
@@ -113,7 +103,9 @@ fn add_accepts_dir_allow_build_and_registry_after_the_subcommand() {
          /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     assert!(
-        pkg_dir.join("generated-by-postinstall.js").exists(),
+        pkg_dir
+            .join("generated-by-postinstall.js")
+            .exists(),
         "the --allow-build package should have run its postinstall",
     );
 
@@ -131,13 +123,8 @@ fn add_accepts_dir_allow_build_and_registry_after_the_subcommand() {
 /// `<pkg>: false` and the install script does not run.
 #[test]
 fn add_denies_a_build_with_the_negation_prefix() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let registry = mock_instance.url();
 
@@ -156,7 +143,9 @@ fn add_denies_a_build_with_the_negation_prefix() {
          /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     assert!(
-        !pkg_dir.join("generated-by-postinstall.js").exists(),
+        !pkg_dir
+            .join("generated-by-postinstall.js")
+            .exists(),
         "a denied package must not run its postinstall",
     );
 
@@ -183,7 +172,9 @@ fn should_install_all_dependencies() {
     eprintln!("Ensure the manifest file ({manifest_path:?}) exists");
     assert!(manifest_path.exists());
 
-    let virtual_store_dir = workspace.join("node_modules").join(".pnpm");
+    let virtual_store_dir = workspace
+        .join("node_modules")
+        .join(".pnpm");
 
     eprintln!("Ensure virtual store dir ({virtual_store_dir:?}) exists");
     assert!(virtual_store_dir.exists());
@@ -218,7 +209,9 @@ pub fn should_symlink_correctly() {
     eprintln!("Ensure the manifest file ({manifest_path:?}) exists");
     assert!(manifest_path.exists());
 
-    let virtual_store_dir = workspace.join("node_modules").join(".pnpm");
+    let virtual_store_dir = workspace
+        .join("node_modules")
+        .join(".pnpm");
 
     eprintln!("Ensure virtual store dir ({virtual_store_dir:?}) exists");
     assert!(virtual_store_dir.exists());
@@ -239,8 +232,12 @@ pub fn should_symlink_correctly() {
         .join("@pnpm.e2e")
         .join("hello-world-js-bin");
     assert_eq!(
-        symlink_path.pipe(fs::canonicalize).expect("canonicalize symlink"),
-        target_path.pipe(fs::canonicalize).expect("canonicalize link target"),
+        symlink_path
+            .pipe(fs::canonicalize)
+            .expect("canonicalize symlink"),
+        target_path
+            .pipe(fs::canonicalize)
+            .expect("canonicalize link target"),
     );
 
     drop((root, anchor)); // cleanup
@@ -271,7 +268,9 @@ fn write_workspace_with_local_fixtures(workspace: &Path) -> PathBuf {
     std::fs::write(&workspace_yaml_path, workspace_yaml).expect("write pnpm-workspace.yaml");
 
     for package_name in ["local-a", "local-b"] {
-        let package_dir = workspace.join("fixtures").join(package_name);
+        let package_dir = workspace
+            .join("fixtures")
+            .join(package_name);
         std::fs::create_dir_all(&package_dir).expect("create local package directory");
         std::fs::write(
             package_dir.join("package.json"),
@@ -293,13 +292,8 @@ fn write_workspace_with_local_fixtures(workspace: &Path) -> PathBuf {
 #[test]
 fn add_runs_with_ndjson_and_silent_reporters() {
     for reporter in ["--reporter=ndjson", "--reporter=silent"] {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
 
         pacquet
             .with_args([reporter, "add", "@pnpm.e2e/hello-world-js-bin"])
@@ -352,13 +346,8 @@ fn add_can_disable_progress_output() {
             true,
         ),
     ] {
-        let CommandTempCwd {
-            mut pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         if let Some((key, value)) = env {
             pacquet.env(key, value);
         }
@@ -385,13 +374,8 @@ fn add_can_disable_progress_output() {
 
 #[test]
 fn add_progress_flag_overrides_the_disabled_setting() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     append_workspace_yaml_key(&workspace, "progress", false);
 
     let output = pacquet
@@ -429,13 +413,8 @@ fn prod_spec(dir: &std::path::Path, name: &str) -> String {
 /// spec, matching pnpm's `updateProjectManifestObject`.
 #[test]
 fn add_existing_dependency_moves_it_to_the_target_group() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         r#"{ "name": "p", "version": "1.0.0", "dependencies": { "@pnpm.e2e/dep-of-pkg-with-1-dep": "~100.0.0" }, "devDependencies": { "@pnpm.e2e/dep-of-pkg-with-1-dep": "^100.0.0" } }"#,
@@ -462,13 +441,8 @@ fn add_existing_dependency_moves_it_to_the_target_group() {
 // Regression test for pnpm/pnpm#13108
 #[test]
 fn add_existing_dependency_ignores_pin_from_peer_range() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         r#"{ "name": "p", "version": "1.0.0", "devDependencies": { "@pnpm.e2e/dep-of-pkg-with-1-dep": "100.0.0" }, "peerDependencies": { "@pnpm.e2e/dep-of-pkg-with-1-dep": "^100.0.0" } }"#,
@@ -519,13 +493,8 @@ fn add_aliasing_a_package_manager_name_installs_the_aliased_package() {
 /// dependency into a semver range.
 #[test]
 fn add_registry_tarball_url_is_kept_verbatim() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(workspace.join("package.json"), r#"{ "name": "p", "version": "1.0.0" }"#)
         .unwrap();
 
@@ -584,9 +553,13 @@ fn add_materializes_transitive_optional_dependencies() {
     let (root, workspace, anchor) =
         exec_pacquet_in_temp_cwd(["add", "@pnpm.e2e/pkg-with-good-optional"]);
 
-    let virtual_store = workspace.join("node_modules").join(".pnpm");
+    let virtual_store = workspace
+        .join("node_modules")
+        .join(".pnpm");
     assert!(
-        virtual_store.join("is-positive@1.0.0").exists(),
+        virtual_store
+            .join("is-positive@1.0.0")
+            .exists(),
         "the transitive optional dependency must be materialized",
     );
     assert!(
@@ -613,13 +586,8 @@ fn add_materializes_transitive_optional_dependencies() {
 /// tracks the final grouping.
 #[test]
 fn add_moves_dependency_to_new_group_and_keeps_other_groups() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         serde_json::json!({
@@ -675,10 +643,12 @@ fn add_moves_dependency_to_new_group_and_keeps_other_groups() {
     assert_eq!(group_members(DependencyGroup::Optional), Vec::<String>::new());
 
     let current = read_current_lockfile(&workspace);
-    let importer = current.importers
+    let importer = current
+        .importers
         .get(Lockfile::ROOT_IMPORTER_KEY)
         .expect("current lockfile has the root importer");
-    let mut dependencies: Vec<String> = importer.dependencies
+    let mut dependencies: Vec<String> = importer
+        .dependencies
         .as_ref()
         .expect("root importer has dependencies")
         .keys()
@@ -712,7 +682,9 @@ fn add_keeps_entries_of_other_dependency_groups() {
         "the wanted lockfile must keep the dev dependency after a prod add:\n{lockfile}",
     );
     assert!(
-        workspace.join("node_modules/@pnpm.e2e/hello-world-js-bin/package.json").exists(),
+        workspace
+            .join("node_modules/@pnpm.e2e/hello-world-js-bin/package.json")
+            .exists(),
         "the dev dependency's node_modules link must survive a prod add",
     );
 
@@ -725,13 +697,8 @@ fn add_keeps_entries_of_other_dependency_groups() {
 /// it to `dependencies`.
 #[test]
 fn add_updates_dependency_in_the_group_it_already_occupies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         serde_json::json!({
@@ -770,13 +737,8 @@ fn add_with_save_settings(args: &[&str]) -> (TempDir, PathBuf, TestRegistry) {
 }
 
 fn add_with_settings(settings: &str, args: &[&str]) -> (TempDir, PathBuf, TestRegistry) {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -899,13 +861,8 @@ mod workspace;
 /// into `add`'s grammar (pnpm/pnpm#14868).
 #[test]
 fn install_with_a_package_keeps_dev_dependencies_when_prod_is_false() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         r#"{ "name": "p", "version": "1.0.0", "devDependencies": { "@pnpm.e2e/foo": "100.0.0" } }"#,
@@ -924,13 +881,8 @@ fn install_with_a_package_keeps_dev_dependencies_when_prod_is_false() {
 
 #[test]
 fn install_with_a_package_skips_dev_dependencies_when_prod_is_set() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         r#"{ "name": "p", "version": "1.0.0", "devDependencies": { "@pnpm.e2e/foo": "100.0.0" } }"#,
@@ -952,13 +904,8 @@ fn install_with_a_package_skips_dev_dependencies_when_prod_is_set() {
 /// carry both.
 #[test]
 fn install_with_a_package_skips_dependencies_when_dev_is_set() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         r#"{ "name": "p", "version": "1.0.0", "dependencies": { "@pnpm.e2e/foo": "100.0.0" }, "devDependencies": { "@pnpm.e2e/bar": "100.0.0" } }"#,

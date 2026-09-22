@@ -124,9 +124,15 @@ async fn shared_subtree_miss_unsatisfied_by_first_importer_still_hoists() {
     .unwrap();
 
     for importer in [".", "pkg-a"] {
-        let direct = result.peers.direct_dependencies_by_importer.get(importer).expect("importer");
+        let direct = result
+            .peers
+            .direct_dependencies_by_importer
+            .get(importer)
+            .expect("importer");
         assert_eq!(
-            direct.get("top").map(std::string::ToString::to_string),
+            direct
+                .get("top")
+                .map(std::string::ToString::to_string),
             Some("top@1.0.0(opt@25.0.0)".to_string()),
             "{importer} hoists the peer the first walk could not satisfy",
         );
@@ -303,7 +309,9 @@ async fn importer_waves_do_not_overlap() {
     assert!(
         overlaps.is_empty(),
         "importers resolved concurrently: {:?}",
-        overlaps.first().expect("checked non-empty"),
+        overlaps
+            .first()
+            .expect("checked non-empty"),
     );
 }
 

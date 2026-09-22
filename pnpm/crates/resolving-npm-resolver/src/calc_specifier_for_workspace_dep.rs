@@ -66,7 +66,10 @@ pub fn calc_specifier_for_workspace_dep(
     if is_prerelease(resolved_version) {
         return format!("{prefix}{resolved_version}");
     }
-    let pin = declared.prev.and_then(infer_range_spec_style).unwrap_or(default_pin);
+    let pin = declared
+        .prev
+        .and_then(infer_range_spec_style)
+        .unwrap_or(default_pin);
     format!("{prefix}{}{resolved_version}", pin.range_prefix())
 }
 

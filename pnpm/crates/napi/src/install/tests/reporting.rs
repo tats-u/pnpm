@@ -74,7 +74,9 @@ fn allow_unused_patches_downgrades_an_unmatched_patch_to_a_warning() {
     std::fs::write(project_dir.join("patches/unmatched.patch"), WELL_FORMED_PATCH)
         .expect("write patch file");
 
-    let project_dir_string = project_dir.to_string_lossy().into_owned();
+    let project_dir_string = project_dir
+        .to_string_lossy()
+        .into_owned();
     let mut options = install_options();
     options.dir = project_dir_string.clone();
     options.projects = vec![NodeApiProject {
@@ -98,7 +100,9 @@ fn allow_unused_patches_downgrades_an_unmatched_patch_to_a_warning() {
     let error = run_install_inner(&options, None, EngineMode::Install(None))
         .expect_err("an unmatched patch must fail the install");
     assert!(
-        error.reason.contains("ERR_PNPM_UNUSED_PATCH"),
+        error
+            .reason
+            .contains("ERR_PNPM_UNUSED_PATCH"),
         "expected ERR_PNPM_UNUSED_PATCH, got: {reason}",
         reason = error.reason,
     );

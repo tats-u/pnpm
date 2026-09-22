@@ -40,7 +40,9 @@ async fn archive_requests_preserve_the_deployments_redirect_guard() {
         false,
     )
     .await;
-    let error = result.err().expect("off-allowlist redirect must fail");
+    let error = result
+        .err()
+        .expect("off-allowlist redirect must fail");
     eprintln!("error={error}");
     assert!(matches!(error, TarballError::FetchTarball(_)));
     redirect.assert_async().await;
@@ -62,7 +64,9 @@ async fn archive_retry_redacts_secrets_and_accepts_the_maximum_retry_budget() {
     let mut server = mockito::Server::new_async().await;
     let url = format!(
         "{}/artifact?token=secret#fragment",
-        server.url().replacen("http://", "http://user:password@", 1),
+        server
+            .url()
+            .replacen("http://", "http://user:password@", 1),
     );
     let failed = server
         .mock("GET", "/artifact?token=secret")
@@ -127,7 +131,9 @@ async fn archive_network_errors_remove_urls_from_the_source_chain() {
         false,
     )
     .await;
-    let error = result.err().expect("closed port must fail");
+    let error = result
+        .err()
+        .expect("closed port must fail");
     eprintln!("error={error:?}");
     let mut source: Option<&dyn std::error::Error> = Some(&error);
     while let Some(error) = source {
@@ -205,8 +211,16 @@ impl Container {
         input: &IngestTarballToStore<'_>,
     ) -> Result<HashMap<String, PathBuf>, TarballError> {
         match self {
-            Self::TarGz => input.run_without_mem_cache::<SilentReporter>().await,
-            Self::Zip => zip_ingestion(input).run_without_mem_cache::<SilentReporter>().await,
+            Self::TarGz => {
+                input
+                    .run_without_mem_cache::<SilentReporter>()
+                    .await
+            }
+            Self::Zip => {
+                zip_ingestion(input)
+                    .run_without_mem_cache::<SilentReporter>()
+                    .await
+            }
         }
     }
 }
@@ -327,7 +341,10 @@ async fn formats_share_projection_offline_replay_and_missing_blob_validation() {
 
             std::fs::remove_file(&paths["data.txt"]).unwrap();
             input.store.verified_files_cache = Arc::default();
-            let error = container.ingest(&input).await.unwrap_err();
+            let error = container
+                .ingest(&input)
+                .await
+                .unwrap_err();
             eprintln!("missing blob: {error}");
             assert!(matches!(error, TarballError::NoOfflineTarball { .. }));
             request.assert_async().await;
@@ -387,7 +404,10 @@ async fn formats_share_retry_classification_and_never_publish_failed_integrity()
                 progress_reported: None,
                 store_projection: ArchiveStoreProjection::RawArchive,
             };
-            let error = container.ingest(&input).await.unwrap_err();
+            let error = container
+                .ingest(&input)
+                .await
+                .unwrap_err();
             eprintln!("failed fetch: {error}");
             assert_fetch_error(status, &error);
             input.store.index_writer = None;
@@ -395,7 +415,10 @@ async fn formats_share_retry_classification_and_never_publish_failed_integrity()
             StoreIndexWriter::drain(task, "contract test").await;
             input.store.index = StoreIndex::shared_readonly_in(store);
             input.fetching.offline = true;
-            let error = container.ingest(&input).await.unwrap_err();
+            let error = container
+                .ingest(&input)
+                .await
+                .unwrap_err();
             eprintln!("failed fetch was not published: {error}");
             assert!(matches!(error, TarballError::NoOfflineTarball { .. }));
             request.assert_async().await;

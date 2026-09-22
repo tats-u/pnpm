@@ -43,13 +43,11 @@ pub(crate) fn remove_unused_catalogs(
 }
 
 fn is_referenced(references: &CatalogReferences, pkg: &str, specs: &[&str]) -> bool {
-    references
-        .get(pkg)
-        .is_some_and(|refs| {
-            specs
-                .iter()
-                .any(|spec| refs.contains(*spec))
-        })
+    references.get(pkg).is_some_and(|refs| {
+        specs
+            .iter()
+            .any(|spec| refs.contains(*spec))
+    })
 }
 
 fn remove_unused_default_catalog(manifest: &mut Manifest, references: &CatalogReferences) -> bool {
@@ -61,20 +59,27 @@ fn remove_unused_default_catalog(manifest: &mut Manifest, references: &CatalogRe
         .cloned()
         .collect();
     if to_remove.len() == catalog.len() {
-        manifest.document.set_text(remove_top_level_block(manifest.document.text(), BLOCK));
+        manifest
+            .document
+            .set_text(remove_top_level_block(manifest.document.text(), BLOCK));
         manifest.catalogs.default = None;
-        manifest.document.keys.retain(|key| key != BLOCK);
+        manifest
+            .document
+            .keys
+            .retain(|key| key != BLOCK);
         return true;
     }
     if to_remove.is_empty() || !has_removable_entries(manifest.document.text(), &[BLOCK]) {
         return false;
     }
-    manifest.document.set_text(remove_mapping_entries(
-        manifest.document.text(),
-        &[BLOCK],
-        &to_remove,
-    ));
-    let catalog = manifest.catalogs.default.as_mut().expect("catalog presence checked above");
+    manifest
+        .document
+        .set_text(remove_mapping_entries(manifest.document.text(), &[BLOCK], &to_remove));
+    let catalog = manifest
+        .catalogs
+        .default
+        .as_mut()
+        .expect("catalog presence checked above");
     for pkg in &to_remove {
         catalog.shift_remove(pkg);
     }
@@ -92,20 +97,31 @@ fn remove_unused_named_catalogs(manifest: &mut Manifest, references: &CatalogRef
         changed |= remove_catalog_entries(manifest, BLOCK, name, to_remove);
     }
 
-    let total_names = manifest.catalogs.named.as_ref().map_or(0, IndexMap::len);
+    let total_names = manifest
+        .catalogs
+        .named
+        .as_ref()
+        .map_or(0, IndexMap::len);
     if names_to_drop.len() == total_names {
-        manifest.document.set_text(remove_top_level_block(manifest.document.text(), BLOCK));
+        manifest
+            .document
+            .set_text(remove_top_level_block(manifest.document.text(), BLOCK));
         manifest.catalogs.named = None;
-        manifest.document.keys.retain(|key| key != BLOCK);
+        manifest
+            .document
+            .keys
+            .retain(|key| key != BLOCK);
         return true;
     }
     if !names_to_drop.is_empty() && has_removable_entries(manifest.document.text(), &[BLOCK]) {
-        manifest.document.set_text(remove_mapping_entries(
-            manifest.document.text(),
-            &[BLOCK],
-            &names_to_drop,
-        ));
-        let catalogs = manifest.catalogs.named.as_mut().expect("catalogs presence checked above");
+        manifest
+            .document
+            .set_text(remove_mapping_entries(manifest.document.text(), &[BLOCK], &names_to_drop));
+        let catalogs = manifest
+            .catalogs
+            .named
+            .as_mut()
+            .expect("catalogs presence checked above");
         for name in &names_to_drop {
             catalogs.shift_remove(name);
         }
@@ -147,12 +163,12 @@ fn remove_catalog_entries(
     if !has_removable_entries(manifest.document.text(), &[block, name]) {
         return false;
     }
-    manifest.document.set_text(remove_mapping_entries(
-        manifest.document.text(),
-        &[block, name],
-        to_remove,
-    ));
-    let entries = manifest.catalogs.named
+    manifest
+        .document
+        .set_text(remove_mapping_entries(manifest.document.text(), &[block, name], to_remove));
+    let entries = manifest
+        .catalogs
+        .named
         .as_mut()
         .and_then(|catalogs| catalogs.get_mut(name))
         .expect("named catalog presence checked above");

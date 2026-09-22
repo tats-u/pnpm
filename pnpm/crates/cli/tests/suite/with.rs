@@ -133,13 +133,8 @@ fn with_fails_when_no_spec_is_provided() {
 
 #[test]
 fn with_version_downloads_and_runs_the_specified_pnpm_version() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_manifest(&workspace, &serde_json::json!({ "name": "project", "version": "1.0.0" }));
 
@@ -161,13 +156,8 @@ fn with_version_downloads_and_runs_the_specified_pnpm_version() {
 
 #[test]
 fn with_version_ignores_the_package_manager_pin_and_uses_the_requested_version() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_manifest(&workspace, &serde_json::json!({ "packageManager": "pnpm@9.1.0" }));
 
@@ -243,12 +233,10 @@ fn assert_semver_like(value: &str) {
             && parts
                 .next()
                 .is_some_and(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()))
-            && parts
+            && parts.next().is_some_and(|part| part
+                .chars()
                 .next()
-                .is_some_and(|part| part
-                    .chars()
-                    .next()
-                    .is_some_and(|c| c.is_ascii_digit())),
+                .is_some_and(|c| c.is_ascii_digit())),
         "expected a semver-looking version, got {value:?}",
     );
 }
@@ -293,7 +281,11 @@ fn concurrent_engine_installs_all_succeed_on_a_cold_cache() {
 
     let mut outputs = Vec::with_capacity(CONCURRENCY);
     for child in children {
-        outputs.push(child.wait_with_output().expect("wait for a concurrent engine install"));
+        outputs.push(
+            child
+                .wait_with_output()
+                .expect("wait for a concurrent engine install"),
+        );
     }
     for output in &outputs {
         assert_success(output);

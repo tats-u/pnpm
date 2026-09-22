@@ -24,7 +24,9 @@ pub(super) fn is_trusted(candidate: &Candidate, name: &str, state_dir: &Path) ->
     }
     let project_dir = candidate.project_dir();
     let candidate_id = candidate.identity();
-    let project_key = lexical_normalize(project_dir).display().to_string();
+    let project_key = lexical_normalize(project_dir)
+        .display()
+        .to_string();
     let trust_file = (!state_dir.as_os_str().is_empty()).then(|| state_dir.join(TRUST_FILE_NAME));
     if let Some(trust_file) = &trust_file
         && let Some(allow) = read_trust_decision(trust_file, &project_key, candidate_id)
@@ -54,10 +56,18 @@ pub(super) fn read_trust_decision(
         let Ok(record) = serde_json::from_str::<Value>(line) else {
             continue;
         };
-        if record.get("projectDir").and_then(Value::as_str) == Some(project_key)
-            && record.get("candidateId").and_then(Value::as_str) == Some(candidate_id)
+        if record
+            .get("projectDir")
+            .and_then(Value::as_str)
+            == Some(project_key)
+            && record
+                .get("candidateId")
+                .and_then(Value::as_str)
+                == Some(candidate_id)
         {
-            decision = record.get("allow").and_then(Value::as_bool);
+            decision = record
+                .get("allow")
+                .and_then(Value::as_bool);
         }
     }
     decision

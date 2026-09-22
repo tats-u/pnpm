@@ -84,7 +84,8 @@ async fn resolve_unreachable(bare_specifier: &str, stderr: &str) -> GitResolveEr
         .resolve(&wanted, &ResolveOptions::default())
         .await
         .expect_err("unreachable remote");
-    *err.downcast::<GitResolveError>().expect("the resolver's own diagnostic, boxed outermost")
+    *err.downcast::<GitResolveError>()
+        .expect("the resolver's own diagnostic, boxed outermost")
 }
 
 fn runner(stdout: &str) -> FakeRunner {
@@ -154,7 +155,9 @@ async fn github_shortcut_full_commit_returns_tarball() {
         format!("https://codeload.github.com/zkochan/is-negative/tar.gz/{COMMIT}"),
     );
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some(format!("github:zkochan/is-negative#{COMMIT}").as_str()),
     );
     assert!(runner.calls.lock().unwrap().is_empty(), "a full sha needs no ls-remote");
@@ -171,7 +174,12 @@ async fn archive_probe_failure_records_git_over_https() {
     let (result, runner, probe) =
         resolve_with(false, &format!("{COMMIT}\tHEAD\n"), "github:foo/bar").await;
 
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("github:foo/bar"));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("github:foo/bar")
+    );
     match &result.resolution {
         LockfileResolution::Git(git) => {
             assert_eq!(git.repo, "https://github.com/foo/bar.git");
@@ -198,7 +206,12 @@ async fn hosted_ssh_input_resolves_through_the_https_identity() {
         resolve_with(true, &format!("{COMMIT}\tHEAD\n"), "git+ssh://git@github.com/foo/bar.git")
             .await;
 
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("github:foo/bar"));
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("github:foo/bar")
+    );
     match &result.resolution {
         LockfileResolution::Tarball(t) => {
             assert_eq!(t.tarball, format!("https://codeload.github.com/foo/bar/tar.gz/{COMMIT}"));
@@ -225,7 +238,12 @@ async fn unknown_host_ssh_url_stays_a_git_resolution() {
         }
         other => panic!("expected Git, got {other:?}"),
     }
-    assert!(result.id.as_str().starts_with("git+ssh://git@example.com/org/repo.git#"));
+    assert!(
+        result
+            .id
+            .as_str()
+            .starts_with("git+ssh://git@example.com/org/repo.git#")
+    );
     assert!(probe.calls.lock().unwrap().is_empty());
 }
 
@@ -241,11 +259,19 @@ async fn path_suffix_appended_to_id_and_resolution() {
     match result.resolution {
         LockfileResolution::Tarball(t) => {
             assert_eq!(t.path.as_deref(), Some("/packages/simple-react-app"));
-            assert!(t.tarball.ends_with("/tar.gz/1111111111111111111111111111111111111111"));
+            assert!(
+                t.tarball
+                    .ends_with("/tar.gz/1111111111111111111111111111111111111111")
+            );
         }
         other => panic!("expected Tarball, got {other:?}"),
     }
-    assert!(result.id.as_str().ends_with("#path:/packages/simple-react-app"));
+    assert!(
+        result
+            .id
+            .as_str()
+            .ends_with("#path:/packages/simple-react-app")
+    );
 }
 
 /// TS: `resolveFromGit() with both sub folder and branch`
@@ -267,7 +293,9 @@ async fn sub_folder_and_branch_resolve_to_a_tarball_carrying_the_path() {
 
     assert_eq!(result.resolved_via, "git-repository");
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some("github:RexSkz/test-git-subfolder-fetch#beta&path:/packages/simple-react-app"),
     );
     match &result.resolution {
@@ -313,7 +341,9 @@ async fn credentialed_https_url_keeps_the_authenticated_url() {
 
     assert_eq!(result.resolved_via, "git-repository");
     assert_eq!(
-        result.normalized_bare_specifier.as_deref(),
+        result
+            .normalized_bare_specifier
+            .as_deref(),
         Some(format!("git+{AUTH_URL}").as_str()),
     );
     match &result.resolution {

@@ -34,9 +34,13 @@ pub(super) fn addressed_registry(
     ecosystem: Ecosystem,
 ) -> Option<String> {
     match registry {
-        Some(name) => {
-            state.inner.config.routing.registries.addressed(name, ecosystem).map(str::to_string)
-        }
+        Some(name) => state
+            .inner
+            .config
+            .routing
+            .registries
+            .addressed(name, ecosystem)
+            .map(str::to_string),
         None => default_registry_target(state, ecosystem),
     }
 }
@@ -61,9 +65,21 @@ pub(super) fn registry_endpoint(
     ecosystem: Ecosystem,
     registry: Option<&str>,
 ) -> String {
-    let public_url = state.inner.config.http.public_url.trim_end_matches('/');
-    let base =
-        format!("{public_url}{}", state.inner.config.routing.registries.base_path(ecosystem));
+    let public_url = state
+        .inner
+        .config
+        .http
+        .public_url
+        .trim_end_matches('/');
+    let base = format!(
+        "{public_url}{}",
+        state
+            .inner
+            .config
+            .routing
+            .registries
+            .base_path(ecosystem)
+    );
     match registry {
         Some(registry) => format!("{base}/~{registry}"),
         None => base,
@@ -107,14 +123,24 @@ pub(super) fn registry_requires_auth(
     ecosystem: Ecosystem,
 ) -> bool {
     let config = &state.inner.config;
-    config.routing.registries
+    config
+        .routing
+        .registries
         .sources(registry, ecosystem)
         .into_iter()
         .any(|source| match config.routing.registries.get(source) {
-            Some(Registry::Hosted { .. }) => config.routing.hosted
+            Some(Registry::Hosted { .. }) => config
+                .routing
+                .hosted
                 .get(source)
-                .is_some_and(|hosted| !hosted.rules.all_access_admit(&Identity::Anonymous)),
-            Some(Registry::Upstream { .. }) => config.routing.upstreams
+                .is_some_and(|hosted| {
+                    !hosted
+                        .rules
+                        .all_access_admit(&Identity::Anonymous)
+                }),
+            Some(Registry::Upstream { .. }) => config
+                .routing
+                .upstreams
                 .get(source)
                 .is_some_and(|upstream| upstream.access.is_some()),
             Some(Registry::Router { .. }) | None => false,
@@ -146,7 +172,12 @@ pub(super) async fn serve_hosted_blob(
     filename: &str,
 ) -> Result<Response, RegistryError> {
     let org = hosted_read_namespace(state, identity, source, key.as_str())?;
-    let blob = state.inner.storage.for_hosted(&org).open_hosted_blob(key, filename).await?;
+    let blob = state
+        .inner
+        .storage
+        .for_hosted(&org)
+        .open_hosted_blob(key, filename)
+        .await?;
     Ok(match blob {
         Some((body, len)) => tarball_response(body, len),
         None => not_found(),
@@ -193,24 +224,38 @@ pub(super) async fn load_upstream_document(
     encode: impl FnOnce(FetchedDocument) -> Result<Vec<u8>, RegistryError>,
 ) -> Result<Option<Vec<u8>>, RegistryError> {
     let storage = &state.inner.storage;
-    let ttl = upstream.maxage().unwrap_or(state.inner.config.http.packument_ttl);
-    if let Some(bytes) = storage.read_upstream_document(namespace, request.name, ttl).await? {
+    let ttl = upstream
+        .maxage()
+        .unwrap_or(state.inner.config.http.packument_ttl);
+    if let Some(bytes) = storage
+        .read_upstream_document(namespace, request.name, ttl)
+        .await?
+    {
         return Ok(Some(bytes));
     }
     let fetched = upstream.fetch_document(request.relative_path, request.accept, request.limit);
-    match fetched.await.and_then(|outcome| match outcome {
-        FetchOutcome::Ok(document) => encode(document).map(Some),
-        FetchOutcome::NotFound => Ok(None),
-    }) {
+    match fetched
+        .await
+        .and_then(|outcome| match outcome {
+            FetchOutcome::Ok(document) => encode(document).map(Some),
+            FetchOutcome::NotFound => Ok(None),
+        }) {
         Ok(Some(bytes)) => {
-            storage.write_upstream_document(namespace, request.name, &bytes).await?;
+            storage
+                .write_upstream_document(namespace, request.name, &bytes)
+                .await?;
             Ok(Some(bytes))
         }
         Ok(None) => {
-            storage.remove_upstream_package(namespace, request.name).await?;
+            storage
+                .remove_upstream_package(namespace, request.name)
+                .await?;
             Ok(None)
         }
-        Err(err) => match storage.read_upstream_document_any(namespace, request.name).await? {
+        Err(err) => match storage
+            .read_upstream_document_any(namespace, request.name)
+            .await?
+        {
             Some(stale) => {
                 tracing::warn!(
                     ?err,
@@ -245,12 +290,20 @@ pub(super) async fn serve_upstream_artifact(
     {
         return response;
     }
-    let response = match upstream.fetch_artifact_response(url).await {
+    let response = match upstream
+        .fetch_artifact_response(url)
+        .await
+    {
         Ok(FetchOutcome::Ok(response)) => response,
         Ok(FetchOutcome::NotFound) => return not_found(),
         Err(err) => return err.into_response(),
     };
-    let write = match state.inner.storage.open_upstream_blob_tmp(namespace, name, filename).await {
+    let write = match state
+        .inner
+        .storage
+        .open_upstream_blob_tmp(namespace, name, filename)
+        .await
+    {
         Ok(write) => write,
         Err(err) => return err.into_response(),
     };

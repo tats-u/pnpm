@@ -65,7 +65,8 @@ async fn workspace_root_direct_deps_resolve_child_importer_peers() {
         WorkspaceImporter { id: "packages/app".to_string(), manifest: &app_manifest },
     ];
     let mut opts = workspace_opts(false, false);
-    opts.peers.resolve_peers_from_workspace_root = true;
+    opts.peers
+        .resolve_peers_from_workspace_root = true;
 
     let result =
         resolve_workspace(&resolver, &importers, &[DependencyGroup::Prod], opts, |importer| {
@@ -80,7 +81,10 @@ async fn workspace_root_direct_deps_resolve_child_importer_peers() {
         .expect("resolve workspace");
 
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["packages/app"]["plugin"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["packages/app"]["plugin"]
+            .as_str(),
         "plugin@1.0.0(rollup@4.0.0)(typescript@5.9.3)",
     );
 }
@@ -137,13 +141,21 @@ async fn local_workspace_package_version_can_satisfy_another_importers_optional_
     .await
     .unwrap();
 
-    let direct = result.peers.direct_dependencies_by_importer.get("pkg-a").expect("pkg-a");
+    let direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get("pkg-a")
+        .expect("pkg-a");
     assert_eq!(
-        direct.get("needs-opt").map(std::string::ToString::to_string),
+        direct
+            .get("needs-opt")
+            .map(std::string::ToString::to_string),
         Some("needs-opt@1.0.0(opt@1.0.0)".to_string()),
     );
     assert_eq!(
-        direct.get("opt").map(std::string::ToString::to_string),
+        direct
+            .get("opt")
+            .map(std::string::ToString::to_string),
         Some("opt@1.0.0".to_string()),
     );
 }
@@ -166,9 +178,15 @@ async fn transiently_walked_subtree_versions_do_not_bias_optional_peer_hoists() 
     )
     .await;
 
-    let direct = result.peers.direct_dependencies_by_importer.get(".").expect("root importer");
+    let direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get(".")
+        .expect("root importer");
     assert_eq!(
-        direct.get("host").map(std::string::ToString::to_string),
+        direct
+            .get("host")
+            .map(std::string::ToString::to_string),
         Some("host@1.0.0".to_string()),
         "the unreachable dep@1.0.0 must not satisfy host's optional peer",
     );
@@ -194,14 +212,22 @@ async fn transiently_walked_subtree_versions_do_not_bias_required_peer_hoists() 
     )
     .await;
 
-    let direct = result.peers.direct_dependencies_by_importer.get(".").expect("root importer");
+    let direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get(".")
+        .expect("root importer");
     assert_eq!(
-        direct.get("host").map(std::string::ToString::to_string),
+        direct
+            .get("host")
+            .map(std::string::ToString::to_string),
         Some("host@1.0.0(dep@1.5.0)".to_string()),
         "the required-peer hoist must dedupe onto the reachable version",
     );
     assert_eq!(
-        direct.get("dep").map(std::string::ToString::to_string),
+        direct
+            .get("dep")
+            .map(std::string::ToString::to_string),
         Some("dep@1.5.0".to_string()),
     );
     assert_eq!(graph_versions_of(&result, "dep"), ["1.5.0"]);
@@ -256,19 +282,24 @@ async fn non_root_importer_hoists_the_root_importers_peer_provider() {
     };
     let mut opts = workspace_opts(false, false);
     opts.peers.auto_install_peers = true;
-    opts.peers.resolve_peers_from_workspace_root = true;
+    opts.peers
+        .resolve_peers_from_workspace_root = true;
     let result =
         resolve_workspace(&resolver, &importers, &[DependencyGroup::Prod], opts, |importer| {
             let mut importer_opts =
                 importer_opts(std::path::PathBuf::from("/repo").join(&importer.id), None);
-            importer_opts.peers.resolve_peers_from_workspace_root = true;
+            importer_opts
+                .peers
+                .resolve_peers_from_workspace_root = true;
             importer_opts
         })
         .await
         .expect("resolve workspace with a root-provided peer");
 
     assert_eq!(graph_versions_of(&result, "react"), ["19.2.0"], "one react, the root's");
-    let app_deps = &result.peers.direct_dependencies_by_importer["app-b"];
+    let app_deps = &result
+        .peers
+        .direct_dependencies_by_importer["app-b"];
     assert_eq!(app_deps["react"].as_str(), "react@19.2.0");
     assert_eq!(app_deps["lucide"].as_str(), "lucide@1.0.0(react@19.2.0)");
 }
@@ -324,23 +355,30 @@ async fn root_dep_named_only_by_its_manifest_still_provides_the_peer() {
     };
     let mut opts = workspace_opts(false, false);
     opts.peers.auto_install_peers = true;
-    opts.peers.resolve_peers_from_workspace_root = true;
+    opts.peers
+        .resolve_peers_from_workspace_root = true;
     let result =
         resolve_workspace(&resolver, &importers, &[DependencyGroup::Prod], opts, |importer| {
             let mut importer_opts =
                 importer_opts(std::path::PathBuf::from("/repo").join(&importer.id), None);
-            importer_opts.peers.resolve_peers_from_workspace_root = true;
+            importer_opts
+                .peers
+                .resolve_peers_from_workspace_root = true;
             importer_opts
         })
         .await
         .expect("resolve workspace with a manifest-named root peer provider");
 
     assert!(
-        !result.peers.graph
+        !result
+            .peers
+            .graph
             .keys()
             .any(|dep_path| dep_path.as_str().contains("1.9.9")),
         "the peer must come from the root's tarball dep, not a second copy off the registry: {:?}",
-        result.peers.graph
+        result
+            .peers
+            .graph
             .keys()
             .map(|k| k.as_str().to_string())
             .collect::<Vec<_>>(),
@@ -458,29 +496,45 @@ async fn a_workspace_range_root_dep_is_offered_as_a_peer_provider() {
     };
     let mut opts = workspace_opts(false, false);
     opts.peers.auto_install_peers = true;
-    opts.peers.resolve_peers_from_workspace_root = true;
+    opts.peers
+        .resolve_peers_from_workspace_root = true;
     let result =
         resolve_workspace(&resolver, &importers, &[DependencyGroup::Prod], opts, |importer| {
             let mut importer_opts =
                 importer_opts(std::path::PathBuf::from("/repo").join(&importer.id), None);
-            importer_opts.peers.resolve_peers_from_workspace_root = true;
+            importer_opts
+                .peers
+                .resolve_peers_from_workspace_root = true;
             importer_opts
         })
         .await
         .expect("resolve workspace with a workspace: range root dep");
 
-    assert_eq!(result.peers.direct_dependencies_by_importer["."]["real-peer"].as_str(), LINK);
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["app-b"]["real-peer"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["."]["real-peer"]
+            .as_str(),
+        LINK
+    );
+    assert_eq!(
+        result
+            .peers
+            .direct_dependencies_by_importer["app-b"]["real-peer"]
+            .as_str(),
         "link:../../packages/real-peer",
         "app-b's peer is the same workspace package, reached from app-b's own directory",
     );
     assert!(
-        !result.peers.graph
+        !result
+            .peers
+            .graph
             .keys()
             .any(|dep_path| dep_path.as_str().contains("1.9.9")),
         "no second copy off the registry: {:?}",
-        result.peers.graph
+        result
+            .peers
+            .graph
             .keys()
             .map(|key| key.as_str().to_string())
             .collect::<Vec<_>>(),
@@ -618,31 +672,43 @@ async fn importer_sharing_foreign_subtrees_binds_peers_from_workspace_root() {
 
     let mut opts = workspace_opts(false, false);
     opts.peers.auto_install_peers = true;
-    opts.peers.resolve_peers_from_workspace_root = true;
+    opts.peers
+        .resolve_peers_from_workspace_root = true;
     let mut next = 0;
     let result = resolve_workspace(&resolver, &importers, &[DependencyGroup::Prod], opts, |_| {
         let dir = dirs[next].to_path_buf();
         next += 1;
         let mut opts = importer_opts(dir, None);
         opts.peers.auto_install_peers = true;
-        opts.peers.resolve_peers_from_workspace_root = true;
+        opts.peers
+            .resolve_peers_from_workspace_root = true;
         opts
     })
     .await
     .unwrap();
 
     // Under pkg-a2, `consumer2` binds to holder's peerpkg@2.0.0.
-    let a2_direct =
-        result.peers.direct_dependencies_by_importer.get("pkg-a2").expect("pkg-a2 importer");
+    let a2_direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get("pkg-a2")
+        .expect("pkg-a2 importer");
     assert_eq!(
-        a2_direct.get("holder").map(std::string::ToString::to_string),
+        a2_direct
+            .get("holder")
+            .map(std::string::ToString::to_string),
         Some("holder@1.0.0".to_string()),
         "holder satisfies its subtree's peer internally",
     );
-    let a_direct =
-        result.peers.direct_dependencies_by_importer.get("pkg-a").expect("pkg-a importer");
+    let a_direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get("pkg-a")
+        .expect("pkg-a importer");
     assert_eq!(
-        a_direct.get("mid").map(std::string::ToString::to_string),
+        a_direct
+            .get("mid")
+            .map(std::string::ToString::to_string),
         Some("mid@1.0.0(peerx@1.0.0)".to_string()),
         "consumer's peerx resolves against pkg-a's direct dep",
     );
@@ -650,15 +716,22 @@ async fn importer_sharing_foreign_subtrees_binds_peers_from_workspace_root() {
     // Under pkg-b, `consumer2` has no provider in its own tree: its peer
     // must fall back to the workspace root's peerpkg@1.0.0, not bind to
     // the peerpkg@2.0.0 provider a reused subtree's walk resolved.
-    let b_direct =
-        result.peers.direct_dependencies_by_importer.get("pkg-b").expect("pkg-b importer");
+    let b_direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get("pkg-b")
+        .expect("pkg-b importer");
     assert_eq!(
-        b_direct.get("bwrap").map(std::string::ToString::to_string),
+        b_direct
+            .get("bwrap")
+            .map(std::string::ToString::to_string),
         Some("bwrap@1.0.0(peerpkg@1.0.0)".to_string()),
         "pkg-b's own consumers must not inherit a reused subtree's provider",
     );
     assert_eq!(
-        b_direct.get("mid").map(std::string::ToString::to_string),
+        b_direct
+            .get("mid")
+            .map(std::string::ToString::to_string),
         Some("mid@1.0.0(peerx@1.0.0)".to_string()),
     );
 }
@@ -789,19 +862,25 @@ async fn project_relative_root_dep_is_not_a_provider(local: &str, manifest: Mani
     };
     let mut opts = workspace_opts(false, false);
     opts.peers.auto_install_peers = true;
-    opts.peers.resolve_peers_from_workspace_root = true;
+    opts.peers
+        .resolve_peers_from_workspace_root = true;
     let result =
         resolve_workspace(&resolver, &importers, &[DependencyGroup::Prod], opts, |importer| {
             let mut importer_opts =
                 importer_opts(std::path::PathBuf::from("/repo").join(&importer.id), None);
-            importer_opts.peers.resolve_peers_from_workspace_root = true;
+            importer_opts
+                .peers
+                .resolve_peers_from_workspace_root = true;
             importer_opts
         })
         .await
         .expect("resolve workspace with a project-relative root dep");
 
     assert_eq!(
-        result.peers.direct_dependencies_by_importer["app-b"]["real-peer"].as_str(),
+        result
+            .peers
+            .direct_dependencies_by_importer["app-b"]["real-peer"]
+            .as_str(),
         "real-peer@1.9.9",
         "`{local}` must not be hoisted into app-b",
     );

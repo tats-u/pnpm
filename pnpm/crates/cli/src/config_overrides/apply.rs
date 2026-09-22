@@ -12,29 +12,31 @@ pub(crate) fn apply_store_dir_override<Sys>(
 where
     Sys: EnvVar + GetCurrentDir + GetHomeDir + LinkProbe,
 {
-    let workspace_dir = config.workspace_dir
+    let workspace_dir = config
+        .workspace_dir
         .as_deref()
         .unwrap_or(dir)
         .to_path_buf();
     if store_dir.as_os_str().is_empty() {
         config.reset_store_dir_to_default::<Sys>(&workspace_dir);
-        config.explicit_settings.insert(
-            "storeDir".to_string(),
-            serde_json::Value::String(String::new()),
-        );
+        config
+            .explicit_settings
+            .insert("storeDir".to_string(), serde_json::Value::String(String::new()));
         return Ok(());
     }
     let resolved = resolve_store_dir::<Sys>(store_dir, &workspace_dir)?;
     config.store_dir = StoreDir::from(lexical_normalize(&resolved));
     if let Some(store_dir) = store_dir.to_str() {
-        config.explicit_settings.insert(
-            "storeDir".to_string(),
-            serde_json::Value::String(store_dir.to_string()),
-        );
+        config
+            .explicit_settings
+            .insert("storeDir".to_string(), serde_json::Value::String(store_dir.to_string()));
     }
-    let virtual_store_dir_explicit = config.explicit_settings.contains_key("virtualStoreDir");
-    let global_virtual_store_dir_explicit =
-        config.explicit_settings.contains_key("globalVirtualStoreDir");
+    let virtual_store_dir_explicit = config
+        .explicit_settings
+        .contains_key("virtualStoreDir");
+    let global_virtual_store_dir_explicit = config
+        .explicit_settings
+        .contains_key("globalVirtualStoreDir");
     config.apply_global_virtual_store_derivation(
         virtual_store_dir_explicit,
         global_virtual_store_dir_explicit,
@@ -54,10 +56,9 @@ where
         lexical_normalize(&dir.join(state_dir))
     };
     if let Some(state_dir) = state_dir.to_str() {
-        config.explicit_settings.insert(
-            "stateDir".to_string(),
-            serde_json::Value::String(state_dir.to_string()),
-        );
+        config
+            .explicit_settings
+            .insert("stateDir".to_string(), serde_json::Value::String(state_dir.to_string()));
     }
 }
 
@@ -99,9 +100,17 @@ fn home_relative_store_dir(store_dir: &Path) -> Option<&Path> {
 pub(crate) fn apply_registry_override(config: &mut Config, registry: &str) {
     let registry = normalize_registry_url(registry);
     config.registry.clone_from(&registry);
-    config.registries_by_scope.insert("default".to_string(), registry.clone());
-    config.package_manager_bootstrap.registry.clone_from(&registry);
-    config.package_manager_bootstrap.registries.insert("default".to_string(), registry);
+    config
+        .registries_by_scope
+        .insert("default".to_string(), registry.clone());
+    config
+        .package_manager_bootstrap
+        .registry
+        .clone_from(&registry);
+    config
+        .package_manager_bootstrap
+        .registries
+        .insert("default".to_string(), registry);
 }
 
 pub(super) fn normalize_registry_url(registry: &str) -> String {
@@ -159,14 +168,17 @@ impl ConfigOverrides {
     }
 
     fn apply_global_directory(&self, config: &mut Config, dir: &Path) {
-        if let Some(value) = self.global_dir
+        if let Some(value) = self
+            .global_dir
             .as_deref()
             .filter(|value| !value.is_empty())
         {
             let global_dir = lexical_normalize(&dir.join(value));
             config.global_pkg_dir = Some(global_dir.join(GLOBAL_LAYOUT_VERSION));
             config.global_dir = Some(global_dir);
-            config.explicit_settings.insert("globalDir".to_string(), value.into());
+            config
+                .explicit_settings
+                .insert("globalDir".to_string(), value.into());
         }
     }
 
@@ -182,7 +194,9 @@ impl ConfigOverrides {
         record_list_overrides!(self, config, trust_policy_exclude => "trustPolicyExclude");
         if let Some(value) = self.trust_policy_ignore_after {
             config.trust_policy_ignore_after = Some(value);
-            config.explicit_settings.insert("trustPolicyIgnoreAfter".to_string(), value.into());
+            config
+                .explicit_settings
+                .insert("trustPolicyIgnoreAfter".to_string(), value.into());
         }
     }
 
@@ -216,7 +230,11 @@ impl ConfigOverrides {
     fn apply_lockfile_overrides(&self, config: &mut Config) {
         if let Some(value) = self.package_lock {
             config.package_lock = value;
-            if self.lockfile.is_none() && !config.explicit_settings.contains_key("lockfile") {
+            if self.lockfile.is_none()
+                && !config
+                    .explicit_settings
+                    .contains_key("lockfile")
+            {
                 config.lockfile = value;
             }
         }
@@ -229,7 +247,9 @@ impl ConfigOverrides {
     fn apply_hoist_overrides(&self, config: &mut Config) {
         if let Some(value) = self.virtual_store_only {
             config.virtual_store_only = value;
-            config.explicit_settings.insert("virtualStoreOnly".to_string(), value.into());
+            config
+                .explicit_settings
+                .insert("virtualStoreOnly".to_string(), value.into());
             if value {
                 config.apply_virtual_store_only_derivation();
             } else {
@@ -273,8 +293,13 @@ impl ConfigOverrides {
             config.scope = Some(scope.clone());
         }
         for (scope, registry) in &self.registries {
-            config.registries_by_scope.insert(scope.clone(), registry.clone());
-            config.package_manager_bootstrap.registries.insert(scope.clone(), registry.clone());
+            config
+                .registries_by_scope
+                .insert(scope.clone(), registry.clone());
+            config
+                .package_manager_bootstrap
+                .registries
+                .insert(scope.clone(), registry.clone());
         }
     }
 
@@ -292,7 +317,9 @@ impl ConfigOverrides {
         // decide whether `minimumReleaseAgeStrict` defaults to true.
         if let Some(value) = self.minimum_release_age {
             config.minimum_release_age = Some(value);
-            config.explicit_settings.insert("minimumReleaseAge".to_string(), value.into());
+            config
+                .explicit_settings
+                .insert("minimumReleaseAge".to_string(), value.into());
         }
         record_list_overrides!(
             self,
@@ -306,7 +333,9 @@ impl ConfigOverrides {
         );
         if let Some(value) = self.minimum_release_age_strict {
             config.minimum_release_age_strict = Some(value);
-            config.explicit_settings.insert("minimumReleaseAgeStrict".to_string(), value.into());
+            config
+                .explicit_settings
+                .insert("minimumReleaseAgeStrict".to_string(), value.into());
         }
     }
 
@@ -341,12 +370,16 @@ impl ConfigOverrides {
         record_enum_overrides!(self, config, package_import_method => "packageImportMethod");
         if let Some(value) = self.child_concurrency {
             config.child_concurrency = resolve_child_concurrency(Some(value));
-            config.explicit_settings.insert("childConcurrency".to_string(), value.into());
+            config
+                .explicit_settings
+                .insert("childConcurrency".to_string(), value.into());
         }
         record_overrides!(self, config, strict_peer_dependencies => "strictPeerDependencies");
         if let Some(value) = self.side_effects_cache {
             config.apply_side_effects_cache_shorthand(value);
-            config.explicit_settings.insert("sideEffectsCache".to_string(), value.into());
+            config
+                .explicit_settings
+                .insert("sideEffectsCache".to_string(), value.into());
         }
     }
 
@@ -364,21 +397,27 @@ impl ConfigOverrides {
         let mut anchored = false;
         for (setting, value) in raw_settings {
             if let Some(value) = value {
-                config.explicit_settings.insert(setting.to_string(), value.into());
+                config
+                    .explicit_settings
+                    .insert(setting.to_string(), value.into());
                 anchored = true;
             }
         }
         if !anchored {
             return;
         }
-        let anchor = config.lockfile_dir
+        let anchor = config
+            .lockfile_dir
             .clone()
             .or_else(|| config.workspace_dir.clone())
             .unwrap_or_else(|| dir.to_path_buf());
         config.anchor_lockfile_paths(&anchor);
-        let virtual_store_dir_explicit = config.explicit_settings.contains_key("virtualStoreDir");
-        let global_virtual_store_dir_explicit =
-            config.explicit_settings.contains_key("globalVirtualStoreDir");
+        let virtual_store_dir_explicit = config
+            .explicit_settings
+            .contains_key("virtualStoreDir");
+        let global_virtual_store_dir_explicit = config
+            .explicit_settings
+            .contains_key("globalVirtualStoreDir");
         config.apply_global_virtual_store_derivation(
             virtual_store_dir_explicit,
             global_virtual_store_dir_explicit,

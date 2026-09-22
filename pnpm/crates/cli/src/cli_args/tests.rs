@@ -22,25 +22,37 @@ use std::path::Path;
 use tempfile::TempDir;
 
 fn install_args(argv: &[&str]) -> InstallArgs {
-    match CliArgs::try_parse_from(argv).expect("parses").command {
+    match CliArgs::try_parse_from(argv)
+        .expect("parses")
+        .command
+    {
         CliCommand::Install(install) => install,
         other => panic!("expected install, got {other:?}"),
     }
 }
 
 fn default_reporter_summary_scope(argv: &[&str]) -> SummaryScope {
-    CliArgs::try_parse_from(argv).expect("parses").command.default_reporter_summary_scope()
+    CliArgs::try_parse_from(argv)
+        .expect("parses")
+        .command
+        .default_reporter_summary_scope()
 }
 
 fn add_args(argv: &[&str]) -> AddArgs {
-    match CliArgs::try_parse_from(argv).expect("parses").command {
+    match CliArgs::try_parse_from(argv)
+        .expect("parses")
+        .command
+    {
         CliCommand::Add(add) => add,
         other => panic!("expected add, got {other:?}"),
     }
 }
 
 fn version_args(argv: &[&str]) -> VersionArgs {
-    match CliArgs::try_parse_from(argv).expect("parses").command {
+    match CliArgs::try_parse_from(argv)
+        .expect("parses")
+        .command
+    {
         CliCommand::Version(version) => version,
         other => panic!("expected version, got {other:?}"),
     }
@@ -108,8 +120,8 @@ fn store_dir_accepts_an_explicit_empty_value() {
 #[test]
 fn repeated_state_dir_uses_the_last_value_on_either_side_of_the_subcommand() {
     for argv in [
-        ["pacquet", "--state-dir", "first-state", "--state-dir", "last-state", "install"].as_slice(
-        ),
+        ["pacquet", "--state-dir", "first-state", "--state-dir", "last-state", "install"]
+            .as_slice(),
         ["pacquet", "install", "--state-dir=first-state", "--state-dir=last-state"].as_slice(),
     ] {
         let parsed = CliArgs::try_parse_from(argv).expect("parses repeated global --state-dir");
@@ -252,7 +264,9 @@ fn package_manager_to_sync_preserves_dev_engine_specifier() {
     )
     .expect("write manifest");
 
-    let manifest = read_manifest_json(&manifest_path).expect("read manifest").expect("manifest");
+    let manifest = read_manifest_json(&manifest_path)
+        .expect("read manifest")
+        .expect("manifest");
     let package_manager =
         package_manager_to_sync(&manifest, root.path(), None).expect("sync package manager");
 
@@ -278,7 +292,9 @@ fn package_manager_to_sync_records_the_running_version_for_a_satisfied_range_pin
     )
     .expect("write manifest");
 
-    let manifest = read_manifest_json(&manifest_path).expect("read manifest").expect("manifest");
+    let manifest = read_manifest_json(&manifest_path)
+        .expect("read manifest")
+        .expect("manifest");
     let package_manager =
         package_manager_to_sync(&manifest, root.path(), None).expect("sync package manager");
 
@@ -296,7 +312,9 @@ fn package_manager_to_sync_records_nothing_for_a_pin_nothing_satisfies() {
     )
     .expect("write manifest");
 
-    let manifest = read_manifest_json(&manifest_path).expect("read manifest").expect("manifest");
+    let manifest = read_manifest_json(&manifest_path)
+        .expect("read manifest")
+        .expect("manifest");
     assert_eq!(package_manager_to_sync(&manifest, root.path(), None), None);
 }
 
@@ -329,13 +347,18 @@ fn trust_lockfile_pair_resolves_last_one_wins() {
     // mutual `overrides_with` collapses them to the last-specified.
     let last_off = install_args(&["pacquet", "install", "--trust-lockfile", "--no-trust-lockfile"]);
     assert!(
-        last_off.lockfile_updates.no_trust_lockfile
+        last_off
+            .lockfile_updates
+            .no_trust_lockfile
             && !last_off.lockfile_updates.trust_lockfile,
         "--no wins when last",
     );
     let last_on = install_args(&["pacquet", "install", "--no-trust-lockfile", "--trust-lockfile"]);
     assert!(
-        last_on.lockfile_updates.trust_lockfile && !last_on.lockfile_updates.no_trust_lockfile,
+        last_on.lockfile_updates.trust_lockfile
+            && !last_on
+                .lockfile_updates
+                .no_trust_lockfile,
         "--trust wins when last",
     );
 }
@@ -490,14 +513,20 @@ fn unlink_ignore_pnpmfile_flag_applies_to_config() {
 }
 
 fn dedupe_args(argv: &[&str]) -> DedupeArgs {
-    match CliArgs::try_parse_from(argv).expect("parses").command {
+    match CliArgs::try_parse_from(argv)
+        .expect("parses")
+        .command
+    {
         CliCommand::Dedupe(dedupe) => dedupe,
         other => panic!("expected dedupe, got {other:?}"),
     }
 }
 
 fn unlink_args(argv: &[&str]) -> UnlinkArgs {
-    match CliArgs::try_parse_from(argv).expect("parses").command {
+    match CliArgs::try_parse_from(argv)
+        .expect("parses")
+        .command
+    {
         CliCommand::Unlink(unlink) => unlink,
         other => panic!("expected unlink, got {other:?}"),
     }
@@ -682,7 +711,10 @@ fn production_is_an_alias_of_prod() {
     }
 
     let groups = |argv: &[&str]| {
-        install_args(argv).dependency_options.dependency_groups(true).collect::<Vec<_>>()
+        install_args(argv)
+            .dependency_options
+            .dependency_groups(true)
+            .collect::<Vec<_>>()
     };
     assert_eq!(
         groups(&["pacquet", "install", "--production"]),
@@ -691,7 +723,9 @@ fn production_is_an_alias_of_prod() {
 }
 
 fn command(argv: &[&str]) -> CliCommand {
-    CliArgs::try_parse_from(argv).expect("parses").command
+    CliArgs::try_parse_from(argv)
+        .expect("parses")
+        .command
 }
 
 mod global_options;

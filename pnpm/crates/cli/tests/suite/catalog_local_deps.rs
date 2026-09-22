@@ -82,13 +82,8 @@ fn installed_version(project_dir: &Path, dep: &str) -> String {
 
 #[test]
 fn local_catalog_entries_resolve_from_the_workspace_directory() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let projects = ["projects/foo", "projects/nested/bar"];
     workspace_with_local_catalog(&workspace, &projects);
 
@@ -122,13 +117,8 @@ fn local_catalog_entries_resolve_from_the_workspace_directory() {
 
 #[test]
 fn retargeting_a_local_catalog_entry_reinstalls_from_the_new_path() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     workspace_with_local_catalog(&workspace, &["projects/foo"]);
 
     pacquet
@@ -162,13 +152,8 @@ fn retargeting_a_local_catalog_entry_reinstalls_from_the_new_path() {
 
 #[test]
 fn the_lockfile_records_local_catalog_entries_as_the_catalog_writes_them() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     workspace_with_local_catalog(&workspace, &["projects/foo"]);
 
     pacquet
@@ -180,7 +165,8 @@ fn the_lockfile_records_local_catalog_entries_as_the_catalog_writes_them() {
         &fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read pnpm-lock.yaml"),
     )
     .expect("parse pnpm-lock.yaml");
-    let catalog = lockfile.catalogs
+    let catalog = lockfile
+        .catalogs
         .as_ref()
         .and_then(|catalogs| catalogs.get("default"))
         .expect("the lockfile records the default catalog");
@@ -242,13 +228,8 @@ fn packing_a_nested_project_reanchors_its_local_catalog_entries() {
 /// root project and failed for every nested one.
 #[test]
 fn a_bare_local_path_entry_resolves_from_the_workspace_directory() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let project = "projects/nested/bar";
     workspace_with_local_catalog(&workspace, &[project]);
     let yaml = fs::read_to_string(workspace.join("pnpm-workspace.yaml"))
@@ -276,11 +257,16 @@ fn read_packed_manifest(tarball: &Path) -> serde_json::Value {
     let bytes = fs::read(tarball).expect("read tarball");
     let decoder = flate2::read::GzDecoder::new(bytes.as_slice());
     let mut archive = tar::Archive::new(decoder);
-    for entry in archive.entries().expect("iterate tarball entries") {
+    for entry in archive
+        .entries()
+        .expect("iterate tarball entries")
+    {
         let mut entry = entry.expect("read tarball entry");
         if entry.path().expect("entry path") == Path::new("package/package.json") {
             let mut contents = String::new();
-            entry.read_to_string(&mut contents).expect("read manifest");
+            entry
+                .read_to_string(&mut contents)
+                .expect("read manifest");
             return serde_json::from_str(&contents).expect("parse manifest");
         }
     }

@@ -44,17 +44,12 @@ impl PruneArgs {
 
     pub async fn run<Reporter: self::Reporter + 'static>(self, state: State) -> miette::Result<()> {
         let lockfile_path = state.lockfile_path();
-        let State {
-            tarball_mem_cache,
-            http_client,
-            config,
-            manifest,
-            lockfile,
-            resolved_packages,
-        } = &state;
+        let State { tarball_mem_cache, http_client, config, manifest, lockfile, resolved_packages } =
+            &state;
 
-        let dependency_groups: Vec<DependencyGroup> =
-            self.dependency_groups(config.optional).collect();
+        let dependency_groups: Vec<DependencyGroup> = self
+            .dependency_groups(config.optional)
+            .collect();
 
         {
             let mut base_install = Install::new(
@@ -67,7 +62,9 @@ impl PruneArgs {
                 dependency_groups,
             );
             base_install.lockfile_policy.trust = false;
-            base_install.lockfile_policy.disable_optimistic_repeat = true;
+            base_install
+                .lockfile_policy
+                .disable_optimistic_repeat = true;
             base_install.execution.skip_runtimes = false;
             base_install.context.lockfile_path = Some(&lockfile_path);
             base_install

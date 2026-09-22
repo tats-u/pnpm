@@ -33,7 +33,9 @@ pub fn check_deps_status_before_run_at(
     let Ok(workspace_dir_opt) = configured_or_discovered_workspace_dir(config, dir) else {
         return cannot_check_deps();
     };
-    let workspace_root = workspace_dir_opt.clone().unwrap_or_else(|| dir.to_path_buf());
+    let workspace_root = workspace_dir_opt
+        .clone()
+        .unwrap_or_else(|| dir.to_path_buf());
     // One shared lockfile is written at the workspace root, whose
     // manifest heads the importer list the install recorded. Dedicated
     // per-project lockfiles give every project its own lockfile, state

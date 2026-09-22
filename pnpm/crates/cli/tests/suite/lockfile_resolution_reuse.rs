@@ -20,7 +20,9 @@ const IS_POSITIVE_PATCH: &str = include_str!(
 );
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 #[test]
@@ -66,7 +68,11 @@ fn compatible_package_range_update_skips_resolution() {
     let npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let npmrc = npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{npmrc}\n"))
@@ -84,9 +90,15 @@ fn compatible_package_range_update_skips_resolution() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load wanted lockfile")
         .expect("wanted lockfile");
-    let name = "@pnpm.e2e/has-optional-peer-with-peer".parse().expect("package name");
+    let name = "@pnpm.e2e/has-optional-peer-with-peer"
+        .parse()
+        .expect("package name");
     assert_eq!(
-        wanted.importers["."].dependencies.as_ref().expect("dependencies")[&name].specifier,
+        wanted.importers["."]
+            .dependencies
+            .as_ref()
+            .expect("dependencies")[&name]
+            .specifier,
         ">=1.0.0 <2",
     );
 
@@ -101,7 +113,9 @@ fn dead_registry_url() -> String {
     // it gets refused.
     let listener =
         TcpListener::bind(("127.0.0.1", 0)).expect("bind an ephemeral port to learn a free one");
-    let addr = listener.local_addr().expect("read the ephemeral port");
+    let addr = listener
+        .local_addr()
+        .expect("read the ephemeral port");
     drop(listener);
     format!("http://127.0.0.1:{}/", addr.port())
 }
@@ -129,8 +143,8 @@ fn reuses_unchanged_subtree_without_re_resolving_from_the_registry() {
     let lockfile_path = workspace.join("pnpm-lock.yaml");
     fs::write(
         &manifest_path,
-        serde_json::json!({ "dependencies": { "@pnpm.e2e/pkg-with-1-dep": "100.0.0" } }).to_string(
-        ),
+        serde_json::json!({ "dependencies": { "@pnpm.e2e/pkg-with-1-dep": "100.0.0" } })
+            .to_string(),
     )
     .expect("write package.json");
 
@@ -153,7 +167,11 @@ fn reuses_unchanged_subtree_without_re_resolving_from_the_registry() {
     let npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let npmrc = npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{npmrc}\n"))
@@ -203,8 +221,8 @@ fn a_reused_tree_is_structurally_identical_to_a_fresh_resolve() {
     let reused_manifest = reused.workspace.join("package.json");
     fs::write(
         &reused_manifest,
-        serde_json::json!({ "dependencies": { "@pnpm.e2e/pkg-with-1-dep": "100.0.0" } }).to_string(
-        ),
+        serde_json::json!({ "dependencies": { "@pnpm.e2e/pkg-with-1-dep": "100.0.0" } })
+            .to_string(),
     )
     .expect("write the reuse scenario's initial manifest");
     pacquet_at(&reused.workspace)
@@ -438,7 +456,11 @@ fn peer_setting_change_on_a_peerless_lockfile_skips_resolution() {
     let npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let npmrc = npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{npmrc}\n"))
@@ -457,7 +479,10 @@ fn peer_setting_change_on_a_peerless_lockfile_skips_resolution() {
         .expect("load wanted lockfile")
         .expect("wanted lockfile");
     assert_eq!(
-        wanted.settings.expect("recorded settings").dedupe_peers,
+        wanted
+            .settings
+            .expect("recorded settings")
+            .dedupe_peers,
         Some(true),
         "the changed setting must be recorded without resolving",
     );
@@ -530,8 +555,13 @@ fn an_unused_patch_is_recorded_without_resolution_and_a_used_one_is_not() {
     )
     .expect("write package.json");
     fs::create_dir_all(workspace.join("patches")).expect("create patches dir");
-    fs::write(workspace.join("patches").join("is-positive@1.0.0.patch"), IS_POSITIVE_PATCH)
-        .expect("write the patch fixture");
+    fs::write(
+        workspace
+            .join("patches")
+            .join("is-positive@1.0.0.patch"),
+        IS_POSITIVE_PATCH,
+    )
+    .expect("write the patch fixture");
     let workspace_yaml =
         fs::read_to_string(&workspace_yaml_path).expect("read pnpm-workspace.yaml");
     fs::write(
@@ -549,7 +579,11 @@ fn an_unused_patch_is_recorded_without_resolution_and_a_used_one_is_not() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -613,11 +647,14 @@ fn an_unused_patch_is_recorded_without_resolution_and_a_used_one_is_not() {
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
     assert!(
-        wanted.snapshots
+        wanted
+            .snapshots
             .as_ref()
             .expect("snapshots")
             .keys()
-            .any(|key| key.to_string().starts_with("is-positive@1.0.0(patch_hash=")),
+            .any(|key| key
+                .to_string()
+                .starts_with("is-positive@1.0.0(patch_hash=")),
         "the patched package's snapshot key carries the patch hash",
     );
     assert!(
@@ -725,7 +762,11 @@ fn patching_a_package_with_an_install_script_rebuilds_it() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -818,7 +859,11 @@ fn combined_manifest_and_ignore_list_drift_skips_resolution() {
     let live_npmrc = fs::read_to_string(&npmrc_path).expect("read .npmrc");
     let dead_npmrc = live_npmrc
         .lines()
-        .filter(|line| !line.trim_start().starts_with("registry="))
+        .filter(|line| {
+            !line
+                .trim_start()
+                .starts_with("registry=")
+        })
         .collect::<Vec<_>>()
         .join("\n");
     fs::write(&npmrc_path, format!("registry={dead_registry}\n{dead_npmrc}\n"))
@@ -836,7 +881,8 @@ fn combined_manifest_and_ignore_list_drift_skips_resolution() {
     let wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("load updated wanted lockfile")
         .expect("updated wanted lockfile");
-    let packages: Vec<String> = wanted.packages
+    let packages: Vec<String> = wanted
+        .packages
         .as_ref()
         .expect("packages")
         .keys()
@@ -849,7 +895,9 @@ fn combined_manifest_and_ignore_list_drift_skips_resolution() {
         "both the removed dependency and the newly ignored optional are gone: {packages:?}",
     );
     assert_eq!(
-        wanted.ignored_optional_dependencies.as_deref(),
+        wanted
+            .ignored_optional_dependencies
+            .as_deref(),
         Some(&["is-positive".to_string()][..]),
     );
     assert!(

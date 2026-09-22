@@ -207,11 +207,17 @@ impl FetchAttempt<'_> {
             url: self.url,
             accept: if opts.full_metadata { ACCEPT_FULL_DOC } else { ACCEPT_ABBREVIATED_DOC },
             priority: opts.priority,
-            etag: self.cache_headers.as_ref().and_then(|headers| headers.etag.as_deref()),
-            modified: self.cache_headers
+            etag: self
+                .cache_headers
+                .as_ref()
+                .and_then(|headers| headers.etag.as_deref()),
+            modified: self
+                .cache_headers
                 .as_ref()
                 .and_then(|headers| headers.modified.as_deref()),
-            bypass_cache: self.cache_bypass.load(Ordering::Relaxed),
+            bypass_cache: self
+                .cache_bypass
+                .load(Ordering::Relaxed),
             http: opts.http,
         }
     }
@@ -238,7 +244,10 @@ fn mirror_path_for(
     } else {
         ABBREVIATED_META_DIR
     };
-    let scope = opts.http.auth_headers.metadata_scope(url, Some(pkg_name));
+    let scope = opts
+        .http
+        .auth_headers
+        .metadata_scope(url, Some(pkg_name));
     let meta_dir = scoped_meta_dir(&scope, base_meta_dir);
     match get_pkg_mirror_path(opts.cache_dir?, &meta_dir, opts.registry, pkg_name) {
         Ok(path) => Some(path),
@@ -269,22 +278,19 @@ struct DecodeMeta {
 
 impl DecodeMeta {
     fn run(self, raw_body: &str) -> Result<(Package, Duration), FetchMetadataError> {
-        let mut meta: Package = serde_json::from_str(raw_body)
-            .map_err(|error| FetchMetadataError::Decode {
-                url: redact_url_credentials(&self.url),
-                error,
-            })?;
+        let mut meta: Package = serde_json::from_str(raw_body).map_err(|error| {
+            FetchMetadataError::Decode { url: redact_url_credentials(&self.url), error }
+        })?;
         meta.drop_incomplete_publish_times();
         let elapsed = self.started_at.elapsed();
         if self.normalize_to_abbreviated {
             meta = normalize_abbreviated_meta(meta);
         }
         if self.should_filter_metadata {
-            meta = clear_meta(&meta)
-                .map_err(|error| FetchMetadataError::FilterMetadata {
-                    url: redact_url_credentials(&self.url),
-                    error: error.into_inner(),
-                })?;
+            meta = clear_meta(&meta).map_err(|error| FetchMetadataError::FilterMetadata {
+                url: redact_url_credentials(&self.url),
+                error: error.into_inner(),
+            })?;
         }
         match self.persist(&meta) {
             // Serve the just-persisted mirror instead of the response body:

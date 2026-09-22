@@ -19,7 +19,9 @@ fn args(packages: &[&str]) -> ApproveBuildsArgs {
 }
 
 fn approve_builds_error(report: miette::Report) -> ApproveBuildsError {
-    report.downcast::<ApproveBuildsError>().expect("an approve-builds error")
+    report
+        .downcast::<ApproveBuildsError>()
+        .expect("an approve-builds error")
 }
 
 #[test]

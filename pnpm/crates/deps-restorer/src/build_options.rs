@@ -49,7 +49,10 @@ impl<'a> BuildScriptOptions<'a> {
             extra_env,
             user_agent: &config.user_agent,
             prepend_node_path: crate::build_modules::exec_scripts_prepend_node_path(config),
-            shell: config.script_shell.as_deref().map(Path::new),
+            shell: config
+                .script_shell
+                .as_deref()
+                .map(Path::new),
             shell_emulator: config.shell_emulator,
             unsafe_perm: config.unsafe_perm,
             ignore: config.ignore_scripts,

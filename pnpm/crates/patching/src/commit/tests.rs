@@ -474,7 +474,8 @@ impl PatchCommitFs for CreateDirErrorFs {
         if path.ends_with(self.fail_on) {
             return Err(io::Error::new(io::ErrorKind::PermissionDenied, "blocked create_dir_all"));
         }
-        self.created_dirs.set(self.created_dirs.get() + 1);
+        self.created_dirs
+            .set(self.created_dirs.get() + 1);
         fs::create_dir_all(path)
     }
 

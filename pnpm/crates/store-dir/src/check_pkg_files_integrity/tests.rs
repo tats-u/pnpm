@@ -18,7 +18,9 @@ use tempfile::tempdir;
 /// Write `content` to the correct CAFS path under `store_dir` for
 /// the given hex digest. Returns the path.
 fn plant_cafs_file(store_dir: &StoreDir, digest: &str, mode: u32, content: &[u8]) -> PathBuf {
-    let path = store_dir.cas_file_path_by_mode(digest, mode).expect("valid digest");
+    let path = store_dir
+        .cas_file_path_by_mode(digest, mode)
+        .expect("valid digest");
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     let mut file = fs::File::create(&path).unwrap();
     file.write_all(content).unwrap();
@@ -65,14 +67,19 @@ fn fast_path_skips_filesystem_checks() {
     let result = build_file_maps_from_index(&store_dir, entry);
     dbg!(&result);
     assert!(result.passed, "fast path passes for a valid digest without touching the disk");
-    let path = result.files_map.get("index.js").expect("path inserted");
+    let path = result
+        .files_map
+        .get("index.js")
+        .expect("path inserted");
     eprintln!("path={path:?} exists={}", path.exists());
     assert!(!path.exists(), "no file was planted — fast path didn't care");
 }
 
 #[test]
 fn deferred_check_builds_the_maps_first_and_stats_only_when_run() {
-    let _guard = TALLY.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let _guard = TALLY
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let tmp = tempdir().unwrap();
     let store_dir = StoreDir::new(tmp.path());
     let content = b"deferred";
@@ -83,7 +90,10 @@ fn deferred_check_builds_the_maps_first_and_stats_only_when_run() {
     let (result, pending) = defer_pkg_files_integrity(&store_dir, entry);
     dbg!(&result);
     assert!(result.passed, "a well-formed row passes before its files are checked");
-    let path = result.files_map.get("index.js").expect("path inserted");
+    let path = result
+        .files_map
+        .get("index.js")
+        .expect("path inserted");
     let cache = VerifiedFilesCache::new();
     assert!(!pending.verify(&store_dir, &cache), "the file was never planted");
     assert!(cache.is_empty(), "a failed file is not cached as verified");
@@ -134,7 +144,9 @@ fn careful_path_fails_on_missing_cafs_file() {
 /// forcing a re-hash.
 #[test]
 fn careful_path_fails_but_keeps_file_whose_content_hash_mismatches() {
-    let _guard = TALLY.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let _guard = TALLY
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let tmp = tempdir().unwrap();
     let store_dir = StoreDir::new(tmp.path());
     let fake_digest = sha512_hex(b"claimed content");
@@ -241,7 +253,9 @@ fn careful_path_dedups_per_resolved_path_not_per_digest() {
     let content = b"polymode";
     let digest = sha512_hex(content);
     let non_exec_path = plant_cafs_file(&store_dir, &digest, 0o644, content);
-    let exec_path = store_dir.cas_file_path_by_mode(&digest, 0o755).unwrap();
+    let exec_path = store_dir
+        .cas_file_path_by_mode(&digest, 0o755)
+        .unwrap();
     eprintln!(
         "non_exec_path={non_exec_path:?} exec_path={exec_path:?} exec_exists={}",
         exec_path.exists(),
@@ -298,7 +312,9 @@ fn careful_path_fails_but_keeps_symlink_at_cafs_path() {
     let digest = sha512_hex(content);
     let target = tmp.path().join("elsewhere");
     fs::write(&target, b"other bytes!!!!").unwrap();
-    let link = store_dir.cas_file_path_by_mode(&digest, 0o644).unwrap();
+    let link = store_dir
+        .cas_file_path_by_mode(&digest, 0o644)
+        .unwrap();
     fs::create_dir_all(link.parent().unwrap()).unwrap();
     std::os::unix::fs::symlink(&target, &link).unwrap();
     let entry =
@@ -348,7 +364,9 @@ static TALLY: Mutex<()> = Mutex::new(());
 /// tallied makes a slow install look unexplained.
 #[test]
 fn re_hashing_a_file_is_tallied() {
-    let _guard = TALLY.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let _guard = TALLY
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let tmp = tempdir().unwrap();
     let store_dir = StoreDir::new(tmp.path());
     let content = b"counted bytes";
@@ -377,7 +395,9 @@ fn re_hashing_a_file_is_tallied() {
 /// hashing.
 #[test]
 fn the_tally_covers_hashing_only() {
-    let _guard = TALLY.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let _guard = TALLY
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let tmp = tempdir().unwrap();
     let store_dir = StoreDir::new(tmp.path());
     let content = b"untouched bytes";
@@ -419,7 +439,9 @@ fn careful_path_removes_directory_at_cafs_path() {
     let tmp = tempdir().unwrap();
     let store_dir = StoreDir::new(tmp.path());
     let digest = "c".repeat(128);
-    let cafs_path = store_dir.cas_file_path_by_mode(&digest, 0o644).unwrap();
+    let cafs_path = store_dir
+        .cas_file_path_by_mode(&digest, 0o644)
+        .unwrap();
     fs::create_dir_all(&cafs_path).unwrap();
     let entry = index_with("sha512", vec![("impostor", info(&digest, 1_000_000, 0o644, Some(0)))]);
     let result = check_pkg_files_integrity(&store_dir, entry, &VerifiedFilesCache::new());
@@ -494,7 +516,9 @@ fn side_effects_overlay_with_nothing_to_restore_drops_cache_key_entry() {
         remote_side_effects_quarantine: None,
     };
     let result = build_file_maps_from_index(&store_dir, entry);
-    let maps = result.side_effects_maps.expect("a configured cache stays `Some`");
+    let maps = result
+        .side_effects_maps
+        .expect("a configured cache stays `Some`");
     assert!(!maps.contains_key("k1"), "an empty row is not a build to restore: {maps:?}");
 }
 
@@ -525,7 +549,8 @@ fn side_effects_overlay_with_only_deletions_keeps_cache_key_entry() {
         remote_side_effects_quarantine: None,
     };
     let result = build_file_maps_from_index(&store_dir, entry);
-    let overlay = result.side_effects_maps
+    let overlay = result
+        .side_effects_maps
         .unwrap()
         .remove("k1")
         .expect("entry survives");
@@ -563,8 +588,12 @@ fn side_effects_overlay_adds_and_drops_correctly() {
         remote_side_effects_quarantine: None,
     };
     let result = build_file_maps_from_index(&store_dir, entry);
-    let maps = result.side_effects_maps.expect("populated");
-    let overlay = maps.get("darwin;arm64;node20;deps=fake").expect("entry exists");
+    let maps = result
+        .side_effects_maps
+        .expect("populated");
+    let overlay = maps
+        .get("darwin;arm64;node20;deps=fake")
+        .expect("entry exists");
     assert!(overlay.contains_key("a.js"), "base survives: {overlay:?}");
     assert!(overlay.contains_key("c.js"), "added overlays: {overlay:?}");
     assert!(!overlay.contains_key("b.js"), "deleted drops: {overlay:?}");
@@ -594,11 +623,14 @@ fn side_effects_overlay_added_shadows_base_on_collision() {
         remote_side_effects_quarantine: None,
     };
     let result = build_file_maps_from_index(&store_dir, entry);
-    let overlay = result.side_effects_maps
+    let overlay = result
+        .side_effects_maps
         .unwrap()
         .remove("k1")
         .unwrap();
-    let path = overlay.get("collide.js").expect("collide.js present");
+    let path = overlay
+        .get("collide.js")
+        .expect("collide.js present");
     // CAFS layout splits the digest as `<2-char prefix>/<rest>`, so the
     // path won't contain the digest as a single contiguous substring.
     // Verify by checking that the overlay digest's tail (post-prefix
@@ -652,7 +684,9 @@ fn side_effects_overlay_malformed_added_digest_drops_cache_key_entry() {
         remote_side_effects_quarantine: None,
     };
     let result = build_file_maps_from_index(&store_dir, entry);
-    let maps = result.side_effects_maps.expect("populated");
+    let maps = result
+        .side_effects_maps
+        .expect("populated");
     assert!(!maps.contains_key("k-bad"), "k-bad must drop entirely on malformed digest");
     assert!(maps.contains_key("k-good"), "k-good must survive: {maps:?}");
 }
@@ -705,7 +739,9 @@ fn side_effects_overlay_unsafe_added_path_drops_cache_key_entry() {
         remote_side_effects_quarantine: None,
     };
     let result = build_file_maps_from_index(&store_dir, entry);
-    let maps = result.side_effects_maps.expect("populated");
+    let maps = result
+        .side_effects_maps
+        .expect("populated");
     for key in ["k-parent", "k-abs", "k-backslash"] {
         assert!(!maps.contains_key(key), "{key} must drop entirely on an unsafe overlay path");
     }

@@ -123,14 +123,13 @@ fn dependency_value_range(line: &str, name: &str) -> Option<Range<usize>> {
     let after_equals = content_start + equals + 1;
     let whitespace = line[after_equals..].len() - line[after_equals..].trim_start().len();
     let start = after_equals + whitespace;
-    let end = comment_start(&line[start..])
-        .map_or_else(
-            || {
-                line.trim_end_matches(['\r', '\n'])
-                    .len()
-            },
-            |comment| start + comment,
-        );
+    let end = comment_start(&line[start..]).map_or_else(
+        || {
+            line.trim_end_matches(['\r', '\n'])
+                .len()
+        },
+        |comment| start + comment,
+    );
     Some(
         start
             ..end
@@ -263,7 +262,10 @@ impl InlineScan<'_> {
 
     fn take_identifier(&mut self) -> Range<usize> {
         let start = self.cursor;
-        while self.peek().is_some_and(is_identifier_byte) {
+        while self
+            .peek()
+            .is_some_and(is_identifier_byte)
+        {
             self.cursor += 1;
         }
         start..self.cursor
@@ -281,7 +283,10 @@ impl InlineScan<'_> {
         matches!(self.peek(), Some(b'"' | b'\''))
     }
     fn skip_whitespace(&mut self) {
-        while self.peek().is_some_and(|byte| byte.is_ascii_whitespace()) {
+        while self
+            .peek()
+            .is_some_and(|byte| byte.is_ascii_whitespace())
+        {
             self.cursor += 1;
         }
     }

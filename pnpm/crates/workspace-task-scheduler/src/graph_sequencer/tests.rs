@@ -24,7 +24,8 @@ fn included(nodes: &[&str]) -> Vec<String> {
 }
 
 fn is_safe(result: &super::GraphSequencerResult<String>) -> bool {
-    result.cycles
+    result
+        .cycles
         .iter()
         .all(|cycle| cycle.len() == 1)
 }

@@ -28,7 +28,9 @@ pub(crate) struct ImporterSatisfactionCheck<'a> {
 pub(crate) fn check_importer_satisfies(
     check: &ImporterSatisfactionCheck<'_>,
 ) -> Result<(), FreshnessCheckError> {
-    let importer = check.lockfile.importers
+    let importer = check
+        .lockfile
+        .importers
         .get(check.importer_id)
         .ok_or_else(|| FreshnessCheckError::NoImporter {
             importer_id: check.importer_id.to_string(),
@@ -125,7 +127,9 @@ pub(in super::super) fn exclude_linked_dependencies(
     };
     for group in [DependencyGroup::Dev, DependencyGroup::Prod, DependencyGroup::Optional] {
         let group: &str = group.into();
-        let Some(dependencies) = manifest.get_mut(group).and_then(serde_json::Value::as_object_mut)
+        let Some(dependencies) = manifest
+            .get_mut(group)
+            .and_then(serde_json::Value::as_object_mut)
         else {
             continue;
         };

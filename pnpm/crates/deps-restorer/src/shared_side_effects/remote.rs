@@ -79,7 +79,9 @@ pub(super) fn remote_cache_setup(
     if config.ignore_scripts {
         return None;
     }
-    let settings = config.remote_side_effects_cache.as_ref()?;
+    let settings = config
+        .remote_side_effects_cache
+        .as_ref()?;
     let platform = artifact_platform(snapshots)?;
     let supported_tags = match platform.supported_tags() {
         Ok(tags) => tags,
@@ -94,7 +96,8 @@ pub(super) fn remote_cache_setup(
         supported_tags,
         trusted_keys,
         owner: OwnerScope::organization(organization.to_string()),
-        eligible_packages: settings.packages
+        eligible_packages: settings
+            .packages
             .iter()
             .cloned()
             .collect(),
@@ -125,24 +128,25 @@ pub(super) async fn resolve_remote_artifacts(
         quarantined_digests(groups, remote_side_effects_quarantine_by_snapshot, server);
     let rejected_artifacts = Arc::new(std::sync::Mutex::new(Vec::new()));
     let rejected_artifacts_for_callback = Arc::clone(&rejected_artifacts);
-    let resolved = match client.resolve_artifacts(ResolveArtifactsOptions {
-        candidates: groups
-            .values()
-            .map(|group| group.candidate.clone())
-            .collect(),
-        supported_tags: setup.supported_tags.clone(),
-        trusted_keys: setup.trusted_keys.clone(),
-        quarantined_envelope_digests,
-        on_rejected_artifact: Some(Arc::new(move |rejected| {
-            rejected_artifacts_for_callback
-                .lock()
-                .unwrap()
-                .push(rejected);
-        })),
-        authorization: authorization.map(str::to_owned),
-        build_policy: artifact_build_policy(setup, groups),
-    })
-    .await
+    let resolved = match client
+        .resolve_artifacts(ResolveArtifactsOptions {
+            candidates: groups
+                .values()
+                .map(|group| group.candidate.clone())
+                .collect(),
+            supported_tags: setup.supported_tags.clone(),
+            trusted_keys: setup.trusted_keys.clone(),
+            quarantined_envelope_digests,
+            on_rejected_artifact: Some(Arc::new(move |rejected| {
+                rejected_artifacts_for_callback
+                    .lock()
+                    .unwrap()
+                    .push(rejected);
+            })),
+            authorization: authorization.map(str::to_owned),
+            build_policy: artifact_build_policy(setup, groups),
+        })
+        .await
     {
         Ok(resolved) => resolved,
         Err(error) => {
@@ -161,7 +165,11 @@ fn artifact_build_policy(
         eligible_packages: setup.eligible_packages.clone(),
         allowed_builds: groups
             .values()
-            .map(|group| dependency_package(&group.candidate).name.clone())
+            .map(|group| {
+                dependency_package(&group.candidate)
+                    .name
+                    .clone()
+            })
             .collect(),
         ignore_scripts: false,
     }
@@ -174,7 +182,8 @@ pub(super) fn quarantined_digests(
     groups
         .iter()
         .map(|(input_key, group)| {
-            let digests = group.snapshots
+            let digests = group
+                .snapshots
                 .iter()
                 .filter_map(|(snapshot_key, _, _)| {
                     remote_side_effects_quarantine_by_snapshot
@@ -220,7 +229,12 @@ pub(super) async fn apply_resolved_artifact(
         return;
     }
     let Some((first_snapshot, _, _)) = group.snapshots.first() else { return };
-    let Some(base) = context.base_cas_paths.get(first_snapshot) else { return };
+    let Some(base) = context
+        .base_cas_paths
+        .get(first_snapshot)
+    else {
+        return;
+    };
     let staged = match stage_artifact(context, artifact, base).await {
         Ok(staged) => staged,
         Err((error, quarantine)) => {
@@ -264,7 +278,13 @@ pub(super) fn remote_diff(
 ) -> SideEffectsDiff {
     SideEffectsDiff {
         added: Some(added),
-        deleted: Some(artifact.payload.manifest.deleted.clone()),
+        deleted: Some(
+            artifact
+                .payload
+                .manifest
+                .deleted
+                .clone(),
+        ),
         remote_origin: Some(RemoteSideEffectsOrigin {
             channel: context.server.to_string(),
             owner: artifact.payload.owner.clone(),
@@ -291,11 +311,13 @@ pub(super) fn record_group(
             local_cache_key.clone(),
             overlay.clone(),
         );
-        context.store_index_writer.queue_remote_side_effects(
-            store_index_key.clone(),
-            local_cache_key.clone(),
-            diff.clone(),
-        );
+        context
+            .store_index_writer
+            .queue_remote_side_effects(
+                store_index_key.clone(),
+                local_cache_key.clone(),
+                diff.clone(),
+            );
     }
 }
 pub(super) fn report_rejected_artifact(
@@ -355,7 +377,9 @@ pub(super) async fn stage_artifact_blob(
         let bytes = download_artifact_file(context, artifact, file).await?;
         downloaded.insert(file.integrity.clone(), bytes);
     }
-    let (path, _) = context.config.store_dir
+    let (path, _) = context
+        .config
+        .store_dir
         .write_cas_file(&downloaded[&file.integrity], pnpm_fs::file_mode::is_executable(file.mode))
         .map_err(|error| (error.to_string(), false))?;
     stored.insert(storage_key, path.clone());
@@ -366,7 +390,8 @@ pub(super) async fn download_artifact_file(
     artifact: &pnpm_pnpr_client::VerifiedArtifact,
     file: &ArtifactFile,
 ) -> Result<Vec<u8>, (String, bool)> {
-    let bytes = context.client
+    let bytes = context
+        .client
         .download_artifact_blob(
             &ArtifactBlobRequest {
                 owner: artifact.payload.owner.clone(),
@@ -400,13 +425,22 @@ pub(super) async fn stored_blob_path(
     file: &ArtifactFile,
     digest: &str,
 ) -> Result<Option<PathBuf>, (String, bool)> {
-    let Some(path) = config.store_dir.cas_file_path_by_mode(digest, file.mode) else {
+    let Some(path) = config
+        .store_dir
+        .cas_file_path_by_mode(digest, file.mode)
+    else {
         return Ok(None);
     };
-    if !store_holds(&path, digest).await.map_err(|error| (error, false))? {
+    if !store_holds(&path, digest)
+        .await
+        .map_err(|error| (error, false))?
+    {
         return Ok(None);
     }
-    if !tokio::fs::metadata(&path).await.is_ok_and(|metadata| metadata.len() == file.size) {
+    if !tokio::fs::metadata(&path)
+        .await
+        .is_ok_and(|metadata| metadata.len() == file.size)
+    {
         return Err((
             "stored shared artifact blob does not match its declared size".to_string(),
             true,

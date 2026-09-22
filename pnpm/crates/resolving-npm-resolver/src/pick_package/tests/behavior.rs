@@ -52,7 +52,14 @@ async fn concurrent_picks_for_same_key_share_one_network_fetch() {
             .expect("all picks succeed");
 
     for result in results {
-        assert_eq!(result.picked_package.expect("picked").version.to_string(), "1.1.0");
+        assert_eq!(
+            result
+                .picked_package
+                .expect("picked")
+                .version
+                .to_string(),
+            "1.1.0"
+        );
     }
     mock.assert_async().await;
 }
@@ -83,10 +90,9 @@ async fn private_scope_fails_closed_on_401_without_disk_fallback() {
     .expect("warm scoped mirror");
 
     let http_client = ThrottledClient::default();
-    let auth_headers = AuthHeaders::default()
-        .with_route_hook(Arc::new(ScopeHook {
-            scope: MetadataCacheScope::Private { descriptor_id: "deadbeef".to_string() },
-        }) as Arc<dyn UpstreamRouteHook>);
+    let auth_headers = AuthHeaders::default().with_route_hook(Arc::new(ScopeHook {
+        scope: MetadataCacheScope::Private { descriptor_id: "deadbeef".to_string() },
+    }) as Arc<dyn UpstreamRouteHook>);
     let meta_cache = InMemoryPackageMetaCache::default();
     let fetch_locker = shared_packument_fetch_locker();
     let ctx = PickPackageContext {

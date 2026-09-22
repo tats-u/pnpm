@@ -196,28 +196,33 @@ pub(super) fn wanted_lockfile_contains_satisfying_entry(
     let Some(packages) = lockfile.and_then(|lockfile| lockfile.packages.as_ref()) else {
         return false;
     };
-    let Some(alias) = wanted.alias
+    let Some(alias) = wanted
+        .alias
         .as_deref()
         .filter(|alias| !alias.is_empty())
     else {
         return false;
     };
-    let (pkg_name, range) =
-        unwrap_package_name(alias, wanted.bare_specifier.as_deref().unwrap_or_default());
+    let (pkg_name, range) = unwrap_package_name(
+        alias,
+        wanted
+            .bare_specifier
+            .as_deref()
+            .unwrap_or_default(),
+    );
     let Ok(range) = range.parse::<node_semver::Range>() else {
         return false;
     };
     let Ok(pkg_name) = PkgName::parse(pkg_name) else {
         return false;
     };
-    packages
-        .keys()
-        .any(|key| {
-            key.name == pkg_name
-                && key.suffix
-                    .version_semver()
-                    .is_some_and(|version| range.satisfies(version))
-        })
+    packages.keys().any(|key| {
+        key.name == pkg_name
+            && key
+                .suffix
+                .version_semver()
+                .is_some_and(|version| range.satisfies(version))
+    })
 }
 
 /// Normalize an `npm:` alias specifier into the real package name and
@@ -258,7 +263,10 @@ pub fn real_package_name_of<'edge>(
     let bare = bare_specifier?;
     if let Some(rest) = bare.strip_prefix("npm:") {
         let alias_keeps_name = alias.is_some_and(|alias| {
-            !alias.is_empty() && rest.parse::<node_semver::Range>().is_ok()
+            !alias.is_empty()
+                && rest
+                    .parse::<node_semver::Range>()
+                    .is_ok()
         });
         if !alias_keeps_name {
             let last_at = rest
@@ -274,8 +282,9 @@ pub fn real_package_name_of<'edge>(
         }
     }
     if bare.starts_with("jsr:") {
-        let spec =
-            pnpm_resolving_jsr_specifier_parser::parse_jsr_specifier(bare, alias).ok().flatten()?;
+        let spec = pnpm_resolving_jsr_specifier_parser::parse_jsr_specifier(bare, alias)
+            .ok()
+            .flatten()?;
         return Some(Cow::Owned(spec.npm_pkg_name));
     }
     alias.map(Cow::Borrowed)
@@ -381,7 +390,8 @@ fn subtree_children_reusable(
     key: &PkgNameVerPeer,
     depth: i32,
 ) -> bool {
-    let Some(snapshot) = lockfile.snapshots
+    let Some(snapshot) = lockfile
+        .snapshots
         .as_ref()
         .and_then(|snaps| snaps.get(key))
     else {
@@ -495,7 +505,10 @@ fn reused_identity<'l>(
     result: &pnpm_resolving_resolver_base::ResolveResult,
     key: &PkgNameVerPeer,
 ) -> Result<ReusedIdentity<'l>, ResolveDependencyTreeError> {
-    let snapshot = ctx.workspace.reuse.lockfile
+    let snapshot = ctx
+        .workspace
+        .reuse
+        .lockfile
         .as_ref()
         .and_then(|lockfile| lockfile.snapshots.as_ref())
         .and_then(|snaps| snaps.get(key));
@@ -574,7 +587,9 @@ fn record_peer_dep_names(ctx: &TreeCtx, peer_dependencies: &BTreeMap<String, Pee
     let mut all_peers = lock_recoverable(&ctx.workspace.tree.all_peer_dep_names);
     for name in peer_dependencies.keys() {
         if all_peers.insert(name.clone()) {
-            ctx.workspace.tree.record_peer_dep_name(name);
+            ctx.workspace
+                .tree
+                .record_peer_dep_name(name);
         }
     }
 }

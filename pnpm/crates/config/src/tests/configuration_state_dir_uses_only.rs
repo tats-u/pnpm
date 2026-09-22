@@ -10,14 +10,21 @@ pub fn state_dir_uses_only_trusted_config_sources() {
     let xdg = tempdir().expect("xdg tempdir");
     let config_dir = xdg.path().join("pnpm");
     let state_root = xdg.path().join("state");
-    let resolved_state_root = dunce::canonicalize(xdg.path()).unwrap().join("state");
+    let resolved_state_root = dunce::canonicalize(xdg.path())
+        .unwrap()
+        .join("state");
     fs::create_dir_all(&config_dir).expect("create config dir");
     fs::write(config_dir.join("config.yaml"), "stateDir: from-global\n")
         .expect("write global config.yaml");
 
     let project = tempdir().expect("project tempdir");
-    fs::write(project.path().join("pnpm-workspace.yaml"), "stateDir: from-project\n")
-        .expect("write workspace yaml");
+    fs::write(
+        project
+            .path()
+            .join("pnpm-workspace.yaml"),
+        "stateDir: from-project\n",
+    )
+    .expect("write workspace yaml");
 
     set_fake_env(&[
         ("XDG_CONFIG_HOME", xdg.path().to_str().unwrap()),
@@ -62,7 +69,9 @@ pub fn global_dirs_use_only_trusted_config_sources() {
 
     let project = tempdir().expect("project tempdir");
     fs::write(
-        project.path().join("pnpm-workspace.yaml"),
+        project
+            .path()
+            .join("pnpm-workspace.yaml"),
         "globalDir: from-project\nglobalBinDir: from-project-bin\n",
     )
     .expect("write workspace yaml");
@@ -98,7 +107,9 @@ pub fn global_dirs_use_only_trusted_config_sources() {
     );
     assert_eq!(config.global_bin, Some(project.path().join("from-env-bin")));
     assert_eq!(
-        config.explicit_settings.get("globalBinDir"),
+        config
+            .explicit_settings
+            .get("globalBinDir"),
         Some(&serde_json::Value::String("from-env-bin".to_string())),
     );
 }
@@ -158,7 +169,10 @@ namedRegistries:
     assert_eq!(config.registry, "https://trusted.example.com/npm/");
     assert_eq!(config.pnpr_server.as_deref(), Some("https://trusted.example.com/pnpr/"));
     assert_eq!(
-        config.registries_by_prefix.get("work").map(String::as_str),
+        config
+            .registries_by_prefix
+            .get("work")
+            .map(String::as_str),
         Some("https://trusted.example.com/work/"),
     );
 }
@@ -218,11 +232,17 @@ pub fn json_env_default_scope_routes_default_registry() {
 
     assert_eq!(config.registry, "https://my-npm-proxy.example/");
     assert_eq!(
-        config.registries_by_scope.get("default").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("default")
+            .map(String::as_str),
         Some("https://my-npm-proxy.example/"),
     );
     assert_eq!(
-        config.auth_headers.for_url("https://my-npm-proxy.example/pkg").as_deref(),
+        config
+            .auth_headers
+            .for_url("https://my-npm-proxy.example/pkg")
+            .as_deref(),
         Some("Bearer proxy-token"),
     );
 }
@@ -241,7 +261,10 @@ pub fn json_env_scoped_entry_routes_that_scope() {
     let config = load_with_fake_env(project.path());
 
     assert_eq!(
-        config.registries_by_scope.get("@org").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@org")
+            .map(String::as_str),
         Some("https://npm.pkg.github.com/"),
     );
 }
@@ -265,16 +288,26 @@ pub fn json_env_env_registry_flag_wins_over_json_env_default() {
 
     assert_eq!(config.registry, "https://cli-registry.example/");
     assert_eq!(
-        config.registries_by_scope.get("default").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("default")
+            .map(String::as_str),
         Some("https://cli-registry.example/"),
     );
     assert_eq!(
-        config.package_manager_bootstrap.registries.get("default").map(String::as_str),
+        config
+            .package_manager_bootstrap
+            .registries
+            .get("default")
+            .map(String::as_str),
         Some("https://cli-registry.example/"),
     );
     // Token is still pinned to the env-declared host.
     assert_eq!(
-        config.auth_headers.for_url("https://my-npm-proxy.example/pkg").as_deref(),
+        config
+            .auth_headers
+            .for_url("https://my-npm-proxy.example/pkg")
+            .as_deref(),
         Some("Bearer proxy-token"),
     );
 }
@@ -292,19 +325,32 @@ pub fn json_env_inferred_registries_flow_to_bootstrap() {
 
     let config = load_with_fake_env(project.path());
 
-    assert_eq!(config.package_manager_bootstrap.registry, "https://my-npm-proxy.example/");
     assert_eq!(
-        config.package_manager_bootstrap.registries.get("@org").map(String::as_str),
+        config
+            .package_manager_bootstrap
+            .registry,
+        "https://my-npm-proxy.example/"
+    );
+    assert_eq!(
+        config
+            .package_manager_bootstrap
+            .registries
+            .get("@org")
+            .map(String::as_str),
         Some("https://my-npm-proxy.example/"),
     );
     assert_eq!(
-        config.package_manager_bootstrap.auth_headers
+        config
+            .package_manager_bootstrap
+            .auth_headers
             .for_url("https://my-npm-proxy.example/pkg")
             .as_deref(),
         Some("Bearer proxy-token"),
     );
     assert_eq!(
-        config.package_manager_bootstrap.auth_headers
+        config
+            .package_manager_bootstrap
+            .auth_headers
             .for_url_with_package("https://my-npm-proxy.example/org/foo", Some("@org/foo"))
             .as_deref(),
         Some("Bearer org-token"),
@@ -333,11 +379,18 @@ pub fn json_env_overrides_user_bootstrap_scoped_registry() {
     let config = load_with_fake_env(project.path());
 
     assert_eq!(
-        config.package_manager_bootstrap.registries.get("@org").map(String::as_str),
+        config
+            .package_manager_bootstrap
+            .registries
+            .get("@org")
+            .map(String::as_str),
         Some("https://my-npm-proxy.example/"),
     );
     assert_eq!(
-        config.registries_by_scope.get("@org").map(String::as_str),
+        config
+            .registries_by_scope
+            .get("@org")
+            .map(String::as_str),
         Some("https://my-npm-proxy.example/"),
     );
 }
@@ -415,7 +468,11 @@ pub fn global_config_yaml_https_proxy_preserves_project_npmrc_http_proxy() {
         Some("http://project-http-proxy.example.com:8080"),
     );
     assert_eq!(
-        config.package_manager_bootstrap.proxy.http_proxy.as_deref(),
+        config
+            .package_manager_bootstrap
+            .proxy
+            .http_proxy
+            .as_deref(),
         Some("http://yaml-proxy.example.com:9090"),
     );
 }
@@ -487,7 +544,11 @@ pub fn cli_https_proxy_preserves_project_npmrc_http_proxy_only_for_project_reque
         Some("http://project-http-proxy.example.com:8080"),
     );
     assert_eq!(
-        config.package_manager_bootstrap.proxy.http_proxy.as_deref(),
+        config
+            .package_manager_bootstrap
+            .proxy
+            .http_proxy
+            .as_deref(),
         Some("http://cli-https-proxy.example.com:8443"),
     );
 }
@@ -506,7 +567,11 @@ pub fn cli_https_proxy_preserves_trusted_npmrc_http_proxy_for_bootstrap_requests
 
     assert_eq!(config.proxy.http_proxy.as_deref(), Some("http://user-http-proxy.example.com:8080"));
     assert_eq!(
-        config.package_manager_bootstrap.proxy.http_proxy.as_deref(),
+        config
+            .package_manager_bootstrap
+            .proxy
+            .http_proxy
+            .as_deref(),
         Some("http://user-http-proxy.example.com:8080"),
     );
 }
@@ -683,8 +748,9 @@ pub fn should_use_xdg_data_home_env_var() {
 pub fn npmrc_in_current_folder_applies_registry() {
     let tmp = tempdir().unwrap();
     fs::write(tmp.path().join(".npmrc"), "registry=https://cwd.example").expect("write to .npmrc");
-    let config =
-        Config::new().current::<HostNoHome>(tmp.path()).expect("workspace yaml absent => no error");
+    let config = Config::new()
+        .current::<HostNoHome>(tmp.path())
+        .expect("workspace yaml absent => no error");
     assert_eq!(config.registry, "https://cwd.example/");
 }
 
@@ -699,8 +765,9 @@ pub fn fetch_retry_keys_in_npmrc_are_ignored() {
     let ini = "fetch-retries=99\nfetch-retry-factor=99\nfetch-retry-mintimeout=99\nfetch-retry-maxtimeout=99\n";
     fs::write(tmp.path().join(".npmrc"), ini).expect("write to .npmrc");
     let defaults = Config::new();
-    let config =
-        Config::new().current::<HostNoHome>(tmp.path()).expect("workspace yaml absent => no error");
+    let config = Config::new()
+        .current::<HostNoHome>(tmp.path())
+        .expect("workspace yaml absent => no error");
     assert_eq!(config.fetch_retries, defaults.fetch_retries);
     assert_eq!(config.fetch_retry_factor, defaults.fetch_retry_factor);
     assert_eq!(config.fetch_retry_mintimeout, defaults.fetch_retry_mintimeout);
@@ -711,8 +778,9 @@ pub fn fetch_retry_keys_in_npmrc_are_ignored() {
 pub fn test_current_folder_for_invalid_npmrc() {
     let tmp = tempdir().unwrap();
     fs::write(tmp.path().join(".npmrc"), b"Hello \xff World").expect("write to .npmrc");
-    let config =
-        Config::new().current::<HostNoHome>(tmp.path()).expect("workspace yaml absent => no error");
+    let config = Config::new()
+        .current::<HostNoHome>(tmp.path())
+        .expect("workspace yaml absent => no error");
     assert!(config.symlink); // default — invalid .npmrc is silently ignored
 }
 
@@ -760,7 +828,9 @@ pub fn npmrc_scope_alone_never_reaches_the_config() {
     // config source that must *not* supply the login scope.
     let tmp = tempdir().unwrap();
     fs::write(tmp.path().join(".npmrc"), "scope=@from-npmrc\n").expect("write to .npmrc");
-    let config = Config::new().current::<HostNoHome>(tmp.path()).expect("config loads");
+    let config = Config::new()
+        .current::<HostNoHome>(tmp.path())
+        .expect("config loads");
     assert_eq!(config.scope, None);
 }
 

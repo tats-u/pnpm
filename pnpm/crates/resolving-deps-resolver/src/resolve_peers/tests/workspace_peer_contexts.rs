@@ -196,24 +196,30 @@ fn a_shared_consumer_keeps_the_first_importers_peer_provider_variant() {
     // Both `utils` occurrences collapse onto one depPath because the
     // `resolver` peer id collapses on the plugin/resolver peer cycle, so
     // exactly one of them supplies the graph node's edges.
-    let utils = result.graph
+    let utils = result
+        .graph
         .keys()
         .filter(|dep_path| dep_path.as_str().starts_with("utils@"));
     assert_eq!(utils.count(), 1, "one utils entry: {:?}", result.graph.keys().collect::<Vec<_>>());
-    let utils_dep_path = result.graph
+    let utils_dep_path = result
+        .graph
         .keys()
         .find(|dep_path| dep_path.as_str().starts_with("utils@"))
         .expect("utils entry")
         .clone();
     assert_eq!(
-        result.graph[&utils_dep_path].edges.children.get("resolver"),
+        result.graph[&utils_dep_path]
+            .edges
+            .children
+            .get("resolver"),
         Some(&DepPath::from("resolver@1.0.0(plugin@1.0.0)")),
     );
     // Trimming a peer segment off the edge would key it to a variant no
     // importer reaches, leaving an orphan entry in the lockfile —
     // <https://github.com/pnpm/pnpm/issues/13320>.
     let mut reachable: HashSet<DepPath> = HashSet::default();
-    let mut queue: Vec<DepPath> = result.direct_dependencies_by_importer
+    let mut queue: Vec<DepPath> = result
+        .direct_dependencies_by_importer
         .values()
         .flat_map(|direct| direct.values().cloned())
         .collect();
@@ -221,9 +227,16 @@ fn a_shared_consumer_keeps_the_first_importers_peer_provider_variant() {
         if !reachable.insert(dep_path.clone()) {
             continue;
         }
-        queue.extend(result.graph[&dep_path].edges.children.values().cloned());
+        queue.extend(
+            result.graph[&dep_path]
+                .edges
+                .children
+                .values()
+                .cloned(),
+        );
     }
-    let orphans: Vec<_> = result.graph
+    let orphans: Vec<_> = result
+        .graph
         .keys()
         .filter(|dep_path| !reachable.contains(*dep_path))
         .collect();
@@ -294,7 +307,8 @@ fn linked_peer_provider_uses_root_relative_snapshot_ref_in_workspace_fallback() 
         result.direct_dependencies_by_importer["apps/nested/app"]["peer"].as_str(),
         "link:../../../packages/peer",
     );
-    let consumer = result.graph
+    let consumer = result
+        .graph
         .values()
         .find(|node| node.resolved_package_id == "consumer@1.0.0")
         .expect("consumer graph node");
@@ -365,7 +379,10 @@ fn workspace_internal_link_peer_keeps_its_node_id_when_exclude_links_on() {
     let consumer_dep_path = &result.direct_dependencies_by_importer["apps/app"]["consumer"];
     assert_eq!(consumer_dep_path.as_str(), "consumer@1.0.0(peer@packages+peer)");
     assert_eq!(
-        result.graph[consumer_dep_path].edges.children.get("peer"),
+        result.graph[consumer_dep_path]
+            .edges
+            .children
+            .get("peer"),
         Some(&DepPath::from("link:packages/peer")),
     );
 }
@@ -430,19 +447,25 @@ fn pruned_hoisted_providers_with_mutual_peers_resolve() {
     );
 
     assert_eq!(
-        result.direct_dependencies_by_alias.get("lib-a"),
+        result
+            .direct_dependencies_by_alias
+            .get("lib-a"),
         Some(&DepPath::from("lib-a@1.0.0(lib-b@1.0.0)")),
         "graph keys: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
     assert_eq!(
-        result.direct_dependencies_by_alias.get("lib-b"),
+        result
+            .direct_dependencies_by_alias
+            .get("lib-b"),
         Some(&DepPath::from("lib-b@1.0.0(lib-a@1.0.0)")),
         "graph keys: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
     assert!(
-        result.graph.contains_key(&DepPath::from("consumer@1.0.0(lib-a@1.0.0)(lib-b@1.0.0)")),
+        result
+            .graph
+            .contains_key(&DepPath::from("consumer@1.0.0(lib-a@1.0.0)(lib-b@1.0.0)")),
         "the consumer must bind both fallback-resolved providers: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
@@ -498,13 +521,17 @@ fn own_direct_dep_and_pruned_provider_with_mutual_peers_resolve() {
     );
 
     assert_eq!(
-        result.direct_dependencies_by_alias.get("main"),
+        result
+            .direct_dependencies_by_alias
+            .get("main"),
         Some(&DepPath::from("main@1.0.0(plugin@1.0.0)")),
         "graph keys: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
     assert_eq!(
-        result.direct_dependencies_by_alias.get("plugin"),
+        result
+            .direct_dependencies_by_alias
+            .get("plugin"),
         Some(&DepPath::from("plugin@1.0.0(main@1.0.0)")),
         "graph keys: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
@@ -574,19 +601,25 @@ fn peer_cycle_between_own_dep_and_provider_at_tree_position_resolves() {
     );
 
     assert_eq!(
-        result.direct_dependencies_by_alias.get("host"),
+        result
+            .direct_dependencies_by_alias
+            .get("host"),
         Some(&DepPath::from("host@1.0.0(main@1.0.0)")),
         "graph keys: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
     assert_eq!(
-        result.direct_dependencies_by_alias.get("main"),
+        result
+            .direct_dependencies_by_alias
+            .get("main"),
         Some(&DepPath::from("main@1.0.0(plugin@1.0.0)")),
         "graph keys: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
     );
     assert_eq!(
-        result.direct_dependencies_by_alias.get("plugin"),
+        result
+            .direct_dependencies_by_alias
+            .get("plugin"),
         Some(&DepPath::from("plugin@1.0.0(main@1.0.0)")),
         "graph keys: {:#?}",
         result.graph.keys().collect::<Vec<_>>(),
@@ -664,12 +697,21 @@ fn repeated_pending_peer_edges_are_buffered_once() {
     // triple. Deduplicating by `(parent, alias)` instead of by whole
     // triple would have dropped that triple and left no edge at all.
     let second_dep_path = DepPath::from("child@2.0.0");
-    walker.caches.node_dep_paths.insert(second_child, second_dep_path.clone());
-    walker.output.graph.insert(parent.clone(), graph_node(&parent));
+    walker
+        .caches
+        .node_dep_paths
+        .insert(second_child, second_dep_path.clone());
+    walker
+        .output
+        .graph
+        .insert(parent.clone(), graph_node(&parent));
     walker.patch_pending_peer_edges();
 
     assert_eq!(
-        walker.output.graph[&parent].edges.children.get("child"),
+        walker.output.graph[&parent]
+            .edges
+            .children
+            .get("child"),
         Some(&second_dep_path),
         "an unresolvable first triple yields to the next one for the same slot",
     );
@@ -689,7 +731,13 @@ fn pending_peer_edges_replay_after_a_drain() {
 
     walker.add_graph_child_or_pending(&mut graph_children, &parent, "child".into(), child.clone());
     walker.patch_pending_peer_edges();
-    assert!(walker.output.pending_peer_edges.is_empty(), "the drain empties the buffer");
+    assert!(
+        walker
+            .output
+            .pending_peer_edges
+            .is_empty(),
+        "the drain empties the buffer"
+    );
 
     walker.add_graph_child_or_pending(&mut graph_children, &parent, "child".to_string(), child);
     assert_eq!(walker.output.pending_peer_edges.len(), 1, "the guard cleared with the buffer");

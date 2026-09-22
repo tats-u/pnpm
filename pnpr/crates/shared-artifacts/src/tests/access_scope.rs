@@ -117,14 +117,22 @@ async fn a_scope_another_artifact_holds_refuses_publication() {
     let (payload, _) = held.envelope.decode_payload().unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&held.key, &payload.subject);
-    assert!(store.publish("acme", held).await.unwrap());
+    assert!(
+        store
+            .publish("acme", held)
+            .await
+            .unwrap()
+    );
 
     let ours = publication_tagged("ci/ours", &["pnpm:v1:linux-x64-node22-glibc2.31"]);
     let slot = {
         let (payload, _) = ours.envelope.decode_payload().unwrap();
         super::super::compatibility_slot(&payload.compatibility)
     };
-    let error = store.publish("acme", ours).await.unwrap_err();
+    let error = store
+        .publish("acme", ours)
+        .await
+        .unwrap_err();
 
     assert!(
         matches!(error, RegistryError::ArtifactAlreadyPublished { .. }),
@@ -181,7 +189,10 @@ async fn a_publication_that_fails_gives_back_the_scopes_it_claimed() {
         .await
         .unwrap_err();
 
-    let (payload, _) = publication_tagged("ci/first", &tags).envelope.decode_payload().unwrap();
+    let (payload, _) = publication_tagged("ci/first", &tags)
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry =
         super::super::entry_digest(&publication_tagged("ci/first", &tags).key, &payload.subject);
@@ -208,7 +219,10 @@ async fn a_scope_that_vanishes_after_the_create_is_not_taken_as_ours() {
     let entry = super::super::entry_digest(&ours.key, &payload.subject);
 
     assert_eq!(
-        store.scope_marker(&owner, &entry, "linux-x64-node22", "any-digest").await.unwrap(),
+        store
+            .scope_marker(&owner, &entry, "linux-x64-node22", "any-digest")
+            .await
+            .unwrap(),
         super::super::ScopeMarker::Gone,
         "an absent marker is nobody's, not this artifact's",
     );
@@ -229,9 +243,15 @@ async fn a_scope_a_failed_publication_left_behind_is_reclaimed() {
     let entry = super::super::entry_digest(&ours.key, &payload.subject);
     let marker = format!("{owner}/entries/{entry}/scopes/linux-x64-node22");
     // What a publication that claimed the scope and then failed leaves.
-    store.create_object(&marker, b"an artifact nobody stored".to_vec()).await.unwrap();
+    store
+        .create_object(&marker, b"an artifact nobody stored".to_vec())
+        .await
+        .unwrap();
 
-    store.reclaim_unreferenced_blobs().await.unwrap();
+    store
+        .reclaim_unreferenced_blobs()
+        .await
+        .unwrap();
 
     assert!(
         store
@@ -263,7 +283,10 @@ async fn reclamation_keeps_the_scopes_a_stored_artifact_reaches() {
             .unwrap(),
     );
 
-    store.reclaim_unreferenced_blobs().await.unwrap();
+    store
+        .reclaim_unreferenced_blobs()
+        .await
+        .unwrap();
 
     let raised = ["pnpm:v1:linux-x64-node22-glibc2.31"];
     let error = store
@@ -287,13 +310,19 @@ async fn a_retry_into_a_crowded_entry_is_refused_once_its_scopes_are_known() {
     let universal = publication("ci/universal");
     let tags = ["pnpm:v1:linux-x64-node22-glibc2.17"];
     let tagged = publication_tagged("ci/tagged", &tags);
-    let (payload, _) = universal.envelope.decode_payload().unwrap();
+    let (payload, _) = universal
+        .envelope
+        .decode_payload()
+        .unwrap();
     let owner = super::super::owner_key("acme", &payload.owner).unwrap();
     let entry = super::super::entry_digest(&universal.key, &payload.subject);
     // Each under the name its own constraints give it, which is where a store
     // written when only identical constraints conflicted put them.
     for request in [&universal, &tagged] {
-        let (payload, _) = request.envelope.decode_payload().unwrap();
+        let (payload, _) = request
+            .envelope
+            .decode_payload()
+            .unwrap();
         let slot = super::super::compatibility_slot(&payload.compatibility);
         store
             .create_object(
@@ -310,7 +339,10 @@ async fn a_retry_into_a_crowded_entry_is_refused_once_its_scopes_are_known() {
         .unwrap_err();
 
     for republished in [publication("ci/universal"), publication_tagged("ci/tagged", &tags)] {
-        let error = store.publish("acme", republished).await.unwrap_err();
+        let error = store
+            .publish("acme", republished)
+            .await
+            .unwrap_err();
         assert!(
             matches!(error, RegistryError::ArtifactAlreadyPublished { .. }),
             "a retry into a crowded entry is refused, got {error:?}",

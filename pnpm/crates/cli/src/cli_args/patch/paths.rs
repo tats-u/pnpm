@@ -59,11 +59,9 @@ pub(super) fn prepare_default_edit_dir(
         .map_err(|source| PatchError::CreateEditDir { edit_dir: edit_root.clone(), source })?;
     reject_default_edit_dir_symlink_components(&edit_root, edit_dir)?;
 
-    let real_modules_dir = dunce::canonicalize(modules_dir)
-        .map_err(|source| PatchError::ResolveEditDir {
-            edit_dir: modules_dir.to_path_buf(),
-            source,
-        })?;
+    let real_modules_dir = dunce::canonicalize(modules_dir).map_err(|source| {
+        PatchError::ResolveEditDir { edit_dir: modules_dir.to_path_buf(), source }
+    })?;
     let real_edit_root = dunce::canonicalize(&edit_root)
         .map_err(|source| PatchError::ResolveEditDir { edit_dir: edit_root.clone(), source })?;
     if !is_subdir(&real_modules_dir, &real_edit_root) {
@@ -167,17 +165,27 @@ pub(super) fn apply_existing_patch_file(
     let patch_file = patched_dependencies
         .get(&exact_key)
         .or_else(|| {
-            target.apply_to_all
+            target
+                .apply_to_all
                 .then(|| patched_dependencies.get(&target.alias))
                 .flatten()
         });
     let Some(patch_file) = patch_file else { return Ok(()) };
-    let base_dir = config.workspace_dir
+    let base_dir = config
+        .workspace_dir
         .as_deref()
-        .unwrap_or_else(|| config.modules_dir.parent().unwrap_or_else(|| Path::new(".")));
+        .unwrap_or_else(|| {
+            config
+                .modules_dir
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+        });
     let patch_file_path = checked_existing_patch_file_path(
         base_dir,
-        config.patches_dir.as_deref().unwrap_or("patches"),
+        config
+            .patches_dir
+            .as_deref()
+            .unwrap_or("patches"),
         patch_file,
     )?;
     if !patch_file_path.exists() {
@@ -228,10 +236,14 @@ pub(super) fn checked_existing_patch_file_path(
         return Err(PatchError::PatchFileOutsidePatchesDir { patch_file: patch_file.to_string() });
     }
 
-    let parent_dir = target_path.parent().map_or_else(PathBuf::new, Path::to_path_buf);
+    let parent_dir = target_path
+        .parent()
+        .map_or_else(PathBuf::new, Path::to_path_buf);
     let target_stats = lstat_patch_if_exists(&target_path)?;
     let real_parent_dir = realpath_if_exists(&parent_dir);
-    let real_patches_dir = ctx.real_patches_dir.or_else(|| realpath_if_exists(&ctx.patches_dir));
+    let real_patches_dir = ctx
+        .real_patches_dir
+        .or_else(|| realpath_if_exists(&ctx.patches_dir));
     if let (Some(real_parent_dir), Some(real_patches_dir)) = (&real_parent_dir, &real_patches_dir)
         && !is_subdir(real_patches_dir, real_parent_dir)
     {

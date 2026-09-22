@@ -160,7 +160,12 @@ fn committed_major(version_spec: &str) -> Option<u64> {
     if version_spec.is_empty() || version_spec == "*" || version_spec.eq_ignore_ascii_case("x") {
         return None;
     }
-    Some(node_semver::Range::parse(version_spec).ok()?.min_version()?.major)
+    Some(
+        node_semver::Range::parse(version_spec)
+            .ok()?
+            .min_version()?
+            .major,
+    )
 }
 
 #[cfg(test)]

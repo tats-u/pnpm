@@ -60,24 +60,22 @@ fn bench_tarball(criterion: &mut Criterion, server: &mut ServerGuard, fixtures_f
     };
     group.throughput(Throughput::Bytes(file.len() as u64));
     group.bench_function("download_dependency", |bencher| {
-        bencher
-            .to_async(&rt)
-            .iter(|| async {
-                // NOTE: the tempdir is being leaked, meaning the cleanup would be postponed until the end of the benchmark
-                let dir = tempdir().unwrap();
-                let store_dir = dir
-                    .path()
-                    .to_path_buf()
-                    .pipe(StoreDir::from)
-                    .pipe(Box::new)
-                    .pipe(Box::leak);
-                let http_client = ThrottledClient::new_for_installs();
+        bencher.to_async(&rt).iter(|| async {
+            // NOTE: the tempdir is being leaked, meaning the cleanup would be postponed until the end of the benchmark
+            let dir = tempdir().unwrap();
+            let store_dir = dir
+                .path()
+                .to_path_buf()
+                .pipe(StoreDir::from)
+                .pipe(Box::new)
+                .pipe(Box::leak);
+            let http_client = ThrottledClient::new_for_installs();
 
-                let cas_map = ingest_benchmark_package(&package, &http_client, store_dir)
-                    .await
-                    .unwrap();
-                cas_map.len()
-            });
+            let cas_map = ingest_benchmark_package(&package, &http_client, store_dir)
+                .await
+                .unwrap();
+            cas_map.len()
+        });
     });
 
     group.finish();
@@ -98,30 +96,24 @@ fn bench_concurrent_tarballs(criterion: &mut Criterion, server: &mut ServerGuard
             .expect("benchmark file count fits u64"),
     ));
     group.bench_function("cold_store_many_medium_tarballs", |bencher| {
-        bencher
-            .to_async(&rt)
-            .iter(|| async {
-                let dir = tempdir().unwrap();
-                let store_dir = dir
-                    .path()
-                    .to_path_buf()
-                    .pipe(StoreDir::from)
-                    .pipe(Box::new)
-                    .pipe(Box::leak);
-                let http_client = ThrottledClient::new_for_installs();
-                future::try_join_all(
-                    packages
-                        .iter()
-                        .map(|package| async {
-                            ingest_benchmark_package(package, &http_client, store_dir).await
-                        }),
-                )
-                .await
-                .unwrap()
-                .iter()
-                .map(std::collections::HashMap::len)
-                .sum::<usize>()
-            });
+        bencher.to_async(&rt).iter(|| async {
+            let dir = tempdir().unwrap();
+            let store_dir = dir
+                .path()
+                .to_path_buf()
+                .pipe(StoreDir::from)
+                .pipe(Box::new)
+                .pipe(Box::leak);
+            let http_client = ThrottledClient::new_for_installs();
+            future::try_join_all(packages.iter().map(|package| async {
+                ingest_benchmark_package(package, &http_client, store_dir).await
+            }))
+            .await
+            .unwrap()
+            .iter()
+            .map(std::collections::HashMap::len)
+            .sum::<usize>()
+        });
     });
     group.finish();
 }
@@ -205,7 +197,9 @@ fn create_benchmark_tarball(package_index: usize) -> Vec<u8> {
         header.set_size(u64::try_from(content.len()).expect("benchmark file size fits u64"));
         header.set_mode(0o644);
         header.set_cksum();
-        archive.append(&header, content.as_slice()).unwrap();
+        archive
+            .append(&header, content.as_slice())
+            .unwrap();
     }
     let encoder = archive.into_inner().unwrap();
     encoder.finish().unwrap()
@@ -231,8 +225,13 @@ fn bench_packument(criterion: &mut Criterion, bytes: &[u8]) {
     group.bench_function("parse", |bencher| {
         bencher.iter(|| {
             let package: Package = serde_json::from_slice(black_box(bytes)).unwrap();
-            let latest = package.dist_tag("latest").expect("lodash lists a `latest` dist-tag");
-            let manifest = package.versions.get(latest).expect("the `latest` manifest hydrates");
+            let latest = package
+                .dist_tag("latest")
+                .expect("lodash lists a `latest` dist-tag");
+            let manifest = package
+                .versions
+                .get(latest)
+                .expect("the `latest` manifest hydrates");
             black_box(manifest)
         });
     });
@@ -245,10 +244,14 @@ fn bench_packument(criterion: &mut Criterion, bytes: &[u8]) {
 /// 12k-line YAML parse dominates the measurement.
 fn bench_lockfile(criterion: &mut Criterion, dir: &Path) {
     assert!(
-        pnpm_lockfile::Lockfile::load_wanted_from_dir(dir).unwrap().is_some(),
+        pnpm_lockfile::Lockfile::load_wanted_from_dir(dir)
+            .unwrap()
+            .is_some(),
         "fixture lockfile must parse to Some, else the bench measures nothing",
     );
-    let bytes = fs::metadata(dir.join(pnpm_lockfile::Lockfile::FILE_NAME)).unwrap().len();
+    let bytes = fs::metadata(dir.join(pnpm_lockfile::Lockfile::FILE_NAME))
+        .unwrap()
+        .len();
     let mut group = criterion.benchmark_group("lockfile");
     group.throughput(Throughput::Bytes(bytes));
     group.bench_function("parse_pnpm_lock", |bencher| {
@@ -261,10 +264,7 @@ fn bench_lockfile(criterion: &mut Criterion, dir: &Path) {
 }
 
 pub fn main() -> Result<(), String> {
-    let CliArgs {
-        save_baseline,
-        full_workspace_resolution,
-    } = CliArgs::parse();
+    let CliArgs { save_baseline, full_workspace_resolution } = CliArgs::parse();
     if full_workspace_resolution {
         workspace_resolution::run_full_workspace_resolution();
         return Ok(());

@@ -108,19 +108,19 @@ fn virtual_store_has(workspace: &Path, name_at_version: &str) -> bool {
 /// [`virtual_store_has`] assertions so a failing CI run shows what was
 /// actually materialized.
 fn list_virtual_store(workspace: &Path) -> Vec<String> {
-    let dir = workspace.join("node_modules").join(".pnpm");
+    let dir = workspace
+        .join("node_modules")
+        .join(".pnpm");
     std::fs::read_dir(&dir)
         .map(|entries| {
             entries
                 .filter_map(|entry| {
-                    entry
-                        .ok()
-                        .map(|entry| {
-                            entry
-                                .file_name()
-                                .to_string_lossy()
-                                .into_owned()
-                        })
+                    entry.ok().map(|entry| {
+                        entry
+                            .file_name()
+                            .to_string_lossy()
+                            .into_owned()
+                    })
                 })
                 .collect()
         })
@@ -139,12 +139,16 @@ fn update_bumps_within_range() {
     // install would keep 100.0.0 (it satisfies `^100.0.0`); update must
     // bump to 100.1.0 (101.0.0 is outside the range).
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0"));
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(
@@ -155,7 +159,9 @@ fn update_bumps_within_range() {
 
     // The rewritten range is what the lockfile importer records, so the
     // lockfile is still frozen-installable.
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -171,9 +177,13 @@ fn update_preserves_the_declared_range_operator() {
             r#"{{ "@pnpm.e2e/bravo-dep": "~1.0.0", "{FOO}": "1.0.0", "{PARENT}": "^100.0.0" }}"#,
         ),
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "@pnpm.e2e/bravo-dep").as_deref(), Some("~1.0.1"));
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("1.0.0"));
@@ -187,7 +197,9 @@ fn update_preserves_an_existing_prerelease_range_operator() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{HAS_PRERELEASE}": "3.0.0-rc.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     assert!(
         virtual_store_has(&workspace, "@pnpm.e2e+has-prerelease@3.0.0-rc.0"),
         "virtual store entries: {:?}",
@@ -195,7 +207,9 @@ fn update_preserves_an_existing_prerelease_range_operator() {
     );
 
     write_manifest(&workspace, &format!(r#"{{ "{HAS_PRERELEASE}": "^3.0.0-rc.0" }}"#));
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     assert!(
         virtual_store_has(&workspace, "@pnpm.e2e+has-prerelease@3.0.0-rc.1"),
@@ -203,7 +217,9 @@ fn update_preserves_an_existing_prerelease_range_operator() {
         list_virtual_store(&workspace),
     );
     assert_eq!(dep_spec(&workspace, HAS_PRERELEASE).as_deref(), Some("^3.0.0-rc.1"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -214,9 +230,13 @@ fn update_keeps_a_dist_tag_specifier() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "latest" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("latest"));
 
@@ -231,7 +251,9 @@ fn update_with_a_requested_version_keeps_the_declared_range_operator() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0", "{FOO}": "1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0", "{FOO}": "~1.0.0" }}"#));
 
     pacquet(&workspace, ["update", &format!("{DEP}@100.1.0"), &format!("{FOO}@100.1.0")])
@@ -243,7 +265,9 @@ fn update_with_a_requested_version_keeps_the_declared_range_operator() {
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+foo@100.1.0"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -255,7 +279,9 @@ fn update_with_a_requested_version_keeps_an_exact_pin() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0", "{FOO}": "latest" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     pacquet(&workspace, ["update", &format!("{DEP}@100.1.0"), &format!("{FOO}@1.0.0")])
         .assert()
@@ -263,7 +289,9 @@ fn update_with_a_requested_version_keeps_an_exact_pin() {
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("100.1.0"));
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("1.0.0"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -276,10 +304,14 @@ fn update_with_a_requested_version_locks_that_version_inside_the_kept_range() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"));
 
-    pacquet(&workspace, ["update", &format!("{DEP}@100.0.0")]).assert().success();
+    pacquet(&workspace, ["update", &format!("{DEP}@100.0.0")])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("^100.0.0"));
     let lock = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read pnpm-lock.yaml");
@@ -288,7 +320,9 @@ fn update_with_a_requested_version_locks_that_version_inside_the_kept_range() {
         !lock.contains("version: 100.1.0"),
         "the range's highest version must not win:\n{lock}",
     );
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -300,10 +334,14 @@ fn update_with_a_requested_version_keeps_an_npm_alias() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "dep-alias": "npm:{DEP}@^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"));
 
-    pacquet(&workspace, ["update", "dep-alias@100.0.0"]).assert().success();
+    pacquet(&workspace, ["update", "dep-alias@100.0.0"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "dep-alias").as_deref(), Some(&*format!("npm:{DEP}@^100.0.0")));
     let lock = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read pnpm-lock.yaml");
@@ -311,7 +349,9 @@ fn update_with_a_requested_version_keeps_an_npm_alias() {
         lock.contains(&format!("version: '{DEP}@100.0.0'")),
         "the requested version must be locked:\n{lock}",
     );
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -323,13 +363,19 @@ fn update_latest_keeps_a_prerelease_range_operator() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{HAS_PRERELEASE}": "3.0.0-rc.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     write_manifest(&workspace, &format!(r#"{{ "{HAS_PRERELEASE}": "^3.0.0-rc.0" }}"#));
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, HAS_PRERELEASE).as_deref(), Some("^3.0.0-rc.1"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -351,11 +397,17 @@ fn update_rewrites_the_range_with_dedicated_lockfiles() {
     )
     .expect("write project package.json");
 
-    pacquet(&project, ["install"]).assert().success();
-    pacquet(&project, ["update"]).assert().success();
+    pacquet(&project, ["install"])
+        .assert()
+        .success();
+    pacquet(&project, ["update"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&project, DEP).as_deref(), Some("^100.1.0"));
-    pacquet(&project, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&project, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -373,7 +425,9 @@ fn update_no_save_preserves_an_override_specifier_for_an_unrelated_update() {
             &format!(r#"{{ "{DEP}": "^100.0.0", "{BRAVO_DEP}": "1.0.0" }}"#),
         );
         set_overrides(&workspace, &[(override_key.as_str(), "100.1.0")]);
-        pacquet(&workspace, ["install", "--lockfile-only"]).assert().success();
+        pacquet(&workspace, ["install", "--lockfile-only"])
+            .assert()
+            .success();
 
         // Widen the unrelated dependency after its initial exact install so
         // update has a newer published fixture version to select.
@@ -405,7 +459,9 @@ fn update_no_save_preserves_an_override_specifier_for_an_unrelated_update() {
             !before_packages.contains(&format!("{BRAVO_DEP}@1.1.0")),
             "{BRAVO_DEP}@1.1.0 must not already be installed: {before_packages:?}",
         );
-        pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+        pacquet(&workspace, ["install", "--frozen-lockfile"])
+            .assert()
+            .success();
         assert!(virtual_store_has(&workspace, "@pnpm.e2e+bravo-dep@1.1.0"));
 
         drop((root, anchor));
@@ -419,10 +475,14 @@ fn update_no_save_keeps_the_declared_range() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["update", "--no-save"]).assert().success();
+    pacquet(&workspace, ["update", "--no-save"])
+        .assert()
+        .success();
 
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"));
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("^100.0.0"));
@@ -436,10 +496,14 @@ fn update_runs_with_ndjson_and_silent_reporters() {
         let (root, workspace, anchor) = setup();
 
         write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0" }}"#));
-        pacquet(&workspace, ["install"]).assert().success();
+        pacquet(&workspace, ["install"])
+            .assert()
+            .success();
         write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
 
-        pacquet(&workspace, [reporter, "update"]).assert().success();
+        pacquet(&workspace, [reporter, "update"])
+            .assert()
+            .success();
 
         assert!(
             virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"),
@@ -457,11 +521,15 @@ fn update_latest_rewrites_manifest() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"));
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     // latest tag is the max published version, 101.0.0.
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
@@ -480,9 +548,13 @@ fn update_latest_save_exact_preserves_existing_caret() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest", "--save-exact"]).assert().success();
+    pacquet(&workspace, ["update", "--latest", "--save-exact"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("^101.0.0"));
 
@@ -496,9 +568,13 @@ fn update_latest_preserves_tilde() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "~100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("~101.0.0"));
 
@@ -512,9 +588,13 @@ fn update_latest_keeps_a_dist_tag_specifier() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "latest" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("latest"));
 
@@ -528,9 +608,13 @@ fn update_latest_preserves_exact() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("101.0.0"));
 
@@ -547,9 +631,13 @@ fn update_latest_preserves_equals_pin() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "=100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("=101.0.0"));
 
@@ -565,7 +653,9 @@ fn update_latest_no_save_keeps_manifest() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0"));
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
@@ -586,7 +676,9 @@ fn update_latest_no_save_keeps_manifest() {
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"));
     assert!(!virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@101.0.0"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -597,9 +689,13 @@ fn update_aliases_work() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["up", "--latest"]).assert().success();
+    pacquet(&workspace, ["up", "--latest"])
+        .assert()
+        .success();
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("^101.0.0"));
 
     drop((root, anchor));
@@ -612,7 +708,9 @@ fn update_latest_with_spec_is_rejected() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["update", "--latest", &format!("{DEP}@2")])
         .output()
@@ -630,7 +728,9 @@ fn update_latest_with_spec_is_rejected() {
 /// The failing half of a `pacquet update` run: the command must exit
 /// non-zero and its stderr must mention `needle`.
 fn assert_update_fails(workspace: &Path, args: &[&str], needle: &str) {
-    let output = pacquet(workspace, args).output().expect("run pacquet update");
+    let output = pacquet(workspace, args)
+        .output()
+        .expect("run pacquet update");
     assert!(!output.status.success(), "`pacquet {}` should fail", args.join(" "));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains(needle), "stderr did not mention {needle:?}: {stderr}");
@@ -692,11 +792,15 @@ fn update_latest_npm_alias_resolves_aliased_package() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "dep-alias": "npm:{DEP}@~100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0"));
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, "dep-alias").as_deref(), Some(&*format!("npm:{DEP}@~101.0.0")));
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
@@ -718,14 +822,18 @@ fn update_respects_minimum_release_age() {
 
     write_manifest(&workspace, &format!(r#"{{ "{BRAVO_DEP}": "1.0.0" }}"#));
     set_minimum_release_age(&workspace, bravo_dep_mature_up_to_1_0_1_minimum_release_age());
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+bravo-dep@1.0.0"));
 
     // Widen the range so the update has newer versions to consider: 1.0.1
     // is mature under the cutoff, the newest in-range version (1.1.0) is
     // not.
     write_manifest(&workspace, &format!(r#"{{ "{BRAVO_DEP}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+bravo-dep@1.0.1"));
@@ -743,9 +851,13 @@ fn update_latest_respects_minimum_release_age() {
 
     write_manifest(&workspace, &format!(r#"{{ "{BRAVO_DEP}": "^1.0.0" }}"#));
     set_minimum_release_age(&workspace, bravo_dep_mature_up_to_1_0_1_minimum_release_age());
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert_eq!(dep_spec(&workspace, BRAVO_DEP).as_deref(), Some("^1.0.1"));
@@ -765,10 +877,14 @@ fn update_no_save_succeeds_when_every_pick_is_mature() {
 
     write_manifest(&workspace, &format!(r#"{{ "{BRAVO_DEP}": "1.0.0" }}"#));
     set_minimum_release_age(&workspace, bravo_dep_mature_up_to_1_0_1_minimum_release_age());
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     write_manifest(&workspace, &format!(r#"{{ "{BRAVO_DEP}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["update", "--no-save"]).assert().success();
+    pacquet(&workspace, ["update", "--no-save"])
+        .assert()
+        .success();
 
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert_eq!(dep_spec(&workspace, BRAVO_DEP).as_deref(), Some("^1.0.0"));
@@ -788,12 +904,16 @@ fn update_no_save_is_refused_when_a_pick_is_immature() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{BRAVO_DEP}": "1.1.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     set_minimum_release_age(&workspace, bravo_dep_mature_up_to_1_0_1_minimum_release_age());
     let workspace_yaml = workspace.join("pnpm-workspace.yaml");
     let before = fs::read_to_string(&workspace_yaml).expect("read pnpm-workspace.yaml");
 
-    let output = pacquet(&workspace, ["update", "--no-save"]).assert().failure();
+    let output = pacquet(&workspace, ["update", "--no-save"])
+        .assert()
+        .failure();
     let stderr = String::from_utf8_lossy(&output.get_output().stderr).into_owned();
 
     assert!(stderr.contains("ERR_PNPM_STRICT_MIN_RELEASE_AGE_REQUIRES_SAVE"), "{stderr}");
@@ -845,7 +965,9 @@ fn update_latest_reports_invalid_minimum_release_age_exclude() {
         format!(r#"["{BRAVO_DEP}@^1.0.0"]"#),
     );
 
-    let output = pacquet(&workspace, ["update", "--latest"]).output().expect("run pacquet update");
+    let output = pacquet(&workspace, ["update", "--latest"])
+        .output()
+        .expect("run pacquet update");
     assert!(!output.status.success(), "update --latest with an invalid exclude should fail");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -909,10 +1031,14 @@ fn update_latest_preserves_local_protocol_dependencies() {
     )
     .expect("write packages/b/package.json");
 
-    pacquet(&workspace, ["-r", "install"]).assert().success();
+    pacquet(&workspace, ["-r", "install"])
+        .assert()
+        .success();
     // Before the fix this failed with ERR_PNPM_PACKAGE_MANAGER_UPDATE_RESOLVE_LATEST
     // trying to fetch the unpublished @test/b, @test/c, and @test/d from the registry.
-    pacquet(&workspace, ["-r", "update", "--latest"]).assert().success();
+    pacquet(&workspace, ["-r", "update", "--latest"])
+        .assert()
+        .success();
 
     let a_manifest = fs::read_to_string(workspace.join("packages/a/package.json"))
         .expect("read packages/a/package.json");
@@ -939,7 +1065,9 @@ fn update_no_save_skips_version_outside_kept_range() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"));
 
     let output = pacquet(&workspace, ["update", "--no-save", &format!("{DEP}@101.0.0")])
@@ -964,7 +1092,9 @@ fn update_no_save_skips_version_outside_kept_range() {
         "the out-of-range requested version must not be recorded",
     );
     // The lockfile still satisfies the manifest.
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -974,7 +1104,9 @@ fn update_no_save_keeps_importer_specifier_for_admitted_version() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
 
     let output =
@@ -994,7 +1126,9 @@ fn update_no_save_keeps_importer_specifier_for_admitted_version() {
         !lock.contains("specifier: 100.1.0"),
         "the requested version must not replace the importer specifier: {lock}",
     );
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -1004,7 +1138,9 @@ fn update_no_save_applies_read_package_to_kept_importer_specifier() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
     fs::write(
         workspace.join(".pnpmfile.cjs"),
@@ -1030,7 +1166,9 @@ fn update_no_save_applies_read_package_to_kept_importer_specifier() {
         !lock.contains("specifier: ^100.0.0"),
         "the raw package.json specifier must not bypass readPackage: {lock}",
     );
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -1040,7 +1178,9 @@ fn update_no_save_runs_read_package_once_for_kept_importer_specifier() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
     fs::write(
         workspace.join(".pnpmfile.cjs"),
@@ -1083,7 +1223,9 @@ fn update_no_save_resolves_a_requested_range_within_the_kept_range() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
 
     let output = pacquet(&workspace, ["update", "--no-save", &format!("{DEP}@>=101.0.0")])
@@ -1100,7 +1242,9 @@ fn update_no_save_resolves_a_requested_range_within_the_kept_range() {
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0"));
     assert!(!virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@101.0.0"));
-    pacquet(&workspace, ["install", "--frozen-lockfile"]).assert().success();
+    pacquet(&workspace, ["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -1114,13 +1258,17 @@ fn update_latest_leaves_auto_installed_peers_alone() {
     anchor.set_dist_tag(PEER_C, "1.0.0", "latest");
 
     write_manifest(&workspace, &format!(r#"{{ "{ABC}": "1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     anchor.set_dist_tag(PEER_A, "1.0.1", "latest");
     anchor.set_dist_tag(PEER_C, "1.0.1", "latest");
     anchor.set_dist_tag(ABC, "2.0.0", "latest");
 
-    pacquet(&workspace, ["update", "--latest", ABC]).assert().success();
+    pacquet(&workspace, ["update", "--latest", ABC])
+        .assert()
+        .success();
 
     let packages = lockfile_package_keys(&workspace);
     assert!(packages.contains(&format!("{ABC}@2.0.0")), "{packages:?}");
@@ -1137,10 +1285,14 @@ fn update_withholds_the_old_pin_of_an_auto_installed_peer() {
     let (root, workspace, anchor) = setup();
     let consumer = "@pnpm.e2e/wants-peer-c-1";
     write_manifest(&workspace, &format!(r#"{{ "{consumer}": "1.0.0", "{PEER_C}": "1.0.0" }}"#));
-    pacquet(&workspace, ["install", "--lockfile-only"]).assert().success();
+    pacquet(&workspace, ["install", "--lockfile-only"])
+        .assert()
+        .success();
     write_manifest(&workspace, &format!(r#"{{ "{consumer}": "1.0.0" }}"#));
 
-    pacquet(&workspace, ["update", "--lockfile-only"]).assert().success();
+    pacquet(&workspace, ["update", "--lockfile-only"])
+        .assert()
+        .success();
     let lockfile = _utils::read_lockfile(&workspace.join("pnpm-lock.yaml"));
     assert_eq!(_utils::importer_version(&lockfile, ".", consumer), "1.0.0(@pnpm.e2e/peer-c@1.0.1)");
     drop((root, anchor));
@@ -1153,17 +1305,23 @@ fn update_re_keys_an_optional_peer_whose_locked_provider_left_in_one_pass() {
     let consumer = "@pnpm.e2e/depends-on-optional-peer-c-host";
     let provider = "@pnpm.e2e/abc-regular-deps";
     write_manifest(&workspace, &format!(r#"{{ "{consumer}": "1.0.0", "{PEER_C}": "1.0.1" }}"#));
-    pacquet(&workspace, ["install", "--lockfile-only"]).assert().success();
+    pacquet(&workspace, ["install", "--lockfile-only"])
+        .assert()
+        .success();
     let lockfile = _utils::read_lockfile(&workspace.join("pnpm-lock.yaml"));
     assert_eq!(_utils::importer_version(&lockfile, ".", consumer), "1.0.0(@pnpm.e2e/peer-c@1.0.1)");
 
     write_manifest(&workspace, &format!(r#"{{ "{consumer}": "1.0.0", "{provider}": "1.0.0" }}"#));
-    pacquet(&workspace, ["update", "--lockfile-only"]).assert().success();
+    pacquet(&workspace, ["update", "--lockfile-only"])
+        .assert()
+        .success();
     let first_pass = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
     let lockfile = _utils::read_lockfile(&workspace.join("pnpm-lock.yaml"));
     assert_eq!(_utils::importer_version(&lockfile, ".", consumer), "1.0.0(@pnpm.e2e/peer-c@1.0.0)");
 
-    pacquet(&workspace, ["update", "--lockfile-only"]).assert().success();
+    pacquet(&workspace, ["update", "--lockfile-only"])
+        .assert()
+        .success();
     let second_pass = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
     assert_eq!(second_pass, first_pass, "a second update must change nothing");
     drop((root, anchor));
@@ -1181,9 +1339,13 @@ fn update_keeps_every_dist_tag_specifier_without_latest() {
         &workspace,
         &format!(r#"{{ "{PEER_A}": "latest", "{PEER_C}": "canary", "{FOO}": "1.0.0" }}"#),
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, PEER_A).as_deref(), Some("latest"));
     assert_eq!(dep_spec(&workspace, PEER_C).as_deref(), Some("canary"));

@@ -176,7 +176,10 @@ impl<'a> MaterializationInputs<'a, '_> {
         'a: 'b,
     {
         FreshInputs {
-            update_checksums: self.install.lockfile_policy.update_checksums,
+            update_checksums: self
+                .install
+                .lockfile_policy
+                .update_checksums,
             resolution_verifiers,
             drivers: crate::install_with_fresh_lockfile::FreshInstallDrivers {
                 http_client: self.install.context.http_client,
@@ -188,10 +191,15 @@ impl<'a> MaterializationInputs<'a, '_> {
                 requester: self.execution.prefix,
                 lockfile_dir: self.workspace.workspace_root,
                 supported_architectures: self.execution.supported_architectures,
-                is_full_install: self.install.execution.mutation.is_full_install(),
-                real_ids: self.workspace.requested_importer_ids.map(|_| {
-                    self.workspace.real_importer_ids
-                }),
+                is_full_install: self
+                    .install
+                    .execution
+                    .mutation
+                    .is_full_install(),
+                real_ids: self
+                    .workspace
+                    .requested_importer_ids
+                    .map(|_| self.workspace.real_importer_ids),
                 selected_ids: self.workspace.requested_importer_ids,
             },
             execution: crate::install_with_fresh_lockfile::FreshInstallExecution {
@@ -226,12 +234,21 @@ impl<'a> MaterializationInputs<'a, '_> {
             pnpmfile_hook_override: self.resolution.pnpmfile_hook,
             lockfile_verification_gate,
             resolution: crate::ResolutionInputs {
-                update_seed_policy: self.resolution.inputs.update_seed_policy,
-                preferred_versions_override: self.resolution.inputs.preferred_versions_override,
+                update_seed_policy: self
+                    .resolution
+                    .inputs
+                    .update_seed_policy,
+                preferred_versions_override: self
+                    .resolution
+                    .inputs
+                    .preferred_versions_override,
                 auth_override: self.resolution.inputs.auth_override,
                 observer: self.resolution.inputs.observer,
                 peer_issues_sink: self.resolution.inputs.peer_issues_sink,
-                deps_requiring_build_sink: self.resolution.inputs.deps_requiring_build_sink,
+                deps_requiring_build_sink: self
+                    .resolution
+                    .inputs
+                    .deps_requiring_build_sink,
             },
             fetching: crate::install_with_fresh_lockfile::FreshFetchingInputs {
                 tarball_mem_cache: self.downloads.tarball_mem_cache,
@@ -239,7 +256,8 @@ impl<'a> MaterializationInputs<'a, '_> {
                 meta_cache: self.lockfiles.verification.meta_cache,
             },
             projects: crate::install_with_fresh_lockfile::FreshProjectInputs {
-                lockfile_specifier_manifests: self.workspace
+                lockfile_specifier_manifests: self
+                    .workspace
                     .lockfile_specifier_project_manifests
                     .map(|manifests| {
                         lockfile_specifier_manifests_by_id(manifests, self.workspace.workspace_root)
@@ -264,21 +282,32 @@ impl<'a> MaterializationInputs<'a, '_> {
         &mut self,
     ) -> Result<Option<crate::LockfileVerificationGate>, InstallError> {
         Ok(
-            if let Some(lockfile_verification_override) = self.lockfiles
+            if let Some(lockfile_verification_override) = self
+                .lockfiles
                 .verification_override
                 .take()
             {
-                lockfile_verification_override.await.map_err(map_frozen_lockfile_error)?;
+                lockfile_verification_override
+                    .await
+                    .map_err(map_frozen_lockfile_error)?;
                 None
             } else {
-                self.lockfiles.wanted.and_then(|loaded_lockfile| {
-                    super::LockfileVerificationGate::spawn::<Reporter>(
-                        loaded_lockfile,
-                        &self.lockfiles.verification.resolution_verifiers,
-                        self.lockfiles.verification.derived_lockfile_path.as_deref(),
-                        &self.install.context.config.cache_dir,
-                    )
-                })
+                self.lockfiles
+                    .wanted
+                    .and_then(|loaded_lockfile| {
+                        super::LockfileVerificationGate::spawn::<Reporter>(
+                            loaded_lockfile,
+                            &self
+                                .lockfiles
+                                .verification
+                                .resolution_verifiers,
+                            self.lockfiles
+                                .verification
+                                .derived_lockfile_path
+                                .as_deref(),
+                            &self.install.context.config.cache_dir,
+                        )
+                    })
             },
         )
     }
@@ -286,11 +315,19 @@ impl<'a> MaterializationInputs<'a, '_> {
     async fn fresh<Reporter: self::Reporter + 'static>(
         mut self,
     ) -> Result<MaterializationOutput, InstallError> {
-        let lockfile_verification_gate = self.start_fresh_verification::<Reporter>().await?;
+        let lockfile_verification_gate = self
+            .start_fresh_verification::<Reporter>()
+            .await?;
         let dependency_groups = std::mem::take(&mut self.workspace.dependency_groups);
-        let resolution_verifiers =
-            std::mem::take(&mut self.lockfiles.verification.resolution_verifiers);
-        let derived_lockfile_path = self.lockfiles.verification
+        let resolution_verifiers = std::mem::take(
+            &mut self
+                .lockfiles
+                .verification
+                .resolution_verifiers,
+        );
+        let derived_lockfile_path = self
+            .lockfiles
+            .verification
             .derived_lockfile_path
             .take();
         let site = (self.workspace.workspace_root, self.install.context.config);

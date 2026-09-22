@@ -61,17 +61,16 @@ fn parse_bulk_advisories(
     raw_body: &str,
     url: &str,
 ) -> Result<BTreeMap<String, Vec<RawBulkAdvisory>>, AuditError> {
-    let parsed: serde_json::Value = serde_json::from_str(raw_body)
-        .map_err(|source| AuditError::InvalidJson {
+    let parsed: serde_json::Value =
+        serde_json::from_str(raw_body).map_err(|source| AuditError::InvalidJson {
             url: url.to_string(),
             reason: source.to_string(),
             body: sanitize_response_body(raw_body),
         })?;
-    serde_json::from_value(parsed.clone())
-        .map_err(|_| AuditError::UnexpectedBody {
-            url: url.to_string(),
-            body: sanitize_response_body(&parsed.to_string()),
-        })
+    serde_json::from_value(parsed.clone()).map_err(|_| AuditError::UnexpectedBody {
+        url: url.to_string(),
+        body: sanitize_response_body(&parsed.to_string()),
+    })
 }
 
 pub(super) fn retry_opts_from_config(config: &Config) -> RetryOpts {
@@ -100,7 +99,8 @@ pub(super) async fn correct_inferred_patched_versions(
     config: &Config,
     http_client: &pnpm_network::ThrottledClient,
 ) -> HashMap<String, Option<PackumentPublishInfo>> {
-    let names: HashSet<&str> = report.advisories
+    let names: HashSet<&str> = report
+        .advisories
         .values()
         .filter(|advisory| advisory.patched_versions.is_some())
         .map(|advisory| advisory.module_name.trim())
@@ -112,16 +112,17 @@ pub(super) async fn correct_inferred_patched_versions(
         .resolved_registries()
         .into_iter()
         .collect();
-    let fetches = names
-        .into_iter()
-        .map(|name| {
-            let registry = pick_registry_for_package(&registries, name, None);
-            async move {
-                (name.to_string(), fetch_publish_times(name, &registry, config, http_client).await)
-            }
-        });
+    let fetches = names.into_iter().map(|name| {
+        let registry = pick_registry_for_package(&registries, name, None);
+        async move {
+            (name.to_string(), fetch_publish_times(name, &registry, config, http_client).await)
+        }
+    });
     let publish_infos: HashMap<String, Option<PackumentPublishInfo>> =
-        futures_util::future::join_all(fetches).await.into_iter().collect();
+        futures_util::future::join_all(fetches)
+            .await
+            .into_iter()
+            .collect();
     for advisory in report.advisories.values_mut() {
         let Some(patched) = advisory.patched_versions.as_deref() else { continue };
         let Some(Some(info)) = publish_infos.get(advisory.module_name.trim()) else { continue };
@@ -142,8 +143,12 @@ pub(super) async fn correct_inferred_patched_versions(
 impl<'a> AuditGraph<'a> {
     pub(super) fn main(lockfile: &'a Lockfile) -> Self {
         let empty = empty_snapshots();
-        let snapshots = lockfile.snapshots.as_ref().unwrap_or(empty);
-        let importers = lockfile.importers
+        let snapshots = lockfile
+            .snapshots
+            .as_ref()
+            .unwrap_or(empty);
+        let importers = lockfile
+            .importers
             .iter()
             .map(|(id, importer)| GraphImporter {
                 path_segment: id.replace('/', "__"),
@@ -154,7 +159,9 @@ impl<'a> AuditGraph<'a> {
     }
 
     pub(super) fn env(env_lockfile: &'a EnvLockfile) -> Self {
-        let importer = env_lockfile.importers.get(EnvLockfile::ROOT_IMPORTER_KEY);
+        let importer = env_lockfile
+            .importers
+            .get(EnvLockfile::ROOT_IMPORTER_KEY);
         let mut importers = Vec::new();
         let Some(importer) = importer else {
             return Self { importers, snapshots: &env_lockfile.snapshots };
@@ -200,7 +207,9 @@ pub(super) fn filter_ignored_advisories(
     report: &mut AuditReport,
     config: &Config,
 ) -> AuditVulnerabilityCounts {
-    let ignore_set = config.audit_config.ignore_ghsas
+    let ignore_set = config
+        .audit_config
+        .ignore_ghsas
         .iter()
         .filter_map(|ghsa| {
             let ghsa_id = normalize_ghsa_id(ghsa);

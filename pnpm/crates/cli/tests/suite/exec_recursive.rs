@@ -172,7 +172,9 @@ fn filtered_exec_keeps_single_command_in_foreground_process_group() {
         "-c",
         process_group_probe(),
     ]));
-    let status = process.wait().expect("wait for pacquet");
+    let status = process
+        .wait()
+        .expect("wait for pacquet");
     assert!(status.success(), "pacquet should succeed on the terminal");
 
     let (child_group, parent_group) = read_process_groups(&workspace);
@@ -201,7 +203,9 @@ fn filtered_exec_without_a_terminal_gives_the_command_its_own_process_group() {
         "-c",
         process_group_probe(),
     ]));
-    let status = process.wait().expect("wait for pacquet");
+    let status = process
+        .wait()
+        .expect("wait for pacquet");
     assert!(status.success(), "pacquet should succeed without a terminal");
 
     let (child_group, parent_group) = read_process_groups(&workspace);
@@ -218,8 +222,12 @@ fn read_process_groups(workspace: &Path) -> (String, String) {
     let groups =
         fs::read_to_string(workspace.join("process-groups.txt")).expect("read process groups");
     let mut fields = groups.split_whitespace();
-    let child_group = fields.next().expect("child process group");
-    let parent_group = fields.next().expect("parent process group");
+    let child_group = fields
+        .next()
+        .expect("child process group");
+    let parent_group = fields
+        .next()
+        .expect("parent process group");
     (child_group.to_string(), parent_group.to_string())
 }
 
@@ -237,7 +245,9 @@ fn recursive_exec_respects_workspace_concurrency() {
 
     assert!(workspace.join("saw-parallel").exists(), "two commands should overlap");
     assert!(
-        !workspace.join("exceeded-concurrency").exists(),
+        !workspace
+            .join("exceeded-concurrency")
+            .exists(),
         "no more than two commands should overlap",
     );
 
@@ -288,7 +298,9 @@ fn parallel_recursive_exec_has_no_workspace_concurrency_cap() {
         .success();
 
     assert!(
-        workspace.join("exceeded-concurrency").exists(),
+        workspace
+            .join("exceeded-concurrency")
+            .exists(),
         "--parallel should start all three commands together",
     );
 
@@ -387,7 +399,13 @@ fn recursive_exec_diff_selector_selects_changed_projects() {
     pnpm_testing_utils::git_repo::init_isolated_repo(&workspace);
     git(&["add", "."]);
     git(&["commit", "-m", "base"]);
-    fs::write(workspace.join("project-1").join("changed.js"), "").expect("write changed file");
+    fs::write(
+        workspace
+            .join("project-1")
+            .join("changed.js"),
+        "",
+    )
+    .expect("write changed file");
     git(&["add", "."]);
     git(&["commit", "-m", "change project-1"]);
 
@@ -447,7 +465,9 @@ fn recursive_exec_filter_no_match_is_a_noop() {
         );
     }
     assert!(
-        !workspace.join("pnpm-exec-summary.json").exists(),
+        !workspace
+            .join("pnpm-exec-summary.json")
+            .exists(),
         "an empty selection should not write a summary file",
     );
 
@@ -470,8 +490,18 @@ fn recursive_exec_report_summary_records_every_package_status() {
         .success();
 
     let statuses = summary_statuses(&workspace);
-    assert_eq!(statuses.get("project-1").map(String::as_str), Some("passed"));
-    assert_eq!(statuses.get("project-2").map(String::as_str), Some("passed"));
+    assert_eq!(
+        statuses
+            .get("project-1")
+            .map(String::as_str),
+        Some("passed")
+    );
+    assert_eq!(
+        statuses
+            .get("project-2")
+            .map(String::as_str),
+        Some("passed")
+    );
 
     drop(root);
 }
@@ -528,10 +558,30 @@ if (name === 'a-slow-1' || name === 'c-slow-2') {
 
     let statuses = summary_statuses(&workspace);
     dbg!(&statuses);
-    assert_eq!(statuses.get("a-slow-1").map(String::as_str), Some("running"));
-    assert_eq!(statuses.get("b-fails").map(String::as_str), Some("failure"));
-    assert_eq!(statuses.get("c-slow-2").map(String::as_str), Some("running"));
-    assert_eq!(statuses.get("z-queued").map(String::as_str), Some("queued"));
+    assert_eq!(
+        statuses
+            .get("a-slow-1")
+            .map(String::as_str),
+        Some("running")
+    );
+    assert_eq!(
+        statuses
+            .get("b-fails")
+            .map(String::as_str),
+        Some("failure")
+    );
+    assert_eq!(
+        statuses
+            .get("c-slow-2")
+            .map(String::as_str),
+        Some("running")
+    );
+    assert_eq!(
+        statuses
+            .get("z-queued")
+            .map(String::as_str),
+        Some("queued")
+    );
     assert!(
         !workspace
             .join("z-queued")
@@ -690,9 +740,16 @@ fn a_dir_selector_selects_the_project_in_that_dir() {
         .assert()
         .success();
 
-    assert!(workspace.join("nested/ran.txt").exists(), "the project at {{nested}} should run");
     assert!(
-        !workspace.join("nested/inner/ran.txt").exists(),
+        workspace
+            .join("nested/ran.txt")
+            .exists(),
+        "the project at {{nested}} should run"
+    );
+    assert!(
+        !workspace
+            .join("nested/inner/ran.txt")
+            .exists(),
         "a project below {{nested}} is not selected by the glob match",
     );
 
@@ -755,9 +812,24 @@ fn a_relative_dir_selector_expands_brace_alternatives() {
         .assert()
         .success();
 
-    assert!(workspace.join("packages/pkg-a/ran.txt").exists(), "pkg-a is an alternative");
-    assert!(workspace.join("packages/pkg-c/ran.txt").exists(), "pkg-c is an alternative");
-    assert!(!workspace.join("packages/pkg-b/ran.txt").exists(), "pkg-b is not an alternative");
+    assert!(
+        workspace
+            .join("packages/pkg-a/ran.txt")
+            .exists(),
+        "pkg-a is an alternative"
+    );
+    assert!(
+        workspace
+            .join("packages/pkg-c/ran.txt")
+            .exists(),
+        "pkg-c is an alternative"
+    );
+    assert!(
+        !workspace
+            .join("packages/pkg-b/ran.txt")
+            .exists(),
+        "pkg-b is not an alternative"
+    );
 
     drop(root);
 }
@@ -787,11 +859,15 @@ fn legacy_dir_filtering_selects_the_subtree_below_the_dir() {
         .success();
 
     assert!(
-        workspace.join("nested/inner/ran.txt").exists(),
+        workspace
+            .join("nested/inner/ran.txt")
+            .exists(),
         "the project below {{nested}} should run under legacyDirFiltering",
     );
     assert!(
-        !workspace.join("nested/ran.txt").exists(),
+        !workspace
+            .join("nested/ran.txt")
+            .exists(),
         "the subtree match excludes the directory it starts from",
     );
 
@@ -826,7 +902,9 @@ fn legacy_dir_filtering_leaves_the_generated_root_exclusion_alone() {
         .success();
 
     assert!(
-        workspace.join("project-1/ran.txt").exists(),
+        workspace
+            .join("project-1/ran.txt")
+            .exists(),
         "the workspace projects should run under legacyDirFiltering",
     );
     assert!(
@@ -868,7 +946,9 @@ fn legacy_dir_filtering_leaves_the_generated_root_inclusion_alone() {
         "--workspace-root should select the workspace root under legacyDirFiltering",
     );
     assert!(
-        !workspace.join("project-1/ran.txt").exists(),
+        !workspace
+            .join("project-1/ran.txt")
+            .exists(),
         "--workspace-root selects the root alone, not the projects below it",
     );
 
@@ -929,9 +1009,24 @@ fn recursive_exec_no_bail_skips_dependents_of_a_failed_command() {
     let order = fs::read_to_string(workspace.join("order.log")).expect("read order log");
     assert_eq!(order, "project-c\n");
     let statuses = summary_statuses(&workspace);
-    assert_eq!(statuses.get("project-a").map(String::as_str), Some("skipped"));
-    assert_eq!(statuses.get("project-b").map(String::as_str), Some("failure"));
-    assert_eq!(statuses.get("project-c").map(String::as_str), Some("passed"));
+    assert_eq!(
+        statuses
+            .get("project-a")
+            .map(String::as_str),
+        Some("skipped")
+    );
+    assert_eq!(
+        statuses
+            .get("project-b")
+            .map(String::as_str),
+        Some("failure")
+    );
+    assert_eq!(
+        statuses
+            .get("project-c")
+            .map(String::as_str),
+        Some("passed")
+    );
 
     drop(root);
 }

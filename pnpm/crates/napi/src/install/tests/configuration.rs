@@ -27,7 +27,12 @@ fn resolved_config_applies_trust_lockfile() {
         let mut options = install_options();
         options.trust_lockfile = trust_lockfile;
         let overlay = build_overlay(&options, false).expect("overlay");
-        assert_eq!(resolve_config(dir.path(), &overlay).expect("config").trust_lockfile, expected);
+        assert_eq!(
+            resolve_config(dir.path(), &overlay)
+                .expect("config")
+                .trust_lockfile,
+            expected
+        );
     }
 }
 
@@ -42,7 +47,9 @@ fn resolved_config_applies_allow_unused_patches() {
         options.allow_unused_patches = allow_unused_patches;
         let overlay = build_overlay(&options, false).expect("overlay");
         assert_eq!(
-            resolve_config(dir.path(), &overlay).expect("config").allow_unused_patches,
+            resolve_config(dir.path(), &overlay)
+                .expect("config")
+                .allow_unused_patches,
             expected,
         );
     }

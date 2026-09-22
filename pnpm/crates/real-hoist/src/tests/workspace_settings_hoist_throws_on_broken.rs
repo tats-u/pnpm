@@ -429,7 +429,8 @@ fn hoisting_limits_border_keeps_descendants_nested() {
     let mut blocked = BTreeSet::new();
     blocked.insert("a".to_string());
     let mut opts = HoistOpts::default();
-    opts.hoisting_limits.insert(".@".to_string(), blocked);
+    opts.hoisting_limits
+        .insert(".@".to_string(), blocked);
 
     let result = hoist(&lockfile, &opts).expect("hoist with limits should succeed");
     let root_children = result.dependencies.borrow();
@@ -496,7 +497,8 @@ fn hoisting_limits_border_keeps_all_descendants_nested() {
     let mut blocked = BTreeSet::new();
     blocked.insert("a".to_string());
     let mut opts = HoistOpts::default();
-    opts.hoisting_limits.insert(".@".to_string(), blocked);
+    opts.hoisting_limits
+        .insert(".@".to_string(), blocked);
 
     let result = hoist(&lockfile, &opts).expect("hoist with limits should succeed");
     let root_children = result.dependencies.borrow();
@@ -565,7 +567,8 @@ fn hoisting_limits_keyed_on_unrelated_importer_is_inert() {
     blocked.insert("b".to_string());
     let mut opts = HoistOpts::default();
     // Wrong key — `packages/foo@workspace:packages/foo`, not `.@`.
-    opts.hoisting_limits.insert("packages/foo@workspace:packages/foo".to_string(), blocked);
+    opts.hoisting_limits
+        .insert("packages/foo@workspace:packages/foo".to_string(), blocked);
 
     let result = hoist(&lockfile, &opts).expect("hoist should succeed");
     let root_children = result.dependencies.borrow();
@@ -604,7 +607,8 @@ fn nested_hoist_uses_the_nested_root_locator() {
     snapshots.insert(dep_key("c", "1.0.0"), SnapshotEntry::default());
 
     let mut opts = HoistOpts::default();
-    opts.hoisting_limits.insert(".@".to_string(), BTreeSet::from(["packages%2Ffoo".to_string()]));
+    opts.hoisting_limits
+        .insert(".@".to_string(), BTreeSet::from(["packages%2Ffoo".to_string()]));
     opts.hoisting_limits.insert(
         "packages%2Ffoo@workspace:packages/foo".to_string(),
         BTreeSet::from(["b".to_string()]),
@@ -747,17 +751,35 @@ fn nested_hoist_keeps_conflicting_dep_reachable_from_every_parent_of_a_shared_no
                 .unwrap_or_else(|| panic!("{parent_name} keeps its conflicting b@2: {parent:#?}"))
                 .0,
         );
-        assert!(nested_b.references.borrow().contains("b@2.0.0"));
+        assert!(
+            nested_b
+                .references
+                .borrow()
+                .contains("b@2.0.0")
+        );
 
         // `d@2` must resolve from this parent's copy of `b@2`: either
         // nested under `b@2` itself or as a sibling inside the parent.
-        let d_under_b = nested_b.dependencies
+        let d_under_b = nested_b
+            .dependencies
             .borrow()
             .iter()
-            .any(|dep| dep.0.name == "d" && dep.0.references.borrow().contains("d@2.0.0"));
-        let d_under_parent = parent_kids
-            .iter()
-            .any(|dep| dep.0.name == "d" && dep.0.references.borrow().contains("d@2.0.0"));
+            .any(|dep| {
+                dep.0.name == "d"
+                    && dep
+                        .0
+                        .references
+                        .borrow()
+                        .contains("d@2.0.0")
+            });
+        let d_under_parent = parent_kids.iter().any(|dep| {
+            dep.0.name == "d"
+                && dep
+                    .0
+                    .references
+                    .borrow()
+                    .contains("d@2.0.0")
+        });
         assert!(
             d_under_b || d_under_parent,
             "d@2 is unreachable from {parent_name}'s subtree, so its b@2 would \
@@ -834,7 +856,10 @@ fn peer_suffix_variants_collapse_to_one_hoisted_copy() {
         .unwrap()
         .0;
     assert!(
-        hoisted_x.references.borrow().contains("x@1.0.0(p@1.0.0)"),
+        hoisted_x
+            .references
+            .borrow()
+            .contains("x@1.0.0(p@1.0.0)"),
         "the first-seen variant is the canonical reference: {hoisted_x:#?}",
     );
 }

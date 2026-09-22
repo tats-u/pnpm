@@ -137,7 +137,12 @@ impl<Probe: GitProbe + 'static, Runner: GitCommandRunner + 'static> GitResolver<
         wanted_dependency: &WantedDependency,
         _opts: &ResolveOptions,
     ) -> Result<Option<ResolveResult>, ResolveError> {
-        let Some(bare) = wanted_dependency.bare_specifier.as_deref() else { return Ok(None) };
+        let Some(bare) = wanted_dependency
+            .bare_specifier
+            .as_deref()
+        else {
+            return Ok(None);
+        };
         let Some(partial) = parse_bare_specifier(bare) else { return Ok(None) };
         let spec = partial.finalize();
         let mut result = build_resolve_result(
@@ -147,7 +152,8 @@ impl<Probe: GitProbe + 'static, Runner: GitCommandRunner + 'static> GitResolver<
             wanted_dependency,
         )
         .await?;
-        self.read_package_metadata(&mut result).await?;
+        self.read_package_metadata(&mut result)
+            .await?;
         Ok(Some(result))
     }
 
@@ -201,7 +207,11 @@ impl<Probe: GitProbe + 'static, Runner: GitCommandRunner + 'static> GitResolver<
         query: &LatestQuery,
         _opts: &ResolveOptions,
     ) -> Result<Option<LatestInfo>, ResolveError> {
-        let Some(bare) = query.wanted_dependency.bare_specifier.as_deref() else {
+        let Some(bare) = query
+            .wanted_dependency
+            .bare_specifier
+            .as_deref()
+        else {
             return Ok(None);
         };
         if parse_bare_specifier(bare).is_none() {
@@ -311,7 +321,10 @@ fn ref_resolution_error(
     let GitResolveRefError::Runner(ls_remote) = &err else {
         return Box::new(err) as ResolveError;
     };
-    let specifier = wanted_dependency.bare_specifier.as_deref().unwrap_or_default();
+    let specifier = wanted_dependency
+        .bare_specifier
+        .as_deref()
+        .unwrap_or_default();
     Box::new(GitResolveError::new(specifier, repo, &ls_remote.to_string())) as ResolveError
 }
 

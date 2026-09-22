@@ -113,21 +113,28 @@ fn prepare_add_config(
     if plain_dependencies {
         args.check_workspace_root(cfg, dir)?;
     }
-    args.install.lockfile_dir.apply_to(cfg, dir);
+    args.install
+        .lockfile_dir
+        .apply_to(cfg, dir);
     args.apply_cli_config(cfg);
     let config_root = derive_config_root(cfg, dir, reporter)
         .wrap_err("derive workspace root and package manager policy")?;
     // `allowBuilds` is persisted to `pnpm-workspace.yaml`, which stays
     // at the workspace root even when `lockfileDir` moved the config
     // root elsewhere.
-    let allow_build_root = cfg.workspace_dir.clone().unwrap_or_else(|| config_root.clone());
+    let allow_build_root = cfg
+        .workspace_dir
+        .clone()
+        .unwrap_or_else(|| config_root.clone());
     apply_allow_build(cfg, &args.install.allow_build, &allow_build_root)?;
     Ok((config_root, recursive_sort))
 }
 
 fn add_global<'a>(ctx: &RunCtx<'a>, args: AddArgs) -> miette::Result<CommandFuture<'a>> {
     let config = (ctx.loaders.global_config)()?;
-    args.install.lockfile_dir.apply_to_global(config)?;
+    args.install
+        .lockfile_dir
+        .apply_to_global(config)?;
     args.apply_cli_config(config);
     let dir = ctx.locations.dir;
     let update_check = update_notifier::spawn(config, reporter_emit(ctx.reporter));
@@ -192,7 +199,9 @@ fn check_non_npm_targets(args: &AddArgs, plan: &PackageSpecifierPlan) -> miette:
 pub(super) fn update<'a>(ctx: &RunCtx<'a>, args: UpdateArgs) -> miette::Result<CommandFuture<'a>> {
     if args.selection.global {
         let config = (ctx.loaders.global_config)()?;
-        args.install.lockfile_dir.apply_to_global(config)?;
+        args.install
+            .lockfile_dir
+            .apply_to_global(config)?;
         args.apply_cli_config(config);
         return Ok(match ctx.reporter {
             ReporterType::Default | ReporterType::AppendOnly => {
@@ -209,7 +218,9 @@ pub(super) fn update<'a>(ctx: &RunCtx<'a>, args: UpdateArgs) -> miette::Result<C
     Ok(Box::pin(async move {
         let cfg = config()?;
         let recursive_sort = cfg.sort;
-        args.install.lockfile_dir.apply_to(cfg, dir);
+        args.install
+            .lockfile_dir
+            .apply_to(cfg, dir);
         args.apply_cli_config(cfg);
         let config_root = derive_config_root(cfg, dir, reporter)
             .wrap_err("derive workspace root and package manager policy")?;
@@ -312,7 +323,9 @@ fn install_with_config<'a>(
             // value is `resolve_bool_override`'s contract.
             let cfg = config()?;
             let recursive_sort = cfg.sort;
-            args.lockfile.directory.apply_to(cfg, dir);
+            args.lockfile
+                .directory
+                .apply_to(cfg, dir);
             apply_install_cli_config(cfg, &args);
             let frozen_lockfile = args.effective_frozen_lockfile(cfg);
             let require_lockfile = frozen_lockfile;
@@ -391,7 +404,8 @@ pub(super) fn create<'a>(ctx: &RunCtx<'a>, args: CreateArgs) -> miette::Result<C
 
 fn remove_global(ctx: &RunCtx<'_>, args: &RemoveArgs) -> miette::Result<()> {
     let config = (ctx.loaders.global_config)()?;
-    args.lockfile_dir.apply_to_global(config)?;
+    args.lockfile_dir
+        .apply_to_global(config)?;
     match ctx.reporter {
         ReporterType::Default | ReporterType::AppendOnly => {
             global::handle_global_remove::<DefaultReporter>(config, &args.package_names)?;

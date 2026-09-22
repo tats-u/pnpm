@@ -118,13 +118,17 @@ pub fn build_package_snapshot(
 mod tests;
 
 fn registry_resolution(package: &PackageVersion) -> Result<RegistryResolution, BuildSnapshotError> {
-    let integrity = package.dist.integrity
+    let integrity = package
+        .dist
+        .integrity
         .clone()
         .ok_or_else(|| BuildSnapshotError::MissingIntegrity {
             name: package.name.clone(),
             version: package.version.to_string(),
         })?;
-    let revision = package.dist.revision
+    let revision = package
+        .dist
+        .revision
         .clone()
         .map(serde_json::from_value::<TarballRevision>)
         .transpose()

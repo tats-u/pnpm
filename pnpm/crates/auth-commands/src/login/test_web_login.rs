@@ -45,7 +45,9 @@ async fn should_use_web_login_when_registry_supports_it() {
     assert_eq!(result, format!("Logged in on {registry}/"));
 
     let writes = login_writes();
-    let (path, _) = writes.first().expect("config.yaml was written");
+    let (path, _) = writes
+        .first()
+        .expect("config.yaml was written");
     assert_eq!(path, &config_dir.join("config.yaml"));
     assert_eq!(
         written_registry_token(&writes, &format!("{registry}/")),

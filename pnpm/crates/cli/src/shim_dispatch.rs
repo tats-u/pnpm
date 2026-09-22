@@ -215,10 +215,7 @@ fn run_global_target(shim: &ShimInvocation<'_>, args: &[OsString]) -> i32 {
     match search_script_runtime::<CmdShimHost>(target) {
         // `.cmd` and `.bat` targets go to `Command::new` directly (see
         // `exec_program_with_path`) rather than through an explicit `cmd`.
-        Ok(Some(ScriptRuntime {
-            prog: Some(prog),
-            args: shebang_args,
-        })) if prog != "cmd" => {
+        Ok(Some(ScriptRuntime { prog: Some(prog), args: shebang_args })) if prog != "cmd" => {
             let mut argv = split_shebang_args(&shebang_args);
             argv.push(target.into());
             argv.extend_from_slice(args);
@@ -253,13 +250,12 @@ fn interpreter_path(bin_dir: &Path, prog: &str) -> PathBuf {
 /// running a cmd-shim would split them. A line the shell could not parse
 /// (an unbalanced quote) falls back to whitespace splitting.
 fn split_shebang_args(shebang_args: &str) -> Vec<OsString> {
-    let words = shell_words::split(shebang_args)
-        .unwrap_or_else(|_| {
-            shebang_args
-                .split_whitespace()
-                .map(str::to_string)
-                .collect()
-        });
+    let words = shell_words::split(shebang_args).unwrap_or_else(|_| {
+        shebang_args
+            .split_whitespace()
+            .map(str::to_string)
+            .collect()
+    });
     words
         .into_iter()
         .map(OsString::from)

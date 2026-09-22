@@ -25,7 +25,11 @@ async fn capped_dns_resolver_limits_concurrency() {
             let resolver = Arc::clone(&resolver);
             tokio::spawn(async move {
                 let _addresses = resolver
-                    .resolve("registry.npmjs.org".parse().expect("valid DNS name"))
+                    .resolve(
+                        "registry.npmjs.org"
+                            .parse()
+                            .expect("valid DNS name"),
+                    )
                     .await
                     .expect("recording resolver succeeds");
             })
@@ -43,7 +47,8 @@ async fn capped_dns_resolver_limits_concurrency() {
 
     gate.add_permits(8);
     for task in tasks {
-        task.await.expect("resolution task succeeds");
+        task.await
+            .expect("resolution task succeeds");
     }
     assert_eq!(active.load(Ordering::SeqCst), 0);
     assert_eq!(maximum_active.load(Ordering::SeqCst), 4);
@@ -384,12 +389,22 @@ async fn no_redirect_client_returns_the_first_redirect_response() {
 
 #[tokio::test]
 async fn socks5_proxy_connects_to_real_target() {
-    let target_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind target");
-    let target_addr = target_listener.local_addr().expect("target address");
+    let target_listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind target");
+    let target_addr = target_listener
+        .local_addr()
+        .expect("target address");
     let target = tokio::spawn(async move {
-        let (mut stream, _) = target_listener.accept().await.expect("accept target connection");
+        let (mut stream, _) = target_listener
+            .accept()
+            .await
+            .expect("accept target connection");
         let mut request = vec![0; 1024];
-        let size = stream.read(&mut request).await.expect("read target request");
+        let size = stream
+            .read(&mut request)
+            .await
+            .expect("read target request");
         stream
             .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
             .await
@@ -397,48 +412,81 @@ async fn socks5_proxy_connects_to_real_target() {
         String::from_utf8(request[..size].to_vec()).expect("HTTP request is ASCII")
     });
 
-    let socks_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind SOCKS5");
-    let socks_addr = socks_listener.local_addr().expect("SOCKS5 address");
+    let socks_listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind SOCKS5");
+    let socks_addr = socks_listener
+        .local_addr()
+        .expect("SOCKS5 address");
     let socks = tokio::spawn(async move {
-        let (mut inbound, _) = socks_listener.accept().await.expect("accept SOCKS5 connection");
+        let (mut inbound, _) = socks_listener
+            .accept()
+            .await
+            .expect("accept SOCKS5 connection");
         let mut greeting = [0; 2];
-        inbound.read_exact(&mut greeting).await.expect("read SOCKS5 greeting");
+        inbound
+            .read_exact(&mut greeting)
+            .await
+            .expect("read SOCKS5 greeting");
         assert_eq!(greeting[0], 5);
         let mut methods = vec![0; usize::from(greeting[1])];
-        inbound.read_exact(&mut methods).await.expect("read SOCKS5 methods");
+        inbound
+            .read_exact(&mut methods)
+            .await
+            .expect("read SOCKS5 methods");
         inbound
             .write_all(&[5, 0])
             .await
             .expect("accept no-auth method");
 
         let mut request = [0; 4];
-        inbound.read_exact(&mut request).await.expect("read SOCKS5 request");
+        inbound
+            .read_exact(&mut request)
+            .await
+            .expect("read SOCKS5 request");
         assert_eq!(&request[..3], &[5, 1, 0]);
         match request[3] {
             1 => {
                 let mut address = [0; 4];
-                inbound.read_exact(&mut address).await.expect("read IPv4 target");
+                inbound
+                    .read_exact(&mut address)
+                    .await
+                    .expect("read IPv4 target");
             }
             3 => {
-                let length = inbound.read_u8().await.expect("read domain length");
+                let length = inbound
+                    .read_u8()
+                    .await
+                    .expect("read domain length");
                 let mut address = vec![0; usize::from(length)];
-                inbound.read_exact(&mut address).await.expect("read domain target");
+                inbound
+                    .read_exact(&mut address)
+                    .await
+                    .expect("read domain target");
             }
             4 => {
                 let mut address = [0; 16];
-                inbound.read_exact(&mut address).await.expect("read IPv6 target");
+                inbound
+                    .read_exact(&mut address)
+                    .await
+                    .expect("read IPv6 target");
             }
             atyp => panic!("unsupported SOCKS5 address type {atyp}"),
         }
-        let port = inbound.read_u16().await.expect("read target port");
+        let port = inbound
+            .read_u16()
+            .await
+            .expect("read target port");
         assert_eq!(port, target_addr.port());
-        let mut outbound =
-            tokio::net::TcpStream::connect(target_addr).await.expect("connect target");
+        let mut outbound = tokio::net::TcpStream::connect(target_addr)
+            .await
+            .expect("connect target");
         inbound
             .write_all(&[5, 0, 0, 1, 127, 0, 0, 1, (port >> 8) as u8, port as u8])
             .await
             .expect("accept SOCKS5 connect");
-        tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await
+        tokio::io::copy_bidirectional(&mut inbound, &mut outbound)
+            .await
             .expect("forward SOCKS5 traffic");
     });
 
@@ -463,7 +511,13 @@ async fn socks5_proxy_connects_to_real_target() {
         .expect("request through SOCKS5");
 
     assert_eq!(response.status(), 200);
-    assert_eq!(response.text().await.expect("target body"), "ok");
+    assert_eq!(
+        response
+            .text()
+            .await
+            .expect("target body"),
+        "ok"
+    );
     let request = target.await.expect("target task");
     assert!(request.starts_with("GET /package HTTP/1.1\r\n"), "got {request:?}");
     socks.await.expect("SOCKS5 task");
@@ -623,8 +677,12 @@ async fn acquire_for_url_routes_per_registry_then_falls_back() {
     )
     .expect("valid");
 
-    let scoped_guard = throttled.acquire_for_url("https://reg.example.com/pkg").await;
-    let default_guard = throttled.acquire_for_url("https://other.example.org/pkg").await;
+    let scoped_guard = throttled
+        .acquire_for_url("https://reg.example.com/pkg")
+        .await;
+    let default_guard = throttled
+        .acquire_for_url("https://other.example.org/pkg")
+        .await;
     let scoped_ptr: *const reqwest::Client = &raw const *scoped_guard;
     let default_ptr: *const reqwest::Client = &raw const *default_guard;
     assert_ne!(
@@ -632,14 +690,12 @@ async fn acquire_for_url_routes_per_registry_then_falls_back() {
         "scoped and default URLs must route through different reqwest clients",
     );
 
-    let scoped_guard =
-        throttled.acquire_for_url_without_redirects_with_priority("https://reg.example.com/pkg", 0)
-            .await;
-    let default_guard = throttled.acquire_for_url_without_redirects_with_priority(
-        "https://other.example.org/pkg",
-        0,
-    )
-    .await;
+    let scoped_guard = throttled
+        .acquire_for_url_without_redirects_with_priority("https://reg.example.com/pkg", 0)
+        .await;
+    let default_guard = throttled
+        .acquire_for_url_without_redirects_with_priority("https://other.example.org/pkg", 0)
+        .await;
     let scoped_ptr: *const reqwest::Client = &raw const *scoped_guard;
     let default_ptr: *const reqwest::Client = &raw const *default_guard;
     assert_ne!(
@@ -692,7 +748,9 @@ async fn per_registry_route_selects_the_client_for_the_requested_redirect_mode()
     // and still look green.
     {
         let routed_guard = throttled.acquire_for_url(&url).await;
-        let unmatched_guard = throttled.acquire_for_url("https://other.example.org/pkg").await;
+        let unmatched_guard = throttled
+            .acquire_for_url("https://other.example.org/pkg")
+            .await;
         let routed: *const reqwest::Client = &raw const *routed_guard;
         let unmatched: *const reqwest::Client = &raw const *unmatched_guard;
         assert_ne!(routed, unmatched, "the fixture URL must reach its own routed client");
@@ -726,8 +784,12 @@ async fn acquire_for_url_falls_back_to_default_when_no_overrides() {
     // short-circuits and `acquire_for_url` always returns the
     // default client.
     let throttled = ThrottledClient::new_for_installs();
-    let permit_a = throttled.acquire_for_url("https://example.com/").await;
-    let permit_b = throttled.acquire_for_url("https://other.example.org/").await;
+    let permit_a = throttled
+        .acquire_for_url("https://example.com/")
+        .await;
+    let permit_b = throttled
+        .acquire_for_url("https://other.example.org/")
+        .await;
     let a_ptr: *const reqwest::Client = &raw const *permit_a;
     let b_ptr: *const reqwest::Client = &raw const *permit_b;
     assert_eq!(a_ptr, b_ptr, "without overrides every URL should hit the default client");

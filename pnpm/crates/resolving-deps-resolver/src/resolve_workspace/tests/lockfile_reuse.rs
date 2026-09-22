@@ -44,7 +44,13 @@ async fn time_based_cutoff_falls_back_to_the_lockfiles_recorded_time() {
 
     assert_eq!(
         resolver.opts_for("sub"),
-        (false, Some(Utc.with_ymd_and_hms(2024, 5, 20, 9, 0, 0).unwrap())),
+        (
+            false,
+            Some(
+                Utc.with_ymd_and_hms(2024, 5, 20, 9, 0, 0)
+                    .unwrap()
+            )
+        ),
         "the recorded publish date stands in for the missing one",
     );
     assert_eq!(
@@ -79,7 +85,9 @@ async fn skips_an_optional_dependency_whose_resolution_fails_with_no_locked_entr
     .await
     .expect("resolution failure of an optional dependency is skipped");
 
-    let direct = &result.peers.direct_dependencies_by_importer["."];
+    let direct = &result
+        .peers
+        .direct_dependencies_by_importer["."];
     assert!(direct.contains_key("kept"), "the regular dep resolves: {direct:?}");
     assert!(!direct.contains_key("broken"), "the failing optional edge is dropped: {direct:?}");
     let skipped = skipped.lock().unwrap();
@@ -94,7 +102,9 @@ async fn skips_an_optional_dependency_whose_resolution_fails_with_no_locked_entr
     );
     assert_eq!(skipped[0].prefix, "/repo");
     assert!(
-        skipped[0].details.contains("No matching version found for broken@^1.0.0"),
+        skipped[0]
+            .details
+            .contains("No matching version found for broken@^1.0.0"),
         "details carry the resolver error: {}",
         skipped[0].details,
     );
@@ -124,7 +134,9 @@ async fn fails_on_an_optional_dependency_that_cannot_be_resolved_with_a_satisfyi
     let Err(crate::ResolveImporterError::Resolve(err)) = result else {
         panic!("a locked optional dependency must fail loudly");
     };
-    let help = miette::Diagnostic::help(&err).expect("carries the lockfile hint").to_string();
+    let help = miette::Diagnostic::help(&err)
+        .expect("carries the lockfile hint")
+        .to_string();
     assert!(help.contains("the lockfile contains a resolution for it"), "unexpected hint: {help}");
     assert!(
         matches!(err, crate::ResolveDependencyTreeError::LockedOptionalResolutionFailure(_)),
@@ -149,7 +161,9 @@ async fn skips_an_optional_dependency_when_the_locked_entry_does_not_satisfy_the
     .await
     .expect("an out-of-range locked entry keeps the skip behavior");
 
-    let direct = &result.peers.direct_dependencies_by_importer["."];
+    let direct = &result
+        .peers
+        .direct_dependencies_by_importer["."];
     assert!(!direct.contains_key("broken"), "the failing optional edge is dropped: {direct:?}");
 }
 
@@ -193,10 +207,15 @@ async fn reused_lockfile_entries_still_notify_the_deprecation_sink() {
     let resolver =
         RecordingResolver { table: HashMap::default(), seen: Mutex::new(HashMap::default()) };
     let mut lockfile = importer_scoped_update_lockfile(&["root"], "old", "^1.0.0", "1.2.0", None);
-    lockfile.packages
+    lockfile
+        .packages
         .as_mut()
         .expect("lockfile carries packages")
-        .get_mut(&"old@1.2.0".parse::<pnpm_lockfile::PkgNameVerPeer>().expect("parse key"))
+        .get_mut(
+            &"old@1.2.0"
+                .parse::<pnpm_lockfile::PkgNameVerPeer>()
+                .expect("parse key"),
+        )
         .expect("direct entry")
         .deprecated = Some("use new instead".to_string());
     let notifications = std::sync::Arc::new(Mutex::new(Vec::new()));
@@ -428,17 +447,28 @@ async fn unchanged_shadow_ownership_handover_keeps_reused_subtree() {
     .await
     .unwrap();
 
-    let root_direct = result.peers.direct_dependencies_by_importer.get(".").expect("root importer");
+    let root_direct = result
+        .peers
+        .direct_dependencies_by_importer
+        .get(".")
+        .expect("root importer");
     assert_eq!(
-        root_direct.get("mid2").map(std::string::ToString::to_string),
+        root_direct
+            .get("mid2")
+            .map(std::string::ToString::to_string),
         Some("mid2@1.0.0".to_string()),
         "needyC's required peer mid2 is hoisted to the root importer",
     );
-    let mid2 = result.peers.graph
+    let mid2 = result
+        .peers
+        .graph
         .get(&pnpm_deps_path::DepPath::from("mid2@1.0.0".to_string()))
         .expect("mid2 in graph");
     assert_eq!(
-        mid2.edges.children.get("leaf2").map(std::string::ToString::to_string),
+        mid2.edges
+            .children
+            .get("leaf2")
+            .map(std::string::ToString::to_string),
         Some("leaf2@1.0.0".to_string()),
         "the lockfile-reused subtree must survive the ownership handover",
     );
@@ -452,7 +482,8 @@ async fn unchanged_shadow_ownership_handover_keeps_reused_subtree() {
 async fn a_pinned_subtree_keeps_its_children_against_a_fresh_walk() {
     for slow in [("fresh", "1.0.0"), ("reused", "1.0.0")] {
         let tree = resolve_pinned_versus_fresh(slow).await;
-        let recorded: Vec<&str> = tree.children_by_id
+        let recorded: Vec<&str> = tree
+            .children_by_id
             .get("shared@1.0.0")
             .expect("shared children")
             .iter()
@@ -510,7 +541,10 @@ async fn warm_up_of_a_speculative_only_edge_leaves_patch_bookkeeping_alone() {
     assert_eq!(resolver.calls_for("q", "^2.0.0"), 1, "the edge was warmed speculatively");
     assert_eq!(graph_versions_of(&result, "q"), ["1.0.0"], "and never entered the graph");
     assert!(
-        !result.merged_tree.applied_patches.contains("q@2.0.0"),
+        !result
+            .merged_tree
+            .applied_patches
+            .contains("q@2.0.0"),
         "a patch the real walk never applied must not count as applied",
     );
 }

@@ -215,7 +215,9 @@ pub(crate) fn shasums_cache_path(
     }
     // `:` (a port separator) is not portable in file names; `+` is the
     // same encoding the registry metadata mirror uses for it.
-    let host = host.to_ascii_lowercase().replace(':', "+");
+    let host = host
+        .to_ascii_lowercase()
+        .replace(':', "+");
     let mut segments = vec![encode_path_segment(&host)?];
     for segment in path.split('/') {
         if segment.is_empty() || segment == "." || segment == ".." {
@@ -223,7 +225,9 @@ pub(crate) fn shasums_cache_path(
         }
         segments.push(encode_path_segment(segment)?);
     }
-    let mut file = cache_dir.join(RUNTIME_SHASUMS_CACHE_DIR).join(trust.dir_name());
+    let mut file = cache_dir
+        .join(RUNTIME_SHASUMS_CACHE_DIR)
+        .join(trust.dir_name());
     file.extend(segments);
     Some(file)
 }

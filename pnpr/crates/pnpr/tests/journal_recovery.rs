@@ -31,7 +31,9 @@ fn static_config(storage: PathBuf) -> Config {
 }
 
 async fn body_json(body: Body) -> Value {
-    let bytes = to_bytes(body, usize::MAX).await.expect("read body");
+    let bytes = to_bytes(body, usize::MAX)
+        .await
+        .expect("read body");
     serde_json::from_slice(&bytes).expect("body parses as JSON")
 }
 
@@ -101,7 +103,9 @@ fn fabricate_crashed_publish_in(
     let tmp_path = pkg_dir.join(format!("{name}-{version}.tgz.tmp.999.0"));
     std::fs::write(&tmp_path, tarball).unwrap();
 
-    let txn_dir = storage.join(".pnpr-journal").join("0000000000000001-999-0");
+    let txn_dir = storage
+        .join(".pnpr-journal")
+        .join("0000000000000001-999-0");
     std::fs::create_dir_all(&txn_dir).unwrap();
     std::fs::write(
         txn_dir.join("packument-0.json"),
@@ -145,7 +149,9 @@ async fn recovery_rolls_a_sealed_transaction_forward() {
     let tarball = b"crashed-tarball-bytes";
     let tmp_path = fabricate_crashed_publish(&storage, "crash-fwd", "1.0.0", tarball, true);
 
-    recover_publish_journal(&static_config(storage.clone())).await.unwrap();
+    recover_publish_journal(&static_config(storage.clone()))
+        .await
+        .unwrap();
 
     // The package became fully visible: packument and tarball in
     // place, staged tmp file promoted, journal entry consumed.
@@ -189,7 +195,9 @@ async fn recovery_rolls_a_sealed_org_transaction_forward_into_its_namespace() {
     let tmp_path =
         fabricate_crashed_publish_in(&storage, Some("acme"), "crash-org", "1.0.0", tarball, true);
 
-    recover_publish_journal(&static_config(storage.clone())).await.unwrap();
+    recover_publish_journal(&static_config(storage.clone()))
+        .await
+        .unwrap();
 
     let on_disk: Value = serde_json::from_slice(
         &std::fs::read(storage.join("acme/crash-org/package.json"))
@@ -218,11 +226,21 @@ async fn recovery_rolls_an_unsealed_transaction_back() {
     let tmp_path =
         fabricate_crashed_publish(&storage, "crash-back", "1.0.0", b"aborted-bytes", false);
 
-    recover_publish_journal(&static_config(storage.clone())).await.unwrap();
+    recover_publish_journal(&static_config(storage.clone()))
+        .await
+        .unwrap();
 
     // Nothing of the aborted publish survives.
-    assert!(!storage.join("crash-back/package.json").exists());
-    assert!(!storage.join("crash-back/crash-back-1.0.0.tgz").exists());
+    assert!(
+        !storage
+            .join("crash-back/package.json")
+            .exists()
+    );
+    assert!(
+        !storage
+            .join("crash-back/crash-back-1.0.0.tgz")
+            .exists()
+    );
     assert!(!tmp_path.exists(), "staged tmp file should be deleted");
     assert!(
         std::fs::read_dir(storage.join(".pnpr-journal"))
@@ -248,7 +266,9 @@ async fn roll_forward_merges_with_versions_published_after_the_crash() {
     )
     .unwrap();
 
-    recover_publish_journal(&static_config(storage.clone())).await.unwrap();
+    recover_publish_journal(&static_config(storage.clone()))
+        .await
+        .unwrap();
 
     let on_disk: Value =
         serde_json::from_slice(&std::fs::read(pkg_dir.join("package.json")).unwrap()).unwrap();
@@ -259,7 +279,9 @@ async fn roll_forward_merges_with_versions_published_after_the_crash() {
 #[tokio::test]
 async fn recovery_is_a_no_op_without_a_journal_directory() {
     let tmp = TempDir::new().unwrap();
-    recover_publish_journal(&static_config(tmp.path().to_path_buf())).await.unwrap();
+    recover_publish_journal(&static_config(tmp.path().to_path_buf()))
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -288,7 +310,11 @@ async fn successful_batch_publish_leaves_no_journal_residue() {
     let response = app.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
 
-    assert!(storage.join("residue-pkg/package.json").exists());
+    assert!(
+        storage
+            .join("residue-pkg/package.json")
+            .exists()
+    );
     let journal_root = storage.join(".pnpr-journal");
     let leftover: Vec<_> = match std::fs::read_dir(&journal_root) {
         Ok(entries) => entries

@@ -38,13 +38,8 @@ use std::fs;
 ///   + project-2 × is-positive@2.0.0).
 #[test]
 fn inject_workspace_packages_writes_file_resolutions_and_lockfile_setting() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // Flip the workspace yaml: `injectWorkspacePackages: true`,
@@ -149,7 +144,8 @@ fn inject_workspace_packages_writes_file_resolutions_and_lockfile_setting() {
         let dep_name_parsed = dep_name
             .parse::<pnpm_lockfile::PkgName>()
             .unwrap_or_else(|err| panic!("parse PkgName {dep_name:?}: {err}"));
-        let importer = parsed.importers
+        let importer = parsed
+            .importers
             .get(importer_id)
             .unwrap_or_else(|| {
                 panic!("pnpm-lock.yaml missing `importers[{importer_id:?}]` block:\n{lockfile}")
@@ -249,13 +245,8 @@ fn inject_workspace_packages_writes_file_resolutions_and_lockfile_setting() {
 /// with the workspace-level `injectWorkspacePackages` unset.
 #[test]
 fn dependencies_meta_injected_per_dep_overrides_global_off() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -320,10 +311,12 @@ fn dependencies_meta_injected_per_dep_overrides_global_off() {
     let parsed: pnpm_lockfile::Lockfile = serde_saphyr::from_str(&lockfile)
         .unwrap_or_else(|err| panic!("re-parse pnpm-lock.yaml: {err}\n{lockfile}"));
 
-    let importer = parsed.importers
+    let importer = parsed
+        .importers
         .get("project-2")
         .unwrap_or_else(|| panic!("missing `importers[project-2]`:\n{lockfile}"));
-    let deps = importer.dependencies
+    let deps = importer
+        .dependencies
         .as_ref()
         .unwrap_or_else(|| panic!("missing project-2 dependencies:\n{lockfile}"));
     let project_1_name: pnpm_lockfile::PkgName = "project-1".parse().unwrap();

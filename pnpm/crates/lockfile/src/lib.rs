@@ -254,7 +254,9 @@ impl<'a> LockfileEntries<'a> {
     /// Consumers decide whether to reuse packages; cleanup always needs the
     /// previous dependency records. Empty when no current lockfile exists.
     pub fn of_previous_install(lockfile: Option<&'a Lockfile>) -> Self {
-        lockfile.map(LockfileEntries::from).unwrap_or_default()
+        lockfile
+            .map(LockfileEntries::from)
+            .unwrap_or_default()
     }
 }
 
@@ -301,7 +303,8 @@ impl Lockfile {
     /// Convenience accessor for the root project's snapshot.
     #[must_use]
     pub fn root_project(&self) -> Option<&'_ ProjectSnapshot> {
-        self.importers.get(Lockfile::ROOT_IMPORTER_KEY)
+        self.importers
+            .get(Lockfile::ROOT_IMPORTER_KEY)
     }
 
     /// `true` when no importer in this lockfile records any dependency
@@ -315,14 +318,24 @@ impl Lockfile {
     /// misread as empty and delete its current lockfile.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.importers
-            .values()
-            .all(|importer| {
-                importer.specifiers.as_ref().is_none_or(HashMap::is_empty)
-                    && importer.dependencies.as_ref().is_none_or(HashMap::is_empty)
-                    && importer.dev_dependencies.as_ref().is_none_or(HashMap::is_empty)
-                    && importer.optional_dependencies.as_ref().is_none_or(HashMap::is_empty)
-            })
+        self.importers.values().all(|importer| {
+            importer
+                .specifiers
+                .as_ref()
+                .is_none_or(HashMap::is_empty)
+                && importer
+                    .dependencies
+                    .as_ref()
+                    .is_none_or(HashMap::is_empty)
+                && importer
+                    .dev_dependencies
+                    .as_ref()
+                    .is_none_or(HashMap::is_empty)
+                && importer
+                    .optional_dependencies
+                    .as_ref()
+                    .is_none_or(HashMap::is_empty)
+        })
     }
 
     /// Defense-in-depth for pruned lockfiles (older `turbo prune --docker`,
@@ -352,7 +365,9 @@ impl Lockfile {
         if to_insert.is_empty() {
             return;
         }
-        let packages = self.packages.get_or_insert_with(HashMap::new);
+        let packages = self
+            .packages
+            .get_or_insert_with(HashMap::new);
         for (key, directory_resolution) in to_insert {
             packages
                 .entry(key)

@@ -48,7 +48,10 @@ pub fn find_global_install_dirs(
         .collect();
     let mut install_dirs: Vec<PathBuf> = Vec::new();
     for pkg in packages {
-        let matched = pkg.dependencies.iter().any(|(alias, _)| matches_params(&patterns, alias));
+        let matched = pkg
+            .dependencies
+            .iter()
+            .any(|(alias, _)| matches_params(&patterns, alias));
         if matched && !install_dirs.contains(&pkg.install_dir) {
             install_dirs.push(pkg.install_dir);
         }
@@ -65,7 +68,9 @@ pub fn list_global_packages(
     long: bool,
 ) -> std::io::Result<String> {
     let packages = scan_global_packages(global_dir)?;
-    let global_dir_str = global_dir.to_string_lossy().into_owned();
+    let global_dir_str = global_dir
+        .to_string_lossy()
+        .into_owned();
     let deps = collect_listed_deps(&packages, params);
 
     if deps.is_empty() {
@@ -100,12 +105,16 @@ fn collect_listed_deps(packages: &[GlobalPackageInfo], params: &[String]) -> Vec
 }
 
 fn listed_dep(pkg: &GlobalPackageInfo, installed: InstalledGlobalPackage) -> ListedDep {
-    let name = installed.manifest
+    let name = installed
+        .manifest
         .get("name")
         .and_then(Value::as_str)
         .unwrap_or(&installed.alias)
         .to_string();
-    let location = pkg.install_dir.join("node_modules").join(&installed.alias);
+    let location = pkg
+        .install_dir
+        .join("node_modules")
+        .join(&installed.alias);
     let path = location.to_string_lossy().into_owned();
     ListedDep { alias: installed.alias, name, version: installed.version, location, path }
 }
@@ -154,7 +163,10 @@ fn insert_manifest_fields(item: &mut Map<String, Value>, dep: &ListedDep) {
         return;
     };
     for key in ["description", "license", "homepage"] {
-        if let Some(value) = manifest.get(key).and_then(Value::as_str) {
+        if let Some(value) = manifest
+            .get(key)
+            .and_then(Value::as_str)
+        {
             item.insert(key.to_string(), json!(value));
         }
     }
@@ -272,7 +284,8 @@ fn flatten_groups(node: &TreeNode) -> Vec<(&TreeNode, &str)> {
     node.groups
         .iter()
         .flat_map(|group| {
-            group.nodes
+            group
+                .nodes
                 .iter()
                 .map(|node| (node, group.group.as_str()))
         })
@@ -350,19 +363,23 @@ fn matches_params(patterns: &[WildcardMatcher], alias: &str) -> bool {
 }
 
 fn dim(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.dimmed()).to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.dimmed())
+        .to_string()
 }
 
 fn bold(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.bold()).to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.bold())
+        .to_string()
 }
 
 fn cyan_bright(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.bright_cyan()).to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.bright_cyan())
+        .to_string()
 }
 
 fn gray(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.bright_black()).to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.bright_black())
+        .to_string()
 }
 
 #[cfg(test)]

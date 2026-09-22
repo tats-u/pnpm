@@ -39,7 +39,9 @@ fn version_only_specifier_borrows_alias_for_name() {
 
 #[test]
 fn scope_and_name_only() {
-    let spec = parse_jsr_specifier("jsr:@foo/bar", None).unwrap().unwrap();
+    let spec = parse_jsr_specifier("jsr:@foo/bar", None)
+        .unwrap()
+        .unwrap();
     assert_eq!(
         spec,
         JsrSpec {
@@ -54,7 +56,9 @@ fn scope_and_name_only() {
 fn scope_name_and_selector() {
     for selector in ["^1.0.0", "1.0.0", "latest"] {
         let input = format!("jsr:@foo/bar@{selector}");
-        let spec = parse_jsr_specifier(&input, None).unwrap().unwrap();
+        let spec = parse_jsr_specifier(&input, None)
+            .unwrap()
+            .unwrap();
         assert_eq!(
             spec,
             JsrSpec {

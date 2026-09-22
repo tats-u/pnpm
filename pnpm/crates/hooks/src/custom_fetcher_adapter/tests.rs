@@ -36,7 +36,8 @@ impl ScriptedFetcher {
 #[async_trait]
 impl CustomFetcher for ScriptedFetcher {
     async fn can_fetch(&self, pkg_id: &str, resolution: Value) -> Result<bool, HookError> {
-        self.can_fetch_calls.fetch_add(1, Ordering::SeqCst);
+        self.can_fetch_calls
+            .fetch_add(1, Ordering::SeqCst);
         self.seen_pkg_ids
             .lock()
             .unwrap()
@@ -54,7 +55,8 @@ impl CustomFetcher for ScriptedFetcher {
         _resolution: Value,
         opts: Value,
     ) -> Result<Value, HookError> {
-        self.fetch_calls.fetch_add(1, Ordering::SeqCst);
+        self.fetch_calls
+            .fetch_add(1, Ordering::SeqCst);
         self.seen_opts
             .lock()
             .unwrap()
@@ -80,12 +82,25 @@ async fn returns_result_from_first_matching_fetcher() {
     let resolution = json!({ "type": "@custom/registry", "url": "https://example.com/pkg" });
     let opts = json!({ "manifest": { "name": "foo", "version": "1.0.0" } });
 
-    let result = picker.try_fetch("foo@1.0.0", &resolution, &opts).await.unwrap();
+    let result = picker
+        .try_fetch("foo@1.0.0", &resolution, &opts)
+        .await
+        .unwrap();
 
     assert!(result.is_some());
     assert_eq!(result.unwrap(), fetch_result());
-    assert_eq!(fetcher.can_fetch_calls.load(Ordering::SeqCst), 1);
-    assert_eq!(fetcher.fetch_calls.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        fetcher
+            .can_fetch_calls
+            .load(Ordering::SeqCst),
+        1
+    );
+    assert_eq!(
+        fetcher
+            .fetch_calls
+            .load(Ordering::SeqCst),
+        1
+    );
 }
 
 #[tokio::test]
@@ -99,11 +114,24 @@ async fn returns_none_when_no_fetcher_claims_package() {
     let resolution = json!({ "type": "@custom/registry" });
     let opts = json!({});
 
-    let result = picker.try_fetch("foo@1.0.0", &resolution, &opts).await.unwrap();
+    let result = picker
+        .try_fetch("foo@1.0.0", &resolution, &opts)
+        .await
+        .unwrap();
 
     assert!(result.is_none());
-    assert_eq!(fetcher.can_fetch_calls.load(Ordering::SeqCst), 1);
-    assert_eq!(fetcher.fetch_calls.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        fetcher
+            .can_fetch_calls
+            .load(Ordering::SeqCst),
+        1
+    );
+    assert_eq!(
+        fetcher
+            .fetch_calls
+            .load(Ordering::SeqCst),
+        0
+    );
 }
 
 #[tokio::test]
@@ -122,15 +150,35 @@ async fn tries_fetchers_in_order_stops_at_first_match() {
     let resolution = json!({ "tarball": "https://example.com/foo.tgz" });
     let opts = json!({});
 
-    let result = picker.try_fetch("foo@1.0.0", &resolution, &opts).await.unwrap();
+    let result = picker
+        .try_fetch("foo@1.0.0", &resolution, &opts)
+        .await
+        .unwrap();
 
     assert_eq!(result.unwrap(), fetch_result());
-    assert_eq!(first.can_fetch_calls.load(Ordering::SeqCst), 1);
-    assert_eq!(first.fetch_calls.load(Ordering::SeqCst), 0);
-    assert_eq!(second.can_fetch_calls.load(Ordering::SeqCst), 1);
-    assert_eq!(second.fetch_calls.load(Ordering::SeqCst), 1);
     assert_eq!(
-        third.can_fetch_calls.load(Ordering::SeqCst),
+        first
+            .can_fetch_calls
+            .load(Ordering::SeqCst),
+        1
+    );
+    assert_eq!(first.fetch_calls.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        second
+            .can_fetch_calls
+            .load(Ordering::SeqCst),
+        1
+    );
+    assert_eq!(
+        second
+            .fetch_calls
+            .load(Ordering::SeqCst),
+        1
+    );
+    assert_eq!(
+        third
+            .can_fetch_calls
+            .load(Ordering::SeqCst),
         0,
         "must not consult fetchers after a match",
     );
@@ -218,12 +266,16 @@ async fn a_non_object_can_fetch_answer_keeps_the_previous_resolution() {
     let resolution =
         json!({ "tarball": "https://registry.test/pkg.tgz", "integrity": "sha512-abc" });
 
-    let selection = picker.pick_fetcher("pkg@1.0.0", &resolution).await.expect("pick a fetcher");
+    let selection = picker
+        .pick_fetcher("pkg@1.0.0", &resolution)
+        .await
+        .expect("pick a fetcher");
 
     assert!(selection.fetcher.is_some(), "the second fetcher claims the package");
     assert_eq!(selection.resolution, resolution);
     assert_eq!(
-        claiming.seen_resolutions
+        claiming
+            .seen_resolutions
             .lock()
             .unwrap()
             .as_slice(),
@@ -265,7 +317,10 @@ async fn a_declining_rewrite_cannot_drop_the_locked_integrity() {
     let resolution =
         json!({ "tarball": "https://registry.test/pkg.tgz", "integrity": "sha512-abc" });
 
-    let selection = picker.pick_fetcher("pkg@1.0.0", &resolution).await.expect("pick a fetcher");
+    let selection = picker
+        .pick_fetcher("pkg@1.0.0", &resolution)
+        .await
+        .expect("pick a fetcher");
 
     assert!(selection.fetcher.is_none());
     assert_eq!(

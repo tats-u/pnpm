@@ -34,7 +34,11 @@ pub struct ArtifactBuildPolicy {
 
 impl ArtifactBuildPolicy {
     fn permits(&self, package_name: &str) -> bool {
-        self.eligible_packages.contains(package_name) && self.allowed_builds.contains(package_name)
+        self.eligible_packages
+            .contains(package_name)
+            && self
+                .allowed_builds
+                .contains(package_name)
     }
 }
 
@@ -97,8 +101,13 @@ fn index_candidates(
     }
     let mut by_key = BTreeMap::new();
     for candidate in candidates {
-        candidate.validate().map_err(|err| PnprClientError::Protocol(err.to_string()))?;
-        if by_key.insert(candidate.key.as_str(), candidate).is_some() {
+        candidate
+            .validate()
+            .map_err(|err| PnprClientError::Protocol(err.to_string()))?;
+        if by_key
+            .insert(candidate.key.as_str(), candidate)
+            .is_some()
+        {
             return Err(PnprClientError::Protocol(format!(
                 "duplicate shared artifact candidate {:?}",
                 candidate.key,
@@ -145,15 +154,24 @@ fn verify_variant(
     candidate: &ArtifactCandidate,
     opts: &ResolveArtifactsOptions,
 ) -> Result<Option<VerifiedArtifact>, PnprClientError> {
-    let Some(public_key) = opts.trusted_keys.get(&variant.envelope.key_id) else {
+    let Some(public_key) = opts
+        .trusted_keys
+        .get(&variant.envelope.key_id)
+    else {
         return Ok(None);
     };
-    let Ok(payload_bytes) = variant.envelope.verify_signature_bytes(public_key) else {
+    let Ok(payload_bytes) = variant
+        .envelope
+        .verify_signature_bytes(public_key)
+    else {
         return Ok(None);
     };
-    let envelope_digest =
-        variant.envelope.digest().map_err(|err| PnprClientError::Protocol(err.to_string()))?;
-    let quarantined = opts.quarantined_envelope_digests
+    let envelope_digest = variant
+        .envelope
+        .digest()
+        .map_err(|err| PnprClientError::Protocol(err.to_string()))?;
+    let quarantined = opts
+        .quarantined_envelope_digests
         .get(candidate.key.as_str())
         .is_some_and(|digests| digests.contains(&envelope_digest));
     if quarantined {
@@ -194,8 +212,13 @@ fn artifact_matches_candidate(payload: &ArtifactPayload, candidate: &ArtifactCan
 impl PnprClient {
     /// Confirm that the server enabled the v0 signed-artifact `PoC`.
     pub async fn handshake_artifacts(&self) -> Result<(), PnprClientError> {
-        let capability = self.fetch_handshake(Some(self.artifact_request_timeout)).await?;
-        if !capability.artifacts.contains(&PROTOCOL_VERSION) {
+        let capability = self
+            .fetch_handshake(Some(self.artifact_request_timeout))
+            .await?;
+        if !capability
+            .artifacts
+            .contains(&PROTOCOL_VERSION)
+        {
             return Err(PnprClientError::Server(format!(
                 "pnpr server does not advertise shared artifact protocol v{PROTOCOL_VERSION}",
             )));
@@ -210,8 +233,11 @@ impl PnprClient {
         request: &PublishArtifactRequest,
         authorization: Option<&str>,
     ) -> Result<(), PnprClientError> {
-        request.validate().map_err(|err| PnprClientError::Protocol(err.to_string()))?;
-        let mut put = self.http
+        request
+            .validate()
+            .map_err(|err| PnprClientError::Protocol(err.to_string()))?;
+        let mut put = self
+            .http
             .put(format!("{}-/pnpr/v0/artifacts", self.base_url))
             .timeout(self.artifact_request_timeout)
             .json(request);
@@ -252,7 +278,9 @@ impl PnprClient {
             return Ok(BTreeMap::new());
         }
         let candidates = index_candidates(&opts.candidates)?;
-        let response = self.post_resolve_artifacts(&opts).await?;
+        let response = self
+            .post_resolve_artifacts(&opts)
+            .await?;
         if response.artifacts.len() > candidates.len() {
             return Err(PnprClientError::Protocol(
                 "shared artifact response contains more entries than requested".to_string(),
@@ -277,7 +305,8 @@ impl PnprClient {
         opts: &ResolveArtifactsOptions,
     ) -> Result<ResolveArtifactsResponse, PnprClientError> {
         let request = ResolveArtifactsRequest { candidates: opts.candidates.clone() };
-        let mut post = self.http
+        let mut post = self
+            .http
             .post(format!("{}-/pnpr/v0/artifacts/resolve", self.base_url))
             .timeout(self.artifact_request_timeout)
             .json(&request);
@@ -304,8 +333,11 @@ impl PnprClient {
         request: &ArtifactBlobRequest,
         authorization: Option<&str>,
     ) -> Result<Vec<u8>, PnprClientError> {
-        request.validate().map_err(|err| PnprClientError::Protocol(err.to_string()))?;
-        let mut post = self.http
+        request
+            .validate()
+            .map_err(|err| PnprClientError::Protocol(err.to_string()))?;
+        let mut post = self
+            .http
             .post(format!("{}-/pnpr/v0/artifacts/blob", self.base_url))
             .timeout(self.artifact_request_timeout)
             .json(request);

@@ -33,7 +33,9 @@ impl PythonPrepare<'_> {
             "root": root, "backend": backend(manifest).module,
             "backend_path": backend(manifest).path, "editable": false,
         });
-        let environment = match self.build_environment::<Reporter>(root, requires, &request).await?
+        let environment = match self
+            .build_environment::<Reporter>(root, requires, &request)
+            .await?
         {
             BuildEnvironment::Ready(environment) => environment,
             BuildEnvironment::NotApproved(names) => {
@@ -121,7 +123,11 @@ impl Shared<'_> {
     ) -> Result<BTreeMap<PathBuf, Arc<host::Interpreter>>> {
         let mut selected = BTreeMap::new();
         let mut together = BTreeSet::new();
-        for membership in scope.memberships.iter().filter(|membership| membership.shared) {
+        for membership in scope
+            .memberships
+            .iter()
+            .filter(|membership| membership.shared)
+        {
             together.extend(membership.members.iter().cloned());
             // Boxed to bound the nesting of the metadata futures, which
             // the compiler otherwise lays out past its recursion limit.
@@ -134,8 +140,9 @@ impl Shared<'_> {
         for (root, manifest) in projects {
             if manifest.needs_metadata() && scope.needed.contains(root) && !together.contains(root)
             {
-                let interpreter =
-                    self.project_metadata::<Reporter>(root, manifest, interpreters).await?;
+                let interpreter = self
+                    .project_metadata::<Reporter>(root, manifest, interpreters)
+                    .await?;
                 selected.insert(root.clone(), interpreter);
             }
         }
@@ -149,7 +156,9 @@ impl Shared<'_> {
         interpreters: &mut Interpreters<'_>,
     ) -> Result<Arc<host::Interpreter>> {
         let original = Arc::clone(manifest);
-        let mut interpreter = interpreters.select::<Reporter>(root, &original).await?;
+        let mut interpreter = interpreters
+            .select::<Reporter>(root, &original)
+            .await?;
         for _ in 0..3 {
             let declared = requires_python(manifest);
             self.prepare_with::<Reporter>(
@@ -161,7 +170,9 @@ impl Shared<'_> {
             if requires_python(manifest) == declared {
                 return Ok(interpreter);
             }
-            let selected = interpreters.select::<Reporter>(root, manifest).await?;
+            let selected = interpreters
+                .select::<Reporter>(root, manifest)
+                .await?;
             if Arc::ptr_eq(&interpreter, &selected) {
                 return Ok(interpreter);
             }
@@ -185,14 +196,20 @@ impl Shared<'_> {
             return Ok(None);
         };
         let root = membership.root.as_path();
-        let mut interpreter = members.select::<Reporter>(interpreters, root, projects).await?;
+        let mut interpreter = members
+            .select::<Reporter>(interpreters, root, projects)
+            .await?;
         for _ in 0..3 {
             let declared = members.ranges(projects);
-            members.prepare::<Reporter>(self, &interpreter, projects).await?;
+            members
+                .prepare::<Reporter>(self, &interpreter, projects)
+                .await?;
             if members.ranges(projects) == declared {
                 return Ok(Some(interpreter));
             }
-            let selected = members.select::<Reporter>(interpreters, root, projects).await?;
+            let selected = members
+                .select::<Reporter>(interpreters, root, projects)
+                .await?;
             if Arc::ptr_eq(&interpreter, &selected) {
                 return Ok(Some(interpreter));
             }
@@ -278,7 +295,9 @@ impl Members {
                 .iter()
                 .map(|&position| (projects[position].0.as_path(), &*projects[position].1)),
         )?;
-        interpreters.select_accepting::<Reporter>(root, range.as_ref()).await
+        interpreters
+            .select_accepting::<Reporter>(root, range.as_ref())
+            .await
     }
 
     /// Prepare the metadata of every member that has any, with
@@ -289,15 +308,16 @@ impl Members {
         interpreter: &Arc<host::Interpreter>,
         projects: &mut [(PathBuf, Arc<Manifest>)],
     ) -> Result<()> {
-        for (&position, original) in self.positions.iter().zip(&self.originals) {
+        for (&position, original) in self
+            .positions
+            .iter()
+            .zip(&self.originals)
+        {
             if original.needs_metadata() {
                 let (root, manifest) = &mut projects[position];
-                shared.prepare_with::<Reporter>(
-                    interpreter,
-                    Preparing { root, original },
-                    manifest,
-                )
-                .await?;
+                shared
+                    .prepare_with::<Reporter>(interpreter, Preparing { root, original }, manifest)
+                    .await?;
             }
         }
         Ok(())
@@ -305,7 +325,10 @@ impl Members {
 }
 
 fn requires_python(manifest: &Manifest) -> Option<String> {
-    manifest.project.as_ref().and_then(|project| project.requires_python.clone())
+    manifest
+        .project
+        .as_ref()
+        .and_then(|project| project.requires_python.clone())
 }
 
 pub(in super::super) struct FallbackWheel {

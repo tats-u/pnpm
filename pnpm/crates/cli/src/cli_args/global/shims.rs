@@ -31,20 +31,22 @@ pub(super) fn link_global_bins(
         .filter_map(|pkg| pkg.manifest.get("name")?.as_str());
     let newly_enabled = record_package_manager_shims(config, names)?;
 
-    let (direct, context_aware): (Vec<_>, Vec<_>) = pkgs
-        .iter()
-        .cloned()
-        .partition(|pkg| {
-            let name = pkg.manifest.get("name").and_then(serde_json::Value::as_str);
-            !name.is_some_and(|name| {
-                (config.global_shims.is_enabled(name) || newly_enabled.contains(name))
-                    && (!pnpm_package_manifest::is_runtime_alias(name)
-                        || dependencies
-                            .iter()
-                            .any(|(alias, spec)| alias == name && spec.starts_with("runtime:")))
-            })
-        });
-    migrate_legacy_shims(global_bin_dir).into_diagnostic().wrap_err("migrate the global shims")?;
+    let (direct, context_aware): (Vec<_>, Vec<_>) = pkgs.iter().cloned().partition(|pkg| {
+        let name = pkg
+            .manifest
+            .get("name")
+            .and_then(serde_json::Value::as_str);
+        !name.is_some_and(|name| {
+            (config.global_shims.is_enabled(name) || newly_enabled.contains(name))
+                && (!pnpm_package_manifest::is_runtime_alias(name)
+                    || dependencies
+                        .iter()
+                        .any(|(alias, spec)| alias == name && spec.starts_with("runtime:")))
+        })
+    });
+    migrate_legacy_shims(global_bin_dir)
+        .into_diagnostic()
+        .wrap_err("migrate the global shims")?;
     if !direct.is_empty() {
         // A slot turning direct again (its package's shim switched off)
         // must not keep the native shim, which would shadow the direct
@@ -119,7 +121,8 @@ pub(super) fn check_virtual_shim_conflicts(
 fn package_bin_providers(packages: &[PackageBinSource]) -> HashMap<String, BTreeSet<String>> {
     let mut providers_by_bin: HashMap<String, BTreeSet<String>> = HashMap::new();
     for package in packages {
-        let package_name = package.manifest
+        let package_name = package
+            .manifest
             .get("name")
             .and_then(serde_json::Value::as_str)
             .unwrap_or("");
@@ -160,7 +163,10 @@ fn add_package_shims_to_restore(
     enabled: &GlobalShims,
     shims: &mut BTreeMap<String, BTreeSet<String>>,
 ) -> miette::Result<()> {
-    let Some(package_name) = package.manifest.get("name").and_then(serde_json::Value::as_str)
+    let Some(package_name) = package
+        .manifest
+        .get("name")
+        .and_then(serde_json::Value::as_str)
     else {
         return Ok(());
     };

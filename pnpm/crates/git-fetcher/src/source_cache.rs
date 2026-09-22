@@ -33,7 +33,10 @@ struct SourceKey {
 impl GitSourceCache {
     pub(crate) fn get(&self, source: &GitSource<'_>) -> SourceResult {
         let cell = {
-            let mut sources = self.sources.lock().expect("git source cache lock poisoned");
+            let mut sources = self
+                .sources
+                .lock()
+                .expect("git source cache lock poisoned");
             Arc::clone(
                 sources
                     .entry(SourceKey::new(source))
@@ -41,7 +44,9 @@ impl GitSourceCache {
             )
         };
         cell.get_or_init(|| {
-            let checkout = tempfile::tempdir().map_err(GitFetcherError::Io).map_err(Arc::new)?;
+            let checkout = tempfile::tempdir()
+                .map_err(GitFetcherError::Io)
+                .map_err(Arc::new)?;
             checkout_commit(&CheckoutOptions {
                 repo: source.repo,
                 commit: source.commit,

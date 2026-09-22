@@ -32,18 +32,24 @@ pub(super) fn run(ctx: &RunCtx<'_>, config: &Config, remove_lockfile: bool) -> m
     // representation of the paths built from the canonicalized `--dir`; on
     // Windows the raw `current_dir()` can differ (casing, 8.3 short names,
     // junctions) and defeat the relative-path computation.
-    let cwd = std::env::current_dir().and_then(dunce::canonicalize).unwrap_or_default();
+    let cwd = std::env::current_dir()
+        .and_then(dunce::canonicalize)
+        .unwrap_or_default();
     // `pnpm clean` resolves `modulesDir` against every project directory it
     // cleans. `config.modules_dir` is already anchored — at the workspace
     // root, or at a configured `lockfileDir` — so rejoining it per project
     // would send every project back to that one directory. Take the
     // configured leaf instead; an absolute setting survives `join`, as it
     // does pnpm's `pathAbsolute`.
-    let modules_leaf = config.explicit_settings
+    let modules_leaf = config
+        .explicit_settings
         .get("modulesDir")
         .and_then(Value::as_str)
         .map_or_else(|| Path::new("node_modules"), Path::new);
-    let root_dir = config.workspace_dir.as_deref().unwrap_or(ctx.locations.dir);
+    let root_dir = config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(ctx.locations.dir);
     let dirs: Vec<PathBuf> = if let Some(workspace_dir) = config.workspace_dir.as_deref() {
         let (projects, _patterns) = discover_workspace_projects(workspace_dir, config)?;
         projects

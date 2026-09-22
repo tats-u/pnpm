@@ -66,12 +66,10 @@ pub(super) fn url_without_credentials(raw: &str) -> Option<url::Url> {
 /// The parser keeps a `%` that begins no `%XX` escape as the manifest wrote
 /// it, and an iri-reference admits no such thing.
 fn percent_escapes_are_complete(url: &str) -> bool {
-    url.split('%')
-        .skip(1)
-        .all(|rest| {
-            let mut escape = rest.bytes().take(2);
-            escape.len() == 2 && escape.all(|byte| byte.is_ascii_hexdigit())
-        })
+    url.split('%').skip(1).all(|rest| {
+        let mut escape = rest.bytes().take(2);
+        escape.len() == 2 && escape.all(|byte| byte.is_ascii_hexdigit())
+    })
 }
 
 pub(super) fn extract_bugs_url(manifest: &serde_json::Value) -> Option<String> {
@@ -121,7 +119,10 @@ pub(super) fn build_purl(name: &str, version: &str) -> String {
 pub(super) fn integrity_string(resolution: &LockfileResolution) -> Option<String> {
     match resolution {
         LockfileResolution::Registry(r) => Some(r.integrity.to_string()),
-        LockfileResolution::Tarball(r) => r.integrity.as_ref().map(ToString::to_string),
+        LockfileResolution::Tarball(r) => r
+            .integrity
+            .as_ref()
+            .map(ToString::to_string),
         LockfileResolution::Binary(r) => Some(r.integrity.to_string()),
         _ => None,
     }
@@ -305,7 +306,9 @@ pub(super) fn sanitize_path_segment(value: &str) -> String {
 pub(super) fn base64_to_hex(input: &str) -> Option<String> {
     use base64::Engine;
     use std::fmt::Write;
-    let bytes = base64::engine::general_purpose::STANDARD.decode(input).ok()?;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(input)
+        .ok()?;
     let mut hex = String::with_capacity(bytes.len() * 2);
     for b in &bytes {
         let _ = write!(hex, "{b:02x}");

@@ -634,7 +634,9 @@ async fn seeded_verified_cache_without_valid_signature_is_refetched() {
 fn node_22_11_0_signature() -> Vec<u8> {
     use base64::{Engine, engine::general_purpose::STANDARD as BASE64_STANDARD};
 
-    BASE64_STANDARD.decode(NODE_22_11_0_SIGNATURE_B64).expect("valid base64")
+    BASE64_STANDARD
+        .decode(NODE_22_11_0_SIGNATURE_B64)
+        .expect("valid base64")
 }
 
 // cspell:disable

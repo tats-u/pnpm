@@ -71,7 +71,8 @@ pub(super) async fn fetch_teams(
         .await);
     }
 
-    let body = read_limited_body(response, TEAM_BODY_LIMIT).await
+    let body = read_limited_body(response, TEAM_BODY_LIMIT)
+        .await
         .map_err(|source| registry_operation_error("reading teams response", source))?;
     serde_json::from_slice(&body.bytes)
         .into_diagnostic()
@@ -110,7 +111,8 @@ pub(super) async fn fetch_team_members(
         .await);
     }
 
-    let body = read_limited_body(response, TEAM_BODY_LIMIT).await
+    let body = read_limited_body(response, TEAM_BODY_LIMIT)
+        .await
         .map_err(|source| registry_operation_error("reading team members response", source))?;
     serde_json::from_slice(&body.bytes)
         .into_diagnostic()
@@ -128,7 +130,9 @@ pub(super) fn auth_header_for_registry(
 ) -> miette::Result<String> {
     let registry_url = registry_for_scope(context, scope);
     let pkg_name = format!("@{scope}/_");
-    context.config.auth_headers
+    context
+        .config
+        .auth_headers
         .for_url_with_package(&registry_url, Some(&pkg_name))
         .ok_or_else(|| TeamError::MissingAuthToken.into())
 }

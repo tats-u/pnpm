@@ -110,7 +110,11 @@ impl TaskCache {
             .filter(|output| output.status.success())
             .map_or_else(
                 || "no-node".to_string(),
-                |output| String::from_utf8_lossy(&output.stdout).trim().to_string(),
+                |output| {
+                    String::from_utf8_lossy(&output.stdout)
+                        .trim()
+                        .to_string()
+                },
             );
         Ok(TaskCache {
             tasks_dir,
@@ -124,7 +128,13 @@ impl TaskCache {
 
     pub fn lookup(&self, key: &str) -> Option<StoredTask> {
         let entry_dir = self.entry_dir(key);
-        check_ancestors(&self.tasks_dir, entry_dir.strip_prefix(&self.tasks_dir).ok()?).ok()?;
+        check_ancestors(
+            &self.tasks_dir,
+            entry_dir
+                .strip_prefix(&self.tasks_dir)
+                .ok()?,
+        )
+        .ok()?;
         let meta = fs::read_to_string(entry_dir.join("meta.json")).ok()?;
         let mut stored: StoredTask = serde_json::from_str(&meta).ok()?;
         if stored.version != 2 {
@@ -151,10 +161,15 @@ impl TaskCache {
         task_id: &str,
     ) -> Result<(), String> {
         let previous = self.read_output_record(task_id);
-        for relative in stored.files
+        for relative in stored
+            .files
             .iter()
             .map(String::as_str)
-            .chain(previous.iter().map(|record| record.path.as_str()))
+            .chain(
+                previous
+                    .iter()
+                    .map(|record| record.path.as_str()),
+            )
         {
             validate_output_path(project_dir, relative)?;
         }
@@ -162,7 +177,8 @@ impl TaskCache {
         check_working_tree_is_ours(stored, project_dir, &previous)?;
         remove_stale_outputs(stored, project_dir, &previous)?;
         let record = copy_cached_outputs(stored, project_dir)?;
-        self.write_output_record(task_id, &record).map_err(|error| error.to_string())
+        self.write_output_record(task_id, &record)
+            .map_err(|error| error.to_string())
     }
 
     /// Store a successful task: its declared outputs and captured logs.
@@ -176,9 +192,13 @@ impl TaskCache {
     ) -> io::Result<()> {
         let files = collect_output_files(project_dir, outputs)?;
         let entry_dir = self.entry_dir(key);
-        let parent = entry_dir.parent().expect("cache entry parent");
+        let parent = entry_dir
+            .parent()
+            .expect("cache entry parent");
         fs::create_dir_all(parent)?;
-        let staging = tempfile::Builder::new().prefix(".publish-").tempdir_in(parent)?;
+        let staging = tempfile::Builder::new()
+            .prefix(".publish-")
+            .tempdir_in(parent)?;
         let staging_dir = staging.path();
         let record = stage_output_files(project_dir, staging_dir, &files)?;
         let meta = StoredTask {
@@ -219,8 +239,12 @@ impl TaskCache {
         }
         for relative in &stored.files {
             check_ancestors(&stored.entry_dir, &Path::new("outputs").join(relative))?;
-            if create_hex_hash_from_file(&stored.entry_dir.join("outputs").join(relative))?
-                != stored.hashes[relative]
+            if create_hex_hash_from_file(
+                &stored
+                    .entry_dir
+                    .join("outputs")
+                    .join(relative),
+            )? != stored.hashes[relative]
             {
                 return Ok(false);
             }
@@ -233,7 +257,8 @@ impl TaskCache {
     }
 
     fn output_record_path(&self, task_id: &str) -> PathBuf {
-        self.state_dir.join(format!("{}.json", create_short_hash(task_id)))
+        self.state_dir
+            .join(format!("{}.json", create_short_hash(task_id)))
     }
 
     fn read_output_record(&self, task_id: &str) -> Vec<RecordedFile> {
@@ -264,8 +289,13 @@ fn validate_output_path(root: &Path, relative: &str) -> Result<(), String> {
 fn check_artifact_integrity(stored: &StoredTask) -> Result<(), String> {
     for relative in &stored.files {
         validate_output_path(&stored.entry_dir, &format!("outputs/{relative}"))?;
-        let actual = create_hex_hash_from_file(&stored.entry_dir.join("outputs").join(relative))
-            .map_err(|error| error.to_string())?;
+        let actual = create_hex_hash_from_file(
+            &stored
+                .entry_dir
+                .join("outputs")
+                .join(relative),
+        )
+        .map_err(|error| error.to_string())?;
         if stored.hashes.get(relative) != Some(&actual) {
             return Err(format!("cached output failed integrity: {relative}"));
         }
@@ -293,9 +323,13 @@ fn check_working_tree_is_ours(
         if ours {
             continue;
         }
-        let artifact_hash =
-            create_hex_hash_from_file(&stored.entry_dir.join("outputs").join(rel_path))
-                .unwrap_or_else(|_| "unreadable".to_string());
+        let artifact_hash = create_hex_hash_from_file(
+            &stored
+                .entry_dir
+                .join("outputs")
+                .join(rel_path),
+        )
+        .unwrap_or_else(|_| "unreadable".to_string());
         if target_hash != artifact_hash {
             return Err(format!(
                 "{rel_path} in the working tree is not what the previous run produced",
@@ -346,7 +380,10 @@ fn copy_cached_outputs(
 ) -> Result<Vec<RecordedFile>, String> {
     let mut record: Vec<RecordedFile> = Vec::with_capacity(stored.files.len());
     for rel_path in &stored.files {
-        let source = stored.entry_dir.join("outputs").join(rel_path);
+        let source = stored
+            .entry_dir
+            .join("outputs")
+            .join(rel_path);
         let target = project_dir.join(rel_path);
         validate_output_path(project_dir, rel_path)?;
         if let Some(parent) = target.parent() {
@@ -406,7 +443,9 @@ fn stage_output_files(
 ) -> io::Result<Vec<RecordedFile>> {
     let mut record: Vec<RecordedFile> = Vec::with_capacity(files.len());
     for rel_path in files {
-        let target = staging_dir.join("outputs").join(rel_path);
+        let target = staging_dir
+            .join("outputs")
+            .join(rel_path);
         if let Some(parent) = target.parent() {
             fs::create_dir_all(parent)?;
         }

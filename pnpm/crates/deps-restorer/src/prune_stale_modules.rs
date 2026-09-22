@@ -74,15 +74,22 @@ impl<'a> PruneStaleModules<'a> {
     /// `orphanPkgIds`), for the caller's single `pnpm:stats`
     /// `removed` emission. `0` when the orphan diff is skipped.
     pub fn run<Reporter: self::Reporter>(self) -> Result<u64, PruneDirectDepsError> {
-        let modules_dir_name: &OsStr =
-            self.config.modules_dir.file_name().unwrap_or_else(|| OsStr::new("node_modules"));
+        let modules_dir_name: &OsStr = self
+            .config
+            .modules_dir
+            .file_name()
+            .unwrap_or_else(|| OsStr::new("node_modules"));
         let wanted_root_deps = self.wanted_root_deps();
 
         for (importer_id, current_snapshot) in &self.current_lockfile.importers {
             // An importer the wanted lockfile doesn't cover was not
             // re-materialized; leave its links alone (the partial
             // install guard).
-            let Some(wanted_snapshot) = self.wanted_lockfile.importers.get(importer_id) else {
+            let Some(wanted_snapshot) = self
+                .wanted_lockfile
+                .importers
+                .get(importer_id)
+            else {
                 continue;
             };
             if validate_importer_id(importer_id).is_err() {
@@ -97,8 +104,9 @@ impl<'a> PruneStaleModules<'a> {
             let wanted_specs = direct_deps_of(wanted_snapshot, self.included_groups);
             // Root is what the others dedupe *against*; it keeps every
             // link the wanted lockfile still records.
-            let dedupe_against_root =
-                (importer_id != ".").then_some(wanted_root_deps.as_ref()).flatten();
+            let dedupe_against_root = (importer_id != ".")
+                .then_some(wanted_root_deps.as_ref())
+                .flatten();
             unlink_stale_direct_deps::<Reporter>(
                 &modules_dir,
                 &importer_dir.display().to_string(),
@@ -127,9 +135,10 @@ impl<'a> PruneStaleModules<'a> {
     /// depend on install history rather than on the manifests. Pnpm
     /// folds the same condition into this diff.
     fn wanted_root_deps(&self) -> Option<HashMap<&'a PkgName, &'a ImporterDepVersion>> {
-        let root_snapshot = self.config.dedupe_direct_deps.then(|| {
-            self.wanted_lockfile.importers.get(".")
-        })??;
+        let root_snapshot = self
+            .config
+            .dedupe_direct_deps
+            .then(|| self.wanted_lockfile.importers.get("."))??;
         Some(
             direct_deps_of(root_snapshot, self.included_groups)
                 .into_iter()
@@ -186,8 +195,14 @@ fn prune_orphan_snapshots(
     prior_hoisted_dependencies: Option<&HoistedDependencies>,
 ) -> Result<u64, PruneDirectDepsError> {
     let empty = HashMap::new();
-    let current_snapshots = current_lockfile.snapshots.as_ref().unwrap_or(&empty);
-    let wanted_snapshots = wanted_lockfile.snapshots.as_ref().unwrap_or(&empty);
+    let current_snapshots = current_lockfile
+        .snapshots
+        .as_ref()
+        .unwrap_or(&empty);
+    let wanted_snapshots = wanted_lockfile
+        .snapshots
+        .as_ref()
+        .unwrap_or(&empty);
     let orphan_keys: Vec<_> = current_snapshots
         .keys()
         .filter(|key| !wanted_snapshots.contains_key(*key))
@@ -203,7 +218,9 @@ fn prune_orphan_snapshots(
         return Ok(removed);
     };
     // Hoist links live in exactly two dirs; resolve + confine each once.
-    let private_dir = config.virtual_store_dir.join("node_modules");
+    let private_dir = config
+        .virtual_store_dir
+        .join("node_modules");
     let private_dir = confined_modules_dir(&private_dir, workspace_root);
     let public_dir = confined_modules_dir(&config.modules_dir, workspace_root);
     for key in orphan_keys {

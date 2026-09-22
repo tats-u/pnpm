@@ -72,7 +72,9 @@ fn wanted(alias: &str, bare: &str) -> WantedDependency {
 fn non_workspace_spec_returns_none() {
     let packages = build_packages();
     let opts = opts(&packages);
-    let result = try_resolve_from_workspace(&wanted("foo", "^1.0.0"), &opts).expect("ok").is_none();
+    let result = try_resolve_from_workspace(&wanted("foo", "^1.0.0"), &opts)
+        .expect("ok")
+        .is_none();
     assert!(result);
 }
 

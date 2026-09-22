@@ -17,7 +17,8 @@ pub(in super::super) fn deploy<'a>(
     let cfg = config()?;
     // Ahead of the target validation, so a project with a `deploy` script
     // never has to name a target it does not deploy to.
-    let script_args = args.target_dirs
+    let script_args = args
+        .target_dirs
         .iter()
         .map(|target| target.to_string_lossy().into_owned())
         .collect();
@@ -134,7 +135,10 @@ pub(in super::super) fn import<'a>(
 ) -> miette::Result<CommandFuture<'a>> {
     let config = (ctx.loaders.config)()?;
     let dir = ctx.locations.dir;
-    let manifest_path = ctx.locations.manifest_path.to_path_buf();
+    let manifest_path = ctx
+        .locations
+        .manifest_path
+        .to_path_buf();
     let reporter = ctx.reporter;
     Ok(Box::pin(async move {
         apply_update_config(config, dir, reporter).await?;
@@ -142,10 +146,17 @@ pub(in super::super) fn import<'a>(
             State::init(manifest_path, config, false).wrap_err("initialize the state")?;
         match reporter {
             ReporterType::Default | ReporterType::AppendOnly => {
-                args.run::<DefaultReporter>(command_state).await
+                args.run::<DefaultReporter>(command_state)
+                    .await
             }
-            ReporterType::Ndjson => args.run::<NdjsonReporter>(command_state).await,
-            ReporterType::Silent => args.run::<SilentReporter>(command_state).await,
+            ReporterType::Ndjson => {
+                args.run::<NdjsonReporter>(command_state)
+                    .await
+            }
+            ReporterType::Silent => {
+                args.run::<SilentReporter>(command_state)
+                    .await
+            }
         }
     }))
 }
@@ -156,16 +167,26 @@ pub(in super::super) fn link<'a>(
 ) -> miette::Result<CommandFuture<'a>> {
     let config = (ctx.loaders.config)()?;
     let dir = ctx.locations.dir;
-    let manifest_path = ctx.locations.manifest_path.to_path_buf();
+    let manifest_path = ctx
+        .locations
+        .manifest_path
+        .to_path_buf();
     let reporter = ctx.reporter;
     Ok(Box::pin(async move {
         apply_update_config(config, dir, reporter).await?;
         match reporter {
             ReporterType::Default | ReporterType::AppendOnly => {
-                args.run::<DefaultReporter>(config, manifest_path).await
+                args.run::<DefaultReporter>(config, manifest_path)
+                    .await
             }
-            ReporterType::Ndjson => args.run::<NdjsonReporter>(config, manifest_path).await,
-            ReporterType::Silent => args.run::<SilentReporter>(config, manifest_path).await,
+            ReporterType::Ndjson => {
+                args.run::<NdjsonReporter>(config, manifest_path)
+                    .await
+            }
+            ReporterType::Silent => {
+                args.run::<SilentReporter>(config, manifest_path)
+                    .await
+            }
         }
     }))
 }

@@ -24,8 +24,12 @@ pub(super) fn enforce_published_version_immutability(
     incoming: &mut Value,
 ) -> Option<RegistryError> {
     // None (no versions to enforce) means "accept", not "error" here.
-    let incoming_versions = incoming.get("versions").and_then(Value::as_object)?;
-    let hosted_versions = hosted.get("versions").and_then(Value::as_object);
+    let incoming_versions = incoming
+        .get("versions")
+        .and_then(Value::as_object)?;
+    let hosted_versions = hosted
+        .get("versions")
+        .and_then(Value::as_object);
     // Fields to re-insert after the scan; deferred because the scan borrows
     // `incoming` and the restore mutates it.
     let mut restore: Vec<(String, &'static str, Value)> = Vec::new();
@@ -68,7 +72,9 @@ pub(super) fn submitted_packument(
     name: &CanonicalPackageName,
 ) -> Result<Value, RegistryError> {
     let mut packument: Value = serde_json::from_slice(body).map_err(RegistryError::Json)?;
-    if let Some(body_name) = packument.get("name").and_then(Value::as_str)
+    if let Some(body_name) = packument
+        .get("name")
+        .and_then(Value::as_str)
         && body_name != name.as_str()
     {
         return Err(RegistryError::BadRequest {
@@ -102,7 +108,8 @@ pub(super) fn check_integrity_immutable(
     let version = entry.version;
     // A present dist.integrity must be a string; a non-string would slip past
     // the string-only checks below.
-    let incoming = match entry.manifest
+    let incoming = match entry
+        .manifest
         .get("dist")
         .and_then(|dist| dist.get("integrity"))
     {
@@ -114,7 +121,8 @@ pub(super) fn check_integrity_immutable(
             });
         }
     };
-    let stored = entry.existing
+    let stored = entry
+        .existing
         .get("dist")
         .and_then(|dist| dist.get("integrity"))
         .and_then(Value::as_str)?;
@@ -147,7 +155,8 @@ pub(super) fn check_tarball_immutable(
 ) -> Option<RegistryError> {
     let version = entry.version;
     let stored_basename = served_tarball_basename(entry.existing, name)?;
-    let incoming_basename = entry.manifest
+    let incoming_basename = entry
+        .manifest
         .get("dist")
         .and_then(|dist| dist.get("tarball"))
         .and_then(Value::as_str)
@@ -160,7 +169,8 @@ pub(super) fn check_tarball_immutable(
         None => {
             let refusal = require_object_dist(entry.manifest, version);
             if refusal.is_none() {
-                let stored = entry.existing
+                let stored = entry
+                    .existing
                     .get("dist")
                     .and_then(|dist| dist.get("tarball"))
                     .cloned()
@@ -187,7 +197,9 @@ pub(super) fn served_tarball_basename(
     if let Some(basename) = tarball_basename(url) {
         return Some(basename.to_owned());
     }
-    let version = manifest.get("version").and_then(Value::as_str)?;
+    let version = manifest
+        .get("version")
+        .and_then(Value::as_str)?;
     Some(pkg.tarball_name_for_version(version))
 }
 
@@ -195,7 +207,10 @@ pub(super) fn served_tarball_basename(
 /// object to write into, so otherwise it would no-op and persist the version
 /// without the field — the stripping this guards against.
 pub(super) fn require_object_dist(manifest: &Value, version: &str) -> Option<RegistryError> {
-    if manifest.get("dist").is_some_and(Value::is_object) {
+    if manifest
+        .get("dist")
+        .is_some_and(Value::is_object)
+    {
         return None;
     }
     Some(RegistryError::BadRequest {

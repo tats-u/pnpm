@@ -69,7 +69,8 @@ pub(crate) async fn apply_rewrite_plan(
             .iter()
             .filter(|override_entry| {
                 override_entry.new_version.is_some()
-                    && plan.replacements
+                    && plan
+                        .replacements
                         .iter()
                         .any(|(old, new)| old != new && old.name == override_entry.name)
             })
@@ -145,7 +146,9 @@ fn apply_replacement(
     target: &mut ReplacementTarget<'_>,
 ) -> Option<()> {
     let replacement = resolved.get(&target.old_key.name)?;
-    let old_snapshot = target.original_snapshots.get(target.old_key)?;
+    let old_snapshot = target
+        .original_snapshots
+        .get(target.old_key)?;
     let dependencies = validate_dependencies(
         effective_dependencies(&replacement.manifest)?,
         old_snapshot.dependencies.as_ref(),
@@ -156,7 +159,9 @@ fn apply_replacement(
     )?;
     let optional_dependencies = validate_dependencies(
         manifest_dependency_map(&replacement.manifest, "optionalDependencies")?,
-        old_snapshot.optional_dependencies.as_ref(),
+        old_snapshot
+            .optional_dependencies
+            .as_ref(),
         target.original_snapshots,
         context.lockfile.packages.as_ref()?,
         plan,
@@ -168,7 +173,9 @@ fn apply_replacement(
     {
         return None;
     }
-    target.snapshots.insert(target.new_key.clone(), snapshot);
+    target
+        .snapshots
+        .insert(target.new_key.clone(), snapshot);
     apply_replacement_metadata(context, replacement, target)
 }
 
@@ -182,10 +189,15 @@ fn apply_replacement_metadata(
         pick_registry_for_package(context.registries, &target.old_key.name.to_string(), None);
     let metadata = package_metadata(
         &replacement.manifest,
-        replacement.resolution
+        replacement
+            .resolution
             .to_lockfile_form(
                 &target.old_key.name.to_string(),
-                &target.new_key.suffix.version().to_string(),
+                &target
+                    .new_key
+                    .suffix
+                    .version()
+                    .to_string(),
                 LockfileFormOptions {
                     registry: &registry,
                     server_type: registry_server_type(context.registry_options_by_url, &registry),
@@ -199,7 +211,9 @@ fn apply_replacement_metadata(
     {
         return None;
     }
-    target.packages.insert(metadata_key, metadata);
+    target
+        .packages
+        .insert(metadata_key, metadata);
     Some(())
 }
 
@@ -257,13 +271,11 @@ fn should_remove_dependency(
     parent_key: Option<&PackageKey>,
     overrides: &[FastOverride],
 ) -> bool {
-    overrides
-        .iter()
-        .any(|override_entry| {
-            override_entry.new_version.is_none()
-                && override_entry.name == *alias
-                && override_applies_to(override_entry, parent_key)
-        })
+    overrides.iter().any(|override_entry| {
+        override_entry.new_version.is_none()
+            && override_entry.name == *alias
+            && override_applies_to(override_entry, parent_key)
+    })
 }
 
 /// Whether an edge on `alias` owned by `parent_key` is one a replacing
@@ -275,13 +287,11 @@ fn should_replace_dependency(
     parent_key: Option<&PackageKey>,
     overrides: &[FastOverride],
 ) -> bool {
-    overrides
-        .iter()
-        .any(|override_entry| {
-            override_entry.new_version.is_some()
-                && override_entry.name == *alias
-                && override_applies_to(override_entry, parent_key)
-        })
+    overrides.iter().any(|override_entry| {
+        override_entry.new_version.is_some()
+            && override_entry.name == *alias
+            && override_applies_to(override_entry, parent_key)
+    })
 }
 
 /// Whether `override_entry`'s parent selector names `parent_key`. A
@@ -295,7 +305,8 @@ fn override_applies_to(override_entry: &FastOverride, parent_key: Option<&Packag
     }
     match parent.bare_specifier.as_deref() {
         None => true,
-        Some(range) => parent_key.suffix
+        Some(range) => parent_key
+            .suffix
             .version_semver()
             .is_some_and(|version| Range::parse(range).is_ok_and(|range| range.satisfies(version))),
     }
@@ -309,7 +320,9 @@ fn validate_dependencies(
     plan: &RewritePlan,
     parent_key: &PackageKey,
 ) -> Option<Option<HashMap<PkgName, SnapshotDepRef>>> {
-    let locked_dependencies = locked_dependencies.cloned().unwrap_or_default();
+    let locked_dependencies = locked_dependencies
+        .cloned()
+        .unwrap_or_default();
     for name in locked_dependencies.keys() {
         if !manifest_dependencies.contains_key(name) && plan.peer_names.contains(name) {
             return None;
@@ -363,7 +376,8 @@ fn find_reusable_dependency(
     plan: &RewritePlan,
 ) -> Option<SnapshotDepRef> {
     if plan.peer_names.contains(name)
-        || plan.overrides
+        || plan
+            .overrides
             .iter()
             .any(|entry| entry.name == *name)
     {
@@ -375,7 +389,8 @@ fn find_reusable_dependency(
             if key.name != *name
                 || !key.suffix.peer().is_empty()
                 || key.suffix.prefix() != Prefix::None
-                || !key.suffix
+                || !key
+                    .suffix
                     .version_semver()
                     .is_some_and(|version| range.satisfies(version))
                 || !snapshot_is_reusable(snapshot)
@@ -404,7 +419,9 @@ fn snapshot_is_reusable(snapshot: &SnapshotEntry) -> bool {
     !snapshot.optional
         && snapshot.patched != Some(true)
         && snapshot.id.is_none()
-        && snapshot.transitive_peer_dependencies.is_none()
+        && snapshot
+            .transitive_peer_dependencies
+            .is_none()
 }
 
 fn effective_dependencies(manifest: &Value) -> Option<HashMap<PkgName, String>> {

@@ -78,7 +78,10 @@ async fn get_custom_resolvers_is_empty_without_resolvers_export() {
     std::fs::write(&pnpmfile_path, "module.exports = { hooks: {} }").expect("write pnpmfile");
     let hooks = pnpm_hooks::node_runtime::NodeJsHooks::new(pnpmfile_path);
 
-    let resolvers = hooks.get_custom_resolvers().await.expect("load resolvers");
+    let resolvers = hooks
+        .get_custom_resolvers()
+        .await
+        .expect("load resolvers");
 
     assert!(resolvers.is_empty());
 }
@@ -88,10 +91,18 @@ async fn custom_resolver_round_trips_can_resolve_and_resolve() {
     let tmp = TempDir::new().expect("temp dir");
     let hooks =
         pnpm_hooks::node_runtime::NodeJsHooks::new(write_custom_resolvers_pnpmfile(tmp.path()));
-    let resolvers = hooks.get_custom_resolvers().await.expect("load resolvers");
+    let resolvers = hooks
+        .get_custom_resolvers()
+        .await
+        .expect("load resolvers");
     let wanted = serde_json::json!({ "alias": "foo", "bareSpecifier": "custom:foo" });
 
-    assert!(resolvers[0].can_resolve(wanted.clone()).await.expect("canResolve"));
+    assert!(
+        resolvers[0]
+            .can_resolve(wanted.clone())
+            .await
+            .expect("canResolve")
+    );
     assert!(
         !resolvers[0]
             .can_resolve(serde_json::json!({ "alias": "bar", "bareSpecifier": "^1.0.0" }))
@@ -115,15 +126,24 @@ async fn custom_resolver_errors_propagate() {
     let tmp = TempDir::new().expect("temp dir");
     let hooks =
         pnpm_hooks::node_runtime::NodeJsHooks::new(write_custom_resolvers_pnpmfile(tmp.path()));
-    let resolvers = hooks.get_custom_resolvers().await.expect("load resolvers");
-    let dep_path: pnpm_lockfile::PackageKey = "any@1.0.0".parse().expect("valid dep path");
+    let resolvers = hooks
+        .get_custom_resolvers()
+        .await
+        .expect("load resolvers");
+    let dep_path: pnpm_lockfile::PackageKey = "any@1.0.0"
+        .parse()
+        .expect("valid dep path");
 
     let err = resolvers[1]
         .should_refresh_resolution(&dep_path, serde_json::json!({}))
         .await
         .expect_err("throwing hook must surface as an error");
 
-    assert!(err.to_string().contains("refresh check crashed"), "got: {err}");
+    assert!(
+        err.to_string()
+            .contains("refresh check crashed"),
+        "got: {err}"
+    );
 }
 
 #[tokio::test]
@@ -133,7 +153,10 @@ async fn get_custom_fetchers_is_empty_without_fetchers_export() {
     std::fs::write(&pnpmfile_path, "module.exports = { hooks: {} }").expect("write pnpmfile");
     let hooks = pnpm_hooks::node_runtime::NodeJsHooks::new(pnpmfile_path);
 
-    let fetchers = hooks.get_custom_fetchers().await.expect("load fetchers");
+    let fetchers = hooks
+        .get_custom_fetchers()
+        .await
+        .expect("load fetchers");
 
     assert!(fetchers.is_empty());
 }
@@ -143,11 +166,19 @@ async fn custom_fetcher_round_trips_can_fetch_and_fetch() {
     let tmp = TempDir::new().expect("temp dir");
     let hooks =
         pnpm_hooks::node_runtime::NodeJsHooks::new(write_custom_fetchers_pnpmfile(tmp.path()));
-    let fetchers = hooks.get_custom_fetchers().await.expect("load fetchers");
+    let fetchers = hooks
+        .get_custom_fetchers()
+        .await
+        .expect("load fetchers");
     let resolution =
         serde_json::json!({ "type": "@custom/local", "url": "https://example.com/pkg" });
 
-    assert!(fetchers[0].can_fetch("foo@1.0.0", resolution.clone()).await.expect("canFetch"));
+    assert!(
+        fetchers[0]
+            .can_fetch("foo@1.0.0", resolution.clone())
+            .await
+            .expect("canFetch")
+    );
     assert!(
         !fetchers[0]
             .can_fetch("foo@1.0.0", serde_json::json!({ "type": "tarball" }))
@@ -156,7 +187,10 @@ async fn custom_fetcher_round_trips_can_fetch_and_fetch() {
     );
 
     let opts = serde_json::json!({ "pkg": { "name": "foo", "version": "1.0.0" } });
-    let result = fetchers[0].fetch("foo@1.0.0", resolution, opts.clone()).await.expect("fetch");
+    let result = fetchers[0]
+        .fetch("foo@1.0.0", resolution, opts.clone())
+        .await
+        .expect("fetch");
     assert_eq!(result["filesIndex"]["package.json"]["integrity"], "sha512-abc123");
     // TS-parity positions: `cafs` / `fetchers` are null placeholders
     // over IPC, `resolution` and `opts` arrive in the TS slots.
@@ -183,14 +217,21 @@ module.exports = {
     )
     .expect("write pnpmfile");
     let hooks = pnpm_hooks::node_runtime::NodeJsHooks::new(pnpmfile_path);
-    let fetchers = hooks.get_custom_fetchers().await.expect("load fetchers");
+    let fetchers = hooks
+        .get_custom_fetchers()
+        .await
+        .expect("load fetchers");
 
     let err = fetchers[0]
         .fetch("foo@1.0.0", serde_json::json!({}), serde_json::json!({}))
         .await
         .expect_err("throwing fetch must surface as an error");
 
-    assert!(err.to_string().contains("fetch crashed"), "got: {err}");
+    assert!(
+        err.to_string()
+            .contains("fetch crashed"),
+        "got: {err}"
+    );
 }
 
 #[tokio::test]
@@ -219,13 +260,21 @@ module.exports = {
     )
     .expect("write pnpmfile");
     let hooks = pnpm_hooks::node_runtime::NodeJsHooks::new(pnpmfile_path);
-    let fetchers = hooks.get_custom_fetchers().await.expect("load fetchers");
+    let fetchers = hooks
+        .get_custom_fetchers()
+        .await
+        .expect("load fetchers");
 
     let resolution = serde_json::json!({
         "type": "@custom/proxy",
         "proxyUrl": "https://proxy.example.com/foo-1.0.0.tgz",
     });
-    assert!(fetchers[0].can_fetch("foo@1.0.0", resolution.clone()).await.unwrap());
+    assert!(
+        fetchers[0]
+            .can_fetch("foo@1.0.0", resolution.clone())
+            .await
+            .unwrap()
+    );
     let result = fetchers[0]
         .fetch("foo@1.0.0", resolution, serde_json::json!({}))
         .await
@@ -253,20 +302,38 @@ module.exports = {
     )
     .expect("write pnpmfile");
     let hooks = pnpm_hooks::node_runtime::NodeJsHooks::new(pnpmfile_path);
-    let fetchers = hooks.get_custom_fetchers().await.expect("load fetchers");
+    let fetchers = hooks
+        .get_custom_fetchers()
+        .await
+        .expect("load fetchers");
     let empty_resolution = serde_json::json!({});
 
     assert!(
-        fetchers[0].can_fetch("a@1.0.0", empty_resolution.clone()).await.unwrap(),
+        fetchers[0]
+            .can_fetch("a@1.0.0", empty_resolution.clone())
+            .await
+            .unwrap(),
         "1 is truthy",
     );
     assert!(
-        fetchers[1].can_fetch("a@1.0.0", empty_resolution.clone()).await.unwrap(),
+        fetchers[1]
+            .can_fetch("a@1.0.0", empty_resolution.clone())
+            .await
+            .unwrap(),
         r#""yes" is truthy"#,
     );
     assert!(
-        !fetchers[2].can_fetch("a@1.0.0", empty_resolution.clone()).await.unwrap(),
+        !fetchers[2]
+            .can_fetch("a@1.0.0", empty_resolution.clone())
+            .await
+            .unwrap(),
         "0 is falsy",
     );
-    assert!(!fetchers[3].can_fetch("a@1.0.0", empty_resolution).await.unwrap(), r#""" is falsy"#);
+    assert!(
+        !fetchers[3]
+            .can_fetch("a@1.0.0", empty_resolution)
+            .await
+            .unwrap(),
+        r#""" is falsy"#
+    );
 }

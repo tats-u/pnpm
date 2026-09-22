@@ -55,13 +55,18 @@ async fn optional_peer_with_real_entry_is_hoisted_from_resolved_tree() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
     assert!(direct.contains(&"opt"), "optional peer `opt` must be hoisted: {direct:?}");
     assert_eq!(
-        result.peers_result.direct_dependencies_by_alias.get("needs-opt"),
+        result
+            .peers_result
+            .direct_dependencies_by_alias
+            .get("needs-opt"),
         Some(&DepPath::from("needs-opt@1.0.0(opt@1.0.0)".to_string())),
     );
 }
@@ -117,13 +122,18 @@ async fn meta_only_optional_peer_is_hoisted_like_a_declared_optional_peer() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
     assert!(direct.contains(&"opt"), "meta-only peer `opt` must be hoisted: {direct:?}");
     assert_eq!(
-        result.peers_result.direct_dependencies_by_alias.get("needs-opt"),
+        result
+            .peers_result
+            .direct_dependencies_by_alias
+            .get("needs-opt"),
         Some(&DepPath::from("needs-opt@1.0.0(opt@1.0.0)".to_string())),
     );
 }
@@ -174,14 +184,18 @@ async fn real_peer_provider_from_direct_child_is_appended_as_hidden_direct_dep()
         .unwrap();
 
     assert_eq!(
-        result.peers_result.direct_dependencies_by_alias.get("provider"),
+        result
+            .peers_result
+            .direct_dependencies_by_alias
+            .get("provider"),
         Some(&DepPath::from("provider@1.0.0".to_string())),
         "provider should be available to the importer peer pass without being a manifest dep",
     );
     assert!(
-        result.peers_result.graph.contains_key(&DepPath::from(
-            "peer-user@1.0.0(provider@1.0.0)".to_string()
-        )),
+        result
+            .peers_result
+            .graph
+            .contains_key(&DepPath::from("peer-user@1.0.0(provider@1.0.0)".to_string())),
         "peer-user should resolve provider from host's child dependency",
     );
 }
@@ -232,14 +246,18 @@ async fn meta_only_peer_provider_from_direct_child_is_appended_as_hidden_direct_
         .unwrap();
 
     assert_eq!(
-        result.peers_result.direct_dependencies_by_alias.get("provider"),
+        result
+            .peers_result
+            .direct_dependencies_by_alias
+            .get("provider"),
         Some(&DepPath::from("provider@1.0.0".to_string())),
         "a resolved meta-only peer feeds auto-installed hidden direct deps like a declared one",
     );
     assert!(
-        result.peers_result.graph.contains_key(&DepPath::from(
-            "peer-user@1.0.0(provider@1.0.0)".to_string()
-        )),
+        result
+            .peers_result
+            .graph
+            .contains_key(&DepPath::from("peer-user@1.0.0(provider@1.0.0)".to_string())),
         "meta-only peers resolve in the final peer graph when provider is in scope",
     );
 }
@@ -283,7 +301,9 @@ async fn auto_install_does_not_install_same_missing_peer_twice() {
         .await
         .unwrap();
 
-    let y_entries: Vec<&DepPath> = result.peers_result.graph
+    let y_entries: Vec<&DepPath> = result
+        .peers_result
+        .graph
         .keys()
         .filter(|dp| dp.to_string().starts_with("y@"))
         .collect();
@@ -337,7 +357,9 @@ async fn auto_install_prefers_peer_version_pinned_in_importer_peerdeps() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
@@ -397,7 +419,9 @@ async fn auto_install_hoisted_peer_dep_reuses_regular_dep_version() {
         .await
         .unwrap();
 
-    let c_entries: Vec<String> = result.peers_result.graph
+    let c_entries: Vec<String> = result
+        .peers_result
+        .graph
         .keys()
         .map(ToString::to_string)
         .filter(|dp| dp.starts_with("c@"))
@@ -500,7 +524,9 @@ async fn aliased_install_with_transitive_mutual_peer_cycle_terminates() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
@@ -508,7 +534,9 @@ async fn aliased_install_with_transitive_mutual_peer_cycle_terminates() {
     assert!(direct.contains(&"x"), "missing peer x must be auto-installed: {direct:?}");
     assert!(direct.contains(&"y"), "missing peer y must be auto-installed: {direct:?}");
 
-    let a_dep_path = result.peers_result.direct_dependencies_by_alias
+    let a_dep_path = result
+        .peers_result
+        .direct_dependencies_by_alias
         .get("a")
         .expect("alias `a` must be in the result")
         .to_string();
@@ -517,7 +545,9 @@ async fn aliased_install_with_transitive_mutual_peer_cycle_terminates() {
         "aliased dep path must start with the real package id, got {a_dep_path}",
     );
 
-    let dep_paths: HashSet<String> = result.peers_result.graph
+    let dep_paths: HashSet<String> = result
+        .peers_result
+        .graph
         .keys()
         .map(ToString::to_string)
         .collect();
@@ -565,10 +595,8 @@ async fn both_hoist_settings_off_leaves_the_optional_peer_missing() {
     // hoist would have a version to pick.
     let seeded_preferred_versions = || {
         let mut selectors = VersionSelectors::new();
-        selectors.insert(
-            "1.0.0".to_string(),
-            VersionSelectorEntry::Plain(VersionSelectorType::Version),
-        );
+        selectors
+            .insert("1.0.0".to_string(), VersionSelectorEntry::Plain(VersionSelectorType::Version));
         PreferredVersions::from([("peer-c".to_string(), selectors)])
     };
 
@@ -588,13 +616,18 @@ async fn both_hoist_settings_off_leaves_the_optional_peer_missing() {
     let result = resolve_importer(&resolver, &manifest, [DependencyGroup::Prod], hoisting_off)
         .await
         .unwrap();
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
     assert_eq!(direct, ["abc"]);
     assert_eq!(
-        result.peers_result.direct_dependencies_by_alias.get("abc"),
+        result
+            .peers_result
+            .direct_dependencies_by_alias
+            .get("abc"),
         Some(&DepPath::from("abc@1.0.0".to_string())),
     );
 
@@ -617,7 +650,10 @@ async fn both_hoist_settings_off_leaves_the_optional_peer_missing() {
         .await
         .unwrap();
     assert_eq!(
-        result.peers_result.direct_dependencies_by_alias.get("abc"),
+        result
+            .peers_result
+            .direct_dependencies_by_alias
+            .get("abc"),
         Some(&DepPath::from("abc@1.0.0(peer-c@1.0.0)".to_string())),
     );
 }

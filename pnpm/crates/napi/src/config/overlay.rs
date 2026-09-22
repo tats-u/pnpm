@@ -8,7 +8,9 @@ pub(super) fn apply_store_dirs(config: &mut Config, overlay: &ConfigOverlay, dir
     if let Some(store_dir) = &overlay.store_dir {
         config.store_dir = StoreDir::new(store_dir.clone());
     } else if let Some(pnpm_home_dir) = &overlay.pnpm_home_dir
-        && !config.explicit_settings.contains_key("storeDir")
+        && !config
+            .explicit_settings
+            .contains_key("storeDir")
     {
         config.resolve_store_dir_from_home::<Host>(pnpm_home_dir, dir);
     }
@@ -21,11 +23,15 @@ pub(super) fn apply_store_dirs(config: &mut Config, overlay: &ConfigOverlay, dir
 pub(super) fn apply_registries(config: &mut Config, overlay: &ConfigOverlay) {
     if let Some(registry) = &overlay.registry {
         config.registry.clone_from(registry);
-        config.registries_by_scope.insert("default".to_string(), registry.clone());
+        config
+            .registries_by_scope
+            .insert("default".to_string(), registry.clone());
     }
     if let Some(registries) = &overlay.registries {
         for (scope, url) in registries {
-            config.registries_by_scope.insert(scope.clone(), url.clone());
+            config
+                .registries_by_scope
+                .insert(scope.clone(), url.clone());
             if scope == "default" {
                 config.registry.clone_from(url);
             }
@@ -92,7 +98,9 @@ pub(super) fn apply_manifest_rewrites(config: &mut Config, overlay: &ConfigOverl
         config.public_hoist_pattern = Some(public_hoist_pattern.clone());
     }
     if let Some(external_dependencies) = &overlay.external_dependencies {
-        config.external_dependencies.clone_from(external_dependencies);
+        config
+            .external_dependencies
+            .clone_from(external_dependencies);
     }
     if let Some(overrides) = &overlay.overrides {
         config.overrides = Some(overrides.clone());
@@ -225,13 +233,17 @@ pub(super) fn apply_release_policy(config: &mut Config, overlay: &ConfigOverlay)
     }
     if let Some(rules) = &overlay.peer_dependency_rules {
         if let Some(ignore_missing) = &rules.ignore_missing {
-            config.peer_dependency_rules.ignore_missing = Some(ignore_missing.clone());
+            config
+                .peer_dependency_rules
+                .ignore_missing = Some(ignore_missing.clone());
         }
         if let Some(allow_any) = &rules.allow_any {
             config.peer_dependency_rules.allow_any = Some(allow_any.clone());
         }
         if let Some(allowed_versions) = &rules.allowed_versions {
-            config.peer_dependency_rules.allowed_versions = Some(allowed_versions.clone());
+            config
+                .peer_dependency_rules
+                .allowed_versions = Some(allowed_versions.clone());
         }
     }
 }
@@ -264,13 +276,16 @@ pub(super) fn pin_unkeyed_header(
     if let Some(header) = unkeyed
         && !default_uri.is_empty()
     {
-        by_uri.entry(default_uri).or_insert_with(|| header.clone());
+        by_uri
+            .entry(default_uri)
+            .or_insert_with(|| header.clone());
     }
     by_uri
 }
 
 pub(super) fn overlay_default_registry(overlay: &ConfigOverlay) -> String {
-    overlay.registries
+    overlay
+        .registries
         .as_ref()
         .and_then(|registries| registries.get("default"))
         .or(overlay.registry.as_ref())

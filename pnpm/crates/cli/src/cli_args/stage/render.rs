@@ -69,7 +69,8 @@ fn render_value(value: &Value) -> String {
 /// The non-JSON `stage download` report: the tarball's contents and details,
 /// in pnpm's `renderTarballSummary` shape.
 pub(super) fn render_tarball_summary(summary: &PublishSummary) -> String {
-    let files: Vec<&str> = summary.files
+    let files: Vec<&str> = summary
+        .files
         .iter()
         .map(|file| file.path.as_str())
         .collect();

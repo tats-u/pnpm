@@ -38,13 +38,8 @@ fn write_manifest(workspace: &Path, dep_spec: &str) {
 
 #[test]
 fn install_applies_convergence_override_and_warns_when_stale() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, "^100.0.0");
@@ -60,7 +55,9 @@ fn install_applies_convergence_override_and_warns_when_stale() {
     eprintln!("STDOUT:\n{stdout}\n");
 
     assert!(
-        workspace.join("node_modules/.pnpm/@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0").exists(),
+        workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0")
+            .exists(),
         "the convergence override should pin the satisfying edge to exactly 100.0.0",
     );
     assert!(stdout.contains(&format!(
@@ -75,13 +72,8 @@ fn install_applies_convergence_override_and_warns_when_stale() {
 
 #[test]
 fn install_stays_silent_when_the_convergence_override_is_not_stale() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, "^100.0.0");
@@ -95,7 +87,9 @@ fn install_stays_silent_when_the_convergence_override_is_not_stale() {
     eprintln!("STDOUT:\n{stdout}\n");
 
     assert!(
-        workspace.join("node_modules/.pnpm/@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0").exists(),
+        workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0")
+            .exists(),
         "the convergence override should rewrite the edge to 100.1.0",
     );
     assert!(
@@ -108,13 +102,8 @@ fn install_stays_silent_when_the_convergence_override_is_not_stale() {
 
 #[test]
 fn install_leaves_incompatible_edges_on_their_own_resolution() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // 101.0.0 does not satisfy ^100.0.0, so the edge keeps its own
@@ -131,7 +120,9 @@ fn install_leaves_incompatible_edges_on_their_own_resolution() {
     eprintln!("STDOUT:\n{stdout}\n");
 
     assert!(
-        workspace.join("node_modules/.pnpm/@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0").exists(),
+        workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+dep-of-pkg-with-1-dep@100.1.0")
+            .exists(),
         "an incompatible convergence override must leave the edge untouched",
     );
     assert!(!stdout.contains("is stale"));

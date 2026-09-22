@@ -57,7 +57,9 @@ impl YarnResolver {
     async fn releases(&self) -> Result<&[YarnRelease], ReadYarnReleasesError> {
         self.releases
             .get_or_try_init(|| async {
-                fetch_yarn_releases(&self.http_client, self.authenticate).await.map(Arc::new)
+                fetch_yarn_releases(&self.http_client, self.authenticate)
+                    .await
+                    .map(Arc::new)
             })
             .await
             .map(|releases| releases.as_slice())
@@ -95,13 +97,12 @@ impl YarnResolver {
             .releases()
             .await
             .map_err(|error| Box::new(YarnResolverError::ReadReleases(error)) as ResolveError)?;
-        let release = pick_release(releases, version_spec)
-            .ok_or_else(|| {
-                // The specifier comes from a manifest, so it can carry
-                // credentials — the message a user sees must not.
-                let spec = redact_and_sanitize(version_spec);
-                Box::new(YarnResolverError::ResolutionFailure { spec }) as ResolveError
-            })?;
+        let release = pick_release(releases, version_spec).ok_or_else(|| {
+            // The specifier comes from a manifest, so it can carry
+            // credentials — the message a user sees must not.
+            let spec = redact_and_sanitize(version_spec);
+            Box::new(YarnResolverError::ResolutionFailure { spec }) as ResolveError
+        })?;
         let variants = asset_variants(release)
             .map_err(|error| Box::new(YarnResolverError::ReadReleases(error)) as ResolveError)?;
 
@@ -161,7 +162,8 @@ pub async fn resolve_yarn_version(
     version_spec: &str,
     authenticate: bool,
 ) -> Result<String, YarnResolverError> {
-    let releases = fetch_yarn_releases(http_client, authenticate).await
+    let releases = fetch_yarn_releases(http_client, authenticate)
+        .await
         .map_err(YarnResolverError::ReadReleases)?;
     pick_release(&releases, version_spec)
         .map(|release| release.version.clone())
@@ -189,7 +191,9 @@ pub(crate) fn pick_release<'a>(
     candidates.sort_by(|left, right| right.0.cmp(&left.0));
 
     if version_spec.is_empty() || version_spec == "latest" || version_spec == "*" {
-        return candidates.first().map(|(_, release)| *release);
+        return candidates
+            .first()
+            .map(|(_, release)| *release);
     }
     let range = node_semver::Range::parse(version_spec).ok()?;
     candidates
@@ -217,7 +221,8 @@ fn bare_runtime_spec(wanted: &WantedDependency) -> Option<&str> {
     if wanted.alias.as_deref() != Some("yarn") {
         return None;
     }
-    wanted.bare_specifier
+    wanted
+        .bare_specifier
         .as_deref()
         .and_then(|spec| spec.strip_prefix(BARE_SPEC_PREFIX))
 }

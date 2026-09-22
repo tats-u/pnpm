@@ -29,7 +29,9 @@ pub const WORKSPACE_STATE_FILENAME: &str = ".pnpm-workspace-state-v1.json";
 /// `<workspace_dir>/node_modules/.pnpm-workspace-state-v1.json`.
 #[must_use]
 pub fn get_file_path(workspace_dir: &Path) -> PathBuf {
-    workspace_dir.join("node_modules").join(WORKSPACE_STATE_FILENAME)
+    workspace_dir
+        .join("node_modules")
+        .join(WORKSPACE_STATE_FILENAME)
 }
 
 /// Per-project entry inside [`WorkspaceState::projects`]: the optional
@@ -249,18 +251,20 @@ pub fn update_workspace_state(
     state: &WorkspaceState,
 ) -> Result<(), UpdateWorkspaceStateError> {
     let file_path = get_file_path(workspace_dir);
-    let parent = file_path.parent().expect("workspace-state path always has a parent");
-    fs::create_dir_all(parent)
-        .map_err(|source| UpdateWorkspaceStateError::CreateDir {
-            path: parent.to_path_buf(),
-            source,
-        })?;
+    let parent = file_path
+        .parent()
+        .expect("workspace-state path always has a parent");
+    fs::create_dir_all(parent).map_err(|source| UpdateWorkspaceStateError::CreateDir {
+        path: parent.to_path_buf(),
+        source,
+    })?;
     let mut serialized =
         serde_json::to_string_pretty(state).map_err(UpdateWorkspaceStateError::SerializeJson)?;
     serialized.push('\n');
     let write = |source| UpdateWorkspaceStateError::WriteFile { path: file_path.clone(), source };
     let mut temp = NamedTempFile::new_in(parent).map_err(write)?;
-    temp.write_all(serialized.as_bytes()).map_err(write)?;
+    temp.write_all(serialized.as_bytes())
+        .map_err(write)?;
     let temp = temp.into_temp_path();
     pnpm_fs::rename_with_retry(&temp, &file_path).map_err(write)
 }

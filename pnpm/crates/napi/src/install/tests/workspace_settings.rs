@@ -21,19 +21,25 @@ fn build_overlay_parses_link_workspace_packages() {
     let mut options = install_options();
     options.link_workspace_packages = Some(serde_json::json!("deep"));
     assert_eq!(
-        build_overlay(&options, false).expect("overlay").link_workspace_packages,
+        build_overlay(&options, false)
+            .expect("overlay")
+            .link_workspace_packages,
         Some(LinkWorkspacePackages::Deep),
     );
 
     options.link_workspace_packages = Some(serde_json::json!(true));
     assert_eq!(
-        build_overlay(&options, false).expect("overlay").link_workspace_packages,
+        build_overlay(&options, false)
+            .expect("overlay")
+            .link_workspace_packages,
         Some(LinkWorkspacePackages::DirectOnly),
     );
 
     options.link_workspace_packages = Some(serde_json::json!(false));
     assert_eq!(
-        build_overlay(&options, false).expect("overlay").link_workspace_packages,
+        build_overlay(&options, false)
+            .expect("overlay")
+            .link_workspace_packages,
         Some(LinkWorkspacePackages::Off),
     );
 

@@ -227,9 +227,14 @@ struct PassSettings {
 
 impl WorkspaceResolveOptions {
     fn split(self) -> (Arc<WorkspaceTreeCtx>, PassSettings) {
-        let recorded_time = self.version.time_based
+        let recorded_time = self
+            .version
+            .time_based
             .then(|| {
-                self.reuse.lockfile.as_ref().and_then(|lockfile| lockfile.time.clone())
+                self.reuse
+                    .lockfile
+                    .as_ref()
+                    .and_then(|lockfile| lockfile.time.clone())
             })
             .flatten();
         let settings = PassSettings { recorded_time, peers: self.peers, version: self.version };
@@ -317,15 +322,24 @@ where
 {
     let mut input_dirs = Vec::with_capacity(sorted.importers.len());
     let mut states = Vec::with_capacity(sorted.importers.len());
-    for (importer_order, (importer, mut importer_opts)) in sorted.importers
+    for (importer_order, (importer, mut importer_opts)) in sorted
+        .importers
         .iter()
         .zip(sorted.opts)
         .enumerate()
     {
-        importer_opts.resolution.pick_lowest_direct = settings.version.pick_lowest_direct;
-        importer_opts.resolution.subdep_published_by = cutoff.published_by;
+        importer_opts
+            .resolution
+            .pick_lowest_direct = settings.version.pick_lowest_direct;
+        importer_opts
+            .resolution
+            .subdep_published_by = cutoff.published_by;
         input_dirs.push((
-            importer_opts.base_opts.project.project_dir.clone(),
+            importer_opts
+                .base_opts
+                .project
+                .project_dir
+                .clone(),
             importer_opts.links.modules_dir.clone(),
         ));
         // Boxed to keep the enclosing install future small: inlining a
@@ -414,7 +428,8 @@ struct PeerInputs {
 fn importer_peer_inputs(initialized: InitializedImporters<'_, '_>) -> PeerInputs {
     let mut per_importer = Vec::with_capacity(initialized.importers.len());
     let mut hoisted_provider_node_ids = std::collections::HashSet::default();
-    for ((importer, state), (project_dir, modules_dir)) in initialized.importers
+    for ((importer, state), (project_dir, modules_dir)) in initialized
+        .importers
         .iter()
         .zip(initialized.states)
         .zip(initialized.input_dirs)
@@ -442,13 +457,17 @@ fn resolve_workspace_peers(
         &settings.peers.lockfile_dir,
         settings.peers.dedupe_injected_deps,
         settings.peers.dedupe_peer_dependents,
-        settings.peers.resolve_peers_from_workspace_root,
+        settings
+            .peers
+            .resolve_peers_from_workspace_root,
         ResolvePeersOptions {
             peers_suffix_max_length: settings.peers.peers_suffix_max_length,
             dedupe_peers: settings.peers.dedupe_peers,
             project_dir: None,
             links: crate::PeerLinkOptions {
-                exclude_links_from_lockfile: settings.peers.exclude_links_from_lockfile,
+                exclude_links_from_lockfile: settings
+                    .peers
+                    .exclude_links_from_lockfile,
                 lockfile_dir: Some(settings.peers.lockfile_dir.clone()),
                 // Per-importer; resolve_peers_workspace swaps the
                 // ImporterPeerInput's modules_dir into walker.opts before each
@@ -482,7 +501,9 @@ where
         .map(|state| state.prepare_initial_required_round(peer_discovery))
         .collect();
     let first_importer_by_pkg = workspace.first_importer_by_pkg();
-    let first_walk_missing_by_pkg = workspace.children.first_walk_missing_by_pkg();
+    let first_walk_missing_by_pkg = workspace
+        .children
+        .first_walk_missing_by_pkg();
     for (state, round) in states
         .iter()
         .zip(rounds.iter_mut().flatten())
@@ -494,7 +515,9 @@ where
         .zip(rounds)
         .filter_map(|(state, round)| round.map(|round| (state, round)))
     {
-        state.complete_initial_required_round(resolver, round, peer_discovery).await?;
+        state
+            .complete_initial_required_round(resolver, round, peer_discovery)
+            .await?;
     }
     Ok(())
 }
@@ -513,13 +536,17 @@ where
     loop {
         let mut any_hoisted = false;
         for state in &mut *states {
-            any_hoisted |= state.hoist_optional_round(resolver).await?;
+            any_hoisted |= state
+                .hoist_optional_round(resolver)
+                .await?;
         }
         if !any_hoisted {
             return Ok(());
         }
         for state in &mut *states {
-            state.run_required_round(resolver, peer_discovery).await?;
+            state
+                .run_required_round(resolver, peer_discovery)
+                .await?;
         }
     }
 }

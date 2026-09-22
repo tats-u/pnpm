@@ -18,13 +18,16 @@ fn deployed_peer_dependencies_can_install_with_a_fresh_lockfile() {
     fs::write(fixture.workspace.join("package.json"), r#"{"name":"root","private":true}"#).unwrap();
     fs::create_dir(fixture.workspace.join("app")).unwrap();
     fs::write(
-        fixture.workspace.join("app/package.json"),
+        fixture
+            .workspace
+            .join("app/package.json"),
         json!({ "name": "app", "version": "1.0.0", "dependencies": dependencies }).to_string(),
     )
     .unwrap();
     crate::_utils::append_workspace_yaml_key(&fixture.workspace, "packages", "[app]");
     crate::_utils::append_workspace_yaml_key(&fixture.workspace, "injectWorkspacePackages", true);
-    fixture.pacquet
+    fixture
+        .pacquet
         .with_arg("install")
         .assert()
         .success();
@@ -39,9 +42,13 @@ fn deployed_peer_dependencies_can_install_with_a_fresh_lockfile() {
     let manifest_path = deploy_dir.join("package.json");
     let manifest: Value = serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
     assert_eq!(manifest["dependencies"], dependencies);
-    let deployed_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir).unwrap().unwrap();
-    let reference = &deployed_lockfile.importers["."].dependencies.as_ref().unwrap()
-        [&"@pnpm.e2e/abc".parse().unwrap()]
+    let deployed_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir)
+        .unwrap()
+        .unwrap();
+    let reference = &deployed_lockfile.importers["."]
+        .dependencies
+        .as_ref()
+        .unwrap()[&"@pnpm.e2e/abc".parse().unwrap()]
         .version;
     assert!(reference.to_string().contains('('), "expected peer-qualified reference: {reference}");
 
@@ -56,9 +63,13 @@ fn deployed_peer_dependencies_can_install_with_a_fresh_lockfile() {
         .success();
     let fresh_manifest: Value = serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
     assert_eq!(fresh_manifest, manifest);
-    let fresh_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir).unwrap().unwrap();
-    let reference = &fresh_lockfile.importers["."].dependencies.as_ref().unwrap()
-        [&"@pnpm.e2e/abc".parse().unwrap()]
+    let fresh_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir)
+        .unwrap()
+        .unwrap();
+    let reference = &fresh_lockfile.importers["."]
+        .dependencies
+        .as_ref()
+        .unwrap()[&"@pnpm.e2e/abc".parse().unwrap()]
         .version;
     assert!(reference.to_string().contains('('), "expected peer-qualified reference: {reference}");
     for name in ["@pnpm.e2e/abc", "alias"] {

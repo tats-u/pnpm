@@ -25,20 +25,18 @@ fn pinning_fixture(served_pnpm_version: &str) -> CommandTempCwd<AddMockedRegistr
     let mut fixture =
         CommandTempCwd::init().add_mocked_registry_with_pnpm_version(served_pnpm_version);
     let registry = fixture.npmrc_info.mock_instance.url();
-    fixture.pacquet.env("PNPM_CONFIG_REGISTRY", registry);
-    fixture.pacquet.env("PNPM_CONFIG_CACHE_DIR", &fixture.npmrc_info.cache_dir);
+    fixture
+        .pacquet
+        .env("PNPM_CONFIG_REGISTRY", registry);
+    fixture
+        .pacquet
+        .env("PNPM_CONFIG_CACHE_DIR", &fixture.npmrc_info.cache_dir);
     fixture
 }
 
 #[test]
 fn should_create_package_json() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = pinning_fixture(LATEST_PNPM);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } = pinning_fixture(LATEST_PNPM);
     pacquet
         .with_arg("init")
         .assert()
@@ -66,13 +64,7 @@ fn should_create_package_json() {
 
 #[test]
 fn the_pin_follows_the_registry_latest_rather_than_the_running_pnpm() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = pinning_fixture(LATEST_PNPM);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } = pinning_fixture(LATEST_PNPM);
     pacquet
         .with_arg("init")
         .assert()
@@ -95,13 +87,7 @@ fn the_pin_follows_the_registry_latest_rather_than_the_running_pnpm() {
 /// being tagged; the pin must not move a fresh project backwards onto it.
 #[test]
 fn a_latest_older_than_the_running_pnpm_is_not_pinned() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = pinning_fixture("1.0.0");
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } = pinning_fixture("1.0.0");
     pacquet
         .with_arg("init")
         .assert()
@@ -135,13 +121,8 @@ fn an_unreachable_registry_pins_the_running_pnpm() {
 /// version is only possible if the lookup never happened.
 #[test]
 fn offline_pins_the_running_pnpm_without_a_lookup() {
-    let CommandTempCwd {
-        mut pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = pinning_fixture(LATEST_PNPM);
+    let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
+        pinning_fixture(LATEST_PNPM);
     pacquet.env("PNPM_CONFIG_OFFLINE", "true");
     pacquet
         .with_arg("init")
@@ -216,13 +197,7 @@ fn init_package_manager_off_in_the_workspace_manifest_leaves_the_manifest_unpinn
 
 #[test]
 fn a_workspace_root_is_pinned() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = pinning_fixture(LATEST_PNPM);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } = pinning_fixture(LATEST_PNPM);
     fs::write(workspace.join("pnpm-workspace.yaml"), "packages:\n  - packages/*\n")
         .expect("write to pnpm-workspace.yaml");
     pacquet
@@ -288,13 +263,7 @@ fn assert_unpinned(dir: &Path) {
 
 #[test]
 fn init_type_commonjs_leaves_the_type_field_out() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = pinning_fixture(LATEST_PNPM);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } = pinning_fixture(LATEST_PNPM);
     pacquet
         .with_arg("init")
         .with_arg("--init-type")
@@ -311,13 +280,7 @@ fn init_type_commonjs_leaves_the_type_field_out() {
 
 #[test]
 fn init_type_from_the_workspace_manifest_is_honored() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = pinning_fixture(LATEST_PNPM);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } = pinning_fixture(LATEST_PNPM);
     fs::write(workspace.join("pnpm-workspace.yaml"), "initType: commonjs\n")
         .expect("write to pnpm-workspace.yaml");
     pacquet
@@ -334,13 +297,7 @@ fn init_type_from_the_workspace_manifest_is_honored() {
 
 #[test]
 fn the_author_license_and_version_settings_replace_the_scaffold_placeholders() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = pinning_fixture(LATEST_PNPM);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } = pinning_fixture(LATEST_PNPM);
     fs::write(
         workspace.join("pnpm-workspace.yaml"),
         "initAuthorName: pnpm\n\
@@ -370,13 +327,7 @@ fn the_author_license_and_version_settings_replace_the_scaffold_placeholders() {
 /// the empty `author` field npm's scaffold carries.
 #[test]
 fn the_scaffold_placeholders_stand_without_the_init_settings() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = pinning_fixture(LATEST_PNPM);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } = pinning_fixture(LATEST_PNPM);
     pacquet
         .with_arg("init")
         .assert()

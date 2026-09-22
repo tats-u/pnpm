@@ -78,7 +78,12 @@ fn metadata_reads_continued_fields_and_stops_at_the_description() {
 #[test]
 fn metadata_without_a_distribution_is_refused() {
     let error = WheelMetadata::parse("Metadata-Version: 2.1\n").expect_err("no name or version");
-    assert!(error.to_string().contains("names no distribution"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("names no distribution"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -97,11 +102,17 @@ fn candidates_prefer_the_first_tag_the_target_lists() {
 
     let candidate = &candidates[&Version::from_str("1.0.0").unwrap()];
     assert_eq!(
-        candidate.wheel().expect("an index file is a wheel").name,
+        candidate
+            .wheel()
+            .expect("an index file is a wheel")
+            .name,
         "demo-1.0.0-cp312-cp312-manylinux_2_17_x86_64.whl",
     );
     assert_eq!(
-        candidate.wheel().expect("an index file is a wheel").url,
+        candidate
+            .wheel()
+            .expect("an index file is a wheel")
+            .url,
         "https://example.test/simple/demo/demo-1.0.0-cp312-cp312-manylinux_2_17_x86_64.whl",
     );
 }
@@ -132,7 +143,8 @@ fn candidates_leave_out_what_the_target_cannot_install() {
     .expect("page parses");
 
     assert_eq!(
-        candidates.candidates
+        candidates
+            .candidates
             .keys()
             .map(ToString::to_string)
             .collect::<Vec<_>>(),
@@ -171,7 +183,9 @@ fn the_releases_kept_for_a_failure_do_not_follow_the_size_of_the_page() {
     assert!(offered.candidates.is_empty());
     assert_eq!(offered.excluded.releases(), 40, "every release is counted");
     assert_eq!(
-        offered.excluded.other_targets
+        offered
+            .excluded
+            .other_targets
             .newest()
             .map(ToString::to_string)
             .collect::<Vec<_>>(),
@@ -262,7 +276,12 @@ fn a_wheel_the_running_interpreter_is_outside_of_is_unavailable() {
     let error = step(&packages, &requirements, &target.environment)
         .expect_err("the only version excludes this interpreter");
 
-    assert!(error.to_string().contains("incompatible Python interpreter"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("incompatible Python interpreter"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -287,18 +306,34 @@ fn candidates_carry_the_metadata_file_an_index_advertises() {
         .expect("declared with digests");
     assert_eq!(digests["sha256"], "c".repeat(64));
     assert_eq!(
-        candidates[&Version::from_str("2.0.0").unwrap()].core_metadata().cloned(),
+        candidates[&Version::from_str("2.0.0").unwrap()]
+            .core_metadata()
+            .cloned(),
         Some(BTreeMap::new()),
         "the legacy spelling declares the file without digests",
     );
-    assert_eq!(candidates[&Version::from_str("3.0.0").unwrap()].core_metadata().cloned(), None);
+    assert_eq!(
+        candidates[&Version::from_str("3.0.0").unwrap()]
+            .core_metadata()
+            .cloned(),
+        None
+    );
 }
 
 #[test]
 fn wheel_identity_refuses_a_filename_that_is_not_one() {
     let error = wheel_identity("demo-1.0.0.whl", &target().tags).expect_err("too few parts");
-    assert!(error.to_string().contains("invalid Python wheel filename"), "{error}");
-    assert!(wheel_identity("demo-1.0.0.tar.gz", &target().tags).expect("not a wheel").is_none());
+    assert!(
+        error
+            .to_string()
+            .contains("invalid Python wheel filename"),
+        "{error}"
+    );
+    assert!(
+        wheel_identity("demo-1.0.0.tar.gz", &target().tags)
+            .expect("not a wheel")
+            .is_none()
+    );
 }
 
 #[test]
@@ -361,7 +396,12 @@ fn a_project_with_no_satisfying_version_reports_why() {
 
     let error = step(&packages, &requirements, &target.environment).expect_err("nothing satisfies");
 
-    assert!(error.to_string().contains("Python dependency resolution failed"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("Python dependency resolution failed"),
+        "{error}"
+    );
 }
 
 fn project_whose_newest_release_declares(requires_dist: &str) -> (Packages, Vec<Requirement>) {
@@ -412,7 +452,12 @@ fn a_project_whose_every_release_is_unreadable_reports_why() {
 
     let error = step(&packages, &requirements, &target.environment).expect_err("nothing readable");
 
-    assert!(error.to_string().contains("requirement pnpm cannot read"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("requirement pnpm cannot read"),
+        "{error}"
+    );
 }
 
 /// A requirement pnpm does not implement is not one release's mistake:
@@ -434,7 +479,9 @@ fn an_unsupported_url_requirement_is_refused_rather_than_skipped() {
         let error = step(&packages, &requirements, &target.environment).expect_err("unsupported");
 
         assert!(
-            error.to_string().contains("unsupported scheme in direct URL Python requirement"),
+            error
+                .to_string()
+                .contains("unsupported scheme in direct URL Python requirement"),
             "{error}",
         );
     }
@@ -445,7 +492,12 @@ fn an_unsupported_url_requirement_is_refused_rather_than_skipped() {
 #[test]
 fn the_target_fixture_is_a_marker_environment() {
     let environment: &MarkerEnvironment = &target().environment;
-    assert_eq!(environment.python_full_version().to_string(), "3.12.0");
+    assert_eq!(
+        environment
+            .python_full_version()
+            .to_string(),
+        "3.12.0"
+    );
 }
 
 /// A solved one-package project: `demo 1.0.0`, whose `Requires-Dist` is
@@ -538,7 +590,12 @@ fn a_lockfile_applies_wherever_its_wheels_install() {
     let error = lockfile
         .applies_to(&inputs, Some(">=3.10"), &native_only)
         .expect_err("no tag");
-    assert!(error.to_string().contains("pins no wheel of demo==1.0.0"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("pins no wheel of demo==1.0.0"),
+        "{error}"
+    );
 
     let other_requirements = [Requirement::from_str("demo>=1").unwrap()];
     let error = lockfile
@@ -548,18 +605,33 @@ fn a_lockfile_applies_wherever_its_wheels_install() {
             &target(),
         )
         .expect_err("other requirements");
-    assert!(error.to_string().contains("requirements changed"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("requirements changed"),
+        "{error}"
+    );
 
     let other_index = Inputs::new(&requirements, &target(), "https://other.test/simple/");
     let error = lockfile
         .applies_to(&other_index, Some(">=3.10"), &target())
         .expect_err("index");
-    assert!(error.to_string().contains("index changed"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("index changed"),
+        "{error}"
+    );
 
     let error = lockfile
         .applies_to(&inputs, None, &target())
         .expect_err("requires-python");
-    assert!(error.to_string().contains("requires-python changed"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("requires-python changed"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -573,7 +645,12 @@ fn a_lockfile_pinning_another_distribution_under_a_package_is_refused() {
         .applies_to(&inputs, Some(">=3.10"), &target())
         .expect_err("wrong wheel");
 
-    assert!(error.to_string().contains("wheel identity mismatch"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("wheel identity mismatch"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -754,7 +831,8 @@ fn a_lockfile_for_several_environments_pins_the_wheel_each_of_them_takes() {
     let helper = &lockfile.packages[1];
     assert_eq!(helper.name.to_string(), "helper");
     assert!(
-        helper.marker
+        helper
+            .marker
             .as_deref()
             .expect("helper is installed on Windows alone")
             .contains("sys_platform == 'win32'"),
@@ -782,7 +860,13 @@ fn an_environment_takes_only_the_packages_and_wheels_the_lockfile_gives_it() {
             .name,
         "demo-1.0.0-py3-none-manylinux_2_17_x86_64.whl",
     );
-    assert!(!linux.candidates.contains_key(&name("helper")), "{:?}", linux.candidates.keys());
+    assert!(
+        !linux
+            .candidates
+            .contains_key(&name("helper")),
+        "{:?}",
+        linux.candidates.keys()
+    );
 
     let mut windows = Packages::new();
     lockfile
@@ -795,7 +879,11 @@ fn an_environment_takes_only_the_packages_and_wheels_the_lockfile_gives_it() {
             .name,
         "demo-1.0.0-py3-none-win_amd64.whl",
     );
-    assert!(windows.candidates.contains_key(&name("helper")));
+    assert!(
+        windows
+            .candidates
+            .contains_key(&name("helper"))
+    );
 }
 
 #[test]
@@ -841,7 +929,12 @@ fn two_environments_nothing_tells_apart_cannot_need_different_versions() {
     )
     .expect_err("one environment, two versions");
 
-    assert!(error.to_string().contains("nothing in their markers tells them apart"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("nothing in their markers tells them apart"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -896,7 +989,9 @@ fn git_and_index_sources_of_one_version_remain_distinct_across_environments() {
         subdirectory: None,
     };
     solved[0].wheels.remove(&name("demo"));
-    solved[0].vcs.insert(name("demo"), vcs.clone());
+    solved[0]
+        .vcs
+        .insert(name("demo"), vcs.clone());
     let lock =
         Lockfile::merged(&metadata, &requirements, &solved, declared_inputs(&requirements), None)
             .unwrap();
@@ -916,7 +1011,11 @@ fn git_and_index_sources_of_one_version_remain_distinct_across_environments() {
     let mut windows = Packages::new();
     lock.seed(&mut windows, &solved[1].target)
         .unwrap();
-    assert!(windows.candidates[&name("demo")][&version("1.0.0")].wheel().is_some());
+    assert!(
+        windows.candidates[&name("demo")][&version("1.0.0")]
+            .wheel()
+            .is_some()
+    );
 }
 
 mod frozen_sources;
@@ -948,7 +1047,11 @@ fn overrides_replace_transitive_ranges_and_constraints_only_narrow_reached_packa
         );
     }
     let requirements = vec!["demo".parse::<Requirement>().unwrap()];
-    packages.overrides = vec!["helper>=2; sys_platform == 'linux'".parse().unwrap()];
+    packages.overrides = vec![
+        "helper>=2; sys_platform == 'linux'"
+            .parse()
+            .unwrap(),
+    ];
     packages.constraints = vec!["helper<3".parse().unwrap(), "absent==1".parse().unwrap()];
     let solved = crate::locked_solution(&packages, &requirements, &target.environment).unwrap();
     assert_eq!(
@@ -956,13 +1059,21 @@ fn overrides_replace_transitive_ranges_and_constraints_only_narrow_reached_packa
         BTreeMap::from([(name("demo"), version("1.0")), (name("helper"), version("2.0"))]),
     );
     crate::validate_locked(&packages, &requirements, &target.environment).unwrap();
-    packages.overrides = vec!["helper>=2; sys_platform == 'win32'".parse().unwrap()];
+    packages.overrides = vec![
+        "helper>=2; sys_platform == 'win32'"
+            .parse()
+            .unwrap(),
+    ];
     let solved = crate::locked_solution(&packages, &requirements, &target.environment).unwrap();
     assert_eq!(solved[&name("helper")], version("1.0"));
     packages.constraints = vec!["helper>=2".parse().unwrap()];
     let error = crate::locked_solution(&packages, &requirements, &target.environment).unwrap_err();
     eprintln!("{error}");
-    assert!(error.to_string().contains("does not satisfy"));
+    assert!(
+        error
+            .to_string()
+            .contains("does not satisfy")
+    );
 }
 
 fn sdist(filename: &str) -> serde_json::Value {
@@ -1029,7 +1140,9 @@ fn a_source_distribution_filename_is_read_against_the_distribution_it_is_publish
     );
     for filename in ["other-1.0.tar.gz", "demo-1.0.tar.bz2", "demo.tar.gz", "demo-1.0-py3.egg"] {
         assert!(
-            source_version(filename, &name("demo")).expect("filename parses").is_none(),
+            source_version(filename, &name("demo"))
+                .expect("filename parses")
+                .is_none(),
             "read {filename} as a source distribution of demo",
         );
     }
@@ -1043,16 +1156,24 @@ fn a_resolution_failure_says_why_a_distribution_offered_nothing() {
     let target = target();
     let unknown = {
         let mut packages = Packages::new();
-        packages.candidates.insert(name("demo"), BTreeMap::new());
-        packages.excluded.insert(name("demo"), Excluded::default());
+        packages
+            .candidates
+            .insert(name("demo"), BTreeMap::new());
+        packages
+            .excluded
+            .insert(name("demo"), Excluded::default());
         packages
     };
     let offered_by_page = |files: serde_json::Value| {
         let mut packages = Packages::new();
         let offered = candidates_from_page(&page(&files), &index_url(), &name("demo"), &target)
             .expect("page parses");
-        packages.candidates.insert(name("demo"), offered.candidates);
-        packages.excluded.insert(name("demo"), offered.excluded);
+        packages
+            .candidates
+            .insert(name("demo"), offered.candidates);
+        packages
+            .excluded
+            .insert(name("demo"), offered.excluded);
         packages
     };
     let elsewhere = offered_by_page(serde_json::json!([wheel(
@@ -1111,7 +1232,9 @@ fn environments_that_take_different_archives_of_one_release_are_refused() {
             &target,
         )
         .expect("page parses");
-        packages.candidates.insert(name("demo"), offered.candidates);
+        packages
+            .candidates
+            .insert(name("demo"), offered.candidates);
         let version = Version::from_str("1.0.0").unwrap();
         packages.metadata.insert(
             (name("demo"), version.clone()),
@@ -1142,7 +1265,12 @@ fn environments_that_take_different_archives_of_one_release_are_refused() {
     .expect_err("one entry cannot pin both archives");
 
     dbg!(&error);
-    assert!(error.to_string().contains("different archives of demo"), "{error}");
+    assert!(
+        error
+            .to_string()
+            .contains("different archives of demo"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -1156,7 +1284,9 @@ fn a_lockfile_pins_the_source_distribution_a_release_is_built_from() {
         &target,
     )
     .expect("page parses");
-    packages.candidates.insert(name("demo"), offered.candidates);
+    packages
+        .candidates
+        .insert(name("demo"), offered.candidates);
     packages.metadata.insert(
         (name("demo"), Version::from_str("1.0.0").unwrap()),
         WheelMetadata::parse("Name: demo\nVersion: 1.0.0\n").expect("metadata parses"),
@@ -1176,7 +1306,11 @@ fn a_lockfile_pins_the_source_distribution_a_release_is_built_from() {
     let [package] = lockfile.packages.as_slice() else { panic!("one package was solved") };
     assert!(package.wheels.is_empty());
     assert_eq!(
-        package.sdist.as_ref().expect("the release pins its source distribution").name,
+        package
+            .sdist
+            .as_ref()
+            .expect("the release pins its source distribution")
+            .name,
         "demo-1.0.0.tar.gz",
     );
 
@@ -1184,7 +1318,9 @@ fn a_lockfile_pins_the_source_distribution_a_release_is_built_from() {
         .applies_to(&inputs(), None, &target)
         .expect("the lockfile applies to this target");
     let mut seeded = Packages::new();
-    lockfile.seed(&mut seeded, &target).expect("the lockfile seeds its own candidates");
+    lockfile
+        .seed(&mut seeded, &target)
+        .expect("the lockfile seeds its own candidates");
     assert_eq!(
         seeded.candidates[&name("demo")][&Version::from_str("1.0.0").unwrap()]
             .sdist()
@@ -1202,7 +1338,10 @@ fn a_lockfile_pins_the_source_distribution_a_release_is_built_from() {
     ] {
         let mut tampered = locked();
         tamper(
-            tampered.packages[0].sdist.as_mut().expect("the release pins its source distribution"),
+            tampered.packages[0]
+                .sdist
+                .as_mut()
+                .expect("the release pins its source distribution"),
         );
         let error = tampered
             .applies_to(&inputs(), None, &target)

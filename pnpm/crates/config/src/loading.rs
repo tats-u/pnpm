@@ -53,7 +53,8 @@ impl Config {
         Sys: EnvVar + EnvVarOs + GetCurrentDir + GetHomeDir + LinkProbe,
     {
         let default_state_dir = default_state_dir::<Sys>().unwrap_or_default();
-        self.state_dir.clone_from(&default_state_dir);
+        self.state_dir
+            .clone_from(&default_state_dir);
 
         self.anchor_default_module_dirs(start_dir);
 
@@ -72,7 +73,8 @@ impl Config {
         // participates in the user-level path resolution below, and its
         // directory is where `auth.ini` lives.
         let global_config_dir = default_config_dir::<Sys>();
-        self.config_dir.clone_from(&global_config_dir);
+        self.config_dir
+            .clone_from(&global_config_dir);
         let global_settings = self.load_global_settings::<Sys>()?;
 
         // Captured here, before any later layer can flip the boolean:
@@ -121,7 +123,10 @@ impl Config {
 
         self.apply_env_settings::<Sys>(&mut explicit, &default_state_dir, start_dir);
 
-        if !self.explicit_settings.contains_key("lockfile") {
+        if !self
+            .explicit_settings
+            .contains_key("lockfile")
+        {
             self.lockfile = self.package_lock;
         }
 
@@ -160,7 +165,9 @@ impl Config {
         // Proxy cascade fires unconditionally — even when no `.npmrc`
         // is found — because the env-var fallback is a normalization step
         // on the resolved config, not a function of `.npmrc` presence.
-        npmrc_auth.proxy.apply_proxy_cascade::<Sys>(self);
+        npmrc_auth
+            .proxy
+            .apply_proxy_cascade::<Sys>(self);
         // TLS + local-address are sourced from `.npmrc` only — pnpm
         // does not honor env vars (`NODE_EXTRA_CA_CERTS`,
         // `NODE_TLS_REJECT_UNAUTHORIZED`, etc.) for these keys
@@ -168,13 +175,16 @@ impl Config {
         // there is no `.npmrc`, `npmrc_auth` is the default value and
         // this is a no-op write of `TlsConfig::default()` onto the
         // already-default `self.tls`.
-        npmrc_auth.tls.apply_tls_and_local_address(self);
+        npmrc_auth
+            .tls
+            .apply_tls_and_local_address(self);
     }
 
     pub(super) fn load_global_settings<Sys: EnvVar>(
         &self,
     ) -> Result<Option<WorkspaceSettings>, LoadWorkspaceYamlError> {
-        let mut global_settings = self.config_dir
+        let mut global_settings = self
+            .config_dir
             .as_deref()
             .map(WorkspaceSettings::load_global)
             .transpose()?
@@ -231,9 +241,14 @@ impl Config {
         if let Some(registry) = env_registry_override {
             let normalized =
                 if registry.ends_with('/') { registry } else { format!("{registry}/") };
-            self.registries_by_scope.insert("default".to_string(), normalized.clone());
-            self.package_manager_bootstrap.registry.clone_from(&normalized);
-            self.package_manager_bootstrap.registries.insert("default".to_string(), normalized);
+            self.registries_by_scope
+                .insert("default".to_string(), normalized.clone());
+            self.package_manager_bootstrap
+                .registry
+                .clone_from(&normalized);
+            self.package_manager_bootstrap
+                .registries
+                .insert("default".to_string(), normalized);
         }
     }
 }

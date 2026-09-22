@@ -115,14 +115,13 @@ pub(crate) fn install_native_shim_from(
     let target_file = target_file_path(bin_dir, name);
     let executable = executable_path(bin_dir, name);
     pnpm_fs::write_atomic(&target_file, &target.encode())?;
-    crate::executable_link::replace_executable(source, &executable)
-        .inspect_err(|_| {
-            // A sidecar without an executable would list as a shim; a sidecar
-            // beside an older executable is a live shim with its new target.
-            if !executable.exists() {
-                let _ = fs::remove_file(&target_file);
-            }
-        })
+    crate::executable_link::replace_executable(source, &executable).inspect_err(|_| {
+        // A sidecar without an executable would list as a shim; a sidecar
+        // beside an older executable is a live shim with its new target.
+        if !executable.exists() {
+            let _ = fs::remove_file(&target_file);
+        }
+    })
 }
 
 /// Remove the shim `name` and its sidecar. A missing shim is not an error.
@@ -209,7 +208,10 @@ pub(crate) fn migrate_legacy_shims_from(source: &Path, bin_dir: &Path) -> io::Re
     };
     for entry in entries {
         let file_name = entry.file_name();
-        let Some(name) = file_name.to_str().filter(|name| is_safe_bin_name(name)) else {
+        let Some(name) = file_name
+            .to_str()
+            .filter(|name| is_safe_bin_name(name))
+        else {
             continue;
         };
         // Migrating one shim removes its Windows siblings, which the
@@ -247,7 +249,9 @@ fn legacy_shim_target(path: &Path) -> io::Result<Option<ShimTarget>> {
         return Ok(None);
     }
     let mut bytes = Vec::new();
-    fs::File::open(path)?.take(MAX_LEGACY_SHIM_BYTES).read_to_end(&mut bytes)?;
+    fs::File::open(path)?
+        .take(MAX_LEGACY_SHIM_BYTES)
+        .read_to_end(&mut bytes)?;
     if !bytes.starts_with(b"#!") {
         return Ok(None);
     }
@@ -300,7 +304,9 @@ fn executing_dispatcher_bin_dir(shim: &Path) -> Option<PathBuf> {
         return None;
     }
     let bin_dir = dispatcher.parent()?.to_path_buf();
-    same_file::is_same_file(supplied_bin_dir, &bin_dir).unwrap_or(false).then_some(bin_dir)
+    same_file::is_same_file(supplied_bin_dir, &bin_dir)
+        .unwrap_or(false)
+        .then_some(bin_dir)
 }
 
 fn try_migrate_legacy_shims(bin_dir: &Path) {
@@ -336,7 +342,9 @@ fn parse_legacy_shim_argv(rest: &[OsString]) -> Option<(&str, &Path, ShimTarget,
     if separator.to_str() != Some("--") {
         return None;
     }
-    let name = name.to_str().filter(|name| is_safe_bin_name(name))?;
+    let name = name
+        .to_str()
+        .filter(|name| is_safe_bin_name(name))?;
     let target = match target.to_str() {
         Some(target) => ShimTarget::from_legacy_marker(target)?,
         None => ShimTarget::Installed(PathBuf::from(target)),
@@ -390,7 +398,9 @@ fn remove_if_exists(path: &Path) -> io::Result<()> {
 fn shim_name(file_name: &OsStr) -> Option<String> {
     let file_name = file_name.to_str()?;
     let name = file_name.get(..file_name.len().checked_sub(4)?)?;
-    file_name[name.len()..].eq_ignore_ascii_case(".exe").then(|| name.to_string())
+    file_name[name.len()..]
+        .eq_ignore_ascii_case(".exe")
+        .then(|| name.to_string())
 }
 
 #[cfg(not(windows))]

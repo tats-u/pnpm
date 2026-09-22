@@ -36,7 +36,12 @@ pub(in crate::server) struct Claims {
 fn signing_key(state: &AppState) -> Result<SigningKey, RegistryError> {
     let mut hash = Sha256::new();
     hash.update(b"pnpr OCI token signing v1\0");
-    hash.update(&state.inner.config.resolution_cache_secret);
+    hash.update(
+        &state
+            .inner
+            .config
+            .resolution_cache_secret,
+    );
     SigningKey::from_slice(&hash.finalize())
         .map_err(|_| RegistryError::Internal { reason: "invalid OCI signing key".to_string() })
 }
@@ -55,9 +60,15 @@ pub(in crate::server) fn decode(
 
 fn verify_claims(key: &SigningKey, token: &str, now: u64) -> Result<Claims, RegistryError> {
     let invalid = || RegistryError::Unauthenticated { resource: "OCI token".to_string() };
-    let (payload, signature) = token.split_once('.').ok_or_else(invalid)?;
-    let bytes = URL_SAFE_NO_PAD.decode(payload).map_err(|_| invalid())?;
-    let signature = URL_SAFE_NO_PAD.decode(signature).map_err(|_| invalid())?;
+    let (payload, signature) = token
+        .split_once('.')
+        .ok_or_else(invalid)?;
+    let bytes = URL_SAFE_NO_PAD
+        .decode(payload)
+        .map_err(|_| invalid())?;
+    let signature = URL_SAFE_NO_PAD
+        .decode(signature)
+        .map_err(|_| invalid())?;
     let signature = Signature::from_slice(&signature).map_err(|_| invalid())?;
     key.verifying_key()
         .verify(&bytes, &signature)
@@ -189,9 +200,19 @@ async fn issue_token(
     if raw.is_some() && *identity == Identity::Anonymous {
         return Ok(error(ErrorCode::Unauthorized, "invalid credentials"));
     }
-    let parent = raw.as_ref().map(|raw| sha256_hex(raw.as_bytes()));
+    let parent = raw
+        .as_ref()
+        .map(|raw| sha256_hex(raw.as_bytes()));
     let record = match &parent {
-        Some(parent) => state.inner.identity.auth.tokens.find_by_key(parent).await?,
+        Some(parent) => {
+            state
+                .inner
+                .identity
+                .auth
+                .tokens
+                .find_by_key(parent)
+                .await?
+        }
         None => None,
     };
     let readonly = record.is_some_and(|record| record.readonly);
@@ -227,7 +248,8 @@ fn granted_scopes(
 ) -> Result<BTreeMap<String, Vec<String>>, RegistryError> {
     let mut scopes = BTreeMap::new();
     let pairs = url::form_urlencoded::parse(
-        query.uri
+        query
+            .uri
             .query()
             .unwrap_or_default()
             .as_bytes(),
@@ -279,7 +301,8 @@ fn grant_one_scope(
     }
     let source =
         resolve_ecosystem_source(state, target, pnpr_registry::Ecosystem::Oci, name.as_str());
-    let allowed: &mut Vec<String> = grant.scopes
+    let allowed: &mut Vec<String> = grant
+        .scopes
         .entry(name.as_str().to_string())
         .or_default();
     extend_granted_actions(
@@ -298,7 +321,8 @@ fn extend_granted_actions(
     grant: &mut GrantActions<'_>,
 ) {
     for action in grant.actions.split(',') {
-        if grant.allowed
+        if grant
+            .allowed
             .iter()
             .any(|held| held == action)
         {
@@ -338,23 +362,30 @@ pub(super) fn challenge(
     scope: Option<(&str, &str)>,
     mut response: Response,
 ) -> Response {
-    if response.status() != StatusCode::UNAUTHORIZED
-        || !state.inner.config.http.oci.bearer_auth
-    {
+    if response.status() != StatusCode::UNAUTHORIZED || !state.inner.config.http.oci.bearer_auth {
         return response;
     }
-    let realm = format!("{}{base}/token", state.inner.config.http.public_url.trim_end_matches('/'));
+    let realm = format!(
+        "{}{base}/token",
+        state
+            .inner
+            .config
+            .http
+            .public_url
+            .trim_end_matches('/')
+    );
     let mut value = format!(r#"Bearer realm="{realm}",service="pnpr""#);
     if let Some((name, actions)) = scope
         && let Ok(name) =
             pnpr_package_name::CanonicalPackageName::parse(name, pnpr_registry::Ecosystem::Oci)
     {
-        write!(value, r#",scope="repository:{}:{actions}""#, name.as_str()).expect(
-            "writing to a string cannot fail",
-        );
+        write!(value, r#",scope="repository:{}:{actions}""#, name.as_str())
+            .expect("writing to a string cannot fail");
     }
     if let Ok(value) = axum::http::HeaderValue::from_str(&value) {
-        response.headers_mut().insert(header::WWW_AUTHENTICATE, value);
+        response
+            .headers_mut()
+            .insert(header::WWW_AUTHENTICATE, value);
     }
     crate::server::private_no_cache(response)
 }

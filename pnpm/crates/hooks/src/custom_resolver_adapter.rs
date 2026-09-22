@@ -30,7 +30,10 @@ impl CustomResolverAdapter {
         format!(
             "{}@{}",
             wanted.alias.as_deref().unwrap_or(""),
-            wanted.bare_specifier.as_deref().unwrap_or(""),
+            wanted
+                .bare_specifier
+                .as_deref()
+                .unwrap_or(""),
         )
     }
 
@@ -82,14 +85,18 @@ impl Resolver for CustomResolverAdapter {
         opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         Box::pin(async move {
-            if !self.can_resolve_cached(wanted_dependency).await? {
+            if !self
+                .can_resolve_cached(wanted_dependency)
+                .await?
+            {
                 return Ok(None);
             }
 
             let wanted_val = Self::wanted_to_value(wanted_dependency);
             let opts_val = Self::opts_to_value(opts);
 
-            let result = self.resolver
+            let result = self
+                .resolver
                 .resolve(wanted_val, opts_val)
                 .await
                 .map_err(|err| Box::new(std::io::Error::other(err.to_string())) as ResolveError)?;
@@ -110,7 +117,8 @@ impl Resolver for CustomResolverAdapter {
 impl CustomResolverAdapter {
     async fn can_resolve_cached(&self, wanted: &WantedDependency) -> Result<bool, ResolveError> {
         let key = Self::cache_key(wanted);
-        let cached = self.can_resolve_cache
+        let cached = self
+            .can_resolve_cache
             .lock()
             .unwrap()
             .get(&key)
@@ -118,7 +126,8 @@ impl CustomResolverAdapter {
         if let Some(cached) = cached {
             return Ok(cached);
         }
-        let result = self.resolver
+        let result = self
+            .resolver
             .can_resolve(Self::wanted_to_value(wanted))
             .await
             .map_err(|err| Box::new(std::io::Error::other(err.to_string())) as ResolveError)?;
@@ -151,18 +160,16 @@ fn resolved_hook_result(
         .get("resolution")
         .ok_or_else(|| invalid_data("Custom resolver did not return a 'resolution' field"))?;
 
-    let resolution = serde_json::from_value(resolution_val.clone())
-        .map_err(|err| {
-            invalid_data(format!("Custom resolver returned invalid resolution: {err}"))
-        })?;
+    let resolution = serde_json::from_value(resolution_val.clone()).map_err(|err| {
+        invalid_data(format!("Custom resolver returned invalid resolution: {err}"))
+    })?;
 
     let manifest = match result.get("manifest") {
-        Some(manifest_val) => Some(Arc::new(
-            serde_json::from_value(manifest_val.clone())
-                .map_err(|err| {
-                    invalid_data(format!("Custom resolver returned invalid manifest: {err}"))
-                })?,
-        )),
+        Some(manifest_val) => {
+            Some(Arc::new(serde_json::from_value(manifest_val.clone()).map_err(|err| {
+                invalid_data(format!("Custom resolver returned invalid manifest: {err}"))
+            })?))
+        }
         None => None,
     };
 

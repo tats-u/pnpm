@@ -106,12 +106,16 @@ fn join_paths_lossy(paths: &[PathBuf]) -> OsString {
 /// `wd`.
 fn ancestor_node_modules_bins(wd: &Path) -> Vec<PathBuf> {
     let normalized = normalize_for_split(wd);
-    let parts: Vec<&str> = normalized.split("/node_modules/").collect();
+    let parts: Vec<&str> = normalized
+        .split("/node_modules/")
+        .collect();
 
     // First part is the project root (everything before the first
     // `/node_modules/` segment); remaining parts are intermediate
     // `node_modules/<pp>` slots.
-    let (head, tail) = parts.split_first().expect("split always yields at least one element");
+    let (head, tail) = parts
+        .split_first()
+        .expect("split always yields at least one element");
 
     // Resolve the head like `path.resolve`: absolute paths stay as-is,
     // relative paths anchor against the process cwd, and an empty head

@@ -196,7 +196,13 @@ fn parse_js_number(value: Option<&str>) -> f64 {
         None => 0.0,
         Some(raw) => {
             let trimmed = raw.trim();
-            if trimmed.is_empty() { 0.0 } else { trimmed.parse::<f64>().unwrap_or(f64::NAN) }
+            if trimmed.is_empty() {
+                0.0
+            } else {
+                trimmed
+                    .parse::<f64>()
+                    .unwrap_or(f64::NAN)
+            }
         }
     }
 }

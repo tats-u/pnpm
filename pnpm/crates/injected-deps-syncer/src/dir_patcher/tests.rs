@@ -6,13 +6,21 @@ use std::{collections::HashMap, fs, path::PathBuf};
 use tempfile::TempDir;
 
 fn create_file(path: &std::path::Path, content: &str) {
-    fs::create_dir_all(path.parent().expect("file has a parent")).expect("create parent");
+    fs::create_dir_all(
+        path.parent()
+            .expect("file has a parent"),
+    )
+    .expect("create parent");
     fs::write(path, content).expect("write file");
 }
 
 #[cfg(unix)]
 fn create_fifo(path: &std::path::Path) {
-    fs::create_dir_all(path.parent().expect("fifo has a parent")).expect("create parent");
+    fs::create_dir_all(
+        path.parent()
+            .expect("fifo has a parent"),
+    )
+    .expect("create parent");
     let status = std::process::Command::new("mkfifo")
         .arg(path)
         .status()

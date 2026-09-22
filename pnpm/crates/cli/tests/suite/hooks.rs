@@ -196,7 +196,8 @@ fn update_config_catalog_applies_to_import() {
             .parse()
             .expect("parse config dependency package key");
     assert!(
-        env_lockfile.packages
+        env_lockfile
+            .packages
             .get(&config_dependency_key)
             .expect("config dependency package must be retained")
             .resolution
@@ -317,7 +318,9 @@ fn update_config_applies_to_recursive_run_defaults() {
     .expect("write pnpmfile");
     // One project at a time, in name order: the failure comes first, so
     // the default `bail` would never dispatch the second project.
-    let failing = workspace.join("packages").join("a-fails");
+    let failing = workspace
+        .join("packages")
+        .join("a-fails");
     fs::create_dir_all(&failing).expect("create failing project dir");
     fs::write(
         failing.join("package.json"),
@@ -329,7 +332,9 @@ fn update_config_applies_to_recursive_run_defaults() {
         .to_string(),
     )
     .expect("write failing project package.json");
-    let next = workspace.join("packages").join("b-writes-marker");
+    let next = workspace
+        .join("packages")
+        .join("b-writes-marker");
     fs::create_dir_all(&next).expect("create next project dir");
     fs::write(
         next.join("package.json"),
@@ -508,7 +513,9 @@ fn update_config_omits_the_settings_nothing_set() {
         .success();
 
     let seen = config_seen_by_hook(&workspace);
-    let settings = seen.as_object().expect("the configuration seen is an object");
+    let settings = seen
+        .as_object()
+        .expect("the configuration seen is an object");
     let reported_as_null: Vec<&String> = settings
         .iter()
         .filter(|(_, value)| value.is_null())
@@ -525,7 +532,10 @@ fn update_config_omits_the_settings_nothing_set() {
         .as_array()
         .expect("the pnpmfiles seen are an array")
         .iter()
-        .map(|path| path.as_str().expect("a pnpmfile path is a string"))
+        .map(|path| {
+            path.as_str()
+                .expect("a pnpmfile path is a string")
+        })
         .collect();
     assert_eq!(pnpmfiles.len(), 1);
     assert!(pnpmfiles[0].ends_with(".pnpmfile.cjs"));

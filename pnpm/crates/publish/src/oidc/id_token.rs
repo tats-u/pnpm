@@ -38,9 +38,17 @@ where
     }
 
     let parsed_registry = Url::parse(registry).map_err(GetIdTokenError::InvalidRegistry)?;
-    let audience = format!("npm:{}", parsed_registry.host_str().unwrap_or_default());
+    let audience = format!(
+        "npm:{}",
+        parsed_registry
+            .host_str()
+            .unwrap_or_default()
+    );
 
-    github_request_token::<Sys, Reporter>(&audience, options).await.map(Some).map_err(Into::into)
+    github_request_token::<Sys, Reporter>(&audience, options)
+        .await
+        .map(Some)
+        .map_err(Into::into)
 }
 
 /// A skippable id-token error: surfaced as a warning by the publish flow,

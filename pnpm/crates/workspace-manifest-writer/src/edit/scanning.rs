@@ -64,7 +64,8 @@ pub(super) fn mapping_keys(text: &str, path: &[&str]) -> Vec<String> {
         Inline::Unsupported => Vec::new(),
         Inline::Block => locate(text, path)
             .map(|mapping| {
-                mapping.entries
+                mapping
+                    .entries
                     .into_iter()
                     .map(|entry| entry.key)
                     .collect()
@@ -82,13 +83,12 @@ fn inline_value_start(text: &str, path: &[&str]) -> Option<usize> {
         let span = top_level_span(text, key)?;
         return inline_value_on_line(text, span.key_line_start);
     }
-    if let Some(entry) = locate(text, parent)
-        .and_then(|mapping| {
-            mapping.entries
-                .into_iter()
-                .find(|entry| entry.key == *key)
-        })
-    {
+    if let Some(entry) = locate(text, parent).and_then(|mapping| {
+        mapping
+            .entries
+            .into_iter()
+            .find(|entry| entry.key == *key)
+    }) {
         return inline_value_on_line(text, entry.line_start);
     }
     // The parent has no line entries of its own when it is itself written
@@ -222,9 +222,8 @@ pub(super) fn comment_start(value: &str) -> Option<usize> {
         _ => 0,
     };
     let bytes = value.as_bytes();
-    (scan_from..bytes.len()).find(|&idx| {
-        bytes[idx] == b'#' && idx > 0 && bytes[idx - 1].is_ascii_whitespace()
-    })
+    (scan_from..bytes.len())
+        .find(|&idx| bytes[idx] == b'#' && idx > 0 && bytes[idx - 1].is_ascii_whitespace())
 }
 
 /// Byte offset of the quote closing the scalar `value` opens with.
@@ -381,11 +380,9 @@ pub(super) fn top_level_span(text: &str, key: &str) -> Option<TopLevelSpan> {
 
 /// Index of the line declaring the top-level key `key`.
 pub(super) fn top_level_key_line(all: &[Line<'_>], key: &str) -> Option<usize> {
-    all.iter()
-        .position(|line| {
-            structural_indent(line.content) == Some(0)
-                && line_key(line.content).as_deref() == Some(key)
-        })
+    all.iter().position(|line| {
+        structural_indent(line.content) == Some(0) && line_key(line.content).as_deref() == Some(key)
+    })
 }
 
 /// Index of the line where the flow collection written inline on

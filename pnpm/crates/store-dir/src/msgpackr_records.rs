@@ -212,7 +212,8 @@ impl<'a> Reader<'a> {
         Ok(byte)
     }
     fn read_bytes(&mut self, n: usize) -> Result<&'a [u8], DecodeError> {
-        let end = self.pos
+        let end = self
+            .pos
             .checked_add(n)
             .ok_or(DecodeError::UnexpectedEof { offset: self.pos })?;
         if end > self.bytes.len() {
@@ -250,7 +251,8 @@ fn transcode_value(
         // names isn't duplicated. We clone instead of borrowing so the
         // recursive `transcode_value` call below can take `&mut state`.
         let fields = Rc::clone(
-            state.slots
+            state
+                .slots
                 .get(&head)
                 .ok_or(DecodeError::UnknownSlot { slot: head, offset: start })?,
         );
@@ -402,7 +404,9 @@ fn read_record_def(
         return Err(DecodeError::SlotOutOfRange { slot, offset: slot_offset });
     }
     let fields: Rc<[String]> = read_string_array(reader)?.into();
-    state.slots.insert(slot, Rc::clone(&fields));
+    state
+        .slots
+        .insert(slot, Rc::clone(&fields));
     state.records_mode = true;
     Ok(fields)
 }

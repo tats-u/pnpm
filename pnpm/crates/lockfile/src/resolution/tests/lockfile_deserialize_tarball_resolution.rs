@@ -451,7 +451,12 @@ fn deserialize_variations_resolution() {
     assert_eq!(variations.variants[0].targets[0].os, "darwin");
     assert_eq!(variations.variants[0].targets[0].cpu, "arm64");
     assert_eq!(variations.variants[0].targets[0].libc, None);
-    assert_eq!(variations.variants[1].targets[0].libc.as_deref(), Some("musl"));
+    assert_eq!(
+        variations.variants[1].targets[0]
+            .libc
+            .as_deref(),
+        Some("musl")
+    );
 }
 
 #[test]

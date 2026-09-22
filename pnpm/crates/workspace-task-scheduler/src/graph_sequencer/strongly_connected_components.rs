@@ -87,7 +87,10 @@ impl TarjanWalk {
         self.discover(root);
         while !self.frames.is_empty() {
             let (node, edge_index) = {
-                let frame = self.frames.last_mut().expect("the loop guard holds a frame");
+                let frame = self
+                    .frames
+                    .last_mut()
+                    .expect("the loop guard holds a frame");
                 let step = (frame.0, frame.1);
                 frame.1 += 1;
                 step
@@ -136,7 +139,10 @@ impl TarjanWalk {
         let component = self.component_size.len();
         let mut size = 0;
         loop {
-            let member = self.stack.pop().expect("Tarjan stack holds the component");
+            let member = self
+                .stack
+                .pop()
+                .expect("Tarjan stack holds the component");
             self.on_stack[member] = false;
             self.component_of[member] = component;
             size += 1;

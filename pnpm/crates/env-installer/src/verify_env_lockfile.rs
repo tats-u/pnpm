@@ -14,7 +14,9 @@ pub fn write_verified_env_lockfile(
     root_dir: &Path,
 ) -> Result<(), ConfigDepError> {
     verify_env_lockfile(env_lockfile)?;
-    env_lockfile.write(root_dir).map_err(ConfigDepError::WriteLockfile)
+    env_lockfile
+        .write(root_dir)
+        .map_err(ConfigDepError::WriteLockfile)
 }
 
 /// Reject config-dependency and optional-subdep names/versions before they
@@ -22,7 +24,10 @@ pub fn write_verified_env_lockfile(
 /// package names, versions exact semver — otherwise a traversal-shaped value
 /// would escape the install roots.
 pub fn verify_env_lockfile(env_lockfile: &EnvLockfile) -> Result<(), ConfigDepError> {
-    let Some(importer) = env_lockfile.importers.get(EnvLockfile::ROOT_IMPORTER_KEY) else {
+    let Some(importer) = env_lockfile
+        .importers
+        .get(EnvLockfile::ROOT_IMPORTER_KEY)
+    else {
         return Ok(());
     };
     for (name, spec) in &importer.config_dependencies {
@@ -32,7 +37,8 @@ pub fn verify_env_lockfile(env_lockfile: &EnvLockfile) -> Result<(), ConfigDepEr
         let Ok(key) = format!("{name}@{}", spec.version).parse::<PackageKey>() else {
             continue;
         };
-        let Some(optionals) = env_lockfile.snapshots
+        let Some(optionals) = env_lockfile
+            .snapshots
             .get(&key)
             .and_then(|snapshot| snapshot.optional_dependencies.as_ref())
         else {
@@ -76,7 +82,10 @@ fn assert_valid_name(name: &str, description: &str) -> Result<(), ConfigDepError
 }
 
 fn assert_valid_version(name: &str, version: &str) -> Result<(), ConfigDepError> {
-    if version.parse::<node_semver::Version>().is_err() {
+    if version
+        .parse::<node_semver::Version>()
+        .is_err()
+    {
         Err(ConfigDepError::InvalidConfigDepVersion {
             name: name.to_string(),
             version: version.to_string(),

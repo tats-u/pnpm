@@ -15,7 +15,9 @@ fn root() -> &'static Path {
 
 fn render(specifier: &str, consumer: Option<&str>) -> String {
     let consumer = consumer.map(|dir| root().join(dir));
-    LocalSpec::parse(specifier, root()).expect("a local specifier").render(consumer.as_deref())
+    LocalSpec::parse(specifier, root())
+        .expect("a local specifier")
+        .render(consumer.as_deref())
 }
 
 #[test]

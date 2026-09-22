@@ -39,7 +39,10 @@ impl Resolver for StubResolver {
     ) -> ResolveFuture<'a> {
         let key = (
             wanted.alias.clone().unwrap_or_default(),
-            wanted.bare_specifier.clone().unwrap_or_default(),
+            wanted
+                .bare_specifier
+                .clone()
+                .unwrap_or_default(),
         );
         self.calls
             .lock()
@@ -71,7 +74,10 @@ impl Resolver for DelayedAliasResolver {
     ) -> ResolveFuture<'a> {
         let key = (
             wanted.alias.clone().unwrap_or_default(),
-            wanted.bare_specifier.clone().unwrap_or_default(),
+            wanted
+                .bare_specifier
+                .clone()
+                .unwrap_or_default(),
         );
         let result = self.table.get(&key).cloned();
         let should_delay = key.0 == self.delayed_alias;
@@ -110,19 +116,27 @@ impl Resolver for OverlayPickResolver {
         opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         let name = wanted.alias.clone().unwrap_or_default();
-        let bare = wanted.bare_specifier.clone().unwrap_or_default();
+        let bare = wanted
+            .bare_specifier
+            .clone()
+            .unwrap_or_default();
         let range = node_semver::Range::from_str(&bare).expect("test range");
-        let preferred: Vec<&str> = opts.version.preferred_versions_overlay
+        let preferred: Vec<&str> = opts
+            .version
+            .preferred_versions_overlay
             .as_ref()
             .map(|overlay| overlay.versions_for(&name))
             .unwrap_or_default();
-        let satisfying: Vec<&ResolveResult> = self.versions
+        let satisfying: Vec<&ResolveResult> = self
+            .versions
             .get(&name)
             .map(Vec::as_slice)
             .unwrap_or_default()
             .iter()
             .filter(|result| {
-                result.package.name_ver
+                result
+                    .package
+                    .name_ver
                     .as_ref()
                     .is_some_and(|name_ver| range.satisfies(&name_ver.suffix))
             })
@@ -163,7 +177,12 @@ impl Resolver for OverlayPickResolver {
 }
 
 fn version_of(result: &ResolveResult) -> &node_semver::Version {
-    &result.package.name_ver.as_ref().expect("test result carries a name and version").suffix
+    &result
+        .package
+        .name_ver
+        .as_ref()
+        .expect("test result carries a name and version")
+        .suffix
 }
 
 /// The versions table both settlement tests resolve against: `pin` in

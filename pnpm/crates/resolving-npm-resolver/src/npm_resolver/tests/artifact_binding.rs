@@ -36,15 +36,33 @@ async fn explicit_revision_selects_its_artifact_and_manifest() {
     let LockfileResolution::Tarball(resolution) = &result.resolution else {
         panic!("expected tarball resolution");
     };
-    assert_eq!(resolution.revision.map(TarballRevision::get), Some(1));
+    assert_eq!(
+        resolution
+            .revision
+            .map(TarballRevision::get),
+        Some(1)
+    );
     assert!(resolution.tarball.ends_with("sha512/Umd2iCLuYk1I_OFexcp5y9YCy39MIVelFlVpkfIu-Me173sY0f9BxZNw77CFhlHUSpNsEbexRMSP4E3zxqPo2g"));
-    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("1.0.0+r1"));
-    let manifest = result.package.manifest.as_ref().expect("manifest");
+    assert_eq!(
+        result
+            .normalized_bare_specifier
+            .as_deref(),
+        Some("1.0.0+r1")
+    );
+    let manifest = result
+        .package
+        .manifest
+        .as_ref()
+        .expect("manifest");
     assert_eq!(manifest["name"], "acme");
     assert_eq!(manifest["version"], "1.0.0");
     assert_eq!(manifest["deprecated"], "current warning");
     assert_eq!(manifest["dependencies"], json!({ "fixed": "1.0.0" }));
-    assert!(manifest.get("optionalDependencies").is_none());
+    assert!(
+        manifest
+            .get("optionalDependencies")
+            .is_none()
+    );
 }
 
 #[tokio::test]
@@ -67,7 +85,11 @@ async fn revision_metadata_rejects_a_tarball_from_another_registry() {
         .await
         .expect_err("a revision URL from another registry must fail the resolve");
 
-    assert!(error.downcast_ref::<MalformedRevisionHistoryError>().is_some());
+    assert!(
+        error
+            .downcast_ref::<MalformedRevisionHistoryError>()
+            .is_some()
+    );
 }
 
 #[tokio::test]
@@ -94,7 +116,8 @@ async fn shasum_only_metadata_resolves_to_a_sha1_integrity() {
         panic!("expected a tarball resolution, got {:?}", result.resolution);
     };
     assert_eq!(
-        tarball.integrity
+        tarball
+            .integrity
             .as_ref()
             .map(ToString::to_string)
             .as_deref(),

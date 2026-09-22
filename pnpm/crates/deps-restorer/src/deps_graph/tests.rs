@@ -96,7 +96,8 @@ fn registry_resolution_full_pkg_id_uses_integrity_verbatim() {
     let node = graph.get(&pkg).expect("graph node");
     let expected_prefix = "@scope/foo@1.0.0:sha512-";
     assert!(
-        node.full_pkg_id.starts_with(expected_prefix),
+        node.full_pkg_id
+            .starts_with(expected_prefix),
         "expected full_pkg_id to start with `{expected_prefix}`, got `{}`",
         node.full_pkg_id,
     );
@@ -150,9 +151,14 @@ fn dependencies_become_children() {
     ]);
 
     let graph = build_deps_graph(&snapshots, &packages);
-    let parent_node = graph.get(&parent_key).expect("parent node");
+    let parent_node = graph
+        .get(&parent_key)
+        .expect("parent node");
     assert_eq!(parent_node.children.len(), 1);
-    let resolved = parent_node.children.get("child").expect("alias `child` present");
+    let resolved = parent_node
+        .children
+        .get("child")
+        .expect("alias `child` present");
     assert_eq!(resolved, &child_key);
 }
 
@@ -176,8 +182,14 @@ fn optional_dependencies_fold_into_children() {
         HashMap::from([(parent_key.clone(), registry_metadata()), (opt_key, registry_metadata())]);
 
     let graph = build_deps_graph(&snapshots, &packages);
-    let parent_node = graph.get(&parent_key).expect("parent node");
-    assert!(parent_node.children.contains_key("optional"));
+    let parent_node = graph
+        .get(&parent_key)
+        .expect("parent node");
+    assert!(
+        parent_node
+            .children
+            .contains_key("optional")
+    );
 }
 
 #[test]

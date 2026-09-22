@@ -34,7 +34,11 @@ async fn package_version_guard_excludes_rejected_versions_and_repicks() {
         .await
         .unwrap()
         .unwrap();
-    let name_ver = result.package.name_ver.as_ref().expect("name_ver");
+    let name_ver = result
+        .package
+        .name_ver
+        .as_ref()
+        .expect("name_ver");
     assert_eq!(name_ver.suffix.to_string(), "1.0.0");
     assert_eq!(result.package.latest.as_deref(), Some("1.0.0"));
 }
@@ -67,7 +71,9 @@ async fn package_version_guard_repopulates_latest_tag() {
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix
@@ -105,7 +111,10 @@ async fn package_version_guard_blocking_every_version_errors() {
     // Every matching version is rejected, so the resolver must surface a
     // clear guard error rather than Ok(None) (which would read as an
     // unsupported spec downstream).
-    let err = resolver.resolve(&wanted, &opts).await.expect_err("expected a guard error");
+    let err = resolver
+        .resolve(&wanted, &opts)
+        .await
+        .expect_err("expected a guard error");
     let message = err.to_string();
     assert!(message.contains("acme"), "{message}");
     assert!(message.contains("rejected by the resolver guard"), "{message}");
@@ -147,7 +156,9 @@ async fn package_version_guard_accepting_rejected_falls_back_to_the_unguarded_pi
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix
@@ -200,7 +211,9 @@ async fn package_version_guard_accepting_rejected_falls_back_at_the_repick_limit
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix
@@ -244,7 +257,9 @@ async fn package_version_guard_blocks_the_packument_key_not_the_parsed_version()
         .unwrap()
         .unwrap();
     assert_eq!(
-        result.package.name_ver
+        result
+            .package
+            .name_ver
             .as_ref()
             .expect("name_ver")
             .suffix

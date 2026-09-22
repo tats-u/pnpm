@@ -37,7 +37,9 @@ pub(super) fn upsert(
     let existing_target = if is_default {
         if manifest.catalogs.default.is_some() {
             Some(Target::Shorthand)
-        } else if manifest.catalogs.named
+        } else if manifest
+            .catalogs
+            .named
             .as_ref()
             .is_some_and(|c| c.contains_key(DEFAULT_CATALOG_NAME))
         {
@@ -45,7 +47,9 @@ pub(super) fn upsert(
         } else {
             None
         }
-    } else if manifest.catalogs.named
+    } else if manifest
+        .catalogs
+        .named
         .as_ref()
         .is_some_and(|c| c.contains_key(catalog_name))
     {
@@ -67,7 +71,9 @@ fn upsert_existing(
     dep: &str,
     specifier: &str,
 ) -> Result<bool, Box<yamlpatch::Error>> {
-    let current = target_map(&manifest.catalogs, target).get(dep).cloned();
+    let current = target_map(&manifest.catalogs, target)
+        .get(dep)
+        .cloned();
     match current {
         Some(existing) if existing == specifier => Ok(false),
         Some(_) => {
@@ -111,7 +117,9 @@ fn create_target(
         // `catalogs:` exists but lacks this name — add a named sub-block.
         let new_text = write_named_subblock(manifest, catalog_name, dep, &value);
         manifest.document.set_text(new_text);
-        manifest.catalogs.named
+        manifest
+            .catalogs
+            .named
             .as_mut()
             .expect("catalogs present")
             .insert(
@@ -137,8 +145,12 @@ fn create_target(
 
 fn target_map<'a>(catalogs: &'a CatalogEntries, target: &Target) -> &'a IndexMap<String, String> {
     match target {
-        Target::Shorthand => catalogs.default.as_ref().expect("catalog shorthand present"),
-        Target::Named(name) => catalogs.named
+        Target::Shorthand => catalogs
+            .default
+            .as_ref()
+            .expect("catalog shorthand present"),
+        Target::Named(name) => catalogs
+            .named
             .as_ref()
             .expect("catalogs present")
             .get(name)
@@ -151,8 +163,12 @@ fn target_map_mut<'a>(
     target: &Target,
 ) -> &'a mut IndexMap<String, String> {
     match target {
-        Target::Shorthand => catalogs.default.as_mut().expect("catalog shorthand present"),
-        Target::Named(name) => catalogs.named
+        Target::Shorthand => catalogs
+            .default
+            .as_mut()
+            .expect("catalog shorthand present"),
+        Target::Named(name) => catalogs
+            .named
             .as_mut()
             .expect("catalogs present")
             .get_mut(name)
@@ -199,8 +215,9 @@ fn replace_scalar_at(
             .to_string();
         return Ok(flow::upsert(text, &collection, dep, &value_text));
     }
-    let document =
-        Document::new(text.to_string()).map_err(yamlpatch::Error::from).map_err(Box::new)?;
+    let document = Document::new(text.to_string())
+        .map_err(yamlpatch::Error::from)
+        .map_err(Box::new)?;
     let components: Vec<Component> = path
         .iter()
         .copied()
@@ -242,7 +259,8 @@ pub(super) fn write_rendered_entry_at(
         return flow::upsert(text, &collection, dep, value_text);
     }
     let mapping = locate(text, path).expect("mapping exists");
-    let existing: Vec<String> = mapping.entries
+    let existing: Vec<String> = mapping
+        .entries
         .iter()
         .map(|entry| entry.key.clone())
         .collect();
@@ -262,7 +280,8 @@ pub(super) fn write_rendered_entry_at(
         mapping.body_start
     } else {
         let predecessor = &order[position - 1];
-        mapping.entries
+        mapping
+            .entries
             .iter()
             .find(|entry| &entry.key == predecessor)
             .expect("predecessor entry exists")
@@ -280,7 +299,8 @@ fn write_named_subblock(manifest: &Manifest, name: &str, dep: &str, value: &str)
         return flow::upsert(text, &collection, name, &entry);
     }
     let catalogs = locate(text, &["catalogs"]).expect("catalogs block exists");
-    let existing: Vec<String> = catalogs.entries
+    let existing: Vec<String> = catalogs
+        .entries
         .iter()
         .map(|entry| entry.key.clone())
         .collect();
@@ -300,7 +320,8 @@ fn write_named_subblock(manifest: &Manifest, name: &str, dep: &str, value: &str)
         catalogs.body_start
     } else {
         let predecessor = &order[position - 1];
-        catalogs.entries
+        catalogs
+            .entries
             .iter()
             .find(|entry| &entry.key == predecessor)
             .expect("predecessor named catalog exists")
@@ -315,7 +336,8 @@ fn write_named_subblock(manifest: &Manifest, name: &str, dep: &str, value: &str)
 /// containing `:` (an artifact pkgId such as `foo@https://example.com/foo.tgz`).
 pub(super) fn replace_bool_value_at(text: &str, path: &[&str], key: &str, value: bool) -> String {
     let mapping = locate(text, path).expect("mapping exists");
-    let entry = mapping.entries
+    let entry = mapping
+        .entries
         .iter()
         .find(|entry| entry.key == key)
         .expect("entry exists");

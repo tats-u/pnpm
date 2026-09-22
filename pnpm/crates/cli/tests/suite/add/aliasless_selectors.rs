@@ -26,13 +26,8 @@ fn write_local_package(workspace: &Path) {
 /// un-injected directory to.
 #[test]
 fn a_relative_directory_path_saves_as_a_link() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_local_package(&workspace);
 
     pacquet
@@ -42,7 +37,9 @@ fn a_relative_directory_path_saves_as_a_link() {
 
     assert_eq!(prod_spec(&workspace, "localpkg"), "link:localpkg");
     assert!(
-        workspace.join("node_modules/localpkg/package.json").exists(),
+        workspace
+            .join("node_modules/localpkg/package.json")
+            .exists(),
         "the local package must be installed",
     );
 
@@ -52,13 +49,8 @@ fn a_relative_directory_path_saves_as_a_link() {
 /// The `file:` protocol asks for copy semantics, so it is kept.
 #[test]
 fn the_file_protocol_on_a_directory_is_kept() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_local_package(&workspace);
 
     pacquet
@@ -76,13 +68,8 @@ fn the_file_protocol_on_a_directory_is_kept() {
 /// written.
 #[test]
 fn a_local_tarball_path_saves_as_a_file_spec() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     fs::write(
         workspace.join("pkg-from-tarball-1.0.0.tgz"),
         tarball_with_manifest(
@@ -98,7 +85,9 @@ fn a_local_tarball_path_saves_as_a_file_spec() {
 
     assert_eq!(prod_spec(&workspace, "pkg-from-tarball"), "file:pkg-from-tarball-1.0.0.tgz");
     assert!(
-        workspace.join("node_modules/pkg-from-tarball/package.json").exists(),
+        workspace
+            .join("node_modules/pkg-from-tarball/package.json")
+            .exists(),
         "the tarball package must be installed",
     );
 
@@ -114,17 +103,14 @@ fn a_local_tarball_path_saves_as_a_file_spec() {
 /// `tarball_url_dependency.rs`).
 #[test]
 fn a_remote_tarball_url_is_saved_verbatim() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let tarball = format!(
         "{}is-positive/-/is-positive-1.0.0.tgz",
-        mock_instance.url().replace("127.0.0.1", "localhost"),
+        mock_instance
+            .url()
+            .replace("127.0.0.1", "localhost"),
     );
 
     pacquet
@@ -134,7 +120,9 @@ fn a_remote_tarball_url_is_saved_verbatim() {
 
     assert_eq!(prod_spec(&workspace, "is-positive"), tarball);
     assert!(
-        workspace.join("node_modules/is-positive/package.json").exists(),
+        workspace
+            .join("node_modules/is-positive/package.json")
+            .exists(),
         "the remote tarball package must be installed",
     );
 
@@ -155,7 +143,9 @@ fn assert_unnamed_tarball_replacement(new_version: &str) {
     let CommandTempCwd { root, workspace, npmrc_info, .. } =
         CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
-    let registry = mock_instance.url().replace("127.0.0.1", "localhost");
+    let registry = mock_instance
+        .url()
+        .replace("127.0.0.1", "localhost");
     let old_tarball = format!("{registry}is-positive/-/is-positive-1.0.0.tgz");
     let new_tarball = format!("{registry}is-positive/-/is-positive-{new_version}.tgz?revision=2");
     let installed_version = || {
@@ -191,11 +181,16 @@ fn assert_unnamed_tarball_replacement(new_version: &str) {
     let lockfile_path = workspace.join("pnpm-lock.yaml");
     let lockfile = read_lockfile(&lockfile_path);
     dbg!(&lockfile);
-    let dependency = &lockfile.importers["."].dependencies.as_ref().unwrap()
-        [&"is-positive".parse::<PkgName>().unwrap()];
+    let dependency = &lockfile.importers["."]
+        .dependencies
+        .as_ref()
+        .unwrap()[&"is-positive"
+        .parse::<PkgName>()
+        .unwrap()];
     assert_eq!(dependency.specifier, new_tarball);
     assert_eq!(dependency.version.to_string(), new_tarball);
-    let package_keys: Vec<_> = lockfile.packages
+    let package_keys: Vec<_> = lockfile
+        .packages
         .as_ref()
         .unwrap()
         .keys()
@@ -220,13 +215,8 @@ fn assert_unnamed_tarball_replacement(new_version: &str) {
 /// would point it somewhere else than where `pnpm add` was run.
 #[test]
 fn a_local_directory_is_not_auto_cataloged() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_local_package(&workspace);
     append_workspace_yaml_key(&workspace, "catalogMode", "prefer");
 
@@ -252,13 +242,8 @@ fn a_local_directory_is_not_auto_cataloged() {
 /// untouched.
 #[test]
 fn a_directory_declaring_no_name_is_refused() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let package_dir = workspace.join("nameless");
     fs::create_dir_all(&package_dir).expect("create local package dir");
     write_json(&package_dir.join("package.json"), &serde_json::json!({ "version": "1.0.0" }));

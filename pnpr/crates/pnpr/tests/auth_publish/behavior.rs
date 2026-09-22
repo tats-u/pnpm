@@ -61,7 +61,8 @@ async fn update_packument_rejects_a_non_string_dist_integrity() {
         .body(Body::from(serde_json::to_vec(&packument).unwrap()))
         .unwrap();
     assert_eq!(
-        app.oneshot(request).await
+        app.oneshot(request)
+            .await
             .unwrap()
             .status(),
         StatusCode::BAD_REQUEST,
@@ -310,7 +311,9 @@ async fn hosted_tarball_is_preferred_over_a_cached_copy() {
     );
 
     // Plant a divergent proxied copy with the same filename.
-    let cached = storage.join(".pnpr-cache").join("pref-pkg");
+    let cached = storage
+        .join(".pnpr-cache")
+        .join("pref-pkg");
     std::fs::create_dir_all(&cached).unwrap();
     std::fs::write(cached.join("pref-pkg-1.0.0.tgz"), b"stale-proxied-bytes").unwrap();
 
@@ -340,11 +343,17 @@ async fn search_finds_packages_by_substring_in_local_storage() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
     let body = body_json(response.into_body()).await;
-    let objects = body["objects"].as_array().expect("objects is array");
+    let objects = body["objects"]
+        .as_array()
+        .expect("objects is array");
     assert!(!objects.is_empty(), "expected no-deps to match the storage fixture");
     let names: Vec<&str> = objects
         .iter()
-        .map(|object| object["package"]["name"].as_str().unwrap())
+        .map(|object| {
+            object["package"]["name"]
+                .as_str()
+                .unwrap()
+        })
         .collect();
     assert!(
         names
@@ -376,7 +385,11 @@ async fn search_filters_protected_packages_for_anonymous_callers() {
         .as_array()
         .unwrap()
         .iter()
-        .map(|object| object["package"]["name"].as_str().unwrap())
+        .map(|object| {
+            object["package"]["name"]
+                .as_str()
+                .unwrap()
+        })
         .collect();
     assert!(
         !names.contains(&"@pnpm.e2e/needs-auth"),
@@ -401,7 +414,11 @@ async fn search_filters_protected_packages_for_anonymous_callers() {
         .as_array()
         .unwrap()
         .iter()
-        .map(|object| object["package"]["name"].as_str().unwrap())
+        .map(|object| {
+            object["package"]["name"]
+                .as_str()
+                .unwrap()
+        })
         .collect();
     assert!(
         names.contains(&"@pnpm.e2e/needs-auth"),
@@ -450,8 +467,12 @@ async fn search_augment_skips_when_upstream_404s() {
     let tmp = TempDir::new().unwrap();
     let listen = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0));
     let mut config = Config::proxy(listen, tmp.path().to_path_buf());
-    config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream").url =
-        upstream.url();
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream")
+        .url = upstream.url();
     config.http.public_url = "http://example.test".to_string();
     config.http.packument_ttl = Duration::from_mins(1);
     let app = router(config);

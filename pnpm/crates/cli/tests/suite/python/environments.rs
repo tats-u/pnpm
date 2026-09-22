@@ -108,7 +108,12 @@ async fn sibling_projects_keep_their_generations_apart() {
     assert_ne!(one.parent(), two.parent());
     let environments = environments_root(root.path());
     for generation in [&one, &two] {
-        assert_eq!(generation.parent().and_then(Path::parent), Some(environments.as_path()));
+        assert_eq!(
+            generation
+                .parent()
+                .and_then(Path::parent),
+            Some(environments.as_path())
+        );
     }
     let mut expected = vec![one, two];
     expected.sort();
@@ -178,7 +183,12 @@ async fn an_install_writes_nothing_into_the_project_pnpm_directory() {
         .arg("install")
         .assert()
         .success();
-    assert_eq!(fs::read_dir(outside.path()).unwrap().count(), 0);
+    assert_eq!(
+        fs::read_dir(outside.path())
+            .unwrap()
+            .count(),
+        0
+    );
     assert_eq!(generations(root.path()).len(), 1);
 }
 
@@ -190,7 +200,9 @@ async fn an_environment_beside_the_project_is_replaced_by_one_in_the_store() {
     let mut server = mockito::Server::new_async().await;
     let _alpha = serve(&mut server, "alpha", &[("1.0", wheel("alpha", "1.0", "", &[]))]).await;
     project(root.path(), &server.url(), &["alpha>=1"]);
-    let beside = root.path().join(".pnpm/python-envs/env-old");
+    let beside = root
+        .path()
+        .join(".pnpm/python-envs/env-old");
     fs::create_dir_all(&beside).unwrap();
     fs::write(beside.join("pyvenv.cfg"), "").unwrap();
     pnpm_fs::force_symlink_dir(&beside, &root.path().join(".venv")).unwrap();
@@ -222,7 +234,9 @@ async fn a_dangling_link_is_replaced() {
     let mut server = mockito::Server::new_async().await;
     let _alpha = serve(&mut server, "alpha", &[("1.0", wheel("alpha", "1.0", "", &[]))]).await;
     project(root.path(), &server.url(), &["alpha>=1"]);
-    let gone = root.path().join("store/v11/python-envs/project/env-gone");
+    let gone = root
+        .path()
+        .join("store/v11/python-envs/project/env-gone");
     fs::create_dir_all(&gone).unwrap();
     pnpm_fs::force_symlink_dir(&gone, &root.path().join(".venv")).unwrap();
     fs::remove_dir_all(root.path().join("store")).unwrap();
@@ -261,7 +275,11 @@ async fn a_frozen_store_keeps_generations_beside_the_project() {
     eprintln!("environment: {}", beside.display());
     assert_eq!(
         beside.parent(),
-        Some(dunce::canonicalize(root.path().join(".pnpm/python-envs")).unwrap().as_path()),
+        Some(
+            dunce::canonicalize(root.path().join(".pnpm/python-envs"))
+                .unwrap()
+                .as_path()
+        ),
     );
     assert_eq!(generations(root.path()), vec![in_store], "the frozen store was written");
     python(root.path())

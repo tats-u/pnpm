@@ -18,7 +18,9 @@ use std::{
 
 #[test]
 fn optional_child_probe_propagates_io_errors() {
-    let snapshot_key: PackageKey = "parent@1.0.0".parse().expect("parse snapshot key");
+    let snapshot_key: PackageKey = "parent@1.0.0"
+        .parse()
+        .expect("parse snapshot key");
     let snapshot = SnapshotEntry {
         optional_dependencies: Some(HashMap::from([(
             PkgName::parse("optional-child").expect("parse alias"),
@@ -48,7 +50,9 @@ fn optional_child_probe_propagates_io_errors() {
 #[test]
 fn invalid_optional_child_entries_do_not_match() {
     let temp_dir = tempfile::tempdir().expect("create temp directory");
-    let snapshot_key: PackageKey = "parent@1.0.0".parse().expect("parse snapshot key");
+    let snapshot_key: PackageKey = "parent@1.0.0"
+        .parse()
+        .expect("parse snapshot key");
     let snapshot = SnapshotEntry {
         optional_dependencies: Some(HashMap::from([(
             PkgName::parse("optional-child").expect("parse alias"),
@@ -61,8 +65,12 @@ fn invalid_optional_child_entries_do_not_match() {
         .slot_dir(&snapshot_key)
         .join("node_modules")
         .join("optional-child");
-    fs::create_dir_all(child_path.parent().expect("child path has a parent"))
-        .expect("create slot modules directory");
+    fs::create_dir_all(
+        child_path
+            .parent()
+            .expect("child path has a parent"),
+    )
+    .expect("create slot modules directory");
     let target = temp_dir.path().join("optional-target");
     fs::create_dir(&target).expect("create optional target");
     pnpm_fs::symlink_dir(&target, &child_path).expect("link optional child");
@@ -123,7 +131,9 @@ const DUMMY_SHA512: &str = "sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 fn registry_metadata() -> PackageMetadata {
     PackageMetadata {
         resolution: LockfileResolution::Registry(RegistryResolution {
-            integrity: DUMMY_SHA512.parse().expect("parse integrity"),
+            integrity: DUMMY_SHA512
+                .parse()
+                .expect("parse integrity"),
             revision: None,
         }),
         version: None,
@@ -148,7 +158,9 @@ struct PlanFixture {
 
 impl PlanFixture {
     fn gvs(store_root: &Path, metadata: PackageMetadata) -> Self {
-        let snapshot_key: PackageKey = "foo@1.0.0".parse().expect("parse snapshot key");
+        let snapshot_key: PackageKey = "foo@1.0.0"
+            .parse()
+            .expect("parse snapshot key");
         let snapshots = HashMap::from([(snapshot_key.clone(), SnapshotEntry::default())]);
         let packages = HashMap::from([(snapshot_key, metadata)]);
         let layout = VirtualStoreLayout::global(
@@ -197,7 +209,8 @@ impl PlanFixture {
 
     fn plan_inner(&self, current_matches_wanted: bool, force: bool) -> SnapshotPlan<'_> {
         let allow_build_policy = AllowBuildPolicy::new(HashSet::new(), HashSet::new(), false);
-        let mut cache_keys = self.snapshots
+        let mut cache_keys = self
+            .snapshots
             .keys()
             .map(|snapshot_key| {
                 (
@@ -272,8 +285,12 @@ fn gvs_partial_slot_without_completion_marker_survives() {
 #[test]
 fn gvs_slot_missing_a_regular_child_link_survives() {
     let temp_dir = tempfile::tempdir().expect("create temp directory");
-    let parent_key: PackageKey = "foo@1.0.0".parse().expect("parse snapshot key");
-    let child_key: PackageKey = "bar@1.0.0".parse().expect("parse snapshot key");
+    let parent_key: PackageKey = "foo@1.0.0"
+        .parse()
+        .expect("parse snapshot key");
+    let child_key: PackageKey = "bar@1.0.0"
+        .parse()
+        .expect("parse snapshot key");
     let parent_snapshot = SnapshotEntry {
         dependencies: Some(HashMap::from([(
             PkgName::parse("bar").expect("parse alias"),
@@ -299,7 +316,8 @@ fn gvs_slot_missing_a_regular_child_link_survives() {
         None,
     );
     let fixture = PlanFixture { snapshots, packages, layout };
-    let parent_dir = fixture.layout
+    let parent_dir = fixture
+        .layout
         .slot_dir(&parent_key)
         .join("node_modules")
         .join("foo");
@@ -307,7 +325,8 @@ fn gvs_slot_missing_a_regular_child_link_survives() {
     fs::write(parent_dir.join("package.json"), "{}").expect("place the completion marker");
 
     let plan = fixture.plan(false);
-    let survivor_keys: HashSet<String> = plan.survivors
+    let survivor_keys: HashSet<String> = plan
+        .survivors
         .iter()
         .map(|(key, _, _)| key.to_string())
         .collect();
@@ -322,7 +341,8 @@ fn gvs_slot_missing_a_regular_child_link_survives() {
         .join("bar");
     fs::create_dir(&child_link).expect("plant a plain directory where the child link belongs");
     let plan = fixture.plan(false);
-    let survivor_keys: HashSet<String> = plan.survivors
+    let survivor_keys: HashSet<String> = plan
+        .survivors
         .iter()
         .map(|(key, _, _)| key.to_string())
         .collect();
@@ -332,7 +352,8 @@ fn gvs_slot_missing_a_regular_child_link_survives() {
     );
     fs::remove_dir(&child_link).expect("remove the plain directory");
 
-    let child_dir = fixture.layout
+    let child_dir = fixture
+        .layout
         .slot_dir(&child_key)
         .join("node_modules")
         .join("bar");

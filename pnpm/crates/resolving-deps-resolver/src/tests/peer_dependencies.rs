@@ -40,7 +40,10 @@ async fn peer_shadowing_follows_the_occurrence_that_wins_the_level() {
     )
     .await;
 
-    let shared_children = tree.children_by_id.get("shared@1.0.0").expect("shared children");
+    let shared_children = tree
+        .children_by_id
+        .get("shared@1.0.0")
+        .expect("shared children");
     eprintln!("SHARED CHILDREN:\n{shared_children:#?}\n");
     assert!(shared_children.is_empty());
 }

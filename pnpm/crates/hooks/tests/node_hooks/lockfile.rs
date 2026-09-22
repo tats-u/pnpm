@@ -35,11 +35,12 @@ function preResolution(ctx, logger) {
         registries: serde_json::json!({ "default": "http://localhost:1234/" }),
     };
 
-    hooks.pre_resolution(
-        ctx,
-        pnpm_hooks::PreResolutionHookLogger { info: Arc::new(|_| {}), warn: Arc::new(|_| {}) },
-    )
-    .await;
+    hooks
+        .pre_resolution(
+            ctx,
+            pnpm_hooks::PreResolutionHookLogger { info: Arc::new(|_| {}), warn: Arc::new(|_| {}) },
+        )
+        .await;
 }
 
 #[tokio::test]
@@ -79,19 +80,20 @@ function preResolution(ctx, logger) {
 
     let info_messages = Arc::new(Mutex::new(Vec::new()));
     let captured_info_messages = Arc::clone(&info_messages);
-    hooks.pre_resolution(
-        ctx,
-        pnpm_hooks::PreResolutionHookLogger {
-            info: Arc::new(move |message| {
-                captured_info_messages
-                    .lock()
-                    .unwrap()
-                    .push(message);
-            }),
-            warn: Arc::new(|_| {}),
-        },
-    )
-    .await;
+    hooks
+        .pre_resolution(
+            ctx,
+            pnpm_hooks::PreResolutionHookLogger {
+                info: Arc::new(move |message| {
+                    captured_info_messages
+                        .lock()
+                        .unwrap()
+                        .push(message);
+                }),
+                warn: Arc::new(|_| {}),
+            },
+        )
+        .await;
 
     let info_messages = info_messages.lock().unwrap();
     dbg!(&*info_messages);
@@ -107,27 +109,28 @@ async fn empty_mjs_is_a_noop_for_pre_resolution() {
     let warnings = Arc::new(Mutex::new(Vec::new()));
     let captured_warnings = Arc::clone(&warnings);
 
-    hooks.pre_resolution(
-        pnpm_hooks::PreResolutionHookContext {
-            wanted_lockfile: serde_json::json!({}),
-            current_lockfile: serde_json::json!({}),
-            exists_current_lockfile: false,
-            exists_non_empty_wanted_lockfile: false,
-            lockfile_dir: "/test/lockfile".to_string(),
-            store_dir: "/test/store".to_string(),
-            registries: serde_json::json!({}),
-        },
-        pnpm_hooks::PreResolutionHookLogger {
-            info: Arc::new(|_| {}),
-            warn: Arc::new(move |message| {
-                captured_warnings
-                    .lock()
-                    .unwrap()
-                    .push(message);
-            }),
-        },
-    )
-    .await;
+    hooks
+        .pre_resolution(
+            pnpm_hooks::PreResolutionHookContext {
+                wanted_lockfile: serde_json::json!({}),
+                current_lockfile: serde_json::json!({}),
+                exists_current_lockfile: false,
+                exists_non_empty_wanted_lockfile: false,
+                lockfile_dir: "/test/lockfile".to_string(),
+                store_dir: "/test/store".to_string(),
+                registries: serde_json::json!({}),
+            },
+            pnpm_hooks::PreResolutionHookLogger {
+                info: Arc::new(|_| {}),
+                warn: Arc::new(move |message| {
+                    captured_warnings
+                        .lock()
+                        .unwrap()
+                        .push(message);
+                }),
+            },
+        )
+        .await;
 
     let warnings = warnings.lock().unwrap();
     dbg!(&*warnings);
@@ -170,19 +173,20 @@ function preResolution(ctx, logger) {
     };
     let info_messages = Arc::new(Mutex::new(Vec::new()));
     let captured_info_messages = Arc::clone(&info_messages);
-    hooks.pre_resolution(
-        ctx,
-        pnpm_hooks::PreResolutionHookLogger {
-            info: Arc::new(move |message| {
-                captured_info_messages
-                    .lock()
-                    .unwrap()
-                    .push(message);
-            }),
-            warn: Arc::new(|_| {}),
-        },
-    )
-    .await;
+    hooks
+        .pre_resolution(
+            ctx,
+            pnpm_hooks::PreResolutionHookLogger {
+                info: Arc::new(move |message| {
+                    captured_info_messages
+                        .lock()
+                        .unwrap()
+                        .push(message);
+                }),
+                warn: Arc::new(|_| {}),
+            },
+        )
+        .await;
 
     let info_messages = info_messages.lock().unwrap();
     dbg!(&*info_messages);
@@ -194,11 +198,18 @@ async fn custom_resolver_should_refresh_resolution_receives_dep_path_and_snapsho
     let tmp = TempDir::new().expect("temp dir");
     let hooks =
         pnpm_hooks::node_runtime::NodeJsHooks::new(write_custom_resolvers_pnpmfile(tmp.path()));
-    let resolvers = hooks.get_custom_resolvers().await.expect("load resolvers");
+    let resolvers = hooks
+        .get_custom_resolvers()
+        .await
+        .expect("load resolvers");
     let snapshot = serde_json::json!({ "resolution": { "integrity": "sha512-x" } });
 
-    let matching: pnpm_lockfile::PackageKey = "refresh-me@1.0.0".parse().expect("valid dep path");
-    let other: pnpm_lockfile::PackageKey = "other@1.0.0".parse().expect("valid dep path");
+    let matching: pnpm_lockfile::PackageKey = "refresh-me@1.0.0"
+        .parse()
+        .expect("valid dep path");
+    let other: pnpm_lockfile::PackageKey = "other@1.0.0"
+        .parse()
+        .expect("valid dep path");
 
     assert!(
         resolvers[0]

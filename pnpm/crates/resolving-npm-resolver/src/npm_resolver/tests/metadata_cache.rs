@@ -111,12 +111,16 @@ async fn shared_manifest_cache_does_not_leak_across_registries() {
         .expect("resolver B")
         .expect("resolver B picks");
 
-    let deps_a = result_a.package.manifest
+    let deps_a = result_a
+        .package
+        .manifest
         .as_ref()
         .and_then(|m| m.get("dependencies"))
         .and_then(|d| d.as_object())
         .expect("resolver A manifest carries dependencies");
-    let deps_b = result_b.package.manifest
+    let deps_b = result_b
+        .package
+        .manifest
         .as_ref()
         .and_then(|m| m.get("dependencies"))
         .and_then(|d| d.as_object())
@@ -159,7 +163,12 @@ async fn revision_metadata_is_validated_and_preserved() {
         panic!("expected a tarball resolution");
     };
     assert_eq!(resolution.tarball, tarball);
-    assert_eq!(resolution.revision.map(TarballRevision::get), Some(2));
+    assert_eq!(
+        resolution
+            .revision
+            .map(TarballRevision::get),
+        Some(2)
+    );
 }
 
 #[tokio::test]
@@ -180,13 +189,17 @@ async fn malformed_revision_metadata_has_the_malformed_metadata_error() {
 
         let wanted =
             WantedDependency { alias: Some("acme".to_string()), ..WantedDependency::default() };
-        let error = match resolver.resolve(&wanted, &ResolveOptions::default()).await {
+        let error = match resolver
+            .resolve(&wanted, &ResolveOptions::default())
+            .await
+        {
             Ok(result) => panic!("revision {revision} must fail the resolve; got {result:?}"),
             Err(error) => error,
         };
 
-        let error =
-            error.downcast_ref::<MalformedRevisionHistoryError>().expect("revision history error");
+        let error = error
+            .downcast_ref::<MalformedRevisionHistoryError>()
+            .expect("revision history error");
         assert_eq!(error.name, "acme");
         assert_eq!(error.version, "1.0.0");
     }

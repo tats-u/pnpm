@@ -41,7 +41,9 @@ use std::{
 use tempfile::{TempDir, tempdir};
 
 fn integrity(integrity_str: &str) -> Integrity {
-    integrity_str.parse().expect("parse integrity string")
+    integrity_str
+        .parse()
+        .expect("parse integrity string")
 }
 
 /// HTTP client for the fall-through tests. A default `ThrottledClient`
@@ -191,16 +193,22 @@ fn mixed_size_tar() -> (Vec<u8>, Vec<u8>) {
         header.set_mode(mode);
         header.set_entry_type(tar::EntryType::Regular);
         header.set_cksum();
-        builder.append_data(&mut header, path, body).expect("append entry");
+        builder
+            .append_data(&mut header, path, body)
+            .expect("append entry");
     }
-    let tar_bytes = builder.into_inner().expect("finish tar");
+    let tar_bytes = builder
+        .into_inner()
+        .expect("finish tar");
     (tar_bytes, large_payload)
 }
 
 fn gzip_bytes(bytes: &[u8]) -> Vec<u8> {
     use std::io::Write;
     let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
-    encoder.write_all(bytes).expect("gzip bytes");
+    encoder
+        .write_all(bytes)
+        .expect("gzip bytes");
     encoder.finish().expect("finish gzip")
 }
 
@@ -232,16 +240,24 @@ fn gzipped_tar(entries: &[(&str, &[u8])]) -> Vec<u8> {
     let mut builder = tar::Builder::new(Vec::new());
     for (path, bytes) in entries {
         let mut header = tar::Header::new_gnu();
-        header.set_path(path).expect("set tar entry path");
+        header
+            .set_path(path)
+            .expect("set tar entry path");
         header.set_size(bytes.len() as u64);
         header.set_mode(0o644);
         header.set_cksum();
-        builder.append(&header, *bytes).expect("append tar entry");
+        builder
+            .append(&header, *bytes)
+            .expect("append tar entry");
     }
-    let tar_bytes = builder.into_inner().expect("finish tar");
+    let tar_bytes = builder
+        .into_inner()
+        .expect("finish tar");
 
     let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
-    encoder.write_all(&tar_bytes).expect("gzip tar");
+    encoder
+        .write_all(&tar_bytes)
+        .expect("gzip tar");
     encoder.finish().expect("finish gzip")
 }
 
@@ -283,10 +299,16 @@ fn build_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
             .compression_method(zip::CompressionMethod::Stored)
             .unix_permissions(0o100644);
         for (name, body) in entries {
-            writer.start_file(*name, opts).expect("start zip entry");
-            writer.write_all(body).expect("write zip entry body");
+            writer
+                .start_file(*name, opts)
+                .expect("start zip entry");
+            writer
+                .write_all(body)
+                .expect("write zip entry body");
         }
-        writer.finish().expect("finalize zip archive");
+        writer
+            .finish()
+            .expect("finalize zip archive");
     }
     buf
 }
@@ -376,7 +398,11 @@ mod normalize_bundled_manifest_tests {
         .expect("non-empty pick");
         let map = result.as_object().expect("object");
         assert_eq!(map.get("name").and_then(|v| v.as_str()), Some("foo"));
-        assert_eq!(map.get("version").and_then(|v| v.as_str()), Some("1.0.0"));
+        assert_eq!(
+            map.get("version")
+                .and_then(|v| v.as_str()),
+            Some("1.0.0")
+        );
         assert_eq!(map.get("bin"), Some(&json!({ "foo": "./bin/foo.js" })));
         assert_eq!(map.get("engines"), Some(&json!({ "node": ">=18" })));
         assert_eq!(map.get("cpu"), Some(&json!(["x64"])));
@@ -415,7 +441,9 @@ mod normalize_bundled_manifest_tests {
         }))
         .expect("non-empty pick");
         assert_eq!(
-            result.get("scripts").expect("scripts present"),
+            result
+                .get("scripts")
+                .expect("scripts present"),
             &json!({
                 "preinstall": "echo pre",
                 "install": "echo install",
@@ -456,8 +484,18 @@ mod normalize_bundled_manifest_tests {
         .expect("non-empty pick");
         assert!(result.get("bin").is_none(), "null `bin` must be dropped");
         assert!(result.get("engines").is_none(), "null `engines` must be dropped");
-        assert_eq!(result.get("name").and_then(|v| v.as_str()), Some("foo"));
-        assert_eq!(result.get("version").and_then(|v| v.as_str()), Some("1.0.0"));
+        assert_eq!(
+            result
+                .get("name")
+                .and_then(|v| v.as_str()),
+            Some("foo")
+        );
+        assert_eq!(
+            result
+                .get("version")
+                .and_then(|v| v.as_str()),
+            Some("1.0.0")
+        );
     }
 
     /// The bundled manifest is downstream-fed into
@@ -496,7 +534,9 @@ fn incompressible_tarball(min_bytes: usize) -> Vec<u8> {
     let mut payload = vec![0_u8; min_bytes + (1 << 16)];
     let mut state: u32 = 0x1234_5678;
     for byte in &mut payload {
-        state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+        state = state
+            .wrapping_mul(1_664_525)
+            .wrapping_add(1_013_904_223);
         *byte = (state >> 24) as u8;
     }
 
@@ -507,9 +547,13 @@ fn incompressible_tarball(min_bytes: usize) -> Vec<u8> {
         header.set_size(payload.len() as u64);
         header.set_mode(0o644);
         header.set_entry_type(tar::EntryType::Regular);
-        header.set_path("package/noise.bin").expect("set entry path");
+        header
+            .set_path("package/noise.bin")
+            .expect("set entry path");
         header.set_cksum();
-        builder.append(&header, payload.as_slice()).expect("append entry");
+        builder
+            .append(&header, payload.as_slice())
+            .expect("append entry");
         builder.finish().expect("finalize tar");
     }
 
@@ -517,7 +561,9 @@ fn incompressible_tarball(min_bytes: usize) -> Vec<u8> {
     {
         use std::io::Write as _;
         let mut encoder = flate2::write::GzEncoder::new(&mut gz, flate2::Compression::fast());
-        encoder.write_all(&tar_bytes).expect("gzip the tar");
+        encoder
+            .write_all(&tar_bytes)
+            .expect("gzip the tar");
         encoder.finish().expect("finish gzip");
     }
     gz
@@ -540,7 +586,9 @@ fn tar_with_raw_entry_name(name: &[u8], body: &[u8]) -> Vec<u8> {
         *byte = 0;
     }
     header.set_cksum();
-    builder.append(&header, body).expect("append entry");
+    builder
+        .append(&header, body)
+        .expect("append entry");
     builder.finish().expect("finalize tar");
     drop(builder);
     tar_bytes
@@ -571,9 +619,13 @@ fn tar_with_entries(entries: &[(&str, &[u8])]) -> Vec<u8> {
         header.set_mode(0o644);
         header.set_entry_type(tar::EntryType::Regular);
         header.set_cksum();
-        builder.append_data(&mut header, path, *body).expect("append entry");
+        builder
+            .append_data(&mut header, path, *body)
+            .expect("append entry");
     }
-    builder.into_inner().expect("finish tar")
+    builder
+        .into_inner()
+        .expect("finish tar")
 }
 
 mod authorization;

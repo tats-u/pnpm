@@ -701,7 +701,9 @@ struct Envelope<'a> {
 }
 
 fn now_millis() -> u128 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_millis())
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis())
 }
 
 /// Capability for obtaining the host name written into the [bunyan]-shaped
@@ -732,7 +734,9 @@ pub struct Host;
 
 impl GetHostName for Host {
     fn get_host_name() -> String {
-        gethostname::gethostname().to_string_lossy().into_owned()
+        gethostname::gethostname()
+            .to_string_lossy()
+            .into_owned()
     }
 }
 

@@ -321,13 +321,21 @@ fn abbreviation_drops_fields_the_resolver_ignores() {
     // Ignored fields dropped.
     assert!(version.get("devDependencies").is_none());
     assert!(version.get("funding").is_none());
-    assert!(version.get("acceptDependencies").is_none());
+    assert!(
+        version
+            .get("acceptDependencies")
+            .is_none()
+    );
     assert!(version.get("_hasShrinkwrap").is_none());
     // `shasum` dropped because `integrity` is present.
     assert_eq!(version["dist"]["integrity"], "sha512-abc");
     assert!(version["dist"].get("shasum").is_none());
     // Legacy PGP signature dropped; ECDSA registry signatures kept.
-    assert!(version["dist"].get("npm-signature").is_none());
+    assert!(
+        version["dist"]
+            .get("npm-signature")
+            .is_none()
+    );
     assert_eq!(version["dist"]["signatures"][0]["keyid"], "SHA256:xyz");
     // Size hints kept: pacquet reads both for decompression
     // preallocation and download scheduling.

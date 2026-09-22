@@ -78,7 +78,9 @@ pub fn build_dependency_graph(
                 .filter(|target| !visited.contains(*target))
                 .cloned(),
         );
-        graph.nodes.insert(node_id, GraphNode { edges, peers });
+        graph
+            .nodes
+            .insert(node_id, GraphNode { edges, peers });
     }
 
     graph
@@ -88,11 +90,15 @@ pub fn build_dependency_graph(
 /// none.
 fn node_edges(node_id: &TreeNodeId, opts: &BuildGraphOptions<'_>) -> Vec<GraphEdge> {
     match node_id {
-        TreeNodeId::Importer(importer_id) => opts.lockfile.importers
+        TreeNodeId::Importer(importer_id) => opts
+            .lockfile
+            .importers
             .get(importer_id.as_str())
             .map(|importer| importer_edges(importer, importer_id, opts))
             .unwrap_or_default(),
-        TreeNodeId::Package(dep_path) => opts.lockfile.snapshots
+        TreeNodeId::Package(dep_path) => opts
+            .lockfile
+            .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.get(dep_path))
             .map(|snapshot| package_edges(snapshot, opts))
@@ -104,7 +110,8 @@ fn node_edges(node_id: &TreeNodeId, opts: &BuildGraphOptions<'_>) -> Vec<GraphEd
 /// `dep_path` (looked up by its peer-stripped key).
 #[must_use]
 pub fn peer_names(lockfile: &Lockfile, dep_path: &PkgNameVerPeer) -> HashSet<String> {
-    lockfile.packages
+    lockfile
+        .packages
         .as_ref()
         .and_then(|packages| packages.get(&dep_path.without_peer()))
         .and_then(|metadata| metadata.peer_dependencies.as_ref())
@@ -129,7 +136,10 @@ fn importer_edges(
         }
         for (alias, spec) in group.into_iter().flatten() {
             let dep_path = spec.version.resolved_key(alias);
-            let link_target = spec.version.as_link_target().map(str::to_string);
+            let link_target = spec
+                .version
+                .as_link_target()
+                .map(str::to_string);
             let target = edge_target(
                 dep_path.as_ref(),
                 link_target.as_deref(),
@@ -163,7 +173,9 @@ fn package_edges(snapshot: &SnapshotEntry, opts: &BuildGraphOptions<'_>) -> Vec<
         }
         for (alias, dep_ref) in group.into_iter().flatten() {
             let dep_path = dep_ref.resolve(alias);
-            let link_target = dep_ref.as_link_target().map(str::to_string);
+            let link_target = dep_ref
+                .as_link_target()
+                .map(str::to_string);
             // Links from external packages are not traversed (the
             // TypeScript `getTreeNodeChildId` returns undefined for
             // package parents), so no importer id is passed here.
@@ -200,7 +212,8 @@ fn edge_target(
     let link_target = link_target?;
     let parent_importer_id = parent_importer_id?;
     let importer_id = normalize_importer_path(parent_importer_id, link_target)?;
-    lockfile.importers
+    lockfile
+        .importers
         .contains_key(importer_id.as_str())
         .then_some(TreeNodeId::Importer(importer_id))
 }

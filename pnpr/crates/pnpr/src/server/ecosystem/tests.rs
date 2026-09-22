@@ -8,10 +8,14 @@ use url::Url;
 fn official_upstreams_allow_only_their_own_download_host() {
     let mut config =
         Config::proxy(SocketAddr::from(([127, 0, 0, 1], 4873)), PathBuf::from("unused"));
-    config.routing.route_policy.public.push(PublicRoute {
-        registry: Some("https://approved.test/files/".to_string()),
-        package: None,
-    });
+    config
+        .routing
+        .route_policy
+        .public
+        .push(PublicRoute {
+            registry: Some("https://approved.test/files/".to_string()),
+            package: None,
+        });
     for (base, allowed, denied) in [
         (
             "https://index.crates.io/",

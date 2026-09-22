@@ -41,7 +41,9 @@ pub(super) async fn run<Reporter: self::Reporter>(
     config: &'static Config,
     dir: &Path,
 ) -> miette::Result<()> {
-    let lockfile_dir = config.lockfile_dir_for(dir).to_path_buf();
+    let lockfile_dir = config
+        .lockfile_dir_for(dir)
+        .to_path_buf();
     let Some(lockfile) = Lockfile::load_wanted_from_dir(&lockfile_dir).into_diagnostic()? else {
         return report_untouched::<Reporter>(dir);
     };
@@ -73,7 +75,8 @@ fn packages_to_check(
 ) -> Vec<PackageToCheck> {
     let skipped: HashSet<&str> = modules_manifest
         .map(|manifest| {
-            manifest.skipped
+            manifest
+                .skipped
                 .iter()
                 .map(String::as_str)
                 .collect()
@@ -85,7 +88,8 @@ fn packages_to_check(
     );
 
     let max_length = config.virtual_store_dir_max_length as usize;
-    lockfile.packages
+    lockfile
+        .packages
         .iter()
         .flatten()
         .filter(|(key, _)| !skipped.contains(key.to_string().as_str()))

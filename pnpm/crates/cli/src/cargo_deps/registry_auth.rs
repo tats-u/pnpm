@@ -79,7 +79,9 @@ fn token_from_credentials(cargo_home: &Path) -> Result<Option<String>> {
         let parse_error = format!("parse Cargo credentials from {}", path.display());
         let credentials: CargoCredentials =
             toml::from_str(&contents).map_err(|_| miette::miette!(parse_error))?;
-        return Ok(credentials.registry.and_then(|registry| nonempty(registry.token)));
+        return Ok(credentials
+            .registry
+            .and_then(|registry| nonempty(registry.token)));
     }
     Ok(None)
 }

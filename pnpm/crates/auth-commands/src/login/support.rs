@@ -142,7 +142,9 @@ pub(crate) fn opts<'a>(registry: &'a str, config_dir: &'a Path) -> LoginOptions<
 /// The `config.yaml` [`login`] left behind, parsed back into JSON. A login
 /// writes one field at a time, so the last write is the finished document.
 pub(crate) fn written_document(writes: &[(PathBuf, String)]) -> serde_json::Value {
-    let (_, text) = writes.last().expect("config.yaml was written");
+    let (_, text) = writes
+        .last()
+        .expect("config.yaml was written");
     serde_saphyr::from_str(text).expect("login writes valid YAML")
 }
 
@@ -152,7 +154,9 @@ pub(crate) fn written_registry_token(
     writes: &[(PathBuf, String)],
     registry: &str,
 ) -> Option<String> {
-    written_document(writes)["_auth"][registry]["@"]["authToken"].as_str().map(str::to_owned)
+    written_document(writes)["_auth"][registry]["@"]["authToken"]
+        .as_str()
+        .map(str::to_owned)
 }
 
 /// The classic-login prompt script the OTP tests share: username / email by

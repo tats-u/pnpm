@@ -65,10 +65,13 @@ impl RebuildArgs {
         if !cfg.shares_one_lockfile()
             && let Some(workspace_selection) = workspace_selection
         {
-            return self.run_per_project::<Reporter>(cfg, workspace_selection, no_bail).await;
+            return self
+                .run_per_project::<Reporter>(cfg, workspace_selection, no_bail)
+                .await;
         }
 
-        let state = State::init(manifest_path, cfg, true).wrap_err("initialize the rebuild state")?;
+        let state =
+            State::init(manifest_path, cfg, true).wrap_err("initialize the rebuild state")?;
         Box::pin(self.run::<Reporter>(state, workspace_selection)).await
     }
 
@@ -94,18 +97,24 @@ impl RebuildArgs {
     ) -> miette::Result<()> {
         let base_config = cfg.clone();
         let names = project_names(cfg, &workspace_selection.projects);
-        let concurrency = usize::try_from(cfg.workspace_concurrency).unwrap_or(usize::MAX).max(1);
+        let concurrency = usize::try_from(cfg.workspace_concurrency)
+            .unwrap_or(usize::MAX)
+            .max(1);
         let first_error: Mutex<Option<miette::Report>> = Mutex::new(None);
         let run_node = |project_dir: PathBuf| {
             let args = self.clone();
             let mut project_config = base_config.clone();
             project_config.anchor_dedicated_project(
                 &project_dir,
-                names.get(&project_dir).map(String::as_str),
+                names
+                    .get(&project_dir)
+                    .map(String::as_str),
             );
             let first_error = &first_error;
             async move {
-                let result = args.rebuild_project::<Reporter>(project_config, &project_dir).await;
+                let result = args
+                    .rebuild_project::<Reporter>(project_config, &project_dir)
+                    .await;
                 match result {
                     Ok(()) => TaskCompletion::Passed,
                     Err(error) => {
@@ -125,7 +134,10 @@ impl RebuildArgs {
                 .continue_on_failure(no_bail),
         )
         .await;
-        if let Some(error) = first_error.into_inner().expect("rebuild error lock is not poisoned") {
+        if let Some(error) = first_error
+            .into_inner()
+            .expect("rebuild error lock is not poisoned")
+        {
             return Err(error);
         }
         Ok(())
@@ -170,7 +182,10 @@ fn resolve_selection(
     };
     // `.modules.yaml` sits in the root `node_modules`, so its importer
     // ids are relative to that directory's parent.
-    let lockfile_dir = config.modules_dir.parent().unwrap_or(&config.modules_dir);
+    let lockfile_dir = config
+        .modules_dir
+        .parent()
+        .unwrap_or(&config.modules_dir);
     // An importer id is always a relative path; a dep path can be
     // absolute-looking (`/lodash@1.0.0`), and Rust's `Path::join`
     // replaces the base on an absolute component, so probe only for
@@ -208,7 +223,11 @@ pub(crate) async fn run_rebuild<Reporter: self::Reporter + 'static>(
 ) -> miette::Result<()> {
     let lockfile_path = state.lockfile_path();
     let rebuild = RebuildOptions {
-        selected_names: selection.names.map(|names| names.into_iter().collect::<HashSet<_>>()),
+        selected_names: selection.names.map(|names| {
+            names
+                .into_iter()
+                .collect::<HashSet<_>>()
+        }),
         pending_projects: selection.projects,
     };
 
@@ -219,17 +238,22 @@ pub(crate) async fn run_rebuild<Reporter: self::Reporter + 'static>(
     install.context.lockfile_path = Some(&lockfile_path);
     match workspace_selection.as_ref() {
         Some(selection) => {
-            install.run_selected_rebuild::<Reporter>(
-                pnpm_package_manager::WorkspaceInstallSelection {
-                    install_dirs: selection.selected_dirs.as_ref(),
-                    workspace_cycles: pnpm_package_manager::PrecomputedWorkspaceCycles::Unknown,
-                    ..super::install::workspace_install_selection(selection)
-                },
-                rebuild,
-            )
-            .await
+            install
+                .run_selected_rebuild::<Reporter>(
+                    pnpm_package_manager::WorkspaceInstallSelection {
+                        install_dirs: selection.selected_dirs.as_ref(),
+                        workspace_cycles: pnpm_package_manager::PrecomputedWorkspaceCycles::Unknown,
+                        ..super::install::workspace_install_selection(selection)
+                    },
+                    rebuild,
+                )
+                .await
         }
-        None => install.run_rebuild::<Reporter>(rebuild).await,
+        None => {
+            install
+                .run_rebuild::<Reporter>(rebuild)
+                .await
+        }
     }
     .wrap_err("rebuilding dependencies")?;
 

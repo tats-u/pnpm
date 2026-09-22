@@ -70,7 +70,8 @@ fn upstream_custom_headers_are_forwarded() {
     let upstream = resolve_upstream("npmjs", upstream_config_file(None, headers))
         .expect("custom headers resolve");
     assert_eq!(
-        upstream.headers
+        upstream
+            .headers
             .get("x-custom")
             .unwrap()
             .to_str()
@@ -187,7 +188,8 @@ registries:
     let config = Config::from_yaml_str(yaml, Path::new("/x"), listen(), None).unwrap();
     let upstream = &config.routing.upstreams["npmjs"];
     assert_eq!(
-        upstream.headers
+        upstream
+            .headers
             .get(AUTHORIZATION)
             .unwrap()
             .to_str()
@@ -195,7 +197,8 @@ registries:
         "Bearer secret-token",
     );
     assert_eq!(
-        upstream.headers
+        upstream
+            .headers
             .get("x-org")
             .unwrap()
             .to_str()
@@ -313,7 +316,11 @@ registries:
             .expect("a resolver-only tier must not fail on unused upstream credentials");
     assert!(config.routing.upstreams.is_empty(), "credentials must not be resolved or carried");
     assert!(
-        config.routing.registries.get("main").is_some(),
+        config
+            .routing
+            .registries
+            .get("main")
+            .is_some(),
         "the graph is still built and validated",
     );
 }
@@ -351,8 +358,10 @@ registries:
     assert!(!team.access.allows(&carol));
     assert!(!team.access.allows(&Identity::Anonymous));
 
-    let access =
-        config.routing.upstreams["corp"].access.as_ref().expect("upstream declares access");
+    let access = config.routing.upstreams["corp"]
+        .access
+        .as_ref()
+        .expect("upstream declares access");
     assert!(access.allows(&alice));
     assert!(!access.allows(&bob));
 }
@@ -403,14 +412,24 @@ registries:
 ";
     let config = Config::from_yaml_str(yaml, Path::new("/x"), listen(), None).unwrap();
     let rules = &config.routing.upstreams["npmjs"].rules;
-    assert!(!rules.for_package("@internal/x").access.allows(&Identity::Anonymous));
+    assert!(
+        !rules
+            .for_package("@internal/x")
+            .access
+            .allows(&Identity::Anonymous)
+    );
     assert!(
         rules
             .for_package("@internal/x")
             .access
             .allows(&user("alice")),
     );
-    assert!(rules.for_package("lodash").access.allows(&Identity::Anonymous));
+    assert!(
+        rules
+            .for_package("lodash")
+            .access
+            .allows(&Identity::Anonymous)
+    );
 }
 
 #[test]
@@ -428,11 +447,17 @@ registries:
     let config = Config::from_yaml_str(yaml, Path::new("/x"), listen(), None).unwrap();
     use pnpr_registry::{ConcreteKind, Resolved};
     assert_eq!(
-        config.routing.registries.resolve("corp", Ecosystem::Npm, "@corp/tool"),
+        config
+            .routing
+            .registries
+            .resolve("corp", Ecosystem::Npm, "@corp/tool"),
         Resolved::Concrete { registry: "corp", kind: ConcreteKind::Upstream },
     );
     assert_eq!(
-        config.routing.registries.resolve("corp", Ecosystem::Npm, "lodash"),
+        config
+            .routing
+            .registries
+            .resolve("corp", Ecosystem::Npm, "lodash"),
         Resolved::Unclaimed,
     );
 }
@@ -496,7 +521,10 @@ registries:
     let upstream = &config.routing.upstreams["corp"];
     assert_eq!(upstream.url, "https://npm.corp.example/");
     assert_eq!(auth_header(upstream), Some("Bearer corp-token"));
-    let access = upstream.access.as_ref().expect("upstream declares access");
+    let access = upstream
+        .access
+        .as_ref()
+        .expect("upstream declares access");
     assert!(access.allows(&user("alice")));
     assert!(!access.allows(&Identity::Anonymous));
 }
@@ -516,7 +544,10 @@ registries:
     let config = Config::from_yaml_str(yaml, Path::new("/x"), listen(), None).unwrap();
     let upstream = &config.routing.upstreams["corp"];
     assert_eq!(auth_header(upstream), Some("Basic dXNlcjpwYXNz"));
-    let access = upstream.access.as_ref().expect("upstream declares access");
+    let access = upstream
+        .access
+        .as_ref()
+        .expect("upstream declares access");
     assert!(access.allows(&user("bob")));
     assert!(!access.allows(&Identity::Anonymous));
 }
@@ -533,5 +564,9 @@ registries:
     let config = Config::from_yaml_str(yaml, Path::new("/x"), listen(), None).unwrap();
     // A public upstream registry is reachable anonymously and carries no access
     // policy or upstream credential.
-    assert!(config.routing.upstreams["corp"].access.is_none());
+    assert!(
+        config.routing.upstreams["corp"]
+            .access
+            .is_none()
+    );
 }

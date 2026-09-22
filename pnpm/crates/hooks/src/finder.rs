@@ -45,13 +45,16 @@ pub struct PnpmfileSelection<'a> {
 
 #[must_use]
 pub fn find_pnpmfiles(root: &Path, selection: PnpmfileSelection<'_>) -> Vec<PathBuf> {
-    let mut paths: Vec<PathBuf> = selection.global
+    let mut paths: Vec<PathBuf> = selection
+        .global
         .map(Path::to_path_buf)
         .into_iter()
         .collect();
     let project = match selection.configured {
         Some(configured) => configured.to_vec(),
-        None => find_pnpmfile(root).into_iter().collect(),
+        None => find_pnpmfile(root)
+            .into_iter()
+            .collect(),
     };
     for path in project {
         if !paths.contains(&path) {
@@ -79,14 +82,13 @@ pub fn validate_configured_pnpmfiles(
 ) -> Result<(), MissingPnpmfileError> {
     // Discovery is the only source that may come back empty without complaint,
     // so both explicitly named sources are checked and the default is not.
-    let mut named = selection.global
-        .into_iter()
-        .chain(
-            selection.configured
-                .unwrap_or(&[])
-                .iter()
-                .map(PathBuf::as_path),
-        );
+    let mut named = selection.global.into_iter().chain(
+        selection
+            .configured
+            .unwrap_or(&[])
+            .iter()
+            .map(PathBuf::as_path),
+    );
     match named.find(|path| !pnpmfile_exists(path)) {
         Some(missing) => Err(MissingPnpmfileError { path: missing.to_path_buf() }),
         None => Ok(()),
@@ -150,7 +152,10 @@ impl PnpmfileHooks for CombinedPnpmfileHooks {
         ctx: HookContext,
     ) -> Result<ReadPackageResult, HookError> {
         for hook in &self.hooks {
-            pkg = (*hook.read_package(pkg, ctx.clone()).await?).clone();
+            pkg = (*hook
+                .read_package(pkg, ctx.clone())
+                .await?)
+                .clone();
         }
         Ok(Arc::new(pkg))
     }
@@ -162,7 +167,9 @@ impl PnpmfileHooks for CombinedPnpmfileHooks {
     ) -> Result<Value, HookError> {
         let mut changed = false;
         for hook in &self.hooks {
-            let result = hook.after_all_resolved(lockfile.clone(), ctx.clone()).await?;
+            let result = hook
+                .after_all_resolved(lockfile.clone(), ctx.clone())
+                .await?;
             if !result.is_null() {
                 lockfile = result;
                 changed = true;
@@ -173,13 +180,17 @@ impl PnpmfileHooks for CombinedPnpmfileHooks {
 
     async fn pre_resolution(&self, ctx: PreResolutionHookContext, logger: PreResolutionHookLogger) {
         for hook in &self.hooks {
-            hook.pre_resolution(ctx.clone(), logger.clone()).await;
+            hook.pre_resolution(ctx.clone(), logger.clone())
+                .await;
         }
     }
 
     async fn filter_log(&self, log: Value, ctx: HookContext) -> bool {
         for hook in &self.hooks {
-            if !hook.filter_log(log.clone(), ctx.clone()).await {
+            if !hook
+                .filter_log(log.clone(), ctx.clone())
+                .await
+            {
                 return false;
             }
         }
@@ -189,7 +200,10 @@ impl PnpmfileHooks for CombinedPnpmfileHooks {
     async fn calculate_pnpmfile_checksum(&self) -> Option<String> {
         let mut includes_hooks = false;
         for hook in &self.hooks {
-            includes_hooks |= hook.calculate_pnpmfile_checksum().await.is_some();
+            includes_hooks |= hook
+                .calculate_pnpmfile_checksum()
+                .await
+                .is_some();
         }
         if !includes_hooks {
             return None;

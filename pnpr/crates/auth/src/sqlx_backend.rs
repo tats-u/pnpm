@@ -57,7 +57,9 @@ impl<Db> SqlAuth<Db> {
         if with_auth_timeout(self.timeout, self.db.user_count()).await? < max {
             return Ok(());
         }
-        if self.reconcile_capped_counter_once_per_interval().await?
+        if self
+            .reconcile_capped_counter_once_per_interval()
+            .await?
             && with_auth_timeout(self.timeout, self.db.user_count()).await? < max
         {
             return Ok(());
@@ -70,18 +72,23 @@ impl<Db> SqlAuth<Db> {
         Db: AuthSqlBackend,
     {
         let now = unix_seconds();
-        let next = self.next_cap_reconcile_at.load(Ordering::Relaxed);
+        let next = self
+            .next_cap_reconcile_at
+            .load(Ordering::Relaxed);
         if now < next {
             return Ok(false);
         }
         let updated_next = now.saturating_add(CAP_RECONCILE_INTERVAL_SECS);
-        if self.next_cap_reconcile_at
+        if self
+            .next_cap_reconcile_at
             .compare_exchange(next, updated_next, Ordering::Relaxed, Ordering::Relaxed)
             .is_err()
         {
             return Ok(false);
         }
-        self.db.reconcile_user_counter_overcount().await
+        self.db
+            .reconcile_user_counter_overcount()
+            .await
     }
 }
 
@@ -132,10 +139,15 @@ where
             return verify_returning_user(&stored.username, password, stored.bcrypt_hash).await;
         }
 
-        self.check_registration_capacity().await?;
+        self.check_registration_capacity()
+            .await?;
 
         let hash = hash_bcrypt(password.to_string(), DEFAULT_BCRYPT_COST).await?;
-        match self.db.insert_user(username, &hash, self.max_users).await? {
+        match self
+            .db
+            .insert_user(username, &hash, self.max_users)
+            .await?
+        {
             InsertUser::Created => Ok((UpsertOutcome::Created, username.to_string())),
             InsertUser::Existing(stored) => {
                 verify_returning_user(&stored.username, password, stored.bcrypt_hash).await
@@ -156,7 +168,9 @@ where
     Db: AuthSqlBackend,
 {
     async fn issue(&self, username: &str) -> Result<String> {
-        let nonce = self.counter.fetch_add(1, Ordering::Relaxed);
+        let nonce = self
+            .counter
+            .fetch_add(1, Ordering::Relaxed);
         let raw = mint_token(&self.secret, nonce, username);
         let token_hash = sha256_hex(raw.as_bytes());
         let now = unix_seconds();
@@ -167,7 +181,9 @@ where
             readonly: false,
             cidr_whitelist: Vec::new(),
         };
-        self.db.insert_token(&token_hash, &record).await?;
+        self.db
+            .insert_token(&token_hash, &record)
+            .await?;
         Ok(raw)
     }
 
@@ -200,10 +216,9 @@ fn invalid_pool_size(backend: &str) -> RegistryError {
 }
 
 fn sql_max_users(max: u64, backend: &str) -> Result<i64> {
-    i64::try_from(max)
-        .map_err(|_| RegistryError::InvalidConfig {
-            reason: format!("backend.{backend} auth max_users must fit a signed BIGINT"),
-        })
+    i64::try_from(max).map_err(|_| RegistryError::InvalidConfig {
+        reason: format!("backend.{backend} auth max_users must fit a signed BIGINT"),
+    })
 }
 
 #[cfg(any(feature = "backend-postgres", feature = "backend-mysql"))]

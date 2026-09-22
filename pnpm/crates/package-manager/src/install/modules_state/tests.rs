@@ -144,7 +144,8 @@ fn a_missing_nested_hoisted_version_cannot_fall_back_to_another_version() {
         &[("foo@1.0.0", &["node_modules/foo"]), ("foo@2.0.0", &["packages/b/node_modules/foo"])],
     );
     let mut lockfile = shared_workspace_lockfile();
-    lockfile.importers
+    lockfile
+        .importers
         .get_mut("packages/b")
         .unwrap()
         .dependencies
@@ -153,7 +154,8 @@ fn a_missing_nested_hoisted_version_cannot_fall_back_to_another_version() {
         .get_mut(&"foo".parse().unwrap())
         .unwrap()
         .version = serde_saphyr::from_str("2.0.0").unwrap();
-    lockfile.snapshots
+    lockfile
+        .snapshots
         .as_mut()
         .unwrap()
         .insert("foo@2.0.0".parse().unwrap(), SnapshotEntry::default());
@@ -222,7 +224,9 @@ fn malformed_importer_paths_cannot_short_circuit_materialization() {
     for importer in ["../outside", "/absolute", "packages/../../outside"] {
         let mut lockfile = shared_workspace_lockfile();
         lockfile.importers.clear();
-        lockfile.importers.insert(importer.to_string(), ProjectSnapshot::default());
+        lockfile
+            .importers
+            .insert(importer.to_string(), ProjectSnapshot::default());
         lockfile.snapshots = None;
         assert!(!tree_intact(dir.path(), NodeLinker::Isolated, &lockfile), "{importer}");
     }
@@ -233,8 +237,11 @@ fn malformed_dependency_names_cannot_short_circuit_materialization() {
     let dir = tempdir().unwrap();
     for name in ["../outside", "@scope/../../outside", "/absolute"] {
         let mut lockfile = shared_workspace_lockfile();
-        lockfile.importers.retain(|id, _| id == "packages/a");
-        let dependencies = lockfile.importers
+        lockfile
+            .importers
+            .retain(|id, _| id == "packages/a");
+        let dependencies = lockfile
+            .importers
             .get_mut("packages/a")
             .unwrap()
             .dependencies
@@ -257,7 +264,9 @@ fn symlink_disabled_install_requires_a_complete_local_virtual_store() {
     config.modules_dir = root.join("node_modules");
     config.virtual_store_dir = config.modules_dir.join(".pnpm");
     config.symlink = false;
-    let package_dir = config.virtual_store_dir.join("foo@1.0.0/node_modules/foo");
+    let package_dir = config
+        .virtual_store_dir
+        .join("foo@1.0.0/node_modules/foo");
     fs::create_dir_all(&package_dir).unwrap();
     let lockfile = shared_workspace_lockfile();
     let intact =
@@ -281,7 +290,9 @@ fn malformed_snapshot_names_cannot_use_directories_outside_their_slot_modules() 
     let layout = crate::VirtualStoreLayout::legacy(root.join("node_modules/.pnpm"), 120);
     for name in ["../outside", "@scope/../../outside"] {
         let key: PackageKey = format!("{name}@1.0.0").parse().unwrap();
-        let slot_modules = layout.slot_dir(&key).join("node_modules");
+        let slot_modules = layout
+            .slot_dir(&key)
+            .join("node_modules");
         let unchecked_dir = slot_modules.join(name);
         fs::create_dir_all(&unchecked_dir).unwrap();
         assert!(unchecked_dir.is_dir());

@@ -93,15 +93,12 @@ pub enum RepoError {
 
 fn get_repo_url_from_current_project(dir: &std::path::Path) -> miette::Result<String> {
     let manifest_path = dir.join("package.json");
-    let manifest = PackageManifest::from_path(manifest_path)
-        .map_err(|err| -> miette::Report {
-            match &err {
-                PackageManifestError::NoImporterManifestFound(_) => {
-                    RepoError::NoRepoUrlLocal.into()
-                }
-                _ => err.into(),
-            }
-        })?;
+    let manifest = PackageManifest::from_path(manifest_path).map_err(|err| -> miette::Report {
+        match &err {
+            PackageManifestError::NoImporterManifestFound(_) => RepoError::NoRepoUrlLocal.into(),
+            _ => err.into(),
+        }
+    })?;
     let repository = manifest.value().get("repository");
     pick_repo_url(repository).ok_or_else(|| RepoError::NoRepoUrlLocal.into())
 }
@@ -114,8 +111,14 @@ async fn get_repo_url_from_registry(
     retry_opts: &RetryOpts,
 ) -> miette::Result<String> {
     let parsed = parse_wanted_dependency(raw_spec);
-    let name = parsed.alias.as_deref().unwrap_or(raw_spec);
-    let bare = parsed.bare_specifier.as_deref().unwrap_or("latest");
+    let name = parsed
+        .alias
+        .as_deref()
+        .unwrap_or(raw_spec);
+    let bare = parsed
+        .bare_specifier
+        .as_deref()
+        .unwrap_or("latest");
     let (resolved_name, range) = PackageManifest::resolve_registry_dependency(name, bare);
 
     let registry = pick_registry_for_package(registries, resolved_name, Some(bare));
@@ -190,7 +193,9 @@ fn repository_to_web_url(raw_url: &str, directory: Option<&str>) -> Option<Strin
         return Some(url);
     }
 
-    let input = raw_url.strip_prefix("git+").unwrap_or(raw_url);
+    let input = raw_url
+        .strip_prefix("git+")
+        .unwrap_or(raw_url);
     let cleaned = if let Some(rest) = input.strip_prefix("git://") {
         Cow::Owned(format!("https://{rest}"))
     } else {
@@ -275,7 +280,9 @@ fn try_hosted_shorthand(raw_url: &str, directory: Option<&str>) -> Option<String
     let browse_path = format!("{hosted_base_url}/{}", parts[..2].join("/"));
 
     Some(if let Some(dir) = directory {
-        let branch = fragment.as_deref().unwrap_or(hosted.default_branch);
+        let branch = fragment
+            .as_deref()
+            .unwrap_or(hosted.default_branch);
         format!("{browse_path}/tree/{branch}/{}", dir.trim_start_matches('/'))
     } else if let Some(branch) = fragment {
         format!("{browse_path}/tree/{branch}")
@@ -285,7 +292,9 @@ fn try_hosted_shorthand(raw_url: &str, directory: Option<&str>) -> Option<String
 }
 
 fn try_user_repo_shorthand(raw_url: &str, directory: Option<&str>) -> Option<String> {
-    let cleaned = raw_url.strip_prefix("git+").unwrap_or(raw_url);
+    let cleaned = raw_url
+        .strip_prefix("git+")
+        .unwrap_or(raw_url);
 
     if cleaned.contains("://") || cleaned.starts_with("git@") {
         return try_hosted_url(raw_url, directory);
@@ -349,7 +358,9 @@ fn try_hosted_url(raw_url: &str, directory: Option<&str>) -> Option<String> {
     let browse_path = format!("{base_url}/{repo_path}");
 
     Some(if let Some(dir) = directory {
-        let branch = fragment.as_deref().unwrap_or(default_branch);
+        let branch = fragment
+            .as_deref()
+            .unwrap_or(default_branch);
         format!("{browse_path}/tree/{branch}/{}", dir.trim_start_matches('/'))
     } else if let Some(branch) = fragment {
         format!("{browse_path}/tree/{branch}")
@@ -361,7 +372,9 @@ fn try_hosted_url(raw_url: &str, directory: Option<&str>) -> Option<String> {
 /// The repository as an `https://<host>/<path>` URL plus its `#branch`
 /// fragment, from the `git+`, SCP-style SSH or `git://` spelling.
 fn parse_hosted_input(raw_url: &str) -> Option<(url::Url, Option<String>)> {
-    let input = raw_url.strip_prefix("git+").unwrap_or(raw_url);
+    let input = raw_url
+        .strip_prefix("git+")
+        .unwrap_or(raw_url);
     if let Some(rest) = input.strip_prefix("git@") {
         // SCP-style SSH: git@<host>:<owner>/<repo>(.git)?(#branch)?
         let (scp_host, scp_path) = rest.split_once(':')?;
@@ -403,7 +416,9 @@ fn build_hosted_browse_url(
     let fragment = try_extract_fragment(path);
 
     Some(if let Some(dir) = directory {
-        let branch = fragment.as_deref().unwrap_or(default_branch);
+        let branch = fragment
+            .as_deref()
+            .unwrap_or(default_branch);
         format!("{browse_path}/tree/{branch}/{}", dir.trim_start_matches('/'))
     } else if let Some(branch) = fragment {
         format!("{browse_path}/tree/{branch}")
@@ -419,17 +434,16 @@ fn try_extract_fragment(raw_url: &str) -> Option<String> {
 }
 
 fn redact_url(url: &str) -> String {
-    url::Url::parse(url)
-        .map_or_else(
-            |_| url.to_string(),
-            |mut parsed_url| {
-                let _ = parsed_url.set_username("");
-                let _ = parsed_url.set_password(None);
-                parsed_url.set_query(None);
-                parsed_url.set_fragment(None);
-                parsed_url.to_string()
-            },
-        )
+    url::Url::parse(url).map_or_else(
+        |_| url.to_string(),
+        |mut parsed_url| {
+            let _ = parsed_url.set_username("");
+            let _ = parsed_url.set_password(None);
+            parsed_url.set_query(None);
+            parsed_url.set_fragment(None);
+            parsed_url.to_string()
+        },
+    )
 }
 
 #[cfg(test)]

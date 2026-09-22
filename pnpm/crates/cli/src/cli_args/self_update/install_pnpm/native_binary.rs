@@ -133,7 +133,11 @@ fn find_native_binary(
     ];
     candidate_dir_names
         .iter()
-        .map(|dir_name| scope_dir.join(dir_name).join(executable))
+        .map(|dir_name| {
+            scope_dir
+                .join(dir_name)
+                .join(executable)
+        })
         .find(|candidate| candidate.exists())
         .ok_or_else(|| {
             miette::miette!("no @pnpm/exe.{platform}-{arch} native binary was found for this host")
@@ -174,7 +178,10 @@ fn global_virtual_store_root_from_slot(slot_dir: &Path, package_name: &str) -> O
     node_semver::Version::parse(version).ok()?;
 
     let mut cursor = slot_dir;
-    for segment in format_global_virtual_store_path(package_name, version, hash).split('/').rev() {
+    for segment in format_global_virtual_store_path(package_name, version, hash)
+        .split('/')
+        .rev()
+    {
         if cursor.file_name()?.to_str()? != segment {
             return None;
         }
@@ -224,7 +231,10 @@ fn rewrite_windows_bin_field(wrapper_dir: &Path) {
     let Ok(mut pkg) = parse_manifest(&text) else {
         return;
     };
-    let Some(bin) = pkg.get_mut("bin").and_then(Value::as_object_mut) else {
+    let Some(bin) = pkg
+        .get_mut("bin")
+        .and_then(Value::as_object_mut)
+    else {
         return;
     };
     for (name, target) in

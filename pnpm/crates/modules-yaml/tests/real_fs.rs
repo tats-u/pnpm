@@ -153,7 +153,8 @@ fn dep_path_serializes_transparently() {
         "publicHoistPattern": [],
     }));
     assert_eq!(
-        manifest.hoisted_aliases
+        manifest
+            .hoisted_aliases
             .as_ref()
             .and_then(|map| map.keys().next()),
         Some(&DepPath::from("/accepts/1.3.7".to_string())),
@@ -202,7 +203,8 @@ fn hoisted_locations_round_trips() {
         },
     }));
     assert_eq!(
-        manifest.hoisted_locations
+        manifest
+            .hoisted_locations
             .as_ref()
             .expect("present")
             .get("/accepts/1.3.7"),

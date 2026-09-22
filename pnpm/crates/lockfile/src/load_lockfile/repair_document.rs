@@ -24,10 +24,16 @@ pub(super) fn prepare_value_for_fix(value: &mut serde_json::Value) {
     ] {
         discard_invalid_generated_field(root, key);
     }
-    if let Some(packages) = root.get_mut("packages").and_then(serde_json::Value::as_object_mut) {
+    if let Some(packages) = root
+        .get_mut("packages")
+        .and_then(serde_json::Value::as_object_mut)
+    {
         packages.retain(|_, metadata| reduce_package_metadata(metadata));
     }
-    if let Some(snapshots) = root.get_mut("snapshots").and_then(serde_json::Value::as_object_mut) {
+    if let Some(snapshots) = root
+        .get_mut("snapshots")
+        .and_then(serde_json::Value::as_object_mut)
+    {
         for snapshot in snapshots.values_mut() {
             reduce_snapshot(snapshot);
         }

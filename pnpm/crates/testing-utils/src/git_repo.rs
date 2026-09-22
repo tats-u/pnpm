@@ -105,7 +105,9 @@ impl GitRepoFixture {
     /// SHA of the work tree's current `HEAD`.
     #[must_use]
     pub fn head(&self) -> String {
-        git(&self.work, &["rev-parse", "HEAD"]).trim().to_string()
+        git(&self.work, &["rev-parse", "HEAD"])
+            .trim()
+            .to_string()
     }
 
     /// `file://` URL of the bare repo — the transport half of a git

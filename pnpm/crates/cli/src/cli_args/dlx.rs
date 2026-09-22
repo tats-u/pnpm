@@ -206,7 +206,11 @@ impl DlxArgs {
         run_bin(
             DlxProgram::Named(&bin_name),
             args,
-            vec![cached_dir.join("node_modules").join(".bin")],
+            vec![
+                cached_dir
+                    .join("node_modules")
+                    .join(".bin"),
+            ],
             &spawn,
         )
     }
@@ -300,9 +304,9 @@ impl DlxProgram<'_> {
     fn shell_word(&self) -> Option<&str> {
         match self {
             DlxProgram::Named(name) => Some(name),
-            DlxProgram::Provisioned { executable, .. } => {
-                executable.file_name().and_then(std::ffi::OsStr::to_str)
-            }
+            DlxProgram::Provisioned { executable, .. } => executable
+                .file_name()
+                .and_then(std::ffi::OsStr::to_str),
         }
     }
 
@@ -373,7 +377,9 @@ fn run_bin(
 /// Determine the bin to run from the first installed dependency.
 fn get_bin_name(cached_dir: &Path) -> Result<String, DlxError> {
     let pkg_name = get_pkg_name(cached_dir)?;
-    let pkg_dir = cached_dir.join("node_modules").join(&pkg_name);
+    let pkg_dir = cached_dir
+        .join("node_modules")
+        .join(&pkg_name);
     let manifest = read_json(&pkg_dir.join("package.json"))?;
     let bins = get_bins_from_package_manifest::<CmdShimHost>(&manifest, &pkg_dir);
 
@@ -422,7 +428,8 @@ fn get_pkg_name(cached_dir: &Path) -> Result<String, DlxError> {
 /// The package name with any `@scope/` prefix removed.
 fn scopeless(pkg_name: &str) -> &str {
     if let Some(rest) = pkg_name.strip_prefix('@') {
-        rest.split_once('/').map_or(pkg_name, |(_, name)| name)
+        rest.split_once('/')
+            .map_or(pkg_name, |(_, name)| name)
     } else {
         pkg_name
     }

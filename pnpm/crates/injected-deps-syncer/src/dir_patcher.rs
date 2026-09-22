@@ -173,7 +173,8 @@ pub fn apply_patch(
     for path in &patch.removed {
         remove_recursive(&target_dir.join(path))?;
     }
-    let (new_dirs, new_files): (Vec<_>, Vec<_>) = patch.changes
+    let (new_dirs, new_files): (Vec<_>, Vec<_>) = patch
+        .changes
         .iter()
         .partition(|change| change.new_value == Value::Dir);
     for change in new_dirs.into_iter().chain(new_files) {
@@ -195,12 +196,11 @@ fn apply_change(change: &Change, source_dir: &Path, target_dir: &Path) -> Result
         Value::File(_) => {
             let source_path = source_dir.join(&change.path);
             retry_over_blocking_inode(&target_path, || {
-                fs::hard_link(&source_path, &target_path)
-                    .map_err(|error| PatchError::Link {
-                        source: source_path.clone(),
-                        target: target_path.clone(),
-                        error,
-                    })
+                fs::hard_link(&source_path, &target_path).map_err(|error| PatchError::Link {
+                    source: source_path.clone(),
+                    target: target_path.clone(),
+                    error,
+                })
             })
         }
     }
@@ -292,7 +292,9 @@ fn add_inode_and_ancestors(result: &mut InodeMap, relative_path: &str, value: Va
     let mut value = value;
     while !path.is_empty() && path != "." && !result.contains_key(path) {
         result.insert(path.to_string(), value);
-        path = path.rsplit_once('/').map_or("", |(parent, _)| parent);
+        path = path
+            .rsplit_once('/')
+            .map_or("", |(parent, _)| parent);
         value = Value::Dir;
     }
 }

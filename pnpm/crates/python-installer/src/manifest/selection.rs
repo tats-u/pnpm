@@ -36,7 +36,9 @@ impl Manifest {
         config: &Config,
         selection: DependencySelection,
     ) -> Result<Vec<Requirement>> {
-        Ok(self.selected_requirements(config)?.into_selected(selection))
+        Ok(self
+            .selected_requirements(config)?
+            .into_selected(selection))
     }
 
     pub(in super::super) fn selected_requirements(
@@ -118,7 +120,8 @@ impl Manifest {
         {
             bail!("cyclic Python dependency group: {group}");
         }
-        let entries = self.groups
+        let entries = self
+            .groups
             .get(group)
             .ok_or_else(|| miette::miette!("unknown Python dependency group: {group}"))?;
         visiting.push(group.to_string());
@@ -127,7 +130,9 @@ impl Manifest {
                 requirements.push(requirement.to_string());
             } else if let Some(table) = entry.as_table()
                 && table.len() == 1
-                && let Some(include) = table.get("include-group").and_then(toml::Value::as_str)
+                && let Some(include) = table
+                    .get("include-group")
+                    .and_then(toml::Value::as_str)
             {
                 self.expand_group(include, visiting, requirements)?;
             } else {
@@ -160,7 +165,9 @@ impl SelectedRequirements {
             self.all.truncate(self.production_count);
         }
         if !selection.production {
-            let count = self.production_count.min(self.all.len());
+            let count = self
+                .production_count
+                .min(self.all.len());
             self.all.drain(..count);
         }
         self.all

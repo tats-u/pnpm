@@ -141,8 +141,16 @@ fn removes_only_excluded_direct_dep_links_and_their_bins() {
     assert!(!bins_dir.join("devtool").exists());
     assert!(is_symlink_or_junction(&modules_dir.join("keep-me")).unwrap());
     assert!(bins_dir.join("unrelated-tool").exists());
-    assert!(modules_dir.join("vendored.txt").exists());
-    assert!(modules_dir.join("user-owned-dir").is_dir());
+    assert!(
+        modules_dir
+            .join("vendored.txt")
+            .exists()
+    );
+    assert!(
+        modules_dir
+            .join("user-owned-dir")
+            .is_dir()
+    );
 }
 
 /// A `node_modules` that is itself a symlink resolving outside the

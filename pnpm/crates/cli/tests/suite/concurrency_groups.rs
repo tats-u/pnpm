@@ -66,7 +66,9 @@ fn state_dir(workspace: &Path) -> PathBuf {
 }
 
 fn pnpm_run(pacquet: &Command, script: &str) -> Command {
-    let workspace = pacquet.get_current_dir().expect("workspace dir");
+    let workspace = pacquet
+        .get_current_dir()
+        .expect("workspace dir");
     let mut command = Command::new(pacquet.get_program());
     command.current_dir(workspace);
     for (name, value) in pacquet.get_envs() {
@@ -136,10 +138,18 @@ fn concurrent_tasks_past_the_limit_wait_for_a_slot() {
     write_project(&workspace, Path::new(pacquet.get_program()), 1);
 
     let started = Instant::now();
-    let mut first = hold(&pacquet).spawn().expect("spawn the first run");
-    let mut second = hold(&pacquet).spawn().expect("spawn the second run");
-    let first = first.wait().expect("wait for the first run");
-    let second = second.wait().expect("wait for the second run");
+    let mut first = hold(&pacquet)
+        .spawn()
+        .expect("spawn the first run");
+    let mut second = hold(&pacquet)
+        .spawn()
+        .expect("spawn the second run");
+    let first = first
+        .wait()
+        .expect("wait for the first run");
+    let second = second
+        .wait()
+        .expect("wait for the second run");
     let elapsed = started.elapsed();
 
     dbg!(first, second, elapsed);
@@ -172,8 +182,12 @@ fn tasks_within_the_limit_do_not_wait() {
         .expect("spawn the second run");
     wait_for_holders(&workspace, 2);
     release_holders(&workspace);
-    let first = first.wait().expect("wait for the first run");
-    let second = second.wait().expect("wait for the second run");
+    let first = first
+        .wait()
+        .expect("wait for the first run");
+    let second = second
+        .wait()
+        .expect("wait for the second run");
 
     dbg!(first, second);
     assert!(first.success() && second.success());
@@ -189,13 +203,17 @@ fn a_task_outside_the_group_runs_while_the_slots_are_held() {
 
     let mut holder = releasable_holder(&pacquet);
     wait_for_holders(&workspace, 1);
-    let free = pnpm_run(&pacquet, "free").status().expect("run the free script");
+    let free = pnpm_run(&pacquet, "free")
+        .status()
+        .expect("run the free script");
     let holder_still_running = holder
         .try_wait()
         .expect("poll the holding run")
         .is_none();
     release_holders(&workspace);
-    holder.wait().expect("wait for the holding run");
+    holder
+        .wait()
+        .expect("wait for the holding run");
 
     dbg!(free, holder_still_running);
     assert!(free.success());
@@ -215,11 +233,20 @@ fn a_waiting_task_reports_who_holds_the_slots() {
         .stdout(Stdio::piped())
         .spawn()
         .expect("spawn the waiting run");
-    let mut stdout = BufReader::new(waiting.stdout.take().expect("capture the waiting run stdout"));
+    let mut stdout = BufReader::new(
+        waiting
+            .stdout
+            .take()
+            .expect("capture the waiting run stdout"),
+    );
     let mut rendered = String::new();
     loop {
         let mut line = String::new();
-        if stdout.read_line(&mut line).expect("read the waiting warning") == 0 {
+        if stdout
+            .read_line(&mut line)
+            .expect("read the waiting warning")
+            == 0
+        {
             break;
         }
         rendered.push_str(&line);
@@ -228,9 +255,15 @@ fn a_waiting_task_reports_who_holds_the_slots() {
         }
     }
     release_holders(&workspace);
-    stdout.read_to_string(&mut rendered).expect("read the waiting run stdout");
-    let status = waiting.wait().expect("wait for the waiting run");
-    holder.wait().expect("wait for the holding run");
+    stdout
+        .read_to_string(&mut rendered)
+        .expect("read the waiting run stdout");
+    let status = waiting
+        .wait()
+        .expect("wait for the waiting run");
+    holder
+        .wait()
+        .expect("wait for the holding run");
 
     // The default reporter renders warnings on stdout.
     dbg!(&rendered);
@@ -304,7 +337,9 @@ fn pipeline_tasks_of_one_group_share_its_slots() {
     pnpm(&["install"]).assert().success();
 
     let started = Instant::now();
-    let output = pnpm(&["pipeline", "--full", "--no-cache"]).output().expect("run the pipeline");
+    let output = pnpm(&["pipeline", "--full", "--no-cache"])
+        .output()
+        .expect("run the pipeline");
     let elapsed = started.elapsed();
 
     dbg!(String::from_utf8_lossy(&output.stderr), elapsed);

@@ -225,7 +225,8 @@ fn a_login_writes_a_config_the_reader_reads_back() {
         String::from_utf8_lossy(&login.stderr),
     );
 
-    let listed = CommandTempCwd::init().pacquet
+    let listed = CommandTempCwd::init()
+        .pacquet
         .with_env("XDG_CONFIG_HOME", root.path())
         .with_arg("config")
         .with_arg("list")

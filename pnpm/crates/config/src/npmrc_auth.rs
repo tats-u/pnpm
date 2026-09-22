@@ -211,8 +211,12 @@ impl NpmrcAuth {
             config.registry =
                 if registry.ends_with('/') { registry } else { format!("{registry}/") };
         }
-        declared.scopes.extend(self.routes.scoped.keys().cloned());
-        config.registries_by_scope.append(&mut self.routes.scoped);
+        declared
+            .scopes
+            .extend(self.routes.scoped.keys().cloned());
+        config
+            .registries_by_scope
+            .append(&mut self.routes.scoped);
         for message in std::mem::take(&mut self.warnings) {
             tracing::warn!(target: "pacquet::npmrc", "{message}");
             config.npmrc_warnings.push(message);
@@ -232,12 +236,17 @@ impl NpmrcAuth {
     pub fn merge_under(&mut self, lower: NpmrcAuth) {
         self.routes.merge_under(lower.routes);
         for (key, value) in lower.raw_ini_config {
-            self.raw_ini_config.entry(key).or_insert(value);
+            self.raw_ini_config
+                .entry(key)
+                .or_insert(value);
         }
         self.proxy.merge_under(lower.proxy);
         self.tls.merge_under(lower.tls);
         for (uri, lower_by_scope) in lower.creds_by_scope_by_uri {
-            let by_scope = self.creds_by_scope_by_uri.entry(uri).or_default();
+            let by_scope = self
+                .creds_by_scope_by_uri
+                .entry(uri)
+                .or_default();
             for (scope, creds) in lower_by_scope {
                 by_scope
                     .entry(scope)
@@ -267,9 +276,12 @@ impl NpmrcAuth {
     pub fn apply_to<Sys: EnvVar>(mut self, config: &mut Config) {
         self.rescope_unscoped("<.npmrc>");
         self.apply_registry_and_warn(config, &mut DeclaredRegistries::default());
-        self.proxy.apply_proxy_cascade::<Sys>(config);
-        self.tls.apply_tls_and_local_address(config);
-        self.build_auth_headers(config).expect("valid credentials in test .npmrc");
+        self.proxy
+            .apply_proxy_cascade::<Sys>(config);
+        self.tls
+            .apply_tls_and_local_address(config);
+        self.build_auth_headers(config)
+            .expect("valid credentials in test .npmrc");
     }
 }
 
@@ -331,7 +343,8 @@ impl NpmrcTls {
         config.tls.cert = self.cert.take();
         config.tls.key = self.key.take();
         config.tls.strict_ssl = self.strict_ssl.take();
-        config.tls.local_address = self.local_address
+        config.tls.local_address = self
+            .local_address
             .take()
             .and_then(|raw| raw.parse().ok());
         // Per-registry TLS overrides. `PerRegistryTls::from_map`
@@ -389,13 +402,19 @@ impl NpmrcRoutes {
     fn merge_under(&mut self, lower: Self) {
         self.default = self.default.take().or(lower.default);
         for (scope, registry) in lower.scoped {
-            self.scoped.entry(scope).or_insert(registry);
+            self.scoped
+                .entry(scope)
+                .or_insert(registry);
         }
         for (scope, registry) in lower.json_env {
-            self.json_env.entry(scope).or_insert(registry);
+            self.json_env
+                .entry(scope)
+                .or_insert(registry);
         }
         for (scope, registry) in lower.json_file {
-            self.json_file.entry(scope).or_insert(registry);
+            self.json_file
+                .entry(scope)
+                .or_insert(registry);
         }
     }
 }
@@ -417,8 +436,14 @@ impl NpmrcTls {
         self.cafile = self.cafile.take().or(lower.cafile);
         self.cert = self.cert.take().or(lower.cert);
         self.key = self.key.take().or(lower.key);
-        self.strict_ssl = self.strict_ssl.take().or(lower.strict_ssl);
-        self.local_address = self.local_address.take().or(lower.local_address);
+        self.strict_ssl = self
+            .strict_ssl
+            .take()
+            .or(lower.strict_ssl);
+        self.local_address = self
+            .local_address
+            .take()
+            .or(lower.local_address);
 
         for (uri, tls) in lower.by_uri {
             let entry = self.by_uri.entry(uri).or_default();

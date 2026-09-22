@@ -193,11 +193,15 @@ pub fn npm_tarball_url(name: &str, version: &str, opts: TarballUrlOptions<'_>) -
     let filename_name = match server_type {
         Some(RegistryServerType::Artifactory) => name,
         Some(RegistryServerType::Npm) | None => match name.strip_prefix('@') {
-            Some(scoped) => scoped.split_once('/').map_or(name, |(_, bare)| bare),
+            Some(scoped) => scoped
+                .split_once('/')
+                .map_or(name, |(_, bare)| bare),
             None => name,
         },
     };
-    let version = version.split_once('+').map_or(version, |(base, _)| base);
+    let version = version
+        .split_once('+')
+        .map_or(version, |(base, _)| base);
     format!("{registry}{name}/-/{filename_name}-{version}.tgz")
 }
 
@@ -218,7 +222,10 @@ pub(super) fn is_canonical_registry_tarball_url(
     // kept. See <https://github.com/pnpm/pnpm/issues/13534>.
     expected == actual
         || (effective_server_type(opts) == Some(RegistryServerType::Npm)
-            && expected == actual.replace("%2f", "/").replace("%2F", "/"))
+            && expected
+                == actual
+                    .replace("%2f", "/")
+                    .replace("%2F", "/"))
 }
 
 /// Default-vs-scope routing for an npm package.

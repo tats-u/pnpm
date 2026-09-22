@@ -88,7 +88,9 @@ fn belongs_to_workspace(workspace_dir: &Path, dir: &Path) -> Result<bool, FindWo
     crate::projects::belongs_to_workspace(
         workspace_dir,
         dir,
-        manifest.as_ref().and_then(|manifest| manifest.packages.as_deref()),
+        manifest
+            .as_ref()
+            .and_then(|manifest| manifest.packages.as_deref()),
     )
     .map_err(FindWorkspaceDirError::FindProjects)
 }

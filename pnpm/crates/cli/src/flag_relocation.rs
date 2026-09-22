@@ -67,7 +67,9 @@ pub(crate) fn scan_for_positional(
     subcommand_union: &ArgTable,
 ) -> Option<PositionalScan> {
     loop {
-        let token = argv.get(index).and_then(|token| token.to_str())?;
+        let token = argv
+            .get(index)
+            .and_then(|token| token.to_str())?;
         if token == "--" {
             return Some(PositionalScan::Separator(index));
         }
@@ -145,7 +147,9 @@ fn expand_recursive_alias(
 ) {
     let mut current_idx = 1;
     while let Some(pos_idx) = find_positional(argv, current_idx, top_level, subcommand_union) {
-        if let Some(token) = argv.get(pos_idx).and_then(|t| t.to_str())
+        if let Some(token) = argv
+            .get(pos_idx)
+            .and_then(|t| t.to_str())
             && matches!(token, "recursive" | "multi" | "m")
             && find_positional(argv, pos_idx + 1, top_level, subcommand_union).is_some()
         {
@@ -317,7 +321,9 @@ impl ArgTable {
     /// manually.
     pub(crate) fn top_level(cmd: &Command) -> Self {
         let mut table = Self::default();
-        table.longs.insert("help".to_string(), false);
+        table
+            .longs
+            .insert("help".to_string(), false);
         table.shorts.insert('h', false);
         table.absorb(cmd.get_arguments());
         table
@@ -328,7 +334,10 @@ impl ArgTable {
     /// subcommand and needs a token's width to step over it.
     pub(crate) fn subcommand_union(cmd: &Command) -> Self {
         let mut table = Self::default();
-        table.absorb(cmd.get_subcommands().flat_map(Command::get_arguments));
+        table.absorb(
+            cmd.get_subcommands()
+                .flat_map(Command::get_arguments),
+        );
         table
     }
 
@@ -345,34 +354,31 @@ impl ArgTable {
     /// not known yet (the pre-clap passes, via
     /// [`crate::parse_boundary::passthrough_from`]).
     pub(crate) fn absorb_subcommands(&mut self, cmd: &Command) {
-        self.absorb(cmd.get_subcommands().flat_map(Command::get_arguments));
+        self.absorb(
+            cmd.get_subcommands()
+                .flat_map(Command::get_arguments),
+        );
     }
 
     fn absorb<'a, Args: IntoIterator<Item = &'a Arg>>(&mut self, args: Args) {
         for arg in args {
             let consumes_value = arg.get_action().takes_values()
-                && arg.get_num_args().is_none_or(|range| range.takes_values())
+                && arg
+                    .get_num_args()
+                    .is_none_or(|range| range.takes_values())
                 && !arg.is_require_equals_set();
-            for long in arg
-                .get_long()
-                .into_iter()
-                .chain(
-                    arg.get_all_aliases()
-                        .into_iter()
-                        .flatten(),
-                )
-            {
+            for long in arg.get_long().into_iter().chain(
+                arg.get_all_aliases()
+                    .into_iter()
+                    .flatten(),
+            ) {
                 merge_arity(self.longs.entry(long.to_string()), consumes_value);
             }
-            for short in arg
-                .get_short()
-                .into_iter()
-                .chain(
-                    arg.get_all_short_aliases()
-                        .into_iter()
-                        .flatten(),
-                )
-            {
+            for short in arg.get_short().into_iter().chain(
+                arg.get_all_short_aliases()
+                    .into_iter()
+                    .flatten(),
+            ) {
                 merge_arity(self.shorts.entry(short), consumes_value);
             }
         }

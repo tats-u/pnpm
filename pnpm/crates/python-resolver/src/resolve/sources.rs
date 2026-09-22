@@ -28,7 +28,9 @@ pub(super) fn has_inactive_source(
         let (requirements, extras) = selected_requirements(provider, solution, &package)?;
         graph.enqueue_requirements(&requirements, &extras, provider);
     }
-    Ok(provider.packages.direct_urls
+    Ok(provider
+        .packages
+        .direct_urls
         .keys()
         .any(|name| !graph.active.contains(name)))
 }
@@ -36,7 +38,10 @@ pub(super) fn has_inactive_source(
 impl SourceGraph {
     fn can_visit(&mut self, provider: &Provider<'_>, package: &Package) -> bool {
         if let Package::Distribution(name, _) = package
-            && provider.packages.direct_urls.contains_key(name)
+            && provider
+                .packages
+                .direct_urls
+                .contains_key(name)
             && !self.active.contains(name)
         {
             self.pending
@@ -55,12 +60,20 @@ impl SourceGraph {
         provider: &Provider<'_>,
     ) {
         for requirement in requirements {
-            if !requirement.marker.evaluate(provider.environment, extras) {
+            if !requirement
+                .marker
+                .evaluate(provider.environment, extras)
+            {
                 continue;
             }
             if matches!(requirement.version_or_url, Some(VersionOrUrl::Url(_))) {
-                self.active.insert(requirement.name.clone());
-                self.frontier.extend(self.pending.remove(&requirement.name).unwrap_or_default());
+                self.active
+                    .insert(requirement.name.clone());
+                self.frontier.extend(
+                    self.pending
+                        .remove(&requirement.name)
+                        .unwrap_or_default(),
+                );
             }
             self.frontier.extend(
                 std::iter::once(None)
@@ -84,7 +97,9 @@ fn selected_requirements(
     let Package::Distribution(name, extra) = package else {
         return Ok((provider.requirements.to_vec(), Vec::new()));
     };
-    let version = solution.get(package).expect("a satisfied requirement was selected");
+    let version = solution
+        .get(package)
+        .expect("a satisfied requirement was selected");
     let metadata = &provider.packages.metadata[&(name.clone(), version.clone())];
     parsed_requirements(metadata, extra.as_ref())
 }
@@ -126,7 +141,11 @@ fn known_locked_requirements(
         .keys()
         .next()
         .expect("one pinned version");
-    let Some(metadata) = provider.packages.metadata.get(&(name.clone(), version.clone())) else {
+    let Some(metadata) = provider
+        .packages
+        .metadata
+        .get(&(name.clone(), version.clone()))
+    else {
         return Ok(None);
     };
     parsed_requirements(metadata, extra.as_ref()).map(Some)
@@ -138,12 +157,17 @@ fn verify_locked_sources(
     extras: &[ExtraName],
 ) -> Result<()> {
     for requirement in requirements {
-        if !requirement.marker.evaluate(provider.environment, extras) {
+        if !requirement
+            .marker
+            .evaluate(provider.environment, extras)
+        {
             continue;
         }
         let Some(VersionOrUrl::Url(url)) = &requirement.version_or_url else { continue };
         let source = crate::Source::parse(url.as_str())?;
-        if !provider.packages.candidates
+        if !provider
+            .packages
+            .candidates
             .get(&requirement.name)
             .is_some_and(|versions| {
                 !versions.is_empty()
@@ -162,7 +186,8 @@ fn parsed_requirements(
     metadata: &WheelMetadata,
     extra: Option<&ExtraName>,
 ) -> Result<(Vec<Requirement>, Vec<ExtraName>)> {
-    let requirements = metadata.requires_dist
+    let requirements = metadata
+        .requires_dist
         .iter()
         .map(|declared| declared.parse::<Requirement>())
         .collect::<std::result::Result<Vec<_>, _>>()

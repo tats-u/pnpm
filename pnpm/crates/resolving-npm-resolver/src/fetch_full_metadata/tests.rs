@@ -35,7 +35,9 @@ fn warns_when_metadata_request_exceeds_configured_timeout() {
     );
 
     assert_eq!(
-        *WARNINGS.lock().expect("warning recorder lock poisoned"),
+        *WARNINGS
+            .lock()
+            .expect("warning recorder lock poisoned"),
         ["Request took 10001ms: https://registry.example.test/pkg"],
     );
 }
@@ -130,19 +132,28 @@ async fn fetch_full_metadata_targets_full_endpoint_with_auth() {
         },
     };
 
-    let pkg =
-        expect_modified(fetch_full_metadata("acme", &opts).await.expect("server returns 200"));
+    let pkg = expect_modified(
+        fetch_full_metadata("acme", &opts)
+            .await
+            .expect("server returns 200"),
+    );
     assert_eq!(pkg.name, "acme");
     assert_eq!(pkg.published_at("1.0.0"), Some("2025-01-10T08:30:00.000Z"));
-    let version = pkg.versions.get("1.0.0").expect("version present");
+    let version = pkg
+        .versions
+        .get("1.0.0")
+        .expect("version present");
     assert!(
-        version.npm_user
+        version
+            .npm_user
             .as_ref()
             .and_then(|user| user.trusted_publisher.as_ref())
             .is_some(),
     );
     assert!(
-        version.dist.attestations
+        version
+            .dist
+            .attestations
             .as_ref()
             .and_then(|att| att.provenance.as_ref())
             .is_some(),
@@ -197,7 +208,9 @@ async fn fetch_full_metadata_uses_package_scope_auth() {
     };
 
     let pkg = expect_modified(
-        fetch_full_metadata("@scope/pkg", &opts).await.expect("server returns 200"),
+        fetch_full_metadata("@scope/pkg", &opts)
+            .await
+            .expect("server returns 200"),
     );
     assert_eq!(pkg.name, "@scope/pkg");
     mock.assert_async().await;
@@ -228,7 +241,9 @@ async fn fetch_full_metadata_surfaces_5xx_as_network_error() {
         },
     };
 
-    let err = fetch_full_metadata("acme", &opts).await.expect_err("503 must surface");
+    let err = fetch_full_metadata("acme", &opts)
+        .await
+        .expect_err("503 must surface");
     assert!(
         matches!(err, super::FetchMetadataError::Network { .. }),
         "expected Network variant, got: {err:?}",
@@ -251,7 +266,12 @@ async fn fetch_full_metadata_redacts_credentials_in_surfaced_error() {
     // Registry configured with inline basic-auth in the URL: the surfaced
     // error (Display *and* Debug, which reach the terminal and CI logs) must
     // not carry the password.
-    let registry = format!("{}/", server.url().replacen("http://", "http://user:secret@", 1));
+    let registry = format!(
+        "{}/",
+        server
+            .url()
+            .replacen("http://", "http://user:secret@", 1)
+    );
     let http_client = ThrottledClient::default();
     let auth_headers = AuthHeaders::default();
     let opts = FetchFullMetadataOptions {
@@ -266,7 +286,9 @@ async fn fetch_full_metadata_redacts_credentials_in_surfaced_error() {
         },
     };
 
-    let err = fetch_full_metadata("acme", &opts).await.expect_err("503 must surface");
+    let err = fetch_full_metadata("acme", &opts)
+        .await
+        .expect_err("503 must surface");
     for rendered in [err.to_string(), format!("{err:?}")] {
         assert!(!rendered.contains("secret"), "password must not leak: {rendered}");
         assert!(!rendered.contains("user:"), "userinfo must not leak: {rendered}");
@@ -322,7 +344,11 @@ async fn fetch_full_metadata_retries_transient_status() {
         },
     };
 
-    let pkg = expect_modified(fetch_full_metadata("acme", &opts).await.expect("503 retries"));
+    let pkg = expect_modified(
+        fetch_full_metadata("acme", &opts)
+            .await
+            .expect("503 retries"),
+    );
     assert_eq!(pkg.name, "acme");
     first.assert_async().await;
     second.assert_async().await;
@@ -358,7 +384,9 @@ async fn fetch_full_metadata_sends_if_modified_since_as_http_date() {
         },
     };
 
-    let outcome = fetch_full_metadata("acme", &opts).await.expect("server returns 304");
+    let outcome = fetch_full_metadata("acme", &opts)
+        .await
+        .expect("server returns 304");
     assert!(
         matches!(outcome, FetchFullMetadataOutcome::NotModified),
         "expected NotModified outcome, got: {outcome:?}",
@@ -412,8 +440,11 @@ async fn fetch_full_metadata_drops_unparsable_modified_value() {
         },
     };
 
-    let pkg =
-        expect_modified(fetch_full_metadata("acme", &opts).await.expect("server returns 200"));
+    let pkg = expect_modified(
+        fetch_full_metadata("acme", &opts)
+            .await
+            .expect("server returns 200"),
+    );
     assert_eq!(pkg.name, "acme");
     mock.assert_async().await;
 }
@@ -476,7 +507,9 @@ async fn fetch_full_metadata_surfaces_body_read_failure_distinctly() {
         },
     };
 
-    let err = fetch_full_metadata("acme", &opts).await.expect_err("undecodable body must surface");
+    let err = fetch_full_metadata("acme", &opts)
+        .await
+        .expect_err("undecodable body must surface");
     assert!(
         matches!(err, super::FetchMetadataError::BodyRead { .. }),
         "expected BodyRead variant, got: {err:?}",
@@ -527,7 +560,11 @@ async fn fetch_full_metadata_retries_body_read_failure() {
         },
     };
 
-    let pkg = expect_modified(fetch_full_metadata("acme", &opts).await.expect("body read retries"));
+    let pkg = expect_modified(
+        fetch_full_metadata("acme", &opts)
+            .await
+            .expect("body read retries"),
+    );
     assert_eq!(pkg.name, "acme");
     first.assert_async().await;
     second.assert_async().await;
@@ -577,7 +614,9 @@ async fn fetch_full_metadata_encodes_scoped_name() {
     };
 
     let pkg = expect_modified(
-        fetch_full_metadata("@scope/pkg", &opts).await.expect("encoded scoped name reaches mock"),
+        fetch_full_metadata("@scope/pkg", &opts)
+            .await
+            .expect("encoded scoped name reaches mock"),
     );
     assert_eq!(pkg.name, "@scope/pkg");
     mock.assert_async().await;
@@ -609,7 +648,9 @@ async fn fetch_full_metadata_surfaces_decode_failure_distinctly() {
         },
     };
 
-    let err = fetch_full_metadata("acme", &opts).await.expect_err("malformed JSON must surface");
+    let err = fetch_full_metadata("acme", &opts)
+        .await
+        .expect_err("malformed JSON must surface");
     assert!(
         matches!(err, super::FetchMetadataError::Decode { .. }),
         "expected Decode variant, got: {err:?}",
@@ -644,7 +685,9 @@ async fn fetch_full_metadata_returns_not_modified_on_304() {
         },
     };
 
-    let outcome = fetch_full_metadata("acme", &opts).await.expect("304 must succeed");
+    let outcome = fetch_full_metadata("acme", &opts)
+        .await
+        .expect("304 must succeed");
     assert!(
         matches!(outcome, FetchFullMetadataOutcome::NotModified),
         "expected NotModified, got: {outcome:?}",

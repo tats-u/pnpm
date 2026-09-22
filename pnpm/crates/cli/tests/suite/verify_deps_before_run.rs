@@ -71,13 +71,8 @@ fn default_install_action_installs_before_running_the_script() {
 #[cfg(unix)]
 #[test]
 fn install_action_reruns_a_production_only_install() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let marker = workspace.join("marker.txt");
     let write_project = |foo_version: &str| {
@@ -101,7 +96,9 @@ fn install_action_reruns_a_production_only_install() {
         .assert()
         .success();
     assert!(
-        !workspace.join("node_modules/@pnpm.e2e/bar").exists(),
+        !workspace
+            .join("node_modules/@pnpm.e2e/bar")
+            .exists(),
         "a production-only install must skip devDependencies",
     );
 
@@ -123,7 +120,9 @@ fn install_action_reruns_a_production_only_install() {
         "the spawned install must install the updated production dependency",
     );
     assert!(
-        !workspace.join("node_modules/@pnpm.e2e/bar").exists(),
+        !workspace
+            .join("node_modules/@pnpm.e2e/bar")
+            .exists(),
         "the spawned install must keep the recorded production-only groups",
     );
 
@@ -132,13 +131,8 @@ fn install_action_reruns_a_production_only_install() {
 
 #[test]
 fn dedupe_peers_lockfile_regeneration_installs_before_running_the_script() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     append_workspace_yaml_key(&workspace, "dedupePeers", true);
     fs::write(
@@ -284,14 +278,21 @@ fn error_action_follows_the_dependency_state() {
     assert!(!output.status.success(), "a missing lockfile must fail");
     assert!(stderr.contains("Cannot find a lockfile in"), "expected the lockfile error:\n{stderr}");
     assert!(
-        !workspace.join("pnpm-lock.yaml").exists(),
+        !workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
         "the pre-run check must not write pnpm-lock.yaml",
     );
     pacquet_in(&workspace)
         .with_arg("install")
         .assert()
         .success();
-    assert!(workspace.join("pnpm-lock.yaml").exists(), "install must restore the lockfile");
+    assert!(
+        workspace
+            .join("pnpm-lock.yaml")
+            .exists(),
+        "install must restore the lockfile"
+    );
 
     // A manifest that no longer matches the lockfile must fail again.
     let mut manifest: serde_json::Value = serde_json::from_str(
@@ -487,9 +488,8 @@ fn prompt_action_errors_when_not_interactive() {
         .join(" ");
     assert!(
         stderr.contains("ERR_PNPM_VERIFY_DEPS_BEFORE_RUN")
-            && stderr_flat.contains(
-                "cannot prompt for confirmation in non-interactive environments"
-            ),
+            && stderr_flat
+                .contains("cannot prompt for confirmation in non-interactive environments"),
         "expected the non-interactive prompt error:\n{stderr}",
     );
 
@@ -803,13 +803,8 @@ fn unreachable_lockfile_snapshots_do_not_trigger_reinstall_loop() {
     const ORPHANED_HOISTED_LINK: &str =
         "node_modules/.pnpm/node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep";
 
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let marker = workspace.join(PREPARE_MARKER);
     let write_project = |dependencies: serde_json::Value| {
@@ -847,9 +842,15 @@ fn unreachable_lockfile_snapshots_do_not_trigger_reinstall_loop() {
     let mut wanted = pnpm_lockfile::Lockfile::load_wanted_from_dir(&workspace)
         .expect("read the wanted lockfile")
         .expect("the install wrote a wanted lockfile");
-    let importer = wanted.importers.get_mut(".").expect("the root importer is in the lockfile");
-    let orphaned = ORPHANED.parse().expect("the dependency name is valid");
-    importer.dependencies
+    let importer = wanted
+        .importers
+        .get_mut(".")
+        .expect("the root importer is in the lockfile");
+    let orphaned = ORPHANED
+        .parse()
+        .expect("the dependency name is valid");
+    importer
+        .dependencies
         .as_mut()
         .expect("the root importer has dependencies")
         .remove(&orphaned);
@@ -873,7 +874,9 @@ fn unreachable_lockfile_snapshots_do_not_trigger_reinstall_loop() {
         "the frozen install must unlink the dependency the importer no longer declares",
     );
     assert!(
-        !workspace.join(ORPHANED_HOISTED_LINK).exists(),
+        !workspace
+            .join(ORPHANED_HOISTED_LINK)
+            .exists(),
         "the frozen install must unhoist a package only the unreachable snapshot reached",
     );
     let current = fs::read_to_string(workspace.join("node_modules/.pnpm/lock.yaml"))

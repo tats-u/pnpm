@@ -24,7 +24,9 @@ pub(crate) fn lockfile_from_solution(
     feature_selections: &BTreeMap<PackageKey, FeatureSelection>,
     configured: &str,
 ) -> Result<String> {
-    let selected = solution.iter().collect::<BTreeMap<_, _>>();
+    let selected = solution
+        .iter()
+        .collect::<BTreeMap<_, _>>();
     let sources = locked_sources(metadata, registry, solution, feature_selections, configured)?;
     let mut packages = Vec::new();
 
@@ -75,9 +77,14 @@ fn workspace_packages(
     sources: &BTreeMap<PackageKey, String>,
 ) -> Result<Vec<Package>> {
     let mut packages = Vec::new();
-    for package in metadata.packages
+    for package in metadata
+        .packages
         .iter()
-        .filter(|package| metadata.workspace_members.contains(&package.id))
+        .filter(|package| {
+            metadata
+                .workspace_members
+                .contains(&package.id)
+        })
     {
         let dependencies = locked_metadata_dependencies(package)?
             .iter()
@@ -216,9 +223,14 @@ fn locked_workspace_dependency(
     requirement: &VersionReq,
     metadata: &CargoMetadata,
 ) -> Result<Dependency> {
-    let package = metadata.packages
+    let package = metadata
+        .packages
         .iter()
-        .filter(|package| metadata.workspace_members.contains(&package.id))
+        .filter(|package| {
+            metadata
+                .workspace_members
+                .contains(&package.id)
+        })
         .find(|package| package.name == name && requirement.matches(&package.version))
         .ok_or_else(|| miette::miette!("workspace dependency {name} is not a workspace member"))?;
     Ok(Dependency {

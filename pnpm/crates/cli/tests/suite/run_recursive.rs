@@ -60,7 +60,9 @@ fn write_node_bin(bin_dir: &Path, name: &str, body: &str) {
         let shim = bin_dir.join(name);
         let contents = generate_sh_shim(&target, &shim, Some(&node), &[], None);
         fs::write(&shim, contents).expect("write the sh shim");
-        let mut perms = fs::metadata(&shim).expect("stat the shim").permissions();
+        let mut perms = fs::metadata(&shim)
+            .expect("stat the shim")
+            .permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&shim, perms).expect("make the shim executable");
     }
@@ -278,8 +280,18 @@ fn recursive_lifecycle_aliases_use_recursive_run_options() {
             );
         }
         let statuses = summary_statuses(&workspace);
-        assert_eq!(statuses.get("project-1").map(String::as_str), Some("passed"));
-        assert_eq!(statuses.get("project-2").map(String::as_str), Some("passed"));
+        assert_eq!(
+            statuses
+                .get("project-1")
+                .map(String::as_str),
+            Some("passed")
+        );
+        assert_eq!(
+            statuses
+                .get("project-2")
+                .map(String::as_str),
+            Some("passed")
+        );
     }
 
     drop(root);
@@ -616,10 +628,30 @@ fn assert_recursive_run_bail_cancels_in_flight(shell_emulator: bool) {
 
     let statuses = summary_statuses(&workspace);
     dbg!(&statuses);
-    assert_eq!(statuses.get("a-slow-1").map(String::as_str), Some("running"));
-    assert_eq!(statuses.get("b-fails").map(String::as_str), Some("failure"));
-    assert_eq!(statuses.get("c-slow-2").map(String::as_str), Some("running"));
-    assert_eq!(statuses.get("z-queued").map(String::as_str), Some("queued"));
+    assert_eq!(
+        statuses
+            .get("a-slow-1")
+            .map(String::as_str),
+        Some("running")
+    );
+    assert_eq!(
+        statuses
+            .get("b-fails")
+            .map(String::as_str),
+        Some("failure")
+    );
+    assert_eq!(
+        statuses
+            .get("c-slow-2")
+            .map(String::as_str),
+        Some("running")
+    );
+    assert_eq!(
+        statuses
+            .get("z-queued")
+            .map(String::as_str),
+        Some("queued")
+    );
     assert!(
         !workspace
             .join("z-queued")
@@ -730,9 +762,16 @@ fn recursive_run_skips_empty_script_body() {
         .success();
 
     let statuses = summary_statuses(&workspace);
-    assert_eq!(statuses.get("with-body").map(String::as_str), Some("passed"));
     assert_eq!(
-        statuses.get("empty-body").map(String::as_str),
+        statuses
+            .get("with-body")
+            .map(String::as_str),
+        Some("passed")
+    );
+    assert_eq!(
+        statuses
+            .get("empty-body")
+            .map(String::as_str),
         Some("skipped"),
         "empty `build` body should be Skipped, not Passed; got {statuses:?}",
     );

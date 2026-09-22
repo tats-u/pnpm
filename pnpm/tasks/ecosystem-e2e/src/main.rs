@@ -40,7 +40,10 @@ fn main() -> ExitCode {
     }
 
     print_report(&report);
-    if report.iter().all(|(_, outcome)| outcome.passed) {
+    if report
+        .iter()
+        .all(|(_, outcome)| outcome.passed)
+    {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE

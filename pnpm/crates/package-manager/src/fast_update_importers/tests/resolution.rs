@@ -15,8 +15,10 @@ fn updates_a_compatible_dependency_range() {
     let updated = try_fast_update_importers(&lockfile(), &[(".".to_string(), &manifest)])
         .expect("compatible range should update");
     assert_eq!(
-        updated.importers["."].dependencies.as_ref().expect("dependencies")
-            [&"foo".parse().expect("package name")]
+        updated.importers["."]
+            .dependencies
+            .as_ref()
+            .expect("dependencies")[&"foo".parse().expect("package name")]
             .specifier,
         ">=1 <2",
     );
@@ -54,7 +56,8 @@ fn drops_a_peer_pair_removed_together() {
     )
     .expect("the peer-dependent snapshot is unreachable after the removal, so nothing rekeys");
 
-    let mut packages: Vec<_> = updated.packages
+    let mut packages: Vec<_> = updated
+        .packages
         .as_ref()
         .expect("packages")
         .keys()
@@ -76,8 +79,10 @@ fn moves_a_group_alongside_a_satisfied_range_change() {
     )
     .expect("both edits stay within the importer");
 
-    let moved = &updated.importers["."].dev_dependencies.as_ref().expect("devDependencies")
-        [&"bar".parse::<PkgName>().expect("alias")];
+    let moved = &updated.importers["."]
+        .dev_dependencies
+        .as_ref()
+        .expect("devDependencies")[&"bar".parse::<PkgName>().expect("alias")];
     assert_eq!(moved.specifier, ">=2 <3");
 }
 #[test]
@@ -179,7 +184,10 @@ fn moves_a_range_past_a_peer_suffix_naming_the_version_it_moves_to() {
 
     let alias: PkgName = "foo".parse().expect("alias");
     assert_eq!(
-        updated.importers["."].dependencies.as_ref().expect("dependencies")[&alias]
+        updated.importers["."]
+            .dependencies
+            .as_ref()
+            .expect("dependencies")[&alias]
             .version
             .to_string(),
         "1.2.0",
@@ -192,7 +200,8 @@ fn moves_a_range_past_a_peer_suffix_naming_the_version_it_moves_to() {
 #[test]
 fn rejects_a_range_move_a_peer_suffix_names_the_version_it_moves_off() {
     let mut subject = parsed_lockfile(WITH_PEER_ON_ANOTHER_VERSION);
-    subject.importers
+    subject
+        .importers
         .get_mut(".")
         .expect("importer")
         .dependencies
@@ -203,11 +212,14 @@ fn rejects_a_range_move_a_peer_suffix_names_the_version_it_moves_off() {
             serde_saphyr::from_str("{specifier: ^4.0.0, version: 4.0.0(foo@1.0.0)}")
                 .expect("dependency"),
         );
-    subject.snapshots
+    subject
+        .snapshots
         .as_mut()
         .expect("snapshots")
         .insert(
-            "baz@4.0.0(foo@1.0.0)".parse().expect("snapshot key"),
+            "baz@4.0.0(foo@1.0.0)"
+                .parse()
+                .expect("snapshot key"),
             serde_saphyr::from_str("dependencies:\n  foo: 1.0.0").expect("snapshot"),
         );
     let manifest = manifest_from(
@@ -222,12 +234,34 @@ fn rejects_a_range_move_a_peer_suffix_names_the_version_it_moves_off() {
 #[test]
 fn rejects_a_range_when_the_alias_also_has_a_named_registry_key() {
     let mut subject = parsed_lockfile(WITH_TWO_LOCKED_VERSIONS);
-    let packages = subject.packages.as_mut().expect("packages");
-    let extra = packages[&"foo@1.2.0".parse::<PackageKey>().expect("package key")].clone();
-    packages.insert("foo@work:1.4.0".parse().expect("package key"), extra);
-    let snapshots = subject.snapshots.as_mut().expect("snapshots");
-    let extra = snapshots[&"foo@1.2.0".parse::<PackageKey>().expect("snapshot key")].clone();
-    snapshots.insert("foo@work:1.4.0".parse().expect("snapshot key"), extra);
+    let packages = subject
+        .packages
+        .as_mut()
+        .expect("packages");
+    let extra = packages[&"foo@1.2.0"
+        .parse::<PackageKey>()
+        .expect("package key")]
+        .clone();
+    packages.insert(
+        "foo@work:1.4.0"
+            .parse()
+            .expect("package key"),
+        extra,
+    );
+    let snapshots = subject
+        .snapshots
+        .as_mut()
+        .expect("snapshots");
+    let extra = snapshots[&"foo@1.2.0"
+        .parse::<PackageKey>()
+        .expect("snapshot key")]
+        .clone();
+    snapshots.insert(
+        "foo@work:1.4.0"
+            .parse()
+            .expect("snapshot key"),
+        extra,
+    );
     let manifest = manifest_from(json!({ "dependencies": { "foo": "^1.1.0" } }));
 
     assert!(

@@ -233,11 +233,15 @@ impl SharedArtifactStore {
                 .len(),
         };
         for candidate in request.candidates {
-            candidate.validate().map_err(|err| protocol_error(&err))?;
+            candidate
+                .validate()
+                .map_err(|err| protocol_error(&err))?;
             if !seen.insert(candidate.key.clone()) {
                 return Err(bad_request("lookup contains a duplicate candidate".to_string()));
             }
-            let Some(resolved) = self.resolve_candidate(username, &candidate, &mut budget).await?
+            let Some(resolved) = self
+                .resolve_candidate(username, &candidate, &mut budget)
+                .await?
             else {
                 continue;
             };
@@ -250,7 +254,9 @@ impl SharedArtifactStore {
     pub async fn read_blob(&self, username: &str, body: &[u8]) -> Result<Option<ArtifactBlob>> {
         let request: ArtifactBlobRequest = serde_json::from_slice(body)
             .map_err(|err| bad_request(format!("invalid artifact blob request: {err}")))?;
-        request.validate().map_err(|err| protocol_error(&err))?;
+        request
+            .validate()
+            .map_err(|err| protocol_error(&err))?;
         let owner = match owner_key(username, &request.owner) {
             Ok(owner) => owner,
             Err(RegistryError::Forbidden { .. }) => return Ok(None),
@@ -294,7 +300,10 @@ impl SharedArtifactStore {
             }
             scanned_variants += 1;
             budget.add_scan(entry.size)?;
-            let Some(bytes) = self.read_object_path(&entry.location).await? else {
+            let Some(bytes) = self
+                .read_object_path(&entry.location)
+                .await?
+            else {
                 continue;
             };
             let Ok(envelope) = serde_json::from_slice::<SignedArtifactEnvelope>(&bytes) else {
@@ -307,10 +316,8 @@ impl SharedArtifactStore {
                 variants.push(ArtifactVariant { envelope });
             }
         }
-        Ok((!variants.is_empty()).then(|| ResolvedArtifact {
-            key: candidate.key.clone(),
-            variants,
-        }))
+        Ok((!variants.is_empty())
+            .then(|| ResolvedArtifact { key: candidate.key.clone(), variants }))
     }
 
     #[cfg(test)]
@@ -330,7 +337,9 @@ fn prepare_publication(
     username: &str,
     request: &PublishArtifactRequest,
 ) -> Result<PreparedPublication> {
-    let validated = request.validate().map_err(|err| protocol_error(&err))?;
+    let validated = request
+        .validate()
+        .map_err(|err| protocol_error(&err))?;
     let payload = validated.payload;
     let owner = owner_key(username, &payload.owner)?;
     let entry = entry_digest(&request.key, &payload.subject);
@@ -339,7 +348,10 @@ fn prepare_publication(
     // input key and one set of compatibility constraints admit one artifact.
     let slot = compatibility_slot(&payload.compatibility);
     let started = std::time::Instant::now();
-    let envelope_digest = request.envelope.digest().map_err(|err| protocol_error(&err))?;
+    let envelope_digest = request
+        .envelope
+        .digest()
+        .map_err(|err| protocol_error(&err))?;
     let variant_path = format!("{owner}/entries/{entry}/{slot}.json");
     Ok(PreparedPublication {
         started,
@@ -376,10 +388,9 @@ fn verify_stored_blob(id: &str, integrity: &str, size: u64, bytes: &[u8]) -> Res
             ),
         });
     }
-    verify_blob(integrity, bytes)
-        .map_err(|err| RegistryError::Internal {
-            reason: format!("stored shared artifact blob failed verification: {err}"),
-        })
+    verify_blob(integrity, bytes).map_err(|err| RegistryError::Internal {
+        reason: format!("stored shared artifact blob failed verification: {err}"),
+    })
 }
 
 fn stored_object_too_large(size: u64, max_size: u64) -> RegistryError {
@@ -442,7 +453,10 @@ impl ResolveBudget {
     }
 
     fn add(&mut self, bytes: usize) -> Result<()> {
-        self.used_bytes = self.used_bytes.checked_add(bytes).ok_or_else(resolve_limit_error)?;
+        self.used_bytes = self
+            .used_bytes
+            .checked_add(bytes)
+            .ok_or_else(resolve_limit_error)?;
         if self.used_bytes > MAX_RESOLVE_RESPONSE_SIZE {
             return Err(resolve_limit_error());
         }

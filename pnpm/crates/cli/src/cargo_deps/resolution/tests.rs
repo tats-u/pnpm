@@ -45,7 +45,14 @@ replace-with = "checkout-source"
     assert_eq!(settings.len(), 2);
     assert_eq!(settings["unstable.bindeps"], toml::Value::Boolean(true));
     assert_eq!(settings["resolver.incompatible-rust-versions"].as_str(), Some("fallback"));
-    assert_eq!(command.get_current_dir(), Some(build_std::sysroot(&child).unwrap().as_path()));
+    assert_eq!(
+        command.get_current_dir(),
+        Some(
+            build_std::sysroot(&child)
+                .unwrap()
+                .as_path()
+        )
+    );
     let args = command
         .get_args()
         .map(|arg| arg.to_string_lossy().into_owned())
@@ -68,7 +75,9 @@ fn a_symlinked_configuration_in_an_ancestor_is_read() {
     let child = parent.path().join("child");
     fs::create_dir_all(&child).unwrap();
     fs::create_dir_all(parent.path().join(".cargo")).unwrap();
-    let elsewhere = parent.path().join("dotfiles-config.toml");
+    let elsewhere = parent
+        .path()
+        .join("dotfiles-config.toml");
     fs::write(&elsewhere, "[resolver]\nincompatible-rust-versions = \"fallback\"\n").unwrap();
     std::os::unix::fs::symlink(&elsewhere, parent.path().join(".cargo/config.toml")).unwrap();
 
@@ -91,7 +100,12 @@ fn a_symlinked_configuration_at_the_workspace_root_is_refused() {
 
     let error = resolution_settings(&workspace, None).unwrap_err();
 
-    assert!(error.to_string().contains("config.toml"), "unexpected error: {error}");
+    assert!(
+        error
+            .to_string()
+            .contains("config.toml"),
+        "unexpected error: {error}"
+    );
 }
 
 /// A nearer configuration can answer on its own, and a file the answer does
@@ -165,7 +179,12 @@ fn a_symlinked_configuration_inside_the_checkout_is_refused() {
 
     let error = resolution_settings(&workspace, Some(&checkout)).unwrap_err();
 
-    assert!(error.to_string().contains("config.toml"), "unexpected error: {error}");
+    assert!(
+        error
+            .to_string()
+            .contains("config.toml"),
+        "unexpected error: {error}"
+    );
 }
 
 /// A boundary pnpm cannot resolve says nothing about what a checkout
@@ -177,13 +196,20 @@ fn an_unresolved_checkout_refuses_a_symlinked_configuration() {
     let child = parent.path().join("child");
     fs::create_dir_all(&child).unwrap();
     fs::create_dir_all(parent.path().join(".cargo")).unwrap();
-    let elsewhere = parent.path().join("dotfiles-config.toml");
+    let elsewhere = parent
+        .path()
+        .join("dotfiles-config.toml");
     fs::write(&elsewhere, "[resolver]\nincompatible-rust-versions = \"fallback\"\n").unwrap();
     std::os::unix::fs::symlink(&elsewhere, parent.path().join(".cargo/config.toml")).unwrap();
 
     let error = resolution_settings(&child, None).unwrap_err();
 
-    assert!(error.to_string().contains("config.toml"), "unexpected error: {error}");
+    assert!(
+        error
+            .to_string()
+            .contains("config.toml"),
+        "unexpected error: {error}"
+    );
 }
 
 #[test]
@@ -201,7 +227,11 @@ incompatible-rust-versions = "command"
         fs::write(root.path().join(".cargo/config.toml"), contents).unwrap();
         let error = resolution_settings(root.path(), None).unwrap_err();
         eprintln!("Invalid settings must fail: {error:?}");
-        assert!(error.to_string().contains("invalid Cargo resolution setting"));
+        assert!(
+            error
+                .to_string()
+                .contains("invalid Cargo resolution setting")
+        );
     }
 }
 

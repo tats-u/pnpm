@@ -7,7 +7,8 @@ pub(super) fn staged_record(
     registry: Option<&str>,
     stage_id: &str,
 ) -> StagedRecord {
-    let (version, dist) = validated.prepared
+    let (version, dist) = validated
+        .prepared
         .first()
         .map_or((None, Value::Null), |attachment| {
             (Some(attachment.version.clone()), attachment.dist.clone())
@@ -32,7 +33,9 @@ pub(super) fn staged_record(
 
 /// The dist-tag naming the staged version, else the first tag declared.
 fn staged_tag(incoming: &Value, version: Option<&str>) -> Option<String> {
-    let tags = incoming.get("dist-tags").and_then(Value::as_object)?;
+    let tags = incoming
+        .get("dist-tags")
+        .and_then(Value::as_object)?;
     match version {
         Some(version) => tags
             .iter()

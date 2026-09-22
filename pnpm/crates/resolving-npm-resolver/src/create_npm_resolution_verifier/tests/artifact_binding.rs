@@ -44,7 +44,9 @@ async fn verifies_tarball_url_when_no_policy_active() {
     });
     let name: PkgName = "aged-pkg".parse().expect("parse");
     assert!(verifier.might_verify(&resolution, ctx(&name, "1.0.0")));
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
     let ResolutionVerification::Err { code, .. } = result else {
         panic!("expected Err, got {result:?}");
     };
@@ -95,8 +97,12 @@ async fn rejects_a_revision_with_an_unadvertised_integrity() {
         integrity: revision_integrity(REVISION_TWO_DIGEST),
         revision: Some(TarballRevision::try_from(1).unwrap()),
     });
-    let name = "revision-pkg".parse::<PkgName>().unwrap();
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let name = "revision-pkg"
+        .parse::<PkgName>()
+        .unwrap();
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
     let ResolutionVerification::Err { code, .. } = result else {
         panic!("expected revision mismatch, got {result:?}");
     };
@@ -110,8 +116,12 @@ async fn verify_short_circuits_file_tarball_resolution() {
     let verifier = create_npm_resolution_verifier(opts);
     let resolution =
         tarball_resolution("file:vendor/types__my-cool-lib-v1.0.0.tgz", Some(fake_integrity()));
-    let name: PkgName = "@types/my-cool-lib".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let name: PkgName = "@types/my-cool-lib"
+        .parse()
+        .expect("parse");
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -126,7 +136,9 @@ async fn missing_integrity_is_rejected_before_any_metadata_lookup() {
     let resolution = tarball_resolution("https://registry.example/foo/-/foo-1.0.0.tgz", None);
     let name: PkgName = "foo".parse().expect("parse");
     assert!(verifier.might_verify(&resolution, ctx(&name, "1.0.0")));
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
     assert_eq!(
         result,
         ResolutionVerification::Err {
@@ -143,13 +155,17 @@ async fn missing_integrity_is_rejected_before_any_metadata_lookup() {
 async fn empty_integrity_counts_as_missing() {
     let verifier =
         create_npm_resolution_verifier(default_opts("http://nonexistent.example.invalid/"));
-    let empty = "".parse::<Integrity>().expect("empty integrity parses");
+    let empty = ""
+        .parse::<Integrity>()
+        .expect("empty integrity parses");
     let name: PkgName = "foo".parse().expect("parse");
     for resolution in [
         tarball_resolution("https://registry.example/foo/-/foo-1.0.0.tgz", Some(empty.clone())),
         LockfileResolution::Registry(RegistryResolution { integrity: empty, revision: None }),
     ] {
-        let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+        let result = verifier
+            .verify(&resolution, ctx(&name, "1.0.0"))
+            .await;
         let ResolutionVerification::Err { code, .. } = result else {
             panic!("expected Err, got {result:?}");
         };
@@ -167,7 +183,9 @@ async fn missing_integrity_is_rejected_on_a_non_semver_version() {
     let tarball = "https://cdn.example/foo/-/foo-1.0.0.tgz";
     let resolution = tarball_resolution(tarball, None);
     let name: PkgName = "foo".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, tarball)).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, tarball))
+        .await;
     let ResolutionVerification::Err { code, .. } = result else {
         panic!("expected Err, got {result:?}");
     };
@@ -183,7 +201,9 @@ async fn url_keyed_tarball_with_integrity_passes_without_a_lookup() {
     let tarball = "https://cdn.example/foo/-/foo-1.0.0.tgz";
     let resolution = tarball_resolution(tarball, Some(fake_integrity()));
     let name: PkgName = "foo".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, tarball)).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, tarball))
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -207,7 +227,9 @@ async fn integrity_is_required_despite_a_git_hosted_claim() {
     for resolution in [forged, unpinned] {
         let version = "https+++attacker.example+evil";
         assert!(verifier.might_verify(&resolution, ctx(&name, version)));
-        let result = verifier.verify(&resolution, ctx(&name, version)).await;
+        let result = verifier
+            .verify(&resolution, ctx(&name, version))
+            .await;
         let ResolutionVerification::Err { code, .. } = result else {
             panic!("expected Err, got {result:?}");
         };
@@ -257,9 +279,17 @@ async fn verify_flags_tarball_url_mismatch() {
         git_hosted: None,
         path: None,
     });
-    let result =
-        verifier.verify(&resolution, ctx(&"aged-pkg".parse::<PkgName>().expect("parse"), "1.0.0"))
-            .await;
+    let result = verifier
+        .verify(
+            &resolution,
+            ctx(
+                &"aged-pkg"
+                    .parse::<PkgName>()
+                    .expect("parse"),
+                "1.0.0",
+            ),
+        )
+        .await;
     let ResolutionVerification::Err { code, reason } = result else {
         panic!("expected Err, got {result:?}");
     };
@@ -315,9 +345,17 @@ async fn tarball_url_default_port_and_scheme_difference_is_a_match() {
         git_hosted: None,
         path: None,
     });
-    let result =
-        verifier.verify(&resolution, ctx(&"aged-pkg".parse::<PkgName>().expect("parse"), "1.0.0"))
-            .await;
+    let result = verifier
+        .verify(
+            &resolution,
+            ctx(
+                &"aged-pkg"
+                    .parse::<PkgName>()
+                    .expect("parse"),
+                "1.0.0",
+            ),
+        )
+        .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -362,7 +400,9 @@ async fn binding_check_records_dist_stats_into_the_sink() {
         path: None,
     });
     let name: PkgName = "acme".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, "1.0.0"))
+        .await;
 
     assert_eq!(result, ResolutionVerification::Ok);
     let recorded = sink
@@ -413,7 +453,9 @@ async fn version_absent_from_fetched_metadata_stays_tarball_url_mismatch() {
         path: None,
     });
     let name: PkgName = "present-pkg".parse().expect("parse");
-    let result = verifier.verify(&resolution, ctx(&name, "2.0.0")).await;
+    let result = verifier
+        .verify(&resolution, ctx(&name, "2.0.0"))
+        .await;
 
     let ResolutionVerification::Err { code, .. } = result else {
         panic!("expected Err, got {result:?}");

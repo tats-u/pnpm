@@ -27,13 +27,17 @@ pub(super) async fn pnpr_request_inputs(
     link: &PnprLink<'_>,
     lockfile_dir: &std::path::Path,
 ) -> miette::Result<PnprRequestInputs> {
-    let overrides = state.config.overrides
+    let overrides = state
+        .config
+        .overrides
         .as_ref()
         .map(serde_json::to_value)
         .transpose()
         .map_err(|err| miette::miette!("failed to serialize overrides: {err}"))?;
-    let patched_dependencies =
-        state.config.patched_dependency_hashes_in_config_order().map_err(miette::Report::new)?;
+    let patched_dependencies = state
+        .config
+        .patched_dependency_hashes_in_config_order()
+        .map_err(miette::Report::new)?;
     let benchmark_registry_override =
         PnprBenchmarkRegistryOverride::from_env(&state.config.registry);
     let resolve_registry = benchmark_registry_override
@@ -84,7 +88,10 @@ pub(super) fn resolve_projects_options(
             // Only the caller's identity to pnpr is sent. Upstream registry
             // credentials are never forwarded: pnpr selects them from its own
             // route policy, so they stay out of the request body.
-            authorization: state.config.auth_headers.for_url(pnpr_server),
+            authorization: state
+                .config
+                .auth_headers
+                .for_url(pnpr_server),
         },
         transforms: pnpm_pnpr_client::ManifestTransforms {
             overrides: inputs.overrides.take(),
@@ -135,10 +142,13 @@ pub(super) fn pnpr_catalogs(state: &State) -> miette::Result<Option<Catalogs>> {
     if let Some(catalogs) = state.config.catalogs.clone() {
         return Ok(Some(catalogs));
     }
-    let workspace_root = state.config.workspace_dir
+    let workspace_root = state
+        .config
+        .workspace_dir
         .as_deref()
         .unwrap_or_else(|| {
-            state.manifest
+            state
+                .manifest
                 .path()
                 .parent()
                 .expect("manifest path always has a parent dir")
@@ -158,7 +168,9 @@ pub(super) fn resolve_projects_for_pnpr(
 ) -> miette::Result<Vec<ResolveProject>> {
     if let Some(selection) = selection {
         return Ok(resolve_workspace_projects(
-            state.config.lockfile_dir_for(&selection.workspace_root),
+            state
+                .config
+                .lockfile_dir_for(&selection.workspace_root),
             &selection.projects,
         ));
     }
@@ -168,7 +180,9 @@ pub(super) fn resolve_projects_for_pnpr(
     {
         let (projects, _) = discover_workspace_projects(workspace_root, state.config)?;
         return Ok(resolve_workspace_projects(
-            state.config.lockfile_dir_for(workspace_root),
+            state
+                .config
+                .lockfile_dir_for(workspace_root),
             &projects,
         ));
     }
@@ -307,7 +321,9 @@ pub(super) fn verification_policy(
 ) -> pnpm_pnpr_client::VerificationPolicy {
     pnpm_pnpr_client::VerificationPolicy {
         minimum_release_age: config.minimum_release_age,
-        minimum_release_age_exclude: config.minimum_release_age_exclude.clone(),
+        minimum_release_age_exclude: config
+            .minimum_release_age_exclude
+            .clone(),
         minimum_release_age_ignore_missing_time: config.minimum_release_age_ignore_missing_time,
         trust_policy: config.trust_policy,
         trust_policy_exclude: config.trust_policy_exclude.clone(),

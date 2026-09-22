@@ -241,7 +241,10 @@ impl PublishJournal {
         let txn = match self.seal(packages).await {
             Ok(txn) => txn,
             Err(err) => {
-                for slot in packages.iter().flat_map(|package| package.slots) {
+                for slot in packages
+                    .iter()
+                    .flat_map(|package| package.slots)
+                {
                     let _ = fs::remove_file(&slot.tmp_path).await;
                 }
                 return Err(err);
@@ -249,7 +252,10 @@ impl PublishJournal {
         };
         let dir = txn.dir.clone();
         let mut first = ApplyProgress::default();
-        let Err(err) = txn.apply(storage, documents, &mut first).await else {
+        let Err(err) = txn
+            .apply(storage, documents, &mut first)
+            .await
+        else {
             return Ok(first.outcome);
         };
         tracing::warn!(%err, "publish apply failed after the seal; retrying it");
@@ -260,13 +266,20 @@ impl PublishJournal {
         // startup recovery and reports the failure that started it.
         let Ok(txn) = SealedTxn::reopen(dir) else { return Err(err) };
         let mut retry = ApplyProgress::default();
-        if txn.apply(storage, documents, &mut retry).await.is_err() {
+        if txn
+            .apply(storage, documents, &mut retry)
+            .await
+            .is_err()
+        {
             return Err(err);
         }
         // An entry the first attempt wrote is this transaction's own, and the
         // retry finding it in place says nothing about another writer.
         // Reporting it would tell a publisher their publish duplicated itself.
-        retry.outcome.unrecorded.retain(|package| !first.wrote_documents.contains(package));
+        retry
+            .outcome
+            .unrecorded
+            .retain(|package| !first.wrote_documents.contains(package));
         Ok(retry.outcome)
     }
 
@@ -356,7 +369,8 @@ impl SealedTxn {
         let mut context = ApplyContext { documents, progress };
         let mut lost_tmp_paths = Vec::new();
         for (index, package) in manifest.packages.iter().enumerate() {
-            self.apply_package(index, package, storage, &mut context, &mut lost_tmp_paths).await?;
+            self.apply_package(index, package, storage, &mut context, &mut lost_tmp_paths)
+                .await?;
         }
         // Remove the journal before cleaning lost tmp files so an interruption
         // cannot leave a retry that has lost the evidence needed to detect the
@@ -390,27 +404,30 @@ impl SealedTxn {
         };
         let target = PackageTarget { store, name };
         let mut lost_blobs = promote_blobs(&target, package, lost_tmp_paths).await?;
-        let claimed = self.claim_revision_refs(
-            &target,
-            package,
-            &mut lost_blobs,
-            &mut context.progress.outcome,
-        )
-        .await?;
-        self.write_package_document(&target, package, index, &lost_blobs, context).await?;
-        for revision_ref in claimed.into_values().flatten() {
-            target.store.commit_hosted_revision_ref(
-                &revision_ref.digest,
-                &revision_ref.ref_id,
-                &self.revision_ref_owner,
-            )
+        let claimed = self
+            .claim_revision_refs(&target, package, &mut lost_blobs, &mut context.progress.outcome)
             .await?;
+        self.write_package_document(&target, package, index, &lost_blobs, context)
+            .await?;
+        for revision_ref in claimed.into_values().flatten() {
+            target
+                .store
+                .commit_hosted_revision_ref(
+                    &revision_ref.digest,
+                    &revision_ref.ref_id,
+                    &self.revision_ref_owner,
+                )
+                .await?;
         }
-        context.progress.outcome.lost_blobs.extend(
-            lost_blobs
-                .into_iter()
-                .map(|filename| LostBlob { package: package.id(), filename }),
-        );
+        context
+            .progress
+            .outcome
+            .lost_blobs
+            .extend(
+                lost_blobs
+                    .into_iter()
+                    .map(|filename| LostBlob { package: package.id(), filename }),
+            );
         Ok(())
     }
 
@@ -428,13 +445,15 @@ impl SealedTxn {
             if lost_blobs.contains(&revision_ref.filename) {
                 continue;
             }
-            let write = target.store.write_hosted_revision_ref(
-                &revision_ref.digest,
-                &revision_ref.ref_id,
-                &self.revision_ref_owner,
-                &revision_ref.bytes,
-            )
-            .await;
+            let write = target
+                .store
+                .write_hosted_revision_ref(
+                    &revision_ref.digest,
+                    &revision_ref.ref_id,
+                    &self.revision_ref_owner,
+                    &revision_ref.bytes,
+                )
+                .await;
             match write {
                 Ok(HostedRevisionRefWrite::Claimed | HostedRevisionRefWrite::AlreadyClaimed) => {
                     claimed
@@ -447,7 +466,8 @@ impl SealedTxn {
                     outcome.reference_limit = Some(limit);
                     lost_blobs.insert(revision_ref.filename.clone());
                     let backed_out = claimed.remove(revision_ref.filename.as_str());
-                    self.release_claims(target, backed_out).await?;
+                    self.release_claims(target, backed_out)
+                        .await?;
                 }
                 Err(err) => return Err(err),
             }
@@ -462,12 +482,14 @@ impl SealedTxn {
         claimed: Option<Vec<&JournaledRevisionRef>>,
     ) -> Result<()> {
         for claimed_ref in claimed.into_iter().flatten() {
-            target.store.remove_hosted_revision_ref(
-                &claimed_ref.digest,
-                &claimed_ref.ref_id,
-                &self.revision_ref_owner,
-            )
-            .await?;
+            target
+                .store
+                .remove_hosted_revision_ref(
+                    &claimed_ref.digest,
+                    &claimed_ref.ref_id,
+                    &self.revision_ref_owner,
+                )
+                .await?;
         }
         Ok(())
     }
@@ -489,37 +511,47 @@ impl SealedTxn {
         if lost_blobs.is_empty()
             && let Some(base_version) = self.base_versions.get(index)
         {
-            let write = target.store.write_hosted_document_if_current(
-                &target.name,
-                &journaled,
-                base_version.as_ref(),
-            )
-            .await?;
+            let write = target
+                .store
+                .write_hosted_document_if_current(&target.name, &journaled, base_version.as_ref())
+                .await?;
             if matches!(write, DocumentWrite::Written) {
-                context.progress.wrote_documents.insert(package.id());
+                context
+                    .progress
+                    .wrote_documents
+                    .insert(package.id());
                 return Ok(());
             }
         }
         let documents = context.documents;
-        let update = target.store.update_hosted_document_with_retry(
-            &target.name,
-            COMMIT_DOCUMENT_WRITE_RETRIES,
-            |existing| {
-                documents.merge(DocumentMerge {
-                    ecosystem: package.ecosystem,
-                    name: &target.name,
-                    existing,
-                    journaled: &journaled,
-                    lost_blobs,
-                })
-            },
-        )
-        .await?;
+        let update = target
+            .store
+            .update_hosted_document_with_retry(
+                &target.name,
+                COMMIT_DOCUMENT_WRITE_RETRIES,
+                |existing| {
+                    documents.merge(DocumentMerge {
+                        ecosystem: package.ecosystem,
+                        name: &target.name,
+                        existing,
+                        journaled: &journaled,
+                        lost_blobs,
+                    })
+                },
+            )
+            .await?;
         match update {
             DocumentUpdate::Written => {
-                context.progress.wrote_documents.insert(package.id());
+                context
+                    .progress
+                    .wrote_documents
+                    .insert(package.id());
             }
-            DocumentUpdate::NotFound => context.progress.outcome.unrecorded.push(package.id()),
+            DocumentUpdate::NotFound => context
+                .progress
+                .outcome
+                .unrecorded
+                .push(package.id()),
         }
         Ok(())
     }
@@ -557,7 +589,11 @@ async fn promote_blobs<'a>(
         }
         let slot =
             BlobSlot::from_parts(blob.tmp_path.clone(), target.name.clone(), blob.filename.clone());
-        match target.store.finalize_blob_slot(slot).await? {
+        match target
+            .store
+            .finalize_blob_slot(slot)
+            .await?
+        {
             BlobFinalize::Written | BlobFinalize::AlreadyIdentical => {}
             // Another writer placed different bytes under this filename. Keep
             // the tmp file so a retry detects the same conflict, and leave the
@@ -584,7 +620,10 @@ pub async fn recover_publish_journal(
         config.storage.hosted_dir.clone(),
         config.storage.cache_dir.clone(),
     )?;
-    storage.publish_journal().recover(&storage, documents).await
+    storage
+        .publish_journal()
+        .recover(&storage, documents)
+        .await
 }
 
 #[cfg(test)]

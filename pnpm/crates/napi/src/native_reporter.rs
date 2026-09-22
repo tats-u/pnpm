@@ -188,15 +188,20 @@ impl NativeRenderer {
 
     fn with_destination(options: &ReporterOptions, dir: &str, destination: Destination) -> Self {
         let is_terminal = destination.is_terminal();
-        let append_only = options.append_only.unwrap_or(!is_terminal);
+        let append_only = options
+            .append_only
+            .unwrap_or(!is_terminal);
         let width = renderer_width(options, &destination, is_terminal);
         let colors = Colors {
-            enabled: options.color.unwrap_or_else(|| {
-                is_terminal && std::env::var_os("NO_COLOR").is_none()
-            }),
+            enabled: options
+                .color
+                .unwrap_or_else(|| is_terminal && std::env::var_os("NO_COLOR").is_none()),
         };
         let state = ReporterState::new_with_options(
-            options.cwd.clone().unwrap_or_else(|| dir.to_string()),
+            options
+                .cwd
+                .clone()
+                .unwrap_or_else(|| dir.to_string()),
             width,
             colors,
             renderer_state_options(options, append_only),
@@ -227,7 +232,9 @@ impl NativeRenderer {
         // coalesceable (stats, the summary, the footer) renders the
         // current counts.
         if is_coalesceable(event)
-            && self.last_write.is_some_and(|last| last.elapsed() < self.throttle)
+            && self
+                .last_write
+                .is_some_and(|last| last.elapsed() < self.throttle)
         {
             return;
         }
@@ -260,7 +267,8 @@ impl NativeRenderer {
                 // line and `\x1b[0J` everything below the frame.
                 self.frame_buf.clear();
                 self.frame_buf.push('\r');
-                self.diff.update_into(&frame, &mut self.frame_buf);
+                self.diff
+                    .update_into(&frame, &mut self.frame_buf);
                 self.frame_buf.push_str("\x1b[K\x1b[0J");
                 let chunk = std::mem::take(&mut self.frame_buf);
                 self.destination.write(&chunk);
@@ -275,16 +283,27 @@ impl NativeRenderer {
 fn renderer_state_options(options: &ReporterOptions, append_only: bool) -> StateOptions {
     StateOptions {
         append_only,
-        ignored_builds_instruction_text: options.ignored_builds_instruction_text.clone(),
-        hide_linked_pkgs_diff: options.hide_linked_pkgs_diff.clone().unwrap_or_default(),
+        ignored_builds_instruction_text: options
+            .ignored_builds_instruction_text
+            .clone(),
+        hide_linked_pkgs_diff: options
+            .hide_linked_pkgs_diff
+            .clone()
+            .unwrap_or_default(),
         max_log_level: parse_log_level(options.log_level.as_deref()),
         lifecycle: pnpm_default_reporter::state::LifecycleOptions {
-            hide_output: options.hide_lifecycle_output.unwrap_or(false),
+            hide_output: options
+                .hide_lifecycle_output
+                .unwrap_or(false),
             ..Default::default()
         },
         progress: pnpm_default_reporter::state::ProgressOptions {
-            hide_added_pkgs: options.hide_added_pkgs_progress.unwrap_or(false),
-            hide_prefix: options.hide_progress_prefix.unwrap_or(false),
+            hide_added_pkgs: options
+                .hide_added_pkgs_progress
+                .unwrap_or(false),
+            hide_prefix: options
+                .hide_progress_prefix
+                .unwrap_or(false),
         },
         ..StateOptions::default()
     }
@@ -295,7 +314,8 @@ fn renderer_width(
     destination: &Destination,
     is_terminal: bool,
 ) -> usize {
-    options.width
+    options
+        .width
         .map_or_else(
             || {
                 if is_terminal {
@@ -353,9 +373,8 @@ fn terminal_columns(stream: StreamFd) -> Option<usize> {
     // the return code is checked before it is read.
     unsafe {
         let mut ws: libc::winsize = std::mem::zeroed();
-        (libc::ioctl(fd, libc::TIOCGWINSZ, &mut ws) == 0 && ws.ws_col > 0).then_some(
-            ws.ws_col as usize,
-        )
+        (libc::ioctl(fd, libc::TIOCGWINSZ, &mut ws) == 0 && ws.ws_col > 0)
+            .then_some(ws.ws_col as usize)
     }
 }
 

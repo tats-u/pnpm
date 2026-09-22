@@ -14,7 +14,8 @@ use crate::optimistic_repeat_install::{filesystem_now_ms, materialized_shape_mat
 /// materialized copy can go stale while every install-state artifact
 /// still says the tree is current.
 pub(super) fn has_directory_snapshot(lockfile: &Lockfile) -> bool {
-    lockfile.packages
+    lockfile
+        .packages
         .iter()
         .flat_map(|packages| packages.values())
         .any(|metadata| {
@@ -172,7 +173,10 @@ pub(super) async fn report_up_to_date<Reporter: self::Reporter + 'static>(
     // eagerly before the up-to-date early return.
     verify_up_to_date_lockfile::<Reporter>(
         context.wanted_lockfile,
-        context.verification.override_check.take(),
+        context
+            .verification
+            .override_check
+            .take(),
         context.verification.verifiers,
         (context.verification.path, &context.tree.config.cache_dir),
     )
@@ -248,7 +252,9 @@ pub(super) async fn verify_up_to_date_lockfile<Reporter: self::Reporter + 'stati
         )
         .await;
     };
-    lockfile_verification_override.await.map_err(map_frozen_lockfile_error)
+    lockfile_verification_override
+        .await
+        .map_err(map_frozen_lockfile_error)
 }
 /// A merge produced a lockfile that no file on disk holds, so it has to be
 /// written back even when nothing else changed.

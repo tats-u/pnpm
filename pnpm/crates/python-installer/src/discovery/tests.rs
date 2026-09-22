@@ -34,9 +34,16 @@ async fn reads_only_declared_workspace_members() {
         fixture.join("requirements.txt"),
     ];
 
-    let discovery = discover(&Config::default(), root.path(), &manifests).await.unwrap();
+    let discovery = discover(&Config::default(), root.path(), &manifests)
+        .await
+        .unwrap();
 
-    assert_eq!(discovery.project_roots().collect::<Vec<_>>(), [member]);
+    assert_eq!(
+        discovery
+            .project_roots()
+            .collect::<Vec<_>>(),
+        [member]
+    );
 }
 
 #[tokio::test]
@@ -62,7 +69,9 @@ async fn skips_conventional_sample_and_fixture_directories_by_default() {
     fs::create_dir_all(&template).unwrap();
     fs::write(template.join("pyproject.toml"), "[project]\nname = 'template'\nversion = '1.0'\n")
         .unwrap();
-    let missing = root.path().join("docs/missing/pyproject.toml");
+    let missing = root
+        .path()
+        .join("docs/missing/pyproject.toml");
     let manifests = vec![
         project.join("pyproject.toml"),
         example.join("pyproject.toml"),
@@ -73,9 +82,16 @@ async fn skips_conventional_sample_and_fixture_directories_by_default() {
         missing,
     ];
 
-    let discovery = discover(&Config::default(), root.path(), &manifests).await.unwrap();
+    let discovery = discover(&Config::default(), root.path(), &manifests)
+        .await
+        .unwrap();
 
-    assert_eq!(discovery.project_roots().collect::<Vec<_>>(), [project]);
+    assert_eq!(
+        discovery
+            .project_roots()
+            .collect::<Vec<_>>(),
+        [project]
+    );
 }
 
 #[tokio::test]
@@ -92,9 +108,16 @@ async fn a_workspace_declaration_can_include_a_conventional_directory() {
         .unwrap();
     let manifests = vec![root.path().join("pyproject.toml"), example.join("pyproject.toml")];
 
-    let discovery = discover(&Config::default(), root.path(), &manifests).await.unwrap();
+    let discovery = discover(&Config::default(), root.path(), &manifests)
+        .await
+        .unwrap();
 
-    assert_eq!(discovery.project_roots().collect::<Vec<_>>(), [example]);
+    assert_eq!(
+        discovery
+            .project_roots()
+            .collect::<Vec<_>>(),
+        [example]
+    );
 }
 
 #[tokio::test]
@@ -122,9 +145,16 @@ async fn nearest_workspace_declaration_controls_discovery() {
         nonmember.join("pyproject.toml"),
     ];
 
-    let discovery = discover(&Config::default(), root.path(), &manifests).await.unwrap();
+    let discovery = discover(&Config::default(), root.path(), &manifests)
+        .await
+        .unwrap();
 
-    assert_eq!(discovery.project_roots().collect::<Vec<_>>(), [member]);
+    assert_eq!(
+        discovery
+            .project_roots()
+            .collect::<Vec<_>>(),
+        [member]
+    );
 }
 
 #[tokio::test]
@@ -146,9 +176,16 @@ async fn a_nested_workspace_declaration_can_include_ignored_descendants() {
         malformed.join("pyproject.toml"),
     ];
 
-    let discovery = discover(&Config::default(), root.path(), &manifests).await.unwrap();
+    let discovery = discover(&Config::default(), root.path(), &manifests)
+        .await
+        .unwrap();
 
-    assert_eq!(discovery.project_roots().collect::<Vec<_>>(), [member]);
+    assert_eq!(
+        discovery
+            .project_roots()
+            .collect::<Vec<_>>(),
+        [member]
+    );
 }
 
 #[tokio::test]
@@ -172,9 +209,16 @@ async fn an_excluded_nested_workspace_declaration_controls_its_descendants() {
         member.join("pyproject.toml"),
     ];
 
-    let discovery = discover(&Config::default(), root.path(), &manifests).await.unwrap();
+    let discovery = discover(&Config::default(), root.path(), &manifests)
+        .await
+        .unwrap();
 
-    assert_eq!(discovery.project_roots().collect::<Vec<_>>(), [member]);
+    assert_eq!(
+        discovery
+            .project_roots()
+            .collect::<Vec<_>>(),
+        [member]
+    );
 }
 
 #[tokio::test]
@@ -195,7 +239,12 @@ async fn reports_an_invalid_manifest_in_a_declared_member() {
     };
 
     eprintln!("{error:?}");
-    assert!(error.to_string().contains("TOML parse error"), "{error:?}");
+    assert!(
+        error
+            .to_string()
+            .contains("TOML parse error"),
+        "{error:?}"
+    );
 }
 
 #[tokio::test]

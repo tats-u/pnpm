@@ -133,10 +133,9 @@ fn strict_errors_when_the_wanted_specifier_is_a_range() {
 #[test]
 fn strict_errors_when_the_wanted_range_sits_inside_the_catalog_range() {
     let catalogs = catalogs(&[("default", &[("is-positive", "^2.0.0")])]);
-    let err = decide(CatalogMode::Strict, &catalogs, &dep("is-positive", "^2.1.0"))
-        .expect_err(
-            "`catalog:` would resolve through `^2.0.0` and could take a version `^2.1.0` excludes",
-        );
+    let err = decide(CatalogMode::Strict, &catalogs, &dep("is-positive", "^2.1.0")).expect_err(
+        "`catalog:` would resolve through `^2.0.0` and could take a version `^2.1.0` excludes",
+    );
     assert_eq!(
         err,
         CatalogVersionMismatchError {
@@ -152,10 +151,9 @@ fn strict_errors_when_the_wanted_range_sits_inside_the_catalog_range() {
 #[test]
 fn strict_errors_when_the_wanted_range_holds_the_catalog_range() {
     let catalogs = catalogs(&[("default", &[("is-positive", "^2.1.0")])]);
-    let err = decide(CatalogMode::Strict, &catalogs, &dep("is-positive", "^2.0.0"))
-        .expect_err(
-            "`catalog:` would resolve through `^2.1.0` and never take the `2.0.x` the range allows",
-        );
+    let err = decide(CatalogMode::Strict, &catalogs, &dep("is-positive", "^2.0.0")).expect_err(
+        "`catalog:` would resolve through `^2.1.0` and never take the `2.0.x` the range allows",
+    );
     assert_eq!(
         err,
         CatalogVersionMismatchError {

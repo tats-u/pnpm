@@ -156,7 +156,10 @@ impl PrefetchResult {
     ) -> usize {
         let checks: Vec<(String, PendingFilesCheck)> = cache_keys
             .into_iter()
-            .filter_map(|cache_key| self.pending_checks.remove_entry(cache_key))
+            .filter_map(|cache_key| {
+                self.pending_checks
+                    .remove_entry(cache_key)
+            })
             .collect();
         let failed: Vec<String> = checks
             .into_par_iter()
@@ -174,7 +177,8 @@ impl PrefetchResult {
             self.manifests.remove(cache_key);
             self.side_effects_maps.remove(cache_key);
             self.side_effects.remove(cache_key);
-            self.remote_side_effects_quarantine.remove(cache_key);
+            self.remote_side_effects_quarantine
+                .remove(cache_key);
             self.requires_build.remove(cache_key);
             self.requires_prepare.remove(cache_key);
         }
@@ -351,21 +355,33 @@ fn collect_prefetch_result(decoded: Vec<DecodedPrefetchRow>) -> PrefetchResult {
             continue;
         }
         if let Some(pending_check) = pending_check {
-            result.pending_checks.insert(cache_key.clone(), pending_check);
+            result
+                .pending_checks
+                .insert(cache_key.clone(), pending_check);
         }
         let calculated_requires_build = stored_requires_build.unwrap_or_else(|| {
-            manifest.as_deref().is_some_and(manifest_requires_build)
+            manifest
+                .as_deref()
+                .is_some_and(manifest_requires_build)
                 || files_include_install_scripts(verify_result.files_map.keys())
         });
         if let Some(manifest) = manifest {
-            result.manifests.insert(cache_key.clone(), manifest);
+            result
+                .manifests
+                .insert(cache_key.clone(), manifest);
         }
         insert_side_effects(&mut result, &cache_key, &mut verify_result);
-        result.requires_build.insert(cache_key.clone(), calculated_requires_build);
+        result
+            .requires_build
+            .insert(cache_key.clone(), calculated_requires_build);
         if let Some(requires_prepare_value) = stored_requires_prepare {
-            result.requires_prepare.insert(cache_key.clone(), requires_prepare_value);
+            result
+                .requires_prepare
+                .insert(cache_key.clone(), requires_prepare_value);
         }
-        result.cas_paths.insert(cache_key, Arc::new(verify_result.files_map));
+        result
+            .cas_paths
+            .insert(cache_key, Arc::new(verify_result.files_map));
     }
     result
 }
@@ -376,23 +392,32 @@ fn insert_side_effects(
     cache_key: &str,
     verify_result: &mut pnpm_store_dir::VerifyResult,
 ) {
-    if let Some(maps) = verify_result.side_effects_maps
+    if let Some(maps) = verify_result
+        .side_effects_maps
         .take()
         .filter(|maps| !maps.is_empty())
     {
-        result.side_effects_maps.insert(cache_key.to_string(), Arc::new(maps));
+        result
+            .side_effects_maps
+            .insert(cache_key.to_string(), Arc::new(maps));
     }
-    if let Some(diffs) = verify_result.side_effects
+    if let Some(diffs) = verify_result
+        .side_effects
         .take()
         .filter(|diffs| !diffs.is_empty())
     {
-        result.side_effects.insert(cache_key.to_string(), Arc::new(diffs));
+        result
+            .side_effects
+            .insert(cache_key.to_string(), Arc::new(diffs));
     }
-    if let Some(quarantine) = verify_result.remote_side_effects_quarantine
+    if let Some(quarantine) = verify_result
+        .remote_side_effects_quarantine
         .take()
         .filter(|quarantine| !quarantine.is_empty())
     {
-        result.remote_side_effects_quarantine.insert(cache_key.to_string(), Arc::new(quarantine));
+        result
+            .remote_side_effects_quarantine
+            .insert(cache_key.to_string(), Arc::new(quarantine));
     }
 }
 

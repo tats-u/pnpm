@@ -139,7 +139,11 @@ fn enable_cargo_support(directory: &Path) -> Result<(), String> {
 }
 
 fn resolve_with_cargo(cargo: &Path, directory: &Path) -> Result<(), String> {
-    run_command(Command::new(cargo).current_dir(directory).arg("generate-lockfile"))
+    run_command(
+        Command::new(cargo)
+            .current_dir(directory)
+            .arg("generate-lockfile"),
+    )
 }
 
 fn resolve_with_pnpm(pnpm: &Path, directory: &Path) -> Result<(), String> {
@@ -205,7 +209,8 @@ fn locked_crates(directory: &Path) -> Result<Vec<String>, String> {
     let contents = fs::read_to_string(&path).map_err(|error| format!("read {path:?}: {error}"))?;
     let lockfile =
         Lockfile::from_str(&contents).map_err(|error| format!("parse {path:?}: {error}"))?;
-    let mut crates = lockfile.packages
+    let mut crates = lockfile
+        .packages
         .iter()
         .map(|package| format!("{} {}", package.name, package.version))
         .collect::<Vec<_>>();
@@ -229,7 +234,11 @@ fn command_outcome(command: &mut Command) -> Result<Option<String>, String> {
     if output.status.success() {
         return Ok(None);
     }
-    Ok(Some(String::from_utf8_lossy(&output.stderr).trim().to_string()))
+    Ok(Some(
+        String::from_utf8_lossy(&output.stderr)
+            .trim()
+            .to_string(),
+    ))
 }
 
 #[cfg(test)]

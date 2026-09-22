@@ -79,22 +79,34 @@ pub(super) async fn download_tarball<Reporter: self::Reporter>(
 ) -> Result<HashMap<String, PathBuf>, TarballError> {
     let Some(mem_cache) = tarball_mem_cache else {
         return if revision_addressed {
-            download.run_revision_addressed_without_mem_cache::<Reporter>().await
+            download
+                .run_revision_addressed_without_mem_cache::<Reporter>()
+                .await
         } else {
-            download.run_without_mem_cache::<Reporter>().await
+            download
+                .run_without_mem_cache::<Reporter>()
+                .await
         };
     };
     // `clone()` is cheap (refs + `Arc`s) and lets us retry through
     // `run_without_mem_cache` below if the shared download failed.
     let result = if revision_addressed {
-        download.clone().run_revision_addressed_with_mem_cache::<Reporter>(mem_cache).await
+        download
+            .clone()
+            .run_revision_addressed_with_mem_cache::<Reporter>(mem_cache)
+            .await
     } else {
-        download.clone().run_with_mem_cache::<Reporter>(mem_cache).await
+        download
+            .clone()
+            .run_with_mem_cache::<Reporter>(mem_cache)
+            .await
     };
     match result {
         Ok(cas_paths) => Ok((*cas_paths).clone()),
         Err(TarballError::SiblingFetchFailed { .. }) if !revision_addressed => {
-            download.run_without_mem_cache::<Reporter>().await
+            download
+                .run_without_mem_cache::<Reporter>()
+                .await
         }
         Err(err) => Err(err),
     }
@@ -164,9 +176,13 @@ impl InstallPackageBySnapshot<'_> {
         emit_progress_resolved::<Reporter>(&package_id, self.ctx.requester);
 
         let download = self.ingest(metadata, &package_id);
-        let custom =
-            self.custom_fetch::<Reporter>(package_key, metadata, &package_id, &download).await?;
-        let resolution = custom.resolution.as_ref().unwrap_or(&metadata.resolution);
+        let custom = self
+            .custom_fetch::<Reporter>(package_key, metadata, &package_id, &download)
+            .await?;
+        let resolution = custom
+            .resolution
+            .as_ref()
+            .unwrap_or(&metadata.resolution);
         // Derived from the effective resolution, not the lockfile's: a
         // custom fetcher's `delegate` can resolve to a directory, and
         // then the file map points at mutable source even though the
@@ -205,7 +221,9 @@ impl InstallPackageBySnapshot<'_> {
                 offline: config.offline,
             },
             package: pnpm_tarball::TarballPackage {
-                integrity: metadata.resolution.checkable_integrity(),
+                integrity: metadata
+                    .resolution
+                    .checkable_integrity(),
                 unpacked_size: None,
                 file_count: None,
                 url: "",
@@ -214,7 +232,10 @@ impl InstallPackageBySnapshot<'_> {
             store: pnpm_tarball::ArchiveStoreContext {
                 dir: &config.store_dir,
                 index: self.fetching.store_index.cloned(),
-                index_writer: self.fetching.store_index_writer.cloned(),
+                index_writer: self
+                    .fetching
+                    .store_index_writer
+                    .cloned(),
                 verify_integrity: config.verify_store_integrity,
                 strict_pkg_content_check: config.strict_store_pkg_content_check,
                 verified_files_cache: Arc::clone(self.fetching.verified_files_cache),
@@ -242,7 +263,8 @@ impl InstallPackageBySnapshot<'_> {
         let allow_build = self.allow_build();
         match fetch.resolution {
             LockfileResolution::Tarball(_) | LockfileResolution::Registry(_) => {
-                self.fetch_snapshot_tarball::<Reporter>(&fetch, &allow_build).await
+                self.fetch_snapshot_tarball::<Reporter>(&fetch, &allow_build)
+                    .await
             }
             LockfileResolution::Directory(dir_resolution) => {
                 // Injected workspace dep (`file:./local-pkg` with
@@ -270,7 +292,8 @@ impl InstallPackageBySnapshot<'_> {
             // includes the host triple, then route through the same
             // `BinaryResolution` extractor.
             LockfileResolution::Binary(binary) => {
-                self.fetch_binary::<Reporter>(binary, fetch.package_key).await
+                self.fetch_binary::<Reporter>(binary, fetch.package_key)
+                    .await
             }
             LockfileResolution::Variations(variations) => {
                 self.fetch_binary::<Reporter>(
@@ -284,7 +307,8 @@ impl InstallPackageBySnapshot<'_> {
                 .await
             }
             LockfileResolution::Git(git_resolution) => {
-                self.fetch_git::<Reporter>(&fetch, git_resolution, &allow_build).await
+                self.fetch_git::<Reporter>(&fetch, git_resolution, &allow_build)
+                    .await
             }
             // A custom-typed resolution cannot be materialized without
             // a custom fetcher that claims it.

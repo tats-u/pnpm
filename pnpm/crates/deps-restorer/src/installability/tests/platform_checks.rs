@@ -309,10 +309,8 @@ fn seeded_snapshot_compatible_with_new_host_is_unskipped() {
     let mut snapshots = HashMap::new();
     snapshots.insert(key.clone(), SnapshotEntry { optional: true, ..Default::default() });
     let mut packages = HashMap::new();
-    packages.insert(
-        key.clone(),
-        synthetic_metadata(None, Some(&["arm64"]), Some(&["darwin"]), None),
-    );
+    packages
+        .insert(key.clone(), synthetic_metadata(None, Some(&["arm64"]), Some(&["darwin"]), None));
 
     let seed = SkippedSnapshots::from_set(std::iter::once(key.clone()).collect());
     let skipped = compute_skipped_snapshots::<RecordingReporter>(
@@ -423,7 +421,9 @@ fn from_strings_skips_unparsable_entries() {
 }
 #[test]
 fn disjoint_subsets_preserve_len_and_iter() {
-    let key: PackageKey = "platform-mismatch-optional@1.0.0".parse().unwrap();
+    let key: PackageKey = "platform-mismatch-optional@1.0.0"
+        .parse()
+        .unwrap();
     let mut skipped = SkippedSnapshots::new();
     skipped.insert_installability(key.clone());
     skipped.add_optional_excluded(key.clone());

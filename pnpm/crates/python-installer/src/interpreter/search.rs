@@ -33,11 +33,17 @@ impl Fallbacks {
     pub(super) fn keep(&mut self, found: Search, request: Option<&VersionRequest>) {
         match found {
             Search::OtherVersion(interpreter) => {
-                self.other_version.get_or_insert(interpreter);
+                self.other_version
+                    .get_or_insert(interpreter);
             }
             Search::Unaccepted(interpreter) => {
                 let asked_for = request.is_none_or(|request| {
-                    request.accepts(interpreter.target.environment.python_full_version())
+                    request.accepts(
+                        interpreter
+                            .target
+                            .environment
+                            .python_full_version(),
+                    )
                 });
                 let kept = if asked_for { &mut self.requested } else { &mut self.unaccepted };
                 kept.get_or_insert(interpreter);

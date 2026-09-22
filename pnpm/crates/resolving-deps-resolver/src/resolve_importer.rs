@@ -202,18 +202,26 @@ impl std::fmt::Debug for ResolveImporterOptions {
             .field("auto_install_peers", &self.peers.auto_install_peers)
             .field(
                 "auto_install_peers_from_highest_match",
-                &self.peers.auto_install_peers_from_highest_match,
+                &self
+                    .peers
+                    .auto_install_peers_from_highest_match,
             )
             .field(
                 "resolve_peers_from_workspace_root",
-                &self.peers.resolve_peers_from_workspace_root,
+                &self
+                    .peers
+                    .resolve_peers_from_workspace_root,
             )
             .field("dedupe_peers", &self.peers.dedupe_peers)
             .field("dedupe_peer_dependents", &self.peers.dedupe_peer_dependents)
             .field("all_preferred_versions", &self.resolution.all_preferred_versions)
             .field(
                 "override_bare_specifier",
-                &self.resolution.override_bare_specifier.as_ref().map(|_| "<overrider>"),
+                &self
+                    .resolution
+                    .override_bare_specifier
+                    .as_ref()
+                    .map(|_| "<overrider>"),
             )
             .field("patched_dependencies", &self.resolution.patched_dependencies)
             .field("base_opts", &self.base_opts)
@@ -225,9 +233,30 @@ impl std::fmt::Debug for ResolveImporterOptions {
             .field("modules_dir", &self.links.modules_dir)
             .field("peers_suffix_max_length", &self.peers_suffix_max_length)
             .field("catalog_server", &self.resolution.catalog_server)
-            .field("manifest_hook", &self.hooks.manifest_hook.as_ref().map(|_| "<hook>"))
-            .field("overrides_hook", &self.hooks.overrides_hook.as_ref().map(|_| "<hook>"))
-            .field("pnpmfile_hook", &self.hooks.pnpmfile_hook.as_ref().map(|_| "<hook>"))
+            .field(
+                "manifest_hook",
+                &self
+                    .hooks
+                    .manifest_hook
+                    .as_ref()
+                    .map(|_| "<hook>"),
+            )
+            .field(
+                "overrides_hook",
+                &self
+                    .hooks
+                    .overrides_hook
+                    .as_ref()
+                    .map(|_| "<hook>"),
+            )
+            .field(
+                "pnpmfile_hook",
+                &self
+                    .hooks
+                    .pnpmfile_hook
+                    .as_ref()
+                    .map(|_| "<hook>"),
+            )
             .finish()
     }
 }
@@ -328,8 +357,13 @@ where
     state.set_workspace_root_deps(root_deps);
     let mut peer_discovery = PeerHoistDiscovery::new();
     loop {
-        state.run_required_round(resolver, &mut peer_discovery).await?;
-        if !state.hoist_optional_round(resolver).await? {
+        state
+            .run_required_round(resolver, &mut peer_discovery)
+            .await?;
+        if !state
+            .hoist_optional_round(resolver)
+            .await?
+        {
             break;
         }
     }
@@ -433,9 +467,16 @@ impl ResolveImporterOptions {
         importer_order: usize,
         workspace: Arc<WorkspaceTreeCtx>,
     ) -> (TreeCtx, HoistSettings) {
-        let project_dir = self.base_opts.project.project_dir.clone();
-        let tree_lockfile_dir =
-            self.links.lockfile_dir.clone().unwrap_or_else(|| project_dir.clone());
+        let project_dir = self
+            .base_opts
+            .project
+            .project_dir
+            .clone();
+        let tree_lockfile_dir = self
+            .links
+            .lockfile_dir
+            .clone()
+            .unwrap_or_else(|| project_dir.clone());
         let ctx = TreeCtx::with_workspace(workspace, self.base_opts)
             .with_lockfile_dir(&tree_lockfile_dir)
             .with_importer_id(importer_id)
@@ -453,9 +494,12 @@ impl ResolveImporterOptions {
             peers_suffix_max_length: self.peers_suffix_max_length,
             peers: crate::ImporterPeerOptions {
                 auto_install_peers: self.peers.auto_install_peers,
-                auto_install_peers_from_highest_match: self.peers
+                auto_install_peers_from_highest_match: self
+                    .peers
                     .auto_install_peers_from_highest_match,
-                resolve_peers_from_workspace_root: self.peers.resolve_peers_from_workspace_root,
+                resolve_peers_from_workspace_root: self
+                    .peers
+                    .resolve_peers_from_workspace_root,
                 dedupe_peers: self.peers.dedupe_peers,
                 dedupe_peer_dependents: self.peers.dedupe_peer_dependents,
             },
@@ -497,7 +541,11 @@ impl ImporterHoistState {
             &ParentPkgAliases::root(seeds.parent_pkg_aliases.clone()),
         )
         .await?;
-        seeds.parent_pkg_aliases.extend(direct.iter().map(|dep| dep.alias.clone()));
+        seeds.parent_pkg_aliases.extend(
+            direct
+                .iter()
+                .map(|dep| dep.alias.clone()),
+        );
         ctx.resolve_new_direct_deps_as_subdeps();
         Ok(Self::assemble(importer_id, ctx, direct, seeds, locked, settings))
     }
@@ -511,8 +559,12 @@ impl ImporterHoistState {
     ) -> Result<Vec<WorkspaceRootDep>, ResolveImporterError> {
         build_workspace_root_deps(
             &self.dependencies.direct,
-            &self.ctx.snapshot_reachable_from(self.dependencies.direct.clone()),
-            &self.dependencies.wanted_specifier_by_alias,
+            &self
+                .ctx
+                .snapshot_reachable_from(self.dependencies.direct.clone()),
+            &self
+                .dependencies
+                .wanted_specifier_by_alias,
             &self.project_dir,
         )
         .map_err(ResolveImporterError::from)
@@ -534,7 +586,8 @@ impl ImporterHoistState {
             },
             scope: crate::PeerResolutionScope {
                 hoist_missing_scope: None,
-                hoisted_peer_provider_node_ids: self.dependencies
+                hoisted_peer_provider_node_ids: self
+                    .dependencies
                     .hoisted_peer_provider_node_ids
                     .clone(),
                 ..Default::default()
@@ -548,14 +601,20 @@ impl ImporterHoistState {
     /// providers among them (see
     /// [`crate::PeerResolutionScope::hoisted_peer_provider_node_ids`]).
     pub(crate) fn into_direct(self) -> (Vec<DirectDep>, HashSet<crate::NodeId>) {
-        (self.dependencies.direct, self.dependencies.hoisted_peer_provider_node_ids)
+        (
+            self.dependencies.direct,
+            self.dependencies
+                .hoisted_peer_provider_node_ids,
+        )
     }
 
     /// Run the final per-importer peer pass and emit the result. Used
     /// by the single-importer entry points.
     fn into_result(self) -> ResolveImporterResult {
         let peers_opts = self.peers_opts();
-        let mut resolved_tree = self.ctx.into_resolved_tree(self.dependencies.direct);
+        let mut resolved_tree = self
+            .ctx
+            .into_resolved_tree(self.dependencies.direct);
         let peers_result = resolve_peers(&mut resolved_tree, peers_opts);
         ResolveImporterResult { resolved_tree, peers_result }
     }

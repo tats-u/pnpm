@@ -117,24 +117,35 @@ impl PublishArgs {
         recursive: bool,
         before_packing_hooks: Vec<Arc<dyn PnpmfileHooks>>,
     ) -> miette::Result<()> {
-        let published = self.publish_packages::<Reporter>(
-            dir,
-            config,
-            recursive,
-            /* stage */ false,
-            before_packing_hooks,
-        )
-        .await?;
+        let published = self
+            .publish_packages::<Reporter>(
+                dir,
+                config,
+                recursive,
+                /* stage */ false,
+                before_packing_hooks,
+            )
+            .await?;
         // Mirror `pnpm publish --json`: serialize only when asked. The
         // recursive path emits the array of per-package summaries (an empty
         // array when nothing was published).
         if self.flags.output.json {
             match &published {
                 PublishedPackages::Single(summary) => {
-                    println!("{}", summary.pipe(serde_json::to_string_pretty).into_diagnostic()?);
+                    println!(
+                        "{}",
+                        summary
+                            .pipe(serde_json::to_string_pretty)
+                            .into_diagnostic()?
+                    );
                 }
                 PublishedPackages::Recursive(published) => {
-                    println!("{}", published.pipe(serde_json::to_string_pretty).into_diagnostic()?);
+                    println!(
+                        "{}",
+                        published
+                            .pipe(serde_json::to_string_pretty)
+                            .into_diagnostic()?
+                    );
                 }
             }
         }
@@ -168,8 +179,9 @@ impl PublishArgs {
         run_git_checks::<Host>(dir, git_checks, publish_branch, config.ci)?;
 
         if recursive {
-            let published =
-                self.run_recursive::<Reporter>(dir, config, stage, &before_packing_hooks).await?;
+            let published = self
+                .run_recursive::<Reporter>(dir, config, stage, &before_packing_hooks)
+                .await?;
             return Ok(PublishedPackages::Recursive(published));
         }
 
@@ -178,27 +190,32 @@ impl PublishArgs {
         let http_client = build_registry_client(config)?;
         let network = PublishNetwork { client: &http_client, auth_headers: &config.auth_headers };
 
-        let summary =
-            if let Some(package) = self.package.as_deref().filter(|path| is_tarball_path(path)) {
-                self.publish_tarball::<Reporter>(package, &opts, &network).await?
-            } else {
-                // Resolved against the command directory so every path the
-                // pack derives from it — the re-anchored `file:` / `link:`
-                // catalog entries among them — can be related to the
-                // absolute workspace directory. `join` keeps an absolute
-                // argument as it is.
-                let project_dir = self.package
-                    .as_deref()
-                    .map_or_else(|| dir.to_path_buf(), |path| dir.join(path));
-                self.publish_directory::<Reporter>(
-                    &project_dir,
-                    config,
-                    &opts,
-                    &network,
-                    &before_packing_hooks,
-                )
+        let summary = if let Some(package) = self
+            .package
+            .as_deref()
+            .filter(|path| is_tarball_path(path))
+        {
+            self.publish_tarball::<Reporter>(package, &opts, &network)
                 .await?
-            };
+        } else {
+            // Resolved against the command directory so every path the
+            // pack derives from it — the re-anchored `file:` / `link:`
+            // catalog entries among them — can be related to the
+            // absolute workspace directory. `join` keeps an absolute
+            // argument as it is.
+            let project_dir = self
+                .package
+                .as_deref()
+                .map_or_else(|| dir.to_path_buf(), |path| dir.join(path));
+            self.publish_directory::<Reporter>(
+                &project_dir,
+                config,
+                &opts,
+                &network,
+                &before_packing_hooks,
+            )
+            .await?
+        };
         Ok(PublishedPackages::Single(Box::new(summary)))
     }
 
@@ -240,8 +257,9 @@ impl PublishArgs {
         network: &PublishNetwork<'_>,
         before_packing_hooks: &[Arc<dyn PnpmfileHooks>],
     ) -> miette::Result<PublishSummary> {
-        let packed =
-            self.pack_directory::<Reporter>(project_dir, config, before_packing_hooks).await?;
+        let packed = self
+            .pack_directory::<Reporter>(project_dir, config, before_packing_hooks)
+            .await?;
         let summary =
             publish_packed_pkg::<Host, Reporter>(&packed.packed_pkg(), opts, network).await?;
 
@@ -275,14 +293,17 @@ impl PublishArgs {
             )?;
         }
 
-        let pack_destination = tempfile::tempdir().into_diagnostic().wrap_err("create temp dir")?;
-        let pack_result = self.pack_for_publish::<Reporter>(
-            project_dir,
-            config,
-            pack_destination.path(),
-            before_packing_hooks,
-        )
-        .await?;
+        let pack_destination = tempfile::tempdir()
+            .into_diagnostic()
+            .wrap_err("create temp dir")?;
+        let pack_result = self
+            .pack_for_publish::<Reporter>(
+                project_dir,
+                config,
+                pack_destination.path(),
+                before_packing_hooks,
+            )
+            .await?;
         let tarball_data = std::fs::read(&pack_result.tarball_path)
             .into_diagnostic()
             .wrap_err("read packed tarball")?;
@@ -352,8 +373,12 @@ impl PublishArgs {
                 ),
                 node_linker: config.node_linker,
                 skip_obfuscation: resolve_bool_override(
-                    self.flags.manifest.skip_manifest_obfuscation,
-                    self.flags.manifest.no_skip_manifest_obfuscation,
+                    self.flags
+                        .manifest
+                        .skip_manifest_obfuscation,
+                    self.flags
+                        .manifest
+                        .no_skip_manifest_obfuscation,
                     config.skip_manifest_obfuscation,
                 ),
                 before_packing_hooks: before_packing_hooks.to_vec(),
@@ -362,13 +387,18 @@ impl PublishArgs {
                 gzip_level: None,
                 dry_run: false,
                 out: None,
-                destination: Some(pack_destination.to_string_lossy().into_owned()),
+                destination: Some(
+                    pack_destination
+                        .to_string_lossy()
+                        .into_owned(),
+                ),
                 injected_files: Vec::new(),
                 locks: None,
             },
         };
         crate::cli_args::pack::set_injected_changelog(&mut options, config, dir).await?;
-        pack_api::<Reporter, PackHost>(&options).await
+        pack_api::<Reporter, PackHost>(&options)
+            .await
             .map_err(miette::Report::new)
             .wrap_err(crate::cli_args::pack::PACK_ERROR_CONTEXT)
     }
@@ -386,11 +416,25 @@ impl PublishArgs {
             registry: pnpm_publish::PublishRegistryOptions {
                 default: config.registry.clone(),
                 scoped: config.registries_by_scope.clone(),
-                access: self.flags.registry.access.as_deref().and_then(Access::parse),
-                tag: self.flags.registry.tag.clone().unwrap_or_else(|| "latest".to_owned()),
+                access: self
+                    .flags
+                    .registry
+                    .access
+                    .as_deref()
+                    .and_then(Access::parse),
+                tag: self
+                    .flags
+                    .registry
+                    .tag
+                    .clone()
+                    .unwrap_or_else(|| "latest".to_owned()),
                 otp,
                 // An absent `--provenance` leaves the decision to the OIDC flow.
-                provenance: self.flags.registry.provenance.then_some(true),
+                provenance: self
+                    .flags
+                    .registry
+                    .provenance
+                    .then_some(true),
                 http: OidcHttpOptions {
                     fetch_retries: Some(config.fetch_retries),
                     fetch_retry_factor: Some(f64::from(config.fetch_retry_factor)),

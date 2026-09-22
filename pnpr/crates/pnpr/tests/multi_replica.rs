@@ -60,13 +60,16 @@ impl Replica {
             .header("Authorization", format!("Bearer {}", self.token))
             .body(body)
             .unwrap();
-        let response = self.app
+        let response = self
+            .app
             .clone()
             .oneshot(request)
             .await
             .unwrap();
         let status = response.status();
-        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
     }
 
@@ -78,19 +81,22 @@ impl Replica {
     }
 
     async fn packument(&self, name: &str) -> Value {
-        let (status, document) = self.send("GET", &format!("/{name}"), Body::empty()).await;
+        let (status, document) = self
+            .send("GET", &format!("/{name}"), Body::empty())
+            .await;
         assert_eq!(status, StatusCode::OK, "{name} must be served by every replica");
         document
     }
 
     async fn stage(&self, name: &str, version: &str, tarball: &[u8]) -> String {
         let body = publish_doc(name, version, tarball);
-        let (status, payload) = self.send(
-            "POST",
-            &format!("/-/stage/package/{name}"),
-            Body::from(serde_json::to_vec(&body).unwrap()),
-        )
-        .await;
+        let (status, payload) = self
+            .send(
+                "POST",
+                &format!("/-/stage/package/{name}"),
+                Body::from(serde_json::to_vec(&body).unwrap()),
+            )
+            .await;
         assert_eq!(status, StatusCode::CREATED);
         payload["stageId"]
             .as_str()
@@ -121,7 +127,9 @@ async fn concurrent_publishes_of_one_package_keep_both_versions() {
 
     for replica in [&first, &second] {
         let packument = replica.packument("shared-pkg").await;
-        let versions = packument["versions"].as_object().expect("versions");
+        let versions = packument["versions"]
+            .as_object()
+            .expect("versions");
         assert!(versions.contains_key("1.0.0"), "1.0.0 is missing: {versions:?}");
         assert!(versions.contains_key("2.0.0"), "2.0.0 is missing: {versions:?}");
     }
@@ -134,7 +142,9 @@ async fn a_stage_created_on_one_replica_is_approved_on_another() {
     let first = Replica::start(&store).await;
     let second = Replica::start(&store).await;
 
-    let stage_id = first.stage("staged-pkg", "1.0.0", b"the tarball").await;
+    let stage_id = first
+        .stage("staged-pkg", "1.0.0", b"the tarball")
+        .await;
     assert_eq!(second.approve(&stage_id).await, StatusCode::CREATED);
     assert!(first.packument("staged-pkg").await["versions"]["1.0.0"].is_object());
     assert_eq!(
@@ -152,7 +162,9 @@ async fn one_stage_approved_on_two_replicas_publishes_once() {
     let first = Replica::start(&store).await;
     let second = Replica::start(&store).await;
 
-    let stage_id = first.stage("staged-pkg", "1.0.0", b"the tarball").await;
+    let stage_id = first
+        .stage("staged-pkg", "1.0.0", b"the tarball")
+        .await;
     let approve_here = first.approve(&stage_id);
     let approve_there = second.approve(&stage_id);
     let (left, right) = tokio::join!(approve_here, approve_there);
@@ -174,7 +186,9 @@ async fn one_stage_approved_on_two_replicas_publishes_once() {
             .len(),
         1,
     );
-    let (status, listing) = second.send("GET", "/-/stage", Body::empty()).await;
+    let (status, listing) = second
+        .send("GET", "/-/stage", Body::empty())
+        .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(listing["total"], 0, "the stage is spent");
 }
@@ -192,7 +206,9 @@ async fn a_rejection_stops_an_approval_that_has_not_committed() {
     let approving = Replica::start(&store).await;
     let rejecting = Replica::start(&store).await;
 
-    let stage_id = approving.stage("staged-pkg", "1.0.0", b"the tarball").await;
+    let stage_id = approving
+        .stage("staged-pkg", "1.0.0", b"the tarball")
+        .await;
     objects.pause("package.json".to_string());
     let approval = tokio::spawn({
         let app = approving.app.clone();
@@ -203,20 +219,24 @@ async fn a_rejection_stops_an_approval_that_has_not_committed() {
                 .header("Authorization", format!("Bearer {token}"))
                 .body(Body::empty())
                 .unwrap();
-            app.oneshot(request).await
+            app.oneshot(request)
+                .await
                 .unwrap()
                 .status()
         }
     });
 
     objects.started.notified().await;
-    let (rejected, _) =
-        rejecting.send("DELETE", &format!("/-/stage/{stage_id}"), Body::empty()).await;
+    let (rejected, _) = rejecting
+        .send("DELETE", &format!("/-/stage/{stage_id}"), Body::empty())
+        .await;
     assert_eq!(rejected, StatusCode::NO_CONTENT);
     objects.resume.notify_one();
 
     assert_ne!(approval.await.unwrap(), StatusCode::CREATED, "the rejection stands");
-    let (status, _) = approving.send("GET", "/staged-pkg", Body::empty()).await;
+    let (status, _) = approving
+        .send("GET", "/staged-pkg", Body::empty())
+        .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "a rejected publish must not be served");
 }
 
@@ -227,13 +247,26 @@ async fn a_dist_tag_written_on_one_replica_is_served_by_the_other() {
     let first = Replica::start(&store).await;
     let second = Replica::start(&store).await;
 
-    assert_eq!(first.publish("tagged-pkg", "1.0.0", b"one").await, StatusCode::CREATED);
-    assert_eq!(second.publish("tagged-pkg", "2.0.0", b"two").await, StatusCode::CREATED);
-    let (status, _) =
-        first.send("PUT", "/-/package/tagged-pkg/dist-tags/next", Body::from(r#""2.0.0""#)).await;
+    assert_eq!(
+        first
+            .publish("tagged-pkg", "1.0.0", b"one")
+            .await,
+        StatusCode::CREATED
+    );
+    assert_eq!(
+        second
+            .publish("tagged-pkg", "2.0.0", b"two")
+            .await,
+        StatusCode::CREATED
+    );
+    let (status, _) = first
+        .send("PUT", "/-/package/tagged-pkg/dist-tags/next", Body::from(r#""2.0.0""#))
+        .await;
     assert_eq!(status, StatusCode::CREATED);
 
-    let (status, tags) = second.send("GET", "/-/package/tagged-pkg/dist-tags", Body::empty()).await;
+    let (status, tags) = second
+        .send("GET", "/-/package/tagged-pkg/dist-tags", Body::empty())
+        .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(tags["next"], "2.0.0");
 }
@@ -254,7 +287,9 @@ async fn add_user_and_get_token(app: axum::Router, username: &str, password: &st
         .unwrap();
     let response = app.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
-    let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let bytes = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let payload: Value = serde_json::from_slice(&bytes).unwrap();
     payload["token"]
         .as_str()

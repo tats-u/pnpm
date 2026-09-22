@@ -51,12 +51,18 @@ fn resolves_a_local_directory_via_the_file_scheme() {
     };
     let result = run_resolve_blocking(wanted, &options_for(dir.path())).expect("resolve file: dep");
 
-    let manifest = result.manifest.expect("file: resolution carries a manifest");
+    let manifest = result
+        .manifest
+        .expect("file: resolution carries a manifest");
     assert_eq!(manifest["name"], "local-pkg");
     assert_eq!(manifest["version"], "1.2.3");
     assert_eq!(result.resolved_via, "local-filesystem");
     dbg!(&result.normalized_bare_specifier);
-    assert!(result.normalized_bare_specifier.is_some());
+    assert!(
+        result
+            .normalized_bare_specifier
+            .is_some()
+    );
 }
 
 #[test]
@@ -70,7 +76,9 @@ fn resolves_a_local_directory_via_the_link_scheme() {
     };
     let result = run_resolve_blocking(wanted, &options_for(dir.path())).expect("resolve link: dep");
 
-    let manifest = result.manifest.expect("link: resolution carries a manifest");
+    let manifest = result
+        .manifest
+        .expect("link: resolution carries a manifest");
     assert_eq!(manifest["name"], "linked-pkg");
     assert_eq!(manifest["version"], "4.5.6");
     assert_eq!(result.resolved_via, "local-filesystem");
@@ -90,7 +98,9 @@ fn errors_when_no_resolver_in_the_chain_claims_the_spec() {
 
     eprintln!("resolve error: {}", error.reason);
     assert!(
-        error.reason.contains("isn't supported by any available resolver"),
+        error
+            .reason
+            .contains("isn't supported by any available resolver"),
         "unexpected error message: {}",
         error.reason,
     );
@@ -145,7 +155,9 @@ fn full_metadata_keeps_registry_custom_version_fields() {
 
     let result = run_resolve_blocking(wanted, &options).expect("resolve registry dep");
 
-    let manifest = result.manifest.expect("registry resolution carries a manifest");
+    let manifest = result
+        .manifest
+        .expect("registry resolution carries a manifest");
     dbg!(&manifest);
     assert_eq!(manifest["componentId"]["name"], "button");
     mock.assert();

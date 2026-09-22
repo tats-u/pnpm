@@ -50,7 +50,9 @@ async fn cold_pick_fetches_and_picks_max_in_range() {
         .await
         .expect("ok");
 
-    let picked = result.picked_package.expect("picked something");
+    let picked = result
+        .picked_package
+        .expect("picked something");
     assert_eq!(picked.version.to_string(), "1.1.0");
     mock.assert_async().await;
 
@@ -108,9 +110,18 @@ async fn normal_range_reuses_dominant_lockfile_version_from_disk() {
     let mut opts = default_opts(&registry);
     opts.preferred_version_selectors = Some(&selectors);
 
-    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("ok");
+    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("ok");
 
-    assert_eq!(result.picked_package.expect("picked").version.to_string(), "1.0.0");
+    assert_eq!(
+        result
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
+        "1.0.0"
+    );
     mock.assert_async().await;
 }
 
@@ -165,11 +176,29 @@ async fn stable_range_does_not_promote_meta_for_a_later_unproven_range() {
     let mut opts = default_opts(&registry);
     opts.preferred_version_selectors = Some(&selectors);
 
-    let first = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("first");
-    let second = pick_package(&ctx, &range_spec("acme", ">=1.1.0"), &opts).await.expect("second");
+    let first = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("first");
+    let second = pick_package(&ctx, &range_spec("acme", ">=1.1.0"), &opts)
+        .await
+        .expect("second");
 
-    assert_eq!(first.picked_package.expect("first pick").version.to_string(), "1.0.0");
-    assert_eq!(second.picked_package.expect("second pick").version.to_string(), "1.1.0");
+    assert_eq!(
+        first
+            .picked_package
+            .expect("first pick")
+            .version
+            .to_string(),
+        "1.0.0"
+    );
+    assert_eq!(
+        second
+            .picked_package
+            .expect("second pick")
+            .version
+            .to_string(),
+        "1.1.0"
+    );
     mock.assert_async().await;
 }
 
@@ -226,9 +255,18 @@ async fn blocked_dominant_version_falls_through_to_registry_pick() {
     opts.preferred_version_selectors = Some(&selectors);
     opts.blocked_versions = Some(&blocked);
 
-    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("ok");
+    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("ok");
 
-    assert_eq!(result.picked_package.expect("picked").version.to_string(), "1.1.0");
+    assert_eq!(
+        result
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
+        "1.1.0"
+    );
     mock.assert_async().await;
 }
 
@@ -272,6 +310,15 @@ async fn pick_lowest_version_picks_min() {
 
     let mut opts = default_opts(&registry);
     opts.pick_lowest_version = true;
-    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts).await.expect("ok");
-    assert_eq!(result.picked_package.expect("picked").version.to_string(), "1.0.0");
+    let result = pick_package(&ctx, &range_spec("acme", "^1.0.0"), &opts)
+        .await
+        .expect("ok");
+    assert_eq!(
+        result
+            .picked_package
+            .expect("picked")
+            .version
+            .to_string(),
+        "1.0.0"
+    );
 }

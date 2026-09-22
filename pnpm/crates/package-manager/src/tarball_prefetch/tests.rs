@@ -130,7 +130,9 @@ async fn revision_prefetch_does_not_follow_redirects() {
         .await;
     let store = tempdir().unwrap();
     let store_dir = Box::leak(Box::new(StoreDir::new(store.path())));
-    let integrity = format!("sha512-{}==", "A".repeat(86)).parse().unwrap();
+    let integrity = format!("sha512-{}==", "A".repeat(86))
+        .parse()
+        .unwrap();
 
     let err = run_tarball_download(revision_download(
         store_dir,
@@ -156,7 +158,9 @@ async fn revision_prefetch_does_not_retry_a_transient_failure() {
         .await;
     let store = tempdir().unwrap();
     let store_dir = Box::leak(Box::new(StoreDir::new(store.path())));
-    let integrity = format!("sha512-{}==", "A".repeat(86)).parse().unwrap();
+    let integrity = format!("sha512-{}==", "A".repeat(86))
+        .parse()
+        .unwrap();
 
     let err = run_tarball_download(revision_download(
         store_dir,

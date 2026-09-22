@@ -9,17 +9,25 @@ use std::{
 #[test]
 fn binds_to_requested_listen_addr() {
     let upstream = TcpListener::bind(("127.0.0.1", 0)).expect("bind upstream");
-    let upstream_addr = upstream.local_addr().expect("upstream addr");
+    let upstream_addr = upstream
+        .local_addr()
+        .expect("upstream addr");
     thread::spawn(move || {
         let (mut socket, _) = upstream.accept().expect("accept");
         let mut buf = [0u8; 64];
-        let read = socket.read(&mut buf).expect("read request");
+        let read = socket
+            .read(&mut buf)
+            .expect("read request");
         assert_eq!(&buf[..read], b"ping");
-        socket.write_all(b"pong").expect("write reply");
+        socket
+            .write_all(b"pong")
+            .expect("write reply");
     });
 
     let reserved = TcpListener::bind(("127.0.0.1", 0)).expect("reserve listen port");
-    let listen = reserved.local_addr().expect("listen addr");
+    let listen = reserved
+        .local_addr()
+        .expect("listen addr");
     drop(reserved);
 
     let profile = LinkProfile { one_way: Duration::ZERO, rate_limit: None, slow_start: false };
@@ -27,9 +35,13 @@ fn binds_to_requested_listen_addr() {
     assert_eq!(proxy.addr, listen);
 
     let mut client = TcpStream::connect(proxy.addr).expect("connect to proxy");
-    client.write_all(b"ping").expect("send request");
+    client
+        .write_all(b"ping")
+        .expect("send request");
     let mut reply = [0u8; 64];
-    let read = client.read(&mut reply).expect("read reply");
+    let read = client
+        .read(&mut reply)
+        .expect("read reply");
     assert_eq!(&reply[..read], b"pong");
 }
 
@@ -46,13 +58,19 @@ fn converts_mbps_to_bytes_per_second() {
 #[test]
 fn injects_round_trip_latency() {
     let upstream = TcpListener::bind(("127.0.0.1", 0)).expect("bind upstream");
-    let upstream_addr = upstream.local_addr().expect("upstream addr");
+    let upstream_addr = upstream
+        .local_addr()
+        .expect("upstream addr");
     thread::spawn(move || {
         let (mut socket, _) = upstream.accept().expect("accept");
         let mut buf = [0u8; 64];
-        let read = socket.read(&mut buf).expect("read request");
+        let read = socket
+            .read(&mut buf)
+            .expect("read request");
         assert_eq!(&buf[..read], b"ping");
-        socket.write_all(b"pong").expect("write reply");
+        socket
+            .write_all(b"pong")
+            .expect("write reply");
     });
 
     let profile =
@@ -61,9 +79,13 @@ fn injects_round_trip_latency() {
 
     let mut client = TcpStream::connect(proxy.addr).expect("connect to proxy");
     let start = Instant::now();
-    client.write_all(b"ping").expect("send request");
+    client
+        .write_all(b"ping")
+        .expect("send request");
     let mut reply = [0u8; 64];
-    let read = client.read(&mut reply).expect("read reply");
+    let read = client
+        .read(&mut reply)
+        .expect("read reply");
     let elapsed = start.elapsed();
 
     assert_eq!(&reply[..read], b"pong");
@@ -84,7 +106,9 @@ fn caps_throughput_to_the_rate_limit() {
     const RATE: u64 = 1_000_000; // 1 MB/s
 
     let upstream = TcpListener::bind(("127.0.0.1", 0)).expect("bind upstream");
-    let upstream_addr = upstream.local_addr().expect("upstream addr");
+    let upstream_addr = upstream
+        .local_addr()
+        .expect("upstream addr");
     thread::spawn(move || {
         let (mut socket, _) = upstream.accept().expect("accept");
         let mut scratch = [0u8; 64];
@@ -102,7 +126,9 @@ fn caps_throughput_to_the_rate_limit() {
 
     let mut client = TcpStream::connect(proxy.addr).expect("connect to proxy");
     let start = Instant::now();
-    client.write_all(b"go").expect("send request");
+    client
+        .write_all(b"go")
+        .expect("send request");
     let mut received = Vec::with_capacity(PAYLOAD);
     let mut buf = [0u8; 16 * 1024];
     loop {
@@ -135,11 +161,15 @@ fn slow_start_ramps_per_connection_throughput() {
 
     let timed_transfer = |slow_start: bool| {
         let upstream = TcpListener::bind(("127.0.0.1", 0)).expect("bind upstream");
-        let upstream_addr = upstream.local_addr().expect("upstream addr");
+        let upstream_addr = upstream
+            .local_addr()
+            .expect("upstream addr");
         thread::spawn(move || {
             let (mut socket, _) = upstream.accept().expect("accept");
             let mut buf = [0u8; 64];
-            let _ = socket.read(&mut buf).expect("read request");
+            let _ = socket
+                .read(&mut buf)
+                .expect("read request");
             socket
                 .write_all(&vec![0u8; PAYLOAD])
                 .expect("write payload");
@@ -151,7 +181,9 @@ fn slow_start_ramps_per_connection_throughput() {
 
         let mut client = TcpStream::connect(proxy.addr).expect("connect to proxy");
         let start = Instant::now();
-        client.write_all(b"go").expect("send request");
+        client
+            .write_all(b"go")
+            .expect("send request");
         let mut received = 0;
         let mut buf = [0u8; 16 * 1024];
         loop {

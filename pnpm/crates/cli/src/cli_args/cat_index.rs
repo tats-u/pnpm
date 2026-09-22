@@ -81,7 +81,9 @@ fn print_sorted_index(pkg_files_index: &PackageFilesIndex) -> Result<()> {
 }
 
 fn lockfile_dir(config: &Config, dir: &Path) -> PathBuf {
-    config.lockfile_dir_for(dir).to_path_buf()
+    config
+        .lockfile_dir_for(dir)
+        .to_path_buf()
 }
 
 fn lockfile_store_index_keys(
@@ -125,14 +127,18 @@ fn importer_store_index_keys(
     requested_bare: Option<&str>,
 ) -> Vec<String> {
     let Some(dependency) = find_dependency(importer, alias_name) else { return Vec::new() };
-    let Some(snapshot_key) = dependency.version.resolved_key(alias_name) else {
+    let Some(snapshot_key) = dependency
+        .version
+        .resolved_key(alias_name)
+    else {
         return Vec::new();
     };
     let metadata_key = snapshot_key.without_peer();
     if !request_matches_dependency(alias, requested_bare, dependency, &metadata_key.to_string()) {
         return Vec::new();
     }
-    let Some(metadata) = lockfile.packages
+    let Some(metadata) = lockfile
+        .packages
         .as_ref()
         .and_then(|packages| packages.get(&metadata_key))
     else {
@@ -147,7 +153,9 @@ fn importer_ids(lockfile_dir: &Path, current_dir: &Path) -> Vec<String> {
         let id = if relative.as_os_str().is_empty() {
             ".".to_string()
         } else {
-            relative.to_string_lossy().replace(std::path::MAIN_SEPARATOR, "/")
+            relative
+                .to_string_lossy()
+                .replace(std::path::MAIN_SEPARATOR, "/")
         };
         ids.push(id);
     }
@@ -185,7 +193,8 @@ fn metadata_store_index_keys(pkg_id: &str, metadata: &PackageMetadata) -> Vec<St
         LockfileResolution::Tarball(resolution) if resolution.is_git_hosted() => {
             git_store_index_keys(pkg_id)
         }
-        LockfileResolution::Tarball(resolution) => resolution.integrity
+        LockfileResolution::Tarball(resolution) => resolution
+            .integrity
             .as_ref()
             .map(|integrity| vec![store_index_key(&integrity.to_string(), pkg_id)])
             .unwrap_or_default(),
@@ -265,7 +274,9 @@ fn sort_deep_keys(value: &mut Value, depth: usize) -> Result<()> {
     }
     match value {
         Value::Object(map) => {
-            let mut entries: Vec<(String, Value)> = std::mem::take(map).into_iter().collect();
+            let mut entries: Vec<(String, Value)> = std::mem::take(map)
+                .into_iter()
+                .collect();
             entries.sort_unstable_by(|(left, _), (right, _)| left.cmp(right));
             for (_, val) in &mut entries {
                 sort_deep_keys(val, depth + 1)?;

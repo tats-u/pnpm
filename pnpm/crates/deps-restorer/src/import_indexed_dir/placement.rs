@@ -74,11 +74,9 @@ pub(super) fn create_indexed_dirs(
     // `newDir` before calling `tryImportIndexedDir`, so do that here
     // too. Files at the package root (e.g. `package.json`) need this
     // even when `rel_dirs` is empty.
-    pnpm_fs::create_dir_all_with_retry(dir_path)
-        .map_err(|error| ImportIndexedDirError::CreateDir {
-            dirname: dir_path.to_path_buf(),
-            error,
-        })?;
+    pnpm_fs::create_dir_all_with_retry(dir_path).map_err(|error| {
+        ImportIndexedDirError::CreateDir { dirname: dir_path.to_path_buf(), error }
+    })?;
 
     let mut ordered: Vec<&str> = rel_dirs.into_iter().collect();
     ordered.sort_by_key(|s| s.len());

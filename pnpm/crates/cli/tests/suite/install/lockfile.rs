@@ -52,13 +52,8 @@ fn fix_lockfile_merges_git_conflicts() {
 
 #[test]
 fn fix_lockfile_regenerates_broken_metadata_without_changing_locked_versions() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -77,13 +72,15 @@ fn fix_lockfile_regenerates_broken_metadata_without_changing_locked_versions() {
     let original = pnpm_lockfile::Lockfile::load_from_path(&lockfile_path)
         .expect("load original lockfile")
         .expect("original lockfile");
-    let original_package_keys = original.packages
+    let original_package_keys = original
+        .packages
         .as_ref()
         .expect("original packages")
         .keys()
         .cloned()
         .collect::<std::collections::HashSet<_>>();
-    let original_snapshot_keys = original.snapshots
+    let original_snapshot_keys = original
+        .snapshots
         .as_ref()
         .expect("original snapshots")
         .keys()
@@ -125,7 +122,8 @@ fn fix_lockfile_regenerates_broken_metadata_without_changing_locked_versions() {
         .expect("load repaired lockfile")
         .expect("repaired lockfile");
     assert_eq!(
-        repaired.packages
+        repaired
+            .packages
             .as_ref()
             .expect("repaired packages")
             .keys()
@@ -134,7 +132,8 @@ fn fix_lockfile_regenerates_broken_metadata_without_changing_locked_versions() {
         original_package_keys,
     );
     assert_eq!(
-        repaired.snapshots
+        repaired
+            .snapshots
             .as_ref()
             .expect("repaired snapshots")
             .keys()
@@ -143,25 +142,33 @@ fn fix_lockfile_regenerates_broken_metadata_without_changing_locked_versions() {
         original_snapshot_keys,
     );
     assert!(
-        repaired.packages
+        repaired
+            .packages
             .as_ref()
             .expect("repaired packages")
             .values()
             .all(|metadata| metadata.deprecated.as_deref() != Some("stale metadata")),
     );
     assert!(
-        repaired.packages
+        repaired
+            .packages
             .as_ref()
             .expect("repaired packages")
             .values()
-            .all(|metadata| metadata.resolution.checkable_integrity().is_some()),
+            .all(|metadata| metadata
+                .resolution
+                .checkable_integrity()
+                .is_some()),
     );
     assert!(
-        repaired.snapshots
+        repaired
+            .snapshots
             .as_ref()
             .expect("repaired snapshots")
             .values()
-            .all(|snapshot| snapshot.transitive_peer_dependencies.is_none()),
+            .all(|snapshot| snapshot
+                .transitive_peer_dependencies
+                .is_none()),
     );
 
     drop((root, mock_instance));
@@ -169,13 +176,8 @@ fn fix_lockfile_regenerates_broken_metadata_without_changing_locked_versions() {
 
 #[test]
 fn filtered_fix_lockfile_preserves_unselected_snapshot_metadata() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(workspace.join("pnpm-workspace.yaml"), "packages:\n  - packages/*\n")
         .expect("write workspace manifest");
@@ -243,11 +245,18 @@ fn filtered_fix_lockfile_preserves_unselected_snapshot_metadata() {
     let repaired = pnpm_lockfile::Lockfile::load_from_path(&lockfile_path)
         .expect("load repaired lockfile")
         .expect("repaired lockfile");
-    let repaired_snapshots = repaired.snapshots.as_ref().expect("repaired snapshots");
+    let repaired_snapshots = repaired
+        .snapshots
+        .as_ref()
+        .expect("repaired snapshots");
     assert!(
         optional_snapshot_keys
             .iter()
-            .all(|key| { repaired_snapshots.get(key).is_some_and(|snapshot| snapshot.optional) }),
+            .all(|key| {
+                repaired_snapshots
+                    .get(key)
+                    .is_some_and(|snapshot| snapshot.optional)
+            }),
     );
 
     drop((root, mock_instance));
@@ -255,13 +264,8 @@ fn filtered_fix_lockfile_preserves_unselected_snapshot_metadata() {
 
 #[test]
 fn frozen_isolated_install_rejects_required_incompatible_engine_in_strict_mode() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_required_incompatible_engine_fixture(&workspace, false);
@@ -301,13 +305,8 @@ fn frozen_isolated_install_rejects_required_incompatible_engine_in_strict_mode()
 
 #[test]
 fn frozen_install_honors_the_store_dir_cli_option() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -330,7 +329,9 @@ fn frozen_install_honors_the_store_dir_cli_option() {
         .assert()
         .success();
 
-    let frozen_store = workspace.join("frozen-store").join(STORE_VERSION);
+    let frozen_store = workspace
+        .join("frozen-store")
+        .join(STORE_VERSION);
     eprintln!("Frozen install must populate the CLI-selected store: {frozen_store:?}");
     assert!(frozen_store.join("index.db").is_file());
 
@@ -345,13 +346,8 @@ fn frozen_install_honors_the_store_dir_cli_option() {
 #[ignore = "flaky on CI: registry fixture drops connections under concurrent load"]
 #[test]
 fn frozen_lockfile_should_be_able_to_handle_big_lockfile() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -388,13 +384,8 @@ fn frozen_lockfile_should_be_able_to_handle_big_lockfile() {
 #[test]
 fn install_regenerates_lockfile_from_node_modules_when_wanted_is_missing() {
     use std::process::Command;
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -429,8 +420,9 @@ fn install_regenerates_lockfile_from_node_modules_when_wanted_is_missing() {
         .expect("remove .pnpm-workspace-state-v1.json");
 
     eprintln!("Re-running install with --reporter=ndjson...");
-    let pacquet_rerun =
-        Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(&workspace);
+    let pacquet_rerun = Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(&workspace);
     let output = pacquet_rerun
         .with_args(["--reporter=ndjson", "install"])
         .output()
@@ -446,9 +438,17 @@ fn install_regenerates_lockfile_from_node_modules_when_wanted_is_missing() {
         .lines()
         .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
         .find(|record| {
-            record.get("name").and_then(|v| v.as_str()) == Some("pnpm")
-                && record.get("level").and_then(|v| v.as_str()) == Some("info")
-                && record.get("message").and_then(|v| v.as_str())
+            record
+                .get("name")
+                .and_then(|v| v.as_str())
+                == Some("pnpm")
+                && record
+                    .get("level")
+                    .and_then(|v| v.as_str())
+                    == Some("info")
+                && record
+                    .get("message")
+                    .and_then(|v| v.as_str())
                     == Some("Lockfile is up to date, resolution step is skipped")
         });
     assert!(
@@ -474,13 +474,8 @@ fn install_regenerates_lockfile_from_node_modules_when_wanted_is_missing() {
 #[test]
 fn frozen_install_short_circuits_when_node_modules_is_up_to_date() {
     use std::process::Command;
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -499,8 +494,9 @@ fn frozen_install_short_circuits_when_node_modules_is_up_to_date() {
         .success();
 
     eprintln!("Re-running with --frozen-lockfile + --reporter=ndjson...");
-    let pacquet_rerun =
-        Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(&workspace);
+    let pacquet_rerun = Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(&workspace);
     let output = pacquet_rerun
         .with_args(["--reporter=ndjson", "install", "--frozen-lockfile"])
         .output()
@@ -516,9 +512,17 @@ fn frozen_install_short_circuits_when_node_modules_is_up_to_date() {
         .lines()
         .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
         .find(|record| {
-            record.get("name").and_then(|v| v.as_str()) == Some("pnpm")
-                && record.get("level").and_then(|v| v.as_str()) == Some("info")
-                && record.get("message").and_then(|v| v.as_str())
+            record
+                .get("name")
+                .and_then(|v| v.as_str())
+                == Some("pnpm")
+                && record
+                    .get("level")
+                    .and_then(|v| v.as_str())
+                    == Some("info")
+                && record
+                    .get("message")
+                    .and_then(|v| v.as_str())
                     == Some("Lockfile is up to date, resolution step is skipped")
         });
     assert!(
@@ -553,13 +557,8 @@ fn frozen_install_short_circuits_when_node_modules_is_up_to_date() {
 #[cfg(unix)]
 #[test]
 fn frozen_store_installs_against_a_read_only_global_virtual_store() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     enable_gvs_in_workspace_yaml(&workspace, "");
@@ -648,13 +647,8 @@ fn frozen_store_installs_against_a_read_only_global_virtual_store() {
 /// port precisely to prove the guard fires before any connection is attempted.
 #[test]
 fn frozen_store_with_a_pnpr_server_is_a_config_conflict() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -682,13 +676,8 @@ fn frozen_store_with_a_pnpr_server_is_a_config_conflict() {
 
 #[test]
 fn frozen_lockfile_setting_drives_the_headless_install() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -724,7 +713,12 @@ fn frozen_lockfile_setting_drives_the_headless_install() {
         .with_args(["install", "--no-frozen-lockfile"])
         .assert()
         .success();
-    assert!(workspace.join("pnpm-lock.yaml").is_file(), "--no-frozen-lockfile must overrule");
+    assert!(
+        workspace
+            .join("pnpm-lock.yaml")
+            .is_file(),
+        "--no-frozen-lockfile must overrule"
+    );
 
     drop((root, mock_instance));
 }
@@ -795,13 +789,8 @@ fn assert_group_filter_reaches_materialization_only(
     const PROD: (&str, &str) = ("@pnpm.e2e/pkg-with-1-dep", "100.0.0");
     const DEV: (&str, &str) = ("@pnpm.e2e/hello-world-js-bin", "1.0.0");
 
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(

@@ -54,7 +54,9 @@ impl SetScriptArgs {
         let mut manifest = PackageManifest::from_path(manifest_path.to_path_buf())
             .wrap_err("reading package.json")?;
         set_script(manifest.value_mut(), name, command);
-        manifest.save().wrap_err("saving package.json")?;
+        manifest
+            .save()
+            .wrap_err("saving package.json")?;
         Ok(())
     }
 }

@@ -31,12 +31,20 @@ async fn does_not_hoist_when_disabled() {
         clippy::needless_collect,
         reason = "Collecting into a Vec keeps the assertion readable; `.any(...)` on the iterator would be denser without saving meaningful work."
     )]
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
     assert!(!direct.contains(&"react"));
-    assert!(result.peers_result.peer_dependency_issues.missing.contains_key("react"));
+    assert!(
+        result
+            .peers_result
+            .peer_dependency_issues
+            .missing
+            .contains_key("react")
+    );
 }
 
 #[tokio::test]
@@ -76,7 +84,9 @@ async fn auto_install_does_not_install_when_no_intersection() {
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
@@ -172,12 +182,15 @@ async fn auto_install_from_highest_match_installs_on_conflict() {
     }));
 
     let mut opts = default_opts();
-    opts.peers.auto_install_peers_from_highest_match = true;
+    opts.peers
+        .auto_install_peers_from_highest_match = true;
     let result = resolve_importer(&resolver, &manifest, [DependencyGroup::Prod], opts)
         .await
         .unwrap();
 
-    let direct: Vec<&str> = result.peers_result.direct_dependencies_by_alias
+    let direct: Vec<&str> = result
+        .peers_result
+        .direct_dependencies_by_alias
         .keys()
         .map(String::as_str)
         .collect();
@@ -225,7 +238,10 @@ async fn auto_install_does_not_hoist_when_root_already_has_dep() {
         "`x` should resolve only via the importer's direct spec, got: {x_ranges:?}",
     );
     assert_eq!(
-        result.peers_result.direct_dependencies_by_alias.get("xyz"),
+        result
+            .peers_result
+            .direct_dependencies_by_alias
+            .get("xyz"),
         Some(&DepPath::from("xyz@1.0.0(x@1.0.0)".to_string())),
     );
 }

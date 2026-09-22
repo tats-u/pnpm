@@ -117,7 +117,9 @@ impl LinkPhaseOutput {
     /// use the virtual store's materialized snapshots.
     #[must_use]
     pub fn build_snapshots<'a>(&'a self, materialized: &'a [PackageKey]) -> &'a [PackageKey] {
-        self.hoisted_build_snapshots.as_deref().unwrap_or(materialized)
+        self.hoisted_build_snapshots
+            .as_deref()
+            .unwrap_or(materialized)
     }
 
     /// The result of a run that materialized nothing.
@@ -201,9 +203,11 @@ fn plan_hoist(inputs: &LinkPhaseInputs<'_>, skipped: &SkippedSnapshots) -> Plann
     let config = inputs.ctx.config;
     // `hoistWorkspacePackages`: named non-root projects become hoist
     // candidates whose links point at the project dirs.
-    let hoisted_workspace_packages = config.hoist_workspace_packages.then(|| {
-        workspace_packages_for_hoist(inputs.ctx.workspace_root, inputs.projects.manifests)
-    });
+    let hoisted_workspace_packages = config
+        .hoist_workspace_packages
+        .then(|| {
+            workspace_packages_for_hoist(inputs.ctx.workspace_root, inputs.projects.manifests)
+        });
     let phase_start = std::time::Instant::now();
     let plan = compute_hoist_plan(
         config,
@@ -215,16 +219,14 @@ fn plan_hoist(inputs: &LinkPhaseInputs<'_>, skipped: &SkippedSnapshots) -> Plann
         inputs.ctx.is_hoisted(),
         hoisted_workspace_packages.as_ref(),
     );
-    let public_targets = plan
-        .as_ref()
-        .map(|plan| {
-            collect_public_hoist_targets(
-                &plan.result,
-                &plan.graph,
-                inputs.ctx.linker.layout,
-                &plan.skipped,
-            )
-        });
+    let public_targets = plan.as_ref().map(|plan| {
+        collect_public_hoist_targets(
+            &plan.result,
+            &plan.graph,
+            inputs.ctx.linker.layout,
+            &plan.skipped,
+        )
+    });
     tracing::info!(target: "pacquet::install::phase", phase = "link.hoist_plan", elapsed_ms = phase_start.elapsed().as_millis() as u64, "phase complete");
     PlannedHoist { plan, public_targets }
 }
@@ -261,10 +263,16 @@ fn relink_importer_tree<Reporter: self::Reporter>(
             link_only: false,
         },
 
-        dependency_groups: inputs.projects.dependency_groups.iter().copied(),
+        dependency_groups: inputs
+            .projects
+            .dependency_groups
+            .iter()
+            .copied(),
 
         package_manifests: Some(inputs.packages.package_manifests),
-        requires_build_by_snapshot: inputs.packages.requires_build_by_snapshot,
+        requires_build_by_snapshot: inputs
+            .packages
+            .requires_build_by_snapshot,
     }
     .run::<Reporter>()
     .map_err(LinkPhaseError::SymlinkDirectDependencies)?;
@@ -287,7 +295,9 @@ fn prune_importer_tree<Reporter: self::Reporter>(
     inputs: &LinkPhaseInputs<'_>,
 ) -> Result<(), LinkPhaseError> {
     let config = inputs.ctx.config;
-    let removed_count = inputs.graph.current_lockfile
+    let removed_count = inputs
+        .graph
+        .current_lockfile
         .map(|current| {
             crate::PruneStaleModules {
                 config,
@@ -420,7 +430,8 @@ fn link_hoisted_projects<Reporter: self::Reporter>(
     inputs: &mut LinkPhaseInputs<'_>,
     skipped: &mut SkippedSnapshots,
 ) -> Result<crate::HoistedLinkerOutput, LinkPhaseError> {
-    inputs.ctx
+    inputs
+        .ctx
         .is_hoisted()
         .then(|| {
             run_hoisted_linker::<Reporter>(
@@ -428,9 +439,14 @@ fn link_hoisted_projects<Reporter: self::Reporter>(
                     graph: crate::HoistedLinkGraph {
                         lockfile: inputs.graph.lockfile,
                         layout: inputs.ctx.linker.layout,
-                        cas_paths_by_pkg_id: inputs.packages.cas_paths_by_pkg_id.take(),
+                        cas_paths_by_pkg_id: inputs
+                            .packages
+                            .cas_paths_by_pkg_id
+                            .take(),
                     },
-                    prior: inputs.prior.hoisted_state(inputs.graph.current_lockfile),
+                    prior: inputs
+                        .prior
+                        .hoisted_state(inputs.graph.current_lockfile),
                     projects: crate::HoistedProjects {
                         importers: &inputs.graph.lockfile.importers,
                         dependency_groups: inputs.projects.dependency_groups,
@@ -445,7 +461,9 @@ fn link_hoisted_projects<Reporter: self::Reporter>(
                     materialization: crate::HoistedMaterialization {
                         logged_methods: inputs.ctx.logged_methods,
                         requester: inputs.ctx.requester,
-                        requires_build_by_snapshot: inputs.packages.requires_build_by_snapshot,
+                        requires_build_by_snapshot: inputs
+                            .packages
+                            .requires_build_by_snapshot,
                         dir_clone_cache: inputs.ctx.dir_clone_cache,
                     },
                 },
@@ -467,7 +485,8 @@ fn link_hoisted_projects<Reporter: self::Reporter>(
 /// the hoist symlinks land.
 fn public_workspace_bin_deps(plan: Option<&HoistPlan>) -> Vec<(String, PathBuf)> {
     plan.map(|plan| {
-        plan.result.hoisted_workspace_aliases
+        plan.result
+            .hoisted_workspace_aliases
             .iter()
             .filter(|(_, kind, _)| matches!(kind, pnpm_modules_yaml::HoistKind::Public))
             .map(|(alias, _, project_dir)| (alias.clone(), project_dir.clone()))
@@ -493,7 +512,9 @@ fn write_hoist_links(
     link_options: &LinkBinsOptions,
 ) -> Result<HoistLinks, LinkPhaseError> {
     let HoistPlan { graph, result, skipped, .. } = plan;
-    let private_hoist_dir = config.virtual_store_dir.join("node_modules");
+    let private_hoist_dir = config
+        .virtual_store_dir
+        .join("node_modules");
     let public_hoist_dir = config.modules_dir.clone();
     symlink_hoisted_dependencies(
         &result.hoisted_dependencies_by_node_id,

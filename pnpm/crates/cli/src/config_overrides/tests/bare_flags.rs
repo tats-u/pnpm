@@ -68,7 +68,12 @@ fn trust_lockfile_is_a_bare_flag_where_no_command_declares_it() {
     let mut config = Config::default();
     overrides.apply(&mut config, Path::new("/workspace"));
     assert!(config.trust_lockfile);
-    assert_eq!(config.explicit_settings.get("trustLockfile"), Some(&serde_json::Value::Bool(true)));
+    assert_eq!(
+        config
+            .explicit_settings
+            .get("trustLockfile"),
+        Some(&serde_json::Value::Bool(true))
+    );
 
     let (overrides, remaining) =
         ConfigOverrides::extract(argv(["pacquet", "remove", "foo", "--no-trust-lockfile"]));
@@ -95,7 +100,12 @@ fn unsafe_perm_is_a_bare_flag_on_every_command() {
     let mut config = Config { unsafe_perm: false, ..Config::default() };
     overrides.apply(&mut config, Path::new("/workspace"));
     assert!(config.unsafe_perm);
-    assert_eq!(config.explicit_settings.get("unsafePerm"), Some(&serde_json::Value::Bool(true)));
+    assert_eq!(
+        config
+            .explicit_settings
+            .get("unsafePerm"),
+        Some(&serde_json::Value::Bool(true))
+    );
 
     let (overrides, remaining) =
         ConfigOverrides::extract(argv(["pacquet", "rebuild", "--no-unsafe-perm"]));
@@ -103,7 +113,12 @@ fn unsafe_perm_is_a_bare_flag_on_every_command() {
     let mut config = Config { unsafe_perm: true, ..Config::default() };
     overrides.apply(&mut config, Path::new("/workspace"));
     assert!(!config.unsafe_perm);
-    assert_eq!(config.explicit_settings.get("unsafePerm"), Some(&serde_json::Value::Bool(false)));
+    assert_eq!(
+        config
+            .explicit_settings
+            .get("unsafePerm"),
+        Some(&serde_json::Value::Bool(false))
+    );
 
     for (flag, expected) in [
         ("--unsafe-perm", true),
@@ -159,7 +174,9 @@ fn the_boolean_settings_are_bare_flags_where_no_command_declares_them() {
     assert!(config.force_legacy_deploy);
     assert_eq!(config.explicit_settings.get("offline"), Some(&serde_json::Value::Bool(true)));
     assert_eq!(
-        config.explicit_settings.get("sharedWorkspaceLockfile"),
+        config
+            .explicit_settings
+            .get("sharedWorkspaceLockfile"),
         Some(&serde_json::Value::Bool(false)),
     );
 
@@ -221,13 +238,11 @@ fn no_bare_setting_flag_shadows_a_global_option() {
     let declared: Vec<&str> = grammar
         .get_arguments()
         .flat_map(|arg| {
-            arg.get_long()
-                .into_iter()
-                .chain(
-                    arg.get_all_aliases()
-                        .into_iter()
-                        .flatten(),
-                )
+            arg.get_long().into_iter().chain(
+                arg.get_all_aliases()
+                    .into_iter()
+                    .flatten(),
+            )
         })
         .collect();
     let shadowed: Vec<&str> = super::super::tokens::BARE_SETTING_FLAGS

@@ -98,23 +98,19 @@ impl MatcherImpl {
 
 /// The first include pattern that matches, by position.
 fn first_include(patterns: &[CompiledPattern], input: &str) -> Option<usize> {
-    patterns
-        .iter()
-        .position(|pattern| {
-            debug_assert!(!pattern.is_ignore);
-            pattern.matches(input)
-        })
+    patterns.iter().position(|pattern| {
+        debug_assert!(!pattern.is_ignore);
+        pattern.matches(input)
+    })
 }
 
 /// Position `0` unless an ignore pattern matches: with no include rules,
 /// everything the ignores leave alone is included.
 fn none_ignores(patterns: &[CompiledPattern], input: &str) -> Option<usize> {
-    let ignored = patterns
-        .iter()
-        .any(|pattern| {
-            debug_assert!(pattern.is_ignore);
-            pattern.matches(input)
-        });
+    let ignored = patterns.iter().any(|pattern| {
+        debug_assert!(pattern.is_ignore);
+        pattern.matches(input)
+    });
     (!ignored).then_some(0)
 }
 
@@ -179,10 +175,8 @@ fn compile_many(patterns: &[String]) -> MatcherImpl {
             compiled.push(CompiledPattern { glob: WildcardMatcher::new(rest), is_ignore: true });
         } else {
             has_include = true;
-            compiled.push(CompiledPattern {
-                glob: WildcardMatcher::new(pattern),
-                is_ignore: false,
-            });
+            compiled
+                .push(CompiledPattern { glob: WildcardMatcher::new(pattern), is_ignore: false });
         }
     }
     let arc: Arc<[CompiledPattern]> = compiled.into();

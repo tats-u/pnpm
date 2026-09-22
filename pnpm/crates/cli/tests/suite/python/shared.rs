@@ -106,7 +106,9 @@ async fn members_that_cannot_be_installed_together_are_refused() {
 
     // The projects are named by the path pnpm read them at, which is the
     // canonical one where the temporary directory is reached through a link.
-    let packages = dunce::canonicalize(root.path()).unwrap().join("packages");
+    let packages = dunce::canonicalize(root.path())
+        .unwrap()
+        .join("packages");
     assert_failure_contains(
         pacquet_in(root.path()).arg("install"),
         &format!(
@@ -175,12 +177,19 @@ async fn adding_to_a_member_updates_its_manifest_and_the_shared_lockfile() {
         .assert()
         .success();
 
-    let edited = fs::read_to_string(root.path().join("packages/b/pyproject.toml")).unwrap();
+    let edited = fs::read_to_string(
+        root.path()
+            .join("packages/b/pyproject.toml"),
+    )
+    .unwrap();
     assert!(edited.contains("gamma>=1.0"), "pins what it resolved: {edited}");
     assert!(
-        !fs::read_to_string(root.path().join("packages/a/pyproject.toml"))
-            .unwrap()
-            .contains("gamma"),
+        !fs::read_to_string(
+            root.path()
+                .join("packages/a/pyproject.toml")
+        )
+        .unwrap()
+        .contains("gamma"),
         "a was not edited",
     );
     let lock: toml::Value =
@@ -238,14 +247,10 @@ async fn a_shared_member_with_dynamic_metadata_is_prepared_with_the_shared_inter
 fn logging_shim(directory: &Path, name: &str, version: &str, log: &Path) {
     use std::os::unix::fs::PermissionsExt;
     fs::create_dir_all(directory).unwrap();
-    let source = super::interpreter_shim_source(version)
-        .replace(
-            "import platform, sys\n",
-            &format!(
-                "import os, platform, sys\nopen('{}', 'a').write('{name}\\n')\n",
-                log.display(),
-            ),
-        );
+    let source = super::interpreter_shim_source(version).replace(
+        "import platform, sys\n",
+        &format!("import os, platform, sys\nopen('{}', 'a').write('{name}\\n')\n", log.display(),),
+    );
     fs::write(directory.join(name), source).unwrap();
     fs::set_permissions(directory.join(name), fs::Permissions::from_mode(0o755)).unwrap();
 }
@@ -342,7 +347,11 @@ async fn an_add_outside_the_declared_workspace_reads_the_project_alone() {
         .assert()
         .success();
 
-    assert!(fs::read_to_string(outside.join("pyproject.toml")).unwrap().contains("alpha>=1.0"));
+    assert!(
+        fs::read_to_string(outside.join("pyproject.toml"))
+            .unwrap()
+            .contains("alpha>=1.0")
+    );
     assert!(outside.join("pylock.toml").is_file(), "an environment of its own");
     assert!(
         !root

@@ -91,12 +91,16 @@ async fn install_into_cache<Reporter: self::Reporter + 'static>(
 /// would otherwise let the install's workspace-root walk pass through the
 /// caller's project dir and mistake it for the dlx workspace.
 pub(super) fn dlx_command_cache_dir(config: &Config, cache_key: &str) -> miette::Result<PathBuf> {
-    let dlx_command_cache_dir = config.cache_dir.join("dlx").join(cache_key);
-    fs::create_dir_all(&dlx_command_cache_dir)
-        .map_err(|source| DlxError::Cache {
-            dir: dlx_command_cache_dir.display().to_string(),
-            source,
-        })?;
+    let dlx_command_cache_dir = config
+        .cache_dir
+        .join("dlx")
+        .join(cache_key);
+    fs::create_dir_all(&dlx_command_cache_dir).map_err(|source| DlxError::Cache {
+        dir: dlx_command_cache_dir
+            .display()
+            .to_string(),
+        source,
+    })?;
     dunce::canonicalize(&dlx_command_cache_dir)
         .into_diagnostic()
         .wrap_err("canonicalizing the dlx cache directory")
@@ -116,7 +120,8 @@ pub(super) fn resolve_catalog_specs(
     config: &Config,
 ) -> miette::Result<Vec<String>> {
     let uses_catalog = |pkg: &String| {
-        parse_wanted_dependency(pkg).bare_specifier
+        parse_wanted_dependency(pkg)
+            .bare_specifier
             .is_some_and(|bare_specifier| parse_catalog_protocol(&bare_specifier).is_some())
     };
     if !pkgs.iter().any(uses_catalog) {
@@ -270,7 +275,9 @@ pub(super) fn get_valid_cache_dir(
 /// The timestamped, pid-scoped subdirectory a fresh dlx install is
 /// prepared in.
 pub(super) fn get_prepare_dir(cache_path: &Path, now: SystemTime, pid: u32) -> PathBuf {
-    let millis = now.duration_since(UNIX_EPOCH).map_or(0, |elapsed| elapsed.as_millis());
+    let millis = now
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_millis());
     // base36 (vs hex) keeps this segment short: it sits between the cache key
     // and pnpm's deep virtual-store layout, and long dlx paths overflow
     // Windows' MAX_PATH (260), which makes lifecycle scripts fail with a
@@ -298,11 +305,10 @@ fn to_base36(mut n: u128) -> String {
 pub(super) fn read_json(path: &Path) -> Result<Value, DlxError> {
     let text = fs::read_to_string(path)
         .map_err(|source| DlxError::ReadManifest { path: path.display().to_string(), source })?;
-    parse_manifest(&text)
-        .map_err(|error| DlxError::ReadManifest {
-            path: path.display().to_string(),
-            source: error.into(),
-        })
+    parse_manifest(&text).map_err(|error| DlxError::ReadManifest {
+        path: path.display().to_string(),
+        source: error.into(),
+    })
 }
 
 /// Resolve caller catalogs before the cache install severs its workspace anchor.
@@ -336,7 +342,9 @@ pub(super) fn command_cache_dir(
             pkgs,
             &build_registries_map(config),
             allow_build,
-            supported_architectures.apply_to(config.supported_architectures.clone()).as_ref(),
+            supported_architectures
+                .apply_to(config.supported_architectures.clone())
+                .as_ref(),
         ),
     )
 }
@@ -351,7 +359,9 @@ fn apply_dlx_build_policy(config: &mut Config, pkgs: &[String], allow_build: &[S
         }
     }
     for name in allow_build {
-        config.allow_builds.insert(name.clone(), true);
+        config
+            .allow_builds
+            .insert(name.clone(), true);
     }
 }
 
@@ -368,7 +378,9 @@ pub(super) fn configure_cache_install(
         supported_architectures.apply_to(config.supported_architectures.clone());
 
     config.modules_dir = prepare_dir.join("node_modules");
-    config.virtual_store_dir = prepare_dir.join("node_modules").join(".pacquet");
+    config.virtual_store_dir = prepare_dir
+        .join("node_modules")
+        .join(".pacquet");
     // Force the project-local virtual store so the whole prepare dir is
     // self-contained and can be symlinked as the cache entry. This is a
     // deliberate deviation from pnpm's dlx, which keeps
@@ -419,7 +431,11 @@ pub(super) async fn get_or_prepare_cache<Reporter: self::Reporter + 'static>(
     let command_dir = command_cache_dir(config, pkgs, allow_build, supported_architectures)?;
     let cache_link = command_dir.join("pkg");
     match get_valid_cache_dir(&cache_link, config.dlx_cache_max_age, SystemTime::now()) {
-        Some(cached_dir) if cached_dir.join("pnpm-lock.yaml").is_file() => {
+        Some(cached_dir)
+            if cached_dir
+                .join("pnpm-lock.yaml")
+                .is_file() =>
+        {
             configure_cache_install(
                 config,
                 &cached_dir,

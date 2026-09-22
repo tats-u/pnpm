@@ -120,7 +120,9 @@ fn refuses_a_wheel_baseline_that_names_no_release() {
         "linux-x64-musllinux_1_bad",
         "linux-x64-musllinux__2",
     ] {
-        entry.parse::<SupportedPlatform>().expect_err(entry);
+        entry
+            .parse::<SupportedPlatform>()
+            .expect_err(entry);
     }
     assert_eq!(spelled("linux-x64-manylinux_2_28"), "linux-x64-manylinux_2_28");
 }
@@ -131,14 +133,21 @@ fn refuses_a_wheel_baseline_that_names_no_release() {
 #[test]
 fn current_is_one_platform_with_the_name_it_also_has() {
     let listed = listed(&["current", "linux-x64"]);
-    assert_eq!(listed.platforms("linux", "x64", "unknown").len(), 1);
+    assert_eq!(
+        listed
+            .platforms("linux", "x64", "unknown")
+            .len(),
+        1
+    );
     assert_eq!(named(&listed), ["linux-x64"]);
 }
 
 #[test]
 fn refuses_an_entry_that_does_not_name_a_platform() {
     for entry in ["x86_64-linux", "linux", "linux-enten", "enten-x64", "linux-x64-enten"] {
-        let error = entry.parse::<SupportedPlatform>().expect_err(entry);
+        let error = entry
+            .parse::<SupportedPlatform>()
+            .expect_err(entry);
         assert_eq!(format!("{error}"), format!("pnpm does not know the platform {entry}"));
     }
 }
@@ -147,7 +156,9 @@ fn refuses_an_entry_that_does_not_name_a_platform() {
 /// is a mistake worth its own message.
 #[test]
 fn refuses_a_c_library_on_a_platform_that_has_none() {
-    let error = "darwin-arm64-musl".parse::<SupportedPlatform>().expect_err("a C library on macOS");
+    let error = "darwin-arm64-musl"
+        .parse::<SupportedPlatform>()
+        .expect_err("a C library on macOS");
     assert_eq!(
         format!("{error}"),
         "only a Linux platform names a C library, and darwin-arm64-musl is not one",

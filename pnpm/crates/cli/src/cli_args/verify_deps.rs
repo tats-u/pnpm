@@ -39,7 +39,10 @@ pub(crate) fn verify_deps_before_run(
     config: &Config,
     reporter: ReporterType,
 ) -> miette::Result<()> {
-    if !config.verify_deps_before_run.is_enabled() {
+    if !config
+        .verify_deps_before_run
+        .is_enabled()
+    {
         return Ok(());
     }
     let Some(status) = check_deps_status_before_run_at(dir, config) else {

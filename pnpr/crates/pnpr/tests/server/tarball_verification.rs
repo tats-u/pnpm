@@ -199,7 +199,11 @@ async fn tampered_upstream_tarball_aborts_the_stream_and_is_never_cached() {
     assert_eq!(tarball_response.status(), StatusCode::OK);
     // Draining the body runs the end-of-stream SRI check, which abandons the
     // cache temp on the mismatch.
-    assert!(to_bytes(tarball_response.into_body(), usize::MAX).await.is_err());
+    assert!(
+        to_bytes(tarball_response.into_body(), usize::MAX)
+            .await
+            .is_err()
+    );
     assert!(!cache_path.exists(), "unverified tarball must not be written to the cache");
 
     packument_mock.assert_async().await;
@@ -219,7 +223,9 @@ async fn tampered_upstream_tarball_aborts_the_stream_and_is_never_cached() {
         .await
         .unwrap();
     assert!(
-        cached_response.status().is_server_error(),
+        cached_response
+            .status()
+            .is_server_error(),
         "the tampered tarball must not be served from cache, got {}",
         cached_response.status(),
     );
@@ -478,7 +484,12 @@ async fn cache_false_upstream_rejects_tampered_tarball_without_mirroring() {
     let tmp = TempDir::new().unwrap();
     let cache_dir = tmp.path().to_path_buf();
     let mut config = config_for(&upstream.url(), cache_dir.clone());
-    config.routing.upstreams.get_mut("npmjs").expect("default `npmjs` upstream").cache = false;
+    config
+        .routing
+        .upstreams
+        .get_mut("npmjs")
+        .expect("default `npmjs` upstream")
+        .cache = false;
     let app = router(config);
 
     let response = app

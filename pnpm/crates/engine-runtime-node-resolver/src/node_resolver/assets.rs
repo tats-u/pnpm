@@ -98,13 +98,8 @@ struct ShasumsRequest<'a> {
 async fn fetch_node_shasums(
     request: ShasumsRequest<'_>,
 ) -> Result<Vec<ShasumsFileItem>, NodeResolverError> {
-    let ShasumsRequest {
-        http_client,
-        auth_headers,
-        integrities_url,
-        cache_dir,
-        verify_signature,
-    } = request;
+    let ShasumsRequest { http_client, auth_headers, integrities_url, cache_dir, verify_signature } =
+        request;
     match (verify_signature, auth_headers.is_empty()) {
         (true, true) => {
             fetch_verified_node_shasums_file_cached(http_client, integrities_url, cache_dir)
@@ -141,7 +136,9 @@ fn node_platform_asset(
     node_mirror_base_url: &str,
 ) -> Result<PlatformAssetResolution, NodeResolverError> {
     let platform = if parsed.platform == "win" { "win32".to_string() } else { parsed.platform };
-    let libc = parsed.is_musl.then(|| "musl".to_string());
+    let libc = parsed
+        .is_musl
+        .then(|| "musl".to_string());
     let address = get_node_artifact_address(GetNodeArtifactAddressOptions {
         version,
         base_url: node_mirror_base_url,
@@ -152,7 +149,8 @@ fn node_platform_asset(
     let url = format!("{}/{}{}", address.dirname, address.basename, address.extname);
     let archive =
         if address.extname == ".zip" { BinaryArchive::Zip } else { BinaryArchive::Tarball };
-    let integrity: Integrity = item.integrity
+    let integrity: Integrity = item
+        .integrity
         .parse()
         .map_err(|error| NodeResolverError::ParseIntegrity {
             integrity: item.integrity.clone(),

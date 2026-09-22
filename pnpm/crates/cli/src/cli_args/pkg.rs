@@ -127,7 +127,10 @@ impl PkgArgs {
 
     /// Run the pkg command across `--filter`-selected workspace projects.
     pub fn run_recursive(self, config: &Config, dir: &Path) -> miette::Result<()> {
-        let workspace_root = config.workspace_dir.as_deref().unwrap_or(dir);
+        let workspace_root = config
+            .workspace_dir
+            .as_deref()
+            .unwrap_or(dir);
         if config.workspace_dir.is_none() {
             return Err(PkgError::RecursiveNoRoot.into());
         }
@@ -138,7 +141,10 @@ impl PkgArgs {
         if selection.selected.is_empty() {
             return Err(PkgError::RecursiveNoPackages.into());
         }
-        let projects = selection.selected.values().map(|node| node.package.project);
+        let projects = selection
+            .selected
+            .values()
+            .map(|node| node.package.project);
         let PkgSubcommand::Get(args) = &self.command else {
             return self.edit_recursive(projects);
         };
@@ -220,13 +226,15 @@ fn print_recursive_get<'a>(
 /// How the recursive report names one project: its manifest name, or
 /// its workspace-relative directory when it declares none.
 fn project_report_name(project: &pnpm_workspace::Project, workspace_root: &Path) -> String {
-    project.manifest
+    project
+        .manifest
         .value()
         .get("name")
         .and_then(Value::as_str)
         .map_or_else(
             || {
-                project.root_dir
+                project
+                    .root_dir
                     .strip_prefix(workspace_root)
                     .unwrap_or(&project.root_dir)
                     .display()

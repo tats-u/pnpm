@@ -40,12 +40,16 @@ pub(super) fn reject_off_allowlist_fetches(
 
     let projects = request.projects_normalized();
     let url_specs = fetchable_specs(request, &projects);
-    if let Some(off) = url_specs.into_iter().find(|spec| fetch_is_off_allowlist(spec, context)) {
+    if let Some(off) = url_specs
+        .into_iter()
+        .find(|spec| fetch_is_off_allowlist(spec, context))
+    {
         return Some(forbidden_off_allowlist(off));
     }
 
     // Override leaves can themselves be direct-URL specs.
-    if let Some(off) = request.overrides
+    if let Some(off) = request
+        .overrides
         .as_ref()
         .and_then(|overrides| first_off_allowlist_override(overrides, context))
     {
@@ -77,8 +81,10 @@ fn fetchable_specs<'a>(request: &'a ResolveRequest, projects: &'a [ProjectDeps])
         );
     }
     extend_package_extension_specs(request, &mut url_specs);
-    if let Some(packages) =
-        request.lockfile.as_ref().and_then(|lockfile| lockfile.packages.as_ref())
+    if let Some(packages) = request
+        .lockfile
+        .as_ref()
+        .and_then(|lockfile| lockfile.packages.as_ref())
     {
         for package in packages.values() {
             if let LockfileResolution::Tarball(resolution) = &package.resolution {
@@ -97,7 +103,9 @@ fn fetchable_specs<'a>(request: &'a ResolveRequest, projects: &'a [ProjectDeps])
 /// semver ranges, `npm:`/`workspace:`/`file:`/`link:` aliases (no `://`),
 /// scoped names — return `false`.
 fn fetch_is_off_allowlist(spec: &str, context: &RouteContext) -> bool {
-    let url = spec.strip_prefix("git+").unwrap_or(spec);
+    let url = spec
+        .strip_prefix("git+")
+        .unwrap_or(spec);
     if url.contains("://") {
         // Gate by origin regardless of scheme: any transport that reaches a
         // host can be an SSRF vector (every git transport — git/ssh/rsync/ftp/
@@ -138,12 +146,12 @@ fn first_off_allowlist_override(
         serde_json::Value::String(spec) => {
             fetch_is_off_allowlist(spec, context).then(|| spec.clone())
         }
-        serde_json::Value::Array(items) => {
-            items.iter().find_map(|item| first_off_allowlist_override(item, context))
-        }
-        serde_json::Value::Object(map) => {
-            map.values().find_map(|item| first_off_allowlist_override(item, context))
-        }
+        serde_json::Value::Array(items) => items
+            .iter()
+            .find_map(|item| first_off_allowlist_override(item, context)),
+        serde_json::Value::Object(map) => map
+            .values()
+            .find_map(|item| first_off_allowlist_override(item, context)),
         _ => None,
     }
 }
@@ -174,7 +182,8 @@ pub(super) fn reject_invalid_registries(request: &ResolveRequest) -> Option<Resp
 }
 
 pub(super) fn reject_invalid_patch_hashes(request: &ResolveRequest) -> Option<Response> {
-    let (selector, _) = request.patched_dependencies
+    let (selector, _) = request
+        .patched_dependencies
         .as_ref()?
         .iter()
         .find(|(_, hash)| {
@@ -201,11 +210,21 @@ pub(super) fn reject_inline_url_auth(request: &ResolveRequest) -> Option<Respons
     if let Some(registry) = request.registry.as_deref() {
         specs.push(registry);
     }
-    specs.extend(request.registries.keys().map(String::as_str));
+    specs.extend(
+        request
+            .registries
+            .keys()
+            .map(String::as_str),
+    );
     let projects = request.projects_normalized();
     specs.extend(fetchable_specs(request, &projects));
-    let inline = specs.iter().any(|spec| pnpr_route::url_has_inline_credentials(spec))
-        || request.overrides.as_ref().is_some_and(overrides_have_inline_url_auth);
+    let inline = specs
+        .iter()
+        .any(|spec| pnpr_route::url_has_inline_credentials(spec))
+        || request
+            .overrides
+            .as_ref()
+            .is_some_and(overrides_have_inline_url_auth);
     inline.then(|| {
         json_error(
             StatusCode::BAD_REQUEST,
@@ -228,7 +247,11 @@ fn extend_package_extension_specs<'a>(request: &'a ResolveRequest, specs: &mut V
         .into_iter()
         .flatten()
         {
-            specs.extend(dependencies.values().map(String::as_str));
+            specs.extend(
+                dependencies
+                    .values()
+                    .map(String::as_str),
+            );
         }
     }
 }
@@ -238,8 +261,12 @@ fn extend_package_extension_specs<'a>(request: &'a ResolveRequest, specs: &mut V
 fn overrides_have_inline_url_auth(value: &serde_json::Value) -> bool {
     match value {
         serde_json::Value::String(spec) => pnpr_route::url_has_inline_credentials(spec),
-        serde_json::Value::Array(items) => items.iter().any(overrides_have_inline_url_auth),
-        serde_json::Value::Object(map) => map.values().any(overrides_have_inline_url_auth),
+        serde_json::Value::Array(items) => items
+            .iter()
+            .any(overrides_have_inline_url_auth),
+        serde_json::Value::Object(map) => map
+            .values()
+            .any(overrides_have_inline_url_auth),
         _ => false,
     }
 }

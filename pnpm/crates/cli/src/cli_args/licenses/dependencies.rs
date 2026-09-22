@@ -13,8 +13,10 @@ pub(super) fn collect_dependencies(
     let mut belongs_to: HashMap<PackageKey, BelongsTo> = HashMap::new();
     let mut stack: Vec<(PackageKey, BelongsTo)> = Vec::new();
     for id in importer_ids {
-        let Some(importer) =
-            lockfile.importers.get(id.as_ref()).or_else(|| lockfile.root_project())
+        let Some(importer) = lockfile
+            .importers
+            .get(id.as_ref())
+            .or_else(|| lockfile.root_project())
         else {
             continue;
         };
@@ -47,7 +49,10 @@ fn walk_installed_closure(
     belongs_to: &mut HashMap<PackageKey, BelongsTo>,
 ) {
     let empty_snapshots = HashMap::new();
-    let snapshots = lockfile.snapshots.as_ref().unwrap_or(&empty_snapshots);
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .unwrap_or(&empty_snapshots);
     while let Some((key, kind)) = stack.pop() {
         if let Some(existing) = belongs_to.get(&key)
             && *existing <= kind
@@ -97,7 +102,9 @@ fn queue_snapshot_children(
     include: Include,
     stack: &mut Vec<(PackageKey, BelongsTo)>,
 ) {
-    let optional = include.optional_dependencies.then_some(snapshot.optional_dependencies.as_ref());
+    let optional = include
+        .optional_dependencies
+        .then_some(snapshot.optional_dependencies.as_ref());
     for deps in [Some(snapshot.dependencies.as_ref()), optional]
         .into_iter()
         .flatten()
@@ -122,7 +129,8 @@ fn snapshot_is_unsupported_optional(
     if !snapshot.is_some_and(|snapshot| snapshot.optional) {
         return false;
     }
-    let package = lockfile.packages
+    let package = lockfile
+        .packages
         .as_ref()
         .and_then(|packages| packages.get(&key.without_peer()));
     package.is_some_and(|package| {
@@ -152,7 +160,11 @@ pub(super) fn compare_versions(left: &str, right: &str) -> std::cmp::Ordering {
 pub(super) fn compare_package_names(left: &str, right: &str) -> Ordering {
     left.bytes()
         .map(package_name_collation_weight)
-        .cmp(right.bytes().map(package_name_collation_weight))
+        .cmp(
+            right
+                .bytes()
+                .map(package_name_collation_weight),
+        )
         .then_with(|| {
             left.bytes()
                 .zip(right.bytes())
@@ -177,7 +189,9 @@ fn package_name_collation_weight(byte: u8) -> u8 {
         b'@' => 3,
         b'/' => 4,
         b'~' => 5,
-        byte => byte.to_ascii_lowercase().saturating_add(6),
+        byte => byte
+            .to_ascii_lowercase()
+            .saturating_add(6),
     }
 }
 

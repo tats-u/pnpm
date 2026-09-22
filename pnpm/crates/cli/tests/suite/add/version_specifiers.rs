@@ -111,13 +111,8 @@ fn add_prerelease_resolved_version_keeps_no_prefix() {
 /// bump would have written.
 #[test]
 fn add_existing_dependency_without_version_keeps_tilde_range() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         r#"{ "name": "p", "version": "1.0.0", "dependencies": { "@pnpm.e2e/dep-of-pkg-with-1-dep": "~100.0.0" } }"#,
@@ -137,13 +132,8 @@ fn add_existing_dependency_without_version_keeps_tilde_range() {
 /// widening it to the default caret.
 #[test]
 fn add_existing_dependency_without_version_keeps_exact_pin() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         r#"{ "name": "p", "version": "1.0.0", "dependencies": { "@pnpm.e2e/dep-of-pkg-with-1-dep": "100.0.0" } }"#,
@@ -203,13 +193,8 @@ fn add_explicit_dist_tag_resolves_with_caret() {
 
 #[test]
 fn readding_a_dev_dependency_at_a_dist_tag_keeps_its_group() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let name = "@pnpm.e2e/dep-of-pkg-with-1-dep";
     std::fs::write(
         workspace.join("package.json"),
@@ -246,13 +231,8 @@ fn readding_a_dev_dependency_at_a_dist_tag_keeps_its_group() {
 /// pnpm, which dedups to and keeps the already-declared version.
 #[test]
 fn add_explicit_range_respects_existing_operator() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         r#"{ "name": "p", "version": "1.0.0", "dependencies": { "@pnpm.e2e/dep-of-pkg-with-1-dep": "~100.0.0" } }"#,
@@ -289,13 +269,8 @@ fn add_npm_alias_spec_is_kept_verbatim() {
 /// (`^100.1.0`), not an exact `100.1.0`.
 #[test]
 fn add_explicit_range_ignores_pin_from_non_registry_prev() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     std::fs::write(
         workspace.join("package.json"),
         r#"{ "name": "p", "version": "1.0.0", "dependencies": { "@pnpm.e2e/dep-of-pkg-with-1-dep": "file:../deps/100.0.0.tgz" } }"#,
@@ -326,13 +301,8 @@ fn save_prefix_arbitrary_value_falls_back_to_caret() {
 /// version, not the raw `latest` dist-tag.
 #[test]
 fn add_without_version_respects_minimum_release_age() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     set_minimum_release_age(&workspace, bravo_dep_mature_up_to_1_0_1_minimum_release_age());
 

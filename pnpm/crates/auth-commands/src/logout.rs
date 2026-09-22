@@ -98,7 +98,9 @@ impl RevokeToken for Host {
         // request itself still targets the full `revoke_url`.
         let log_url = revoke_log_url(revoke_url);
         match send_with_retry(http_client, log_url, retry, |client| {
-            client.delete(revoke_url).header(reqwest::header::AUTHORIZATION, authorization.as_str())
+            client
+                .delete(revoke_url)
+                .header(reqwest::header::AUTHORIZATION, authorization.as_str())
         })
         .await
         {
@@ -141,7 +143,10 @@ where
     Sys: FsReadToString + FsWrite + RevokeToken,
     Reporter: self::Reporter,
 {
-    let registry = normalize_registry_url(opts.registry.unwrap_or(DEFAULT_REGISTRY));
+    let registry = normalize_registry_url(
+        opts.registry
+            .unwrap_or(DEFAULT_REGISTRY),
+    );
     // Canonicalized the way the reader and `pnpm login` canonicalize, so that
     // logging out names the same registry logging in did however the URL was
     // spelled on the command line. An unparsable one keeps its own spelling:
@@ -185,13 +190,17 @@ where
                     "The auth token for {registry_display} was not found in {}. \
                  It may be configured in .npmrc or another config file. \
                  The token was revoked on the registry but must be removed manually from that config file.",
-                    opts.config_dir.join(GLOBAL_CONFIG_YAML_FILENAME).display(),
+                    opts.config_dir
+                        .join(GLOBAL_CONFIG_YAML_FILENAME)
+                        .display(),
                 ),
             );
         } else {
             return Err(LogoutError::LogoutFailed {
                 registry: registry_display,
-                config_path: opts.config_dir.join(GLOBAL_CONFIG_YAML_FILENAME),
+                config_path: opts
+                    .config_dir
+                    .join(GLOBAL_CONFIG_YAML_FILENAME),
             });
         }
     }
@@ -294,7 +303,9 @@ fn global<Reporter: self::Reporter>(prefix: &str, level: LogLevel, message: Stri
 /// token is percent-encoded (so it has no literal `/`), making the last `/`
 /// the segment boundary.
 fn revoke_log_url(revoke_url: &str) -> &str {
-    revoke_url.rsplit_once('/').map_or(revoke_url, |(prefix, _token)| prefix)
+    revoke_url
+        .rsplit_once('/')
+        .map_or(revoke_url, |(prefix, _token)| prefix)
 }
 
 /// Errors surfaced by [`logout`]. The two user-facing variants carry

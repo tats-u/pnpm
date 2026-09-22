@@ -21,9 +21,8 @@ pub fn bin_dir_is_relocatable(bin_dir: &Path, root: &Path) -> bool {
         return false;
     }
     match fs::read_dir(&bin_dir) {
-        Ok(mut entries) => entries.all(|entry| {
-            entry.is_ok_and(|entry| is_relocatable_bin(&entry, &bin_dir, &root))
-        }),
+        Ok(mut entries) => entries
+            .all(|entry| entry.is_ok_and(|entry| is_relocatable_bin(&entry, &bin_dir, &root))),
         Err(error) => error.kind() == io::ErrorKind::NotFound,
     }
 }
@@ -31,12 +30,11 @@ pub fn bin_dir_is_relocatable(bin_dir: &Path, root: &Path) -> bool {
 fn is_relocatable_bin(entry: &DirEntry, bin_dir: &Path, root: &Path) -> bool {
     let path = entry.path();
     match entry.file_type() {
-        Ok(file_type) if file_type.is_symlink() => fs::read_link(&path)
-            .is_ok_and(|link| {
-                link.is_relative()
-                    && realpath_missing(&bin_dir.join(link))
-                        .is_ok_and(|target| is_subdir(root, &target))
-            }),
+        Ok(file_type) if file_type.is_symlink() => fs::read_link(&path).is_ok_and(|link| {
+            link.is_relative()
+                && realpath_missing(&bin_dir.join(link))
+                    .is_ok_and(|target| is_subdir(root, &target))
+        }),
         Ok(file_type) if file_type.is_file() => {
             read_shim(&path).is_some_and(|content| is_relocatable_shim(&content, bin_dir, root))
         }

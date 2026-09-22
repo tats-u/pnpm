@@ -346,17 +346,13 @@ pub fn select_platform_variant<'a>(
     variants: &'a [PlatformAssetResolution],
     selector: &PlatformSelector,
 ) -> Option<&'a PlatformAssetResolution> {
-    variants
-        .iter()
-        .find(|variant| {
-            variant.targets
-                .iter()
-                .any(|target| {
-                    target.os == selector.os
-                        && target.cpu == selector.cpu
-                        && libc_matches(target.libc.as_deref(), selector.libc.as_deref())
-                })
+    variants.iter().find(|variant| {
+        variant.targets.iter().any(|target| {
+            target.os == selector.os
+                && target.cpu == selector.cpu
+                && libc_matches(target.libc.as_deref(), selector.libc.as_deref())
         })
+    })
 }
 
 /// Check whether a variant's `libc` annotation matches the host
@@ -448,7 +444,10 @@ impl LockfileResolution {
         let git_hosted = tarball.is_git_hosted();
         let integrity_addressed =
             is_integrity_addressed_registry_tarball_url(&tarball.tarball, integrity, opts.registry);
-        if let Some(revision) = tarball.revision.filter(|_| !integrity_addressed) {
+        if let Some(revision) = tarball
+            .revision
+            .filter(|_| !integrity_addressed)
+        {
             return Err(LockfileFormError::RevisionUrlMismatch { revision });
         }
         // A standard registry tarball whose URL can be rebuilt from name+version+
@@ -555,16 +554,18 @@ impl From<LockfileResolution> for ResolutionSerde {
         match value {
             LockfileResolution::Tarball(resolution) => resolution.into(),
             LockfileResolution::Registry(resolution) => resolution.into(),
-            LockfileResolution::Directory(resolution) => {
-                resolution.pipe(TaggedResolution::from).into()
-            }
-            LockfileResolution::Git(resolution) => resolution.pipe(TaggedResolution::from).into(),
-            LockfileResolution::Binary(resolution) => {
-                resolution.pipe(TaggedResolution::from).into()
-            }
-            LockfileResolution::Variations(resolution) => {
-                resolution.pipe(TaggedResolution::from).into()
-            }
+            LockfileResolution::Directory(resolution) => resolution
+                .pipe(TaggedResolution::from)
+                .into(),
+            LockfileResolution::Git(resolution) => resolution
+                .pipe(TaggedResolution::from)
+                .into(),
+            LockfileResolution::Binary(resolution) => resolution
+                .pipe(TaggedResolution::from)
+                .into(),
+            LockfileResolution::Variations(resolution) => resolution
+                .pipe(TaggedResolution::from)
+                .into(),
             LockfileResolution::Custom(resolution) => resolution.into(),
         }
     }

@@ -46,7 +46,12 @@ fn original_integrity_uses_current_integrity_before_any_replacement() {
         revision: RevisionField::Missing,
         revisions: Vec::new(),
     };
-    assert_eq!(original_integrity(&dist).unwrap().to_string(), integrity);
+    assert_eq!(
+        original_integrity(&dist)
+            .unwrap()
+            .to_string(),
+        integrity
+    );
 }
 
 #[test]
@@ -88,7 +93,12 @@ fn original_integrity_uses_validated_revision_zero_after_replacement() {
             HostedRevisionRecord { revision: serde_json::json!(1), integrity: Some(replacement) },
         ],
     };
-    assert_eq!(original_integrity(&dist).unwrap().to_string(), original);
+    assert_eq!(
+        original_integrity(&dist)
+            .unwrap()
+            .to_string(),
+        original
+    );
 }
 
 #[test]
@@ -166,7 +176,11 @@ fn cidr_contains_rejects_family_mismatch_and_malformed_entries() {
 
 #[test]
 fn canonical_ip_unwraps_ipv4_mapped_v6() {
-    let mapped = IpAddr::V6("::ffff:203.0.113.7".parse::<Ipv6Addr>().unwrap());
+    let mapped = IpAddr::V6(
+        "::ffff:203.0.113.7"
+            .parse::<Ipv6Addr>()
+            .unwrap(),
+    );
     assert_eq!(canonical_ip(mapped), ip("203.0.113.7"));
     // A peer arriving as an IPv4-mapped IPv6 address still matches an
     // IPv4 whitelist range.
@@ -322,7 +336,8 @@ fn with_peer(mut request: Request<Body>, addr: SocketAddr) -> Request<Body> {
 }
 
 async fn status(app: axum::Router, request: Request<Body>) -> StatusCode {
-    app.oneshot(request).await
+    app.oneshot(request)
+        .await
         .unwrap()
         .status()
 }
@@ -339,7 +354,9 @@ async fn authenticated_identity_reaches_handlers() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
-    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["username"], "alice");
 
@@ -358,7 +375,12 @@ async fn team_tokens_reach_package_authorization() {
     let mut config = Config::static_serve(listen, tmp.path().to_path_buf());
     use pnpr_policy::{AccessToken, Identity};
     use pnpr_registry::{Ecosystem, PackagePattern};
-    config.routing.hosted.get_mut("local").unwrap().rules = PackageRules::new(
+    config
+        .routing
+        .hosted
+        .get_mut("local")
+        .unwrap()
+        .rules = PackageRules::new(
         vec![PackageRule {
             pattern: PackagePattern::parse("@team/*", Ecosystem::Npm).unwrap(),
             access: Some(AccessList::new(vec![AccessToken::Team {
@@ -374,8 +396,18 @@ async fn team_tokens_reach_package_authorization() {
     let alice = Identity::user("alice");
     let carol = Identity::user("carol");
     let rules = &config.routing.hosted["local"].rules;
-    assert!(rules.for_package("@team/x").access.allows(&alice));
-    assert!(!rules.for_package("@team/x").access.allows(&carol));
+    assert!(
+        rules
+            .for_package("@team/x")
+            .access
+            .allows(&alice)
+    );
+    assert!(
+        !rules
+            .for_package("@team/x")
+            .access
+            .allows(&carol)
+    );
 
     // Over HTTP: the team member reaches storage (404, the package is
     // absent); a caller denied by the *explicit* `@team/*` entry is
@@ -500,7 +532,12 @@ fn config_with_teams(tmp: &TempDir) -> Config {
     let listen = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
     let mut config = Config::static_serve(listen, tmp.path().to_path_buf());
     let teams = [("developers", vec!["bob", "alice"]), ("admins", vec!["alice"])];
-    config.routing.hosted.get_mut("local").unwrap().teams = teams
+    config
+        .routing
+        .hosted
+        .get_mut("local")
+        .unwrap()
+        .teams = teams
         .into_iter()
         .map(|(team, members)| {
             (
@@ -516,7 +553,9 @@ fn config_with_teams(tmp: &TempDir) -> Config {
 }
 
 async fn body_json(response: axum::response::Response) -> serde_json::Value {
-    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     serde_json::from_slice(&body).unwrap()
 }
 
@@ -592,7 +631,9 @@ async fn team_mutations_are_rejected_as_config_managed() {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::FORBIDDEN, "{method} {path}");
-        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let body = String::from_utf8(body.to_vec()).unwrap();
         assert!(body.contains("declared in the pnpr configuration"), "{method} {path}: {body}");
     }
@@ -603,8 +644,12 @@ async fn team_listing_masks_callers_the_registry_denies() {
     let tmp = TempDir::new().unwrap();
     let mut config = config_with_teams(&tmp);
     // Registry-level default access admits only authenticated callers.
-    config.routing.hosted.get_mut("local").unwrap().rules =
-        PackageRules::new(Vec::new(), Some(AccessList::from_tokens(["$authenticated"])));
+    config
+        .routing
+        .hosted
+        .get_mut("local")
+        .unwrap()
+        .rules = PackageRules::new(Vec::new(), Some(AccessList::from_tokens(["$authenticated"])));
     let app = app_with_config_and_token(config, "tok", record(false, &[]));
     // An anonymous caller gets the not-found mask on reads and mutations
     // alike — team names must not become an existence probe.

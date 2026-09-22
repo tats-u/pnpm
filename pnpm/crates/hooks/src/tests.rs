@@ -66,7 +66,12 @@ async fn checksum_free_hooks_still_run_their_hooks() {
 
 #[tokio::test]
 async fn checksum_free_hooks_contribute_no_checksum() {
-    assert_eq!(wrapped().calculate_pnpmfile_checksum().await, None);
+    assert_eq!(
+        wrapped()
+            .calculate_pnpmfile_checksum()
+            .await,
+        None
+    );
 }
 
 /// Pins the bound on [`ChecksumFreeHooks`]: it suppresses the checksum

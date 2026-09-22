@@ -247,7 +247,12 @@ where
         node.children
             .iter()
             .map(|(alias, child_key)| {
-                (alias.as_str(), cache.get(child_key).map_or("", String::as_str))
+                (
+                    alias.as_str(),
+                    cache
+                        .get(child_key)
+                        .map_or("", String::as_str),
+                )
             })
             .collect()
     } else {

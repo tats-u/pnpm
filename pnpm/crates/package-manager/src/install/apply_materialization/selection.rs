@@ -21,23 +21,31 @@ pub(super) struct MaterializedState<'a> {
 pub(super) fn select_materialized_state<'a>(
     inputs: &SelectMaterializedStateInputs<'a>,
 ) -> MaterializedState<'a> {
-    let wanted_lockfile = inputs.lockfiles.fresh.or(inputs.lockfiles.wanted);
+    let wanted_lockfile = inputs
+        .lockfiles
+        .fresh
+        .or(inputs.lockfiles.wanted);
     let selected_current_lockfile = wanted_lockfile.and_then(|wanted| {
-        inputs.projects.requested_ids.map(|requested| {
-            crate::materialization_closure(
-                wanted,
-                inputs.workspace_root,
-                requested,
-                inputs.included,
-                inputs.install_skipped,
-            )
-            .lockfile
-        })
+        inputs
+            .projects
+            .requested_ids
+            .map(|requested| {
+                crate::materialization_closure(
+                    wanted,
+                    inputs.workspace_root,
+                    requested,
+                    inputs.included,
+                    inputs.install_skipped,
+                )
+                .lockfile
+            })
     });
     let current_lockfile =
         wanted_lockfile.map(|wanted| materialized_current_lockfile(inputs, wanted));
     let project_anchor_importer_ids = project_anchor_importers(inputs, wanted_lockfile);
-    let project_manifests = inputs.projects.manifests
+    let project_manifests = inputs
+        .projects
+        .manifests
         .iter()
         .filter(|(project_dir, _)| {
             let importer_id =
@@ -85,7 +93,9 @@ pub(super) fn materialized_current_lockfile(
         crate::filter_lockfile_for_current(wanted, inputs.included, inputs.install_skipped)
     } else if let Some(requested_importer_ids) = inputs.projects.requested_ids {
         crate::merge_filtered_current_lockfile(
-            (!inputs.is_inconsistent).then_some(inputs.lockfiles.current).flatten(),
+            (!inputs.is_inconsistent)
+                .then_some(inputs.lockfiles.current)
+                .flatten(),
             wanted,
             requested_importer_ids,
             inputs.included,
@@ -130,12 +140,17 @@ pub(super) async fn link_materialized_projects<Reporter: self::Reporter + 'stati
         crate::link_manifest_link_deps::<Reporter>(
             inputs.workspace_root,
             inputs.materialized_project_manifests,
-            inputs.lockfiles.wanted.and_then(|lockfile| {
-                (!lockfile.importers.is_empty()).then_some(&lockfile.importers)
-            }),
+            inputs
+                .lockfiles
+                .wanted
+                .and_then(|lockfile| {
+                    (!lockfile.importers.is_empty()).then_some(&lockfile.importers)
+                }),
             inputs.manifest_links.workspace_packages,
             inputs.manifest_links.included,
-            inputs.config.modules_dir
+            inputs
+                .config
+                .modules_dir
                 .file_name()
                 .unwrap_or_else(|| std::ffi::OsStr::new("node_modules")),
             &crate::shim_link_options(inputs.config, inputs.node_linker),
@@ -180,7 +195,8 @@ pub(super) async fn package_map_engine_name(
 ) -> Option<String> {
     let runtime_major =
         crate::install_frozen_lockfile::find_runtime_node_major(current.snapshots.as_ref());
-    let configured_major = config.node_version
+    let configured_major = config
+        .node_version
         .as_deref()
         .and_then(crate::install_frozen_lockfile::parse_major_from_version);
     match runtime_major.or(configured_major) {

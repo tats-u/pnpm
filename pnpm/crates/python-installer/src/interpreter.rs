@@ -94,7 +94,8 @@ impl<'a> Interpreters<'a> {
         manifest: &Manifest,
     ) -> Result<Arc<Interpreter>> {
         let requires_python = requires_python(root, manifest)?;
-        self.select_accepting::<Reporter>(root, requires_python.as_ref()).await
+        self.select_accepting::<Reporter>(root, requires_python.as_ref())
+            .await
     }
 
     /// The interpreter that installs the projects sharing the environment
@@ -107,10 +108,14 @@ impl<'a> Interpreters<'a> {
         requires_python: Option<&pep440_rs::VersionSpecifiers>,
     ) -> Result<Arc<Interpreter>> {
         if self.config.python.executable.is_some() {
-            return self.configured::<Reporter>(root, requires_python).await;
+            return self
+                .configured::<Reporter>(root, requires_python)
+                .await;
         }
         let request = self.version_request::<Reporter>(root)?;
-        let found = self.search(requires_python, request.as_ref()).await;
+        let found = self
+            .search(requires_python, request.as_ref())
+            .await;
         if let Search::Accepted(interpreter) = found {
             return Ok(interpreter);
         }
@@ -123,7 +128,10 @@ impl<'a> Interpreters<'a> {
             request: request.as_ref(),
             any_version: matches!(found, Search::None | Search::Unaccepted(_)),
         };
-        if let Some(interpreter) = self.install::<Reporter>(root, install).await? {
+        if let Some(interpreter) = self
+            .install::<Reporter>(root, install)
+            .await?
+        {
             return Ok(interpreter);
         }
         self.fall_back::<Reporter>(root, found, requires_python, request.as_ref())
@@ -149,7 +157,10 @@ impl<'a> Interpreters<'a> {
                     message: format!(
                         "Installing {} with Python {}: {} asks for Python {}, which was not found",
                         root.display(),
-                        interpreter.target.environment.python_full_version(),
+                        interpreter
+                            .target
+                            .environment
+                            .python_full_version(),
                         request.file.display(),
                         request.version(),
                     ),
@@ -161,7 +172,10 @@ impl<'a> Interpreters<'a> {
         };
         let accepted = mismatch::accepted::<Reporter>(
             root,
-            interpreter.target.environment.python_full_version(),
+            interpreter
+                .target
+                .environment
+                .python_full_version(),
             requires_python.expect("only a declared range can go unmet"),
             Mismatch::of(self.config),
         );
@@ -183,11 +197,7 @@ impl<'a> Interpreters<'a> {
         if !download::allowed(self.config) {
             return Ok(None);
         }
-        let Install {
-            requires_python,
-            request,
-            any_version,
-        } = install;
+        let Install { requires_python, request, any_version } = install;
         let exact = download::exact_version(requires_python, request);
         let releases =
             download::Releases::read_from(self.config, self.client, self.source, exact.as_ref())
@@ -206,7 +216,9 @@ impl<'a> Interpreters<'a> {
             level: LogLevel::Info,
             message: format!("Installing Python {} for {}", build.version(), root.display()),
         }));
-        let command = build.install(self.config, self.client).await?;
+        let command = build
+            .install(self.config, self.client)
+            .await?;
         match self.probe(&command).await {
             Probe::Usable(interpreter) => Ok(Some(Arc::clone(interpreter))),
             Probe::Unusable(reason) => bail!("{reason}"),
@@ -220,8 +232,12 @@ impl<'a> Interpreters<'a> {
         root: &Path,
         requires_python: Option<&pep440_rs::VersionSpecifiers>,
     ) -> Result<Arc<Interpreter>> {
-        let executable =
-            self.config.python.executable.as_ref().expect("the workspace names an interpreter");
+        let executable = self
+            .config
+            .python
+            .executable
+            .as_ref()
+            .expect("the workspace names an interpreter");
         let command = InterpreterCommand::program(executable);
         let interpreter = match self.probe(&command).await {
             Probe::Usable(interpreter) => Arc::clone(interpreter),
@@ -245,7 +261,9 @@ impl<'a> Interpreters<'a> {
         let mut fallbacks = Fallbacks::default();
         for round in [Round::Named, Round::Scanned] {
             for command in self.candidates(round, request).await {
-                let found = self.consider(&command, requires_python, request).await;
+                let found = self
+                    .consider(&command, requires_python, request)
+                    .await;
                 if let Search::Accepted(interpreter) = found {
                     return Search::Accepted(interpreter);
                 }
@@ -265,7 +283,10 @@ impl<'a> Interpreters<'a> {
     ) -> Search {
         let Probe::Usable(interpreter) = self.probe(command).await else { return Search::None };
         let interpreter = Arc::clone(interpreter);
-        let version = interpreter.target.environment.python_full_version();
+        let version = interpreter
+            .target
+            .environment
+            .python_full_version();
         if requires_python.is_some_and(|specifiers| !specifiers.contains(version)) {
             return Search::Unaccepted(interpreter);
         }
@@ -284,10 +305,17 @@ impl<'a> Interpreters<'a> {
     ) -> Vec<InterpreterCommand> {
         if matches!(round, Round::Scanned) {
             if self.scanned.is_none() {
-                let installed = self.config.store_dir.root().join("python");
+                let installed = self
+                    .config
+                    .store_dir
+                    .root()
+                    .join("python");
                 self.scanned = Some(scan_for_interpreters(&self.path, &installed).await);
             }
-            return self.scanned.clone().expect("the machine was just scanned");
+            return self
+                .scanned
+                .clone()
+                .expect("the machine was just scanned");
         }
         Self::named(request)
             .into_iter()
@@ -318,7 +346,8 @@ impl<'a> Interpreters<'a> {
     /// Probe an interpreter, at most once per install. It reports what it
     /// is, and what every environment the project locks for resolves as.
     async fn probe(&mut self, command: &InterpreterCommand) -> &Probe {
-        let mut index = self.probed
+        let mut index = self
+            .probed
             .iter()
             .position(|(probed, _)| probed == command);
         if index.is_none() {
@@ -337,7 +366,8 @@ impl<'a> Interpreters<'a> {
                 Ok(interpreter) => Probe::Usable(Arc::new(interpreter)),
                 Err(error) => Probe::Unusable(format!("{command}: {error}")),
             };
-            self.probed.push((command.clone(), probe));
+            self.probed
+                .push((command.clone(), probe));
             index = Some(self.probed.len() - 1);
         }
         &self.probed[index.expect("the interpreter was just probed")].1
@@ -365,7 +395,8 @@ impl<'a> Interpreters<'a> {
         request: Option<&VersionRequest>,
     ) -> String {
         if let Some((_, Probe::Unusable(reason))) = self.probed.first()
-            && self.probed
+            && self
+                .probed
                 .iter()
                 .all(|(_, probe)| matches!(probe, Probe::Unusable(_)))
         {
@@ -384,7 +415,10 @@ impl<'a> Interpreters<'a> {
                 Probe::Usable(interpreter) => write!(
                     report,
                     "\n  {command} is Python {}",
-                    interpreter.target.environment.python_full_version(),
+                    interpreter
+                        .target
+                        .environment
+                        .python_full_version(),
                 ),
                 Probe::Unusable(_) => write!(report, "\n  {command} did not run"),
             }
@@ -436,7 +470,8 @@ fn requires_python(
     root: &Path,
     manifest: &Manifest,
 ) -> Result<Option<pep440_rs::VersionSpecifiers>> {
-    manifest.project
+    manifest
+        .project
         .as_ref()
         .and_then(|project| project.requires_python.as_deref())
         .map(str::parse)

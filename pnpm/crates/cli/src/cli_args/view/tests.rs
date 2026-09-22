@@ -7,7 +7,9 @@ use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 
 fn utc(rfc3339: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(rfc3339).expect("valid timestamp").with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(rfc3339)
+        .expect("valid timestamp")
+        .with_timezone(&Utc)
 }
 
 #[test]

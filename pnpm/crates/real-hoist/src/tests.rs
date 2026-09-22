@@ -23,7 +23,8 @@ fn pkg_name(name: &str) -> PkgName {
 }
 
 fn ver_peer(spec: &str) -> PkgVerPeer {
-    spec.parse::<PkgVerPeer>().expect("parse PkgVerPeer")
+    spec.parse::<PkgVerPeer>()
+        .expect("parse PkgVerPeer")
 }
 
 fn dep_key(name: &str, version: &str) -> PkgNameVerPeer {

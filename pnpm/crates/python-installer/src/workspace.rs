@@ -38,7 +38,8 @@ pub(super) struct LocalProject {
 /// entry for is left out, and a resolution that needs it fails as stale
 /// rather than reaching past what was locked.
 pub(super) fn offer_locked(packages: &mut Packages, local: &[LocalProject], lock: &Lockfile) {
-    let locked = lock.packages
+    let locked = lock
+        .packages
         .iter()
         .map(|package| package.name.clone())
         .collect::<BTreeSet<_>>();
@@ -156,7 +157,9 @@ impl Workspace {
             shared: BTreeMap::new(),
             selection: None,
         };
-        workspace.with_scopes(projects)?.with_shared(projects)
+        workspace
+            .with_scopes(projects)?
+            .with_shared(projects)
     }
 
     pub(super) fn update_manifests(&mut self, projects: &[(PathBuf, Arc<Manifest>)]) {
@@ -173,7 +176,8 @@ impl Workspace {
     ) {
         self.selection = Some(Selection {
             config,
-            environments: environments.list
+            environments: environments
+                .list
                 .iter()
                 .map(|environment| environment.target.environment.clone())
                 .collect(),
@@ -187,7 +191,8 @@ impl Workspace {
     /// Without such a table there is no declared workspace, and every
     /// project pnpm discovered is one pnpm may link.
     fn with_scopes(mut self, projects: &[(PathBuf, Arc<Manifest>)]) -> Result<Self> {
-        let every = self.roots
+        let every = self
+            .roots
             .keys()
             .cloned()
             .collect::<BTreeSet<_>>();
@@ -195,16 +200,15 @@ impl Workspace {
             let members = match Self::declaring_root(root, projects) {
                 Some((declared_in, declaration, manifest)) => {
                     if declared_in != *root {
-                        self.inherited.insert(
-                            root.clone(),
-                            (declared_in.clone(), Arc::clone(manifest)),
-                        );
+                        self.inherited
+                            .insert(root.clone(), (declared_in.clone(), Arc::clone(manifest)));
                     }
                     members_of(&declared_in, declaration, projects)
                 }
                 None => every.clone(),
             };
-            self.declared.insert(root.clone(), members);
+            self.declared
+                .insert(root.clone(), members);
         }
         Ok(self)
     }
@@ -212,7 +216,8 @@ impl Workspace {
     /// Where the project declaring `name` is, for a project at `root` that
     /// may depend on it.
     pub(super) fn member(&self, name: &PackageName, root: &Path) -> Result<Option<&Path>> {
-        if !self.declared
+        if !self
+            .declared
             .get(root)
             .is_some_and(|members| members.contains(name))
         {

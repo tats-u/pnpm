@@ -33,13 +33,17 @@ async fn pipeline_surface_records_lists_and_serves_runs_append_only() {
     for (workspace, reader, writer) in
         [("demo-abc123", "alice", "alice"), ("hidden", "bob", "bob"), ("read-only", "alice", "bob")]
     {
-        config.features.pipeline.workspaces.insert(
-            workspace.to_string(),
-            pnpr_config::StorageAccess {
-                access: pnpr_policy::AccessList::from_tokens([reader]),
-                publish: pnpr_policy::AccessList::from_tokens([writer]),
-            },
-        );
+        config
+            .features
+            .pipeline
+            .workspaces
+            .insert(
+                workspace.to_string(),
+                pnpr_config::StorageAccess {
+                    access: pnpr_policy::AccessList::from_tokens([reader]),
+                    publish: pnpr_policy::AccessList::from_tokens([writer]),
+                },
+            );
     }
     config.identity.auth.htpasswd.max_users = MaxUsers::Unlimited;
     let app = router(config);
@@ -201,7 +205,11 @@ async fn pipeline_surface_records_lists_and_serves_runs_append_only() {
     let listed = body_json(listed.into_body()).await;
     assert_eq!(listed["runs"][0]["runId"], "100-default");
     assert_eq!(listed["runs"][0]["summary"]["pipeline"], "default");
-    assert!(listed["runs"][0].get("events").is_none());
+    assert!(
+        listed["runs"][0]
+            .get("events")
+            .is_none()
+    );
 
     let fetched = app
         .clone()
@@ -250,7 +258,9 @@ async fn cors_allows_only_configured_origins_and_handles_preflight() {
         .await
         .unwrap();
     assert_eq!(
-        allowed.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
+        allowed
+            .headers()
+            .get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
         Some(&HeaderValue::from_static("https://npmx.example")),
     );
     let vary = allowed
@@ -259,10 +269,11 @@ async fn cors_allows_only_configured_origins_and_handles_preflight() {
         .unwrap()
         .to_str()
         .unwrap();
-    assert!(
-        vary.split(',')
-            .any(|header| header.trim().eq_ignore_ascii_case("origin")),
-    );
+    assert!(vary.split(',').any(|header| {
+        header
+            .trim()
+            .eq_ignore_ascii_case("origin")
+    }),);
 
     let missing = app
         .clone()
@@ -276,7 +287,9 @@ async fn cors_allows_only_configured_origins_and_handles_preflight() {
         .unwrap();
     assert_eq!(missing.status(), StatusCode::NOT_FOUND);
     assert_eq!(
-        missing.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
+        missing
+            .headers()
+            .get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
         Some(&HeaderValue::from_static("https://npmx.example")),
     );
 
@@ -312,7 +325,9 @@ async fn cors_allows_only_configured_origins_and_handles_preflight() {
         .unwrap();
     assert_eq!(preflight.status(), StatusCode::OK);
     assert_eq!(
-        preflight.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
+        preflight
+            .headers()
+            .get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
         Some(&HeaderValue::from_static("https://npmx.example")),
     );
     let allowed_headers = preflight
@@ -324,6 +339,8 @@ async fn cors_allows_only_configured_origins_and_handles_preflight() {
     assert!(
         allowed_headers
             .split(',')
-            .any(|header| header.trim().eq_ignore_ascii_case("authorization")),
+            .any(|header| header
+                .trim()
+                .eq_ignore_ascii_case("authorization")),
     );
 }

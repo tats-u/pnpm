@@ -11,13 +11,8 @@ use assert_cmd::{assert::OutputAssertExt, cargo::CommandCargoExt};
 /// value (pnpm/pnpm#14553).
 #[test]
 fn prod_takes_an_explicit_boolean_value() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -35,7 +30,9 @@ fn prod_takes_an_explicit_boolean_value() {
         .assert()
         .success();
     assert!(
-        workspace.join("node_modules/@pnpm.e2e/bar/package.json").exists(),
+        workspace
+            .join("node_modules/@pnpm.e2e/bar/package.json")
+            .exists(),
         "--prod=false must install devDependencies",
     );
 
@@ -44,11 +41,15 @@ fn prod_takes_an_explicit_boolean_value() {
         .assert()
         .success();
     assert!(
-        !workspace.join("node_modules/@pnpm.e2e/bar").exists(),
+        !workspace
+            .join("node_modules/@pnpm.e2e/bar")
+            .exists(),
         "--prod=true must drop the dev dependency",
     );
     assert!(
-        workspace.join("node_modules/@pnpm.e2e/foo/package.json").exists(),
+        workspace
+            .join("node_modules/@pnpm.e2e/foo/package.json")
+            .exists(),
         "the prod dependency must stay installed",
     );
 
@@ -59,13 +60,8 @@ fn prod_takes_an_explicit_boolean_value() {
 /// lifecycle scripts during a production install (pnpm/pnpm#14864).
 #[test]
 fn prod_install_does_not_run_dev_dependency_postinstall() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // The script's cwd is the package's materialized virtual-store
@@ -126,7 +122,9 @@ fn prod_install_does_not_run_dev_dependency_postinstall() {
         .success();
 
     assert!(
-        !workspace.join("dev-postinstall-ran").exists(),
+        !workspace
+            .join("dev-postinstall-ran")
+            .exists(),
         "a dev-only package must not run its postinstall during install --prod",
     );
     // Without this, the assertion above would also hold for an install
@@ -146,13 +144,8 @@ fn prod_install_does_not_run_dev_dependency_postinstall() {
 
 #[test]
 fn no_optional_excludes_transitive_optional_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // `@pnpm.e2e/pkg-with-good-optional` is a prod dependency whose own
@@ -177,11 +170,15 @@ fn no_optional_excludes_transitive_optional_dependencies() {
 
     let virtual_store = workspace.join("node_modules/.pnpm");
     assert!(
-        virtual_store.join("@pnpm.e2e+pkg-with-good-optional@1.0.0").exists(),
+        virtual_store
+            .join("@pnpm.e2e+pkg-with-good-optional@1.0.0")
+            .exists(),
         "the prod dependency must be installed",
     );
     assert!(
-        !virtual_store.join("is-positive@1.0.0").exists(),
+        !virtual_store
+            .join("is-positive@1.0.0")
+            .exists(),
         "--no-optional must not materialize the transitive optional dependency",
     );
 
@@ -208,7 +205,9 @@ fn no_optional_excludes_transitive_optional_dependencies() {
         .assert()
         .success();
     assert!(
-        virtual_store.join("is-positive@1.0.0").exists(),
+        virtual_store
+            .join("is-positive@1.0.0")
+            .exists(),
         "a normal install must restore the previously excluded optional dependency",
     );
 
@@ -217,13 +216,8 @@ fn no_optional_excludes_transitive_optional_dependencies() {
 
 #[test]
 fn fresh_isolated_install_rejects_required_incompatible_engine_in_strict_mode() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_required_incompatible_engine_fixture(&workspace, true);
@@ -248,13 +242,8 @@ fn fresh_isolated_install_rejects_required_incompatible_engine_in_strict_mode() 
 
 #[test]
 fn fresh_isolated_install_allows_required_incompatible_engine_without_strict_mode() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_required_incompatible_engine_fixture(&workspace, false);
@@ -269,18 +258,9 @@ fn fresh_isolated_install_allows_required_incompatible_engine_without_strict_mod
 
 #[test]
 fn store_dir_cli_option_overrides_config_and_resolves_from_dir() {
-    let CommandTempCwd {
-        mut pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
-    let AddMockedRegistry {
-        store_dir: configured_store_dir,
-        mock_instance,
-        ..
-    } = npmrc_info;
+    let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
+    let AddMockedRegistry { store_dir: configured_store_dir, mock_instance, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
     let package_json_content = serde_json::json!({
@@ -298,7 +278,9 @@ fn store_dir_cli_option_overrides_config_and_resolves_from_dir() {
         .assert()
         .success();
 
-    let cli_store_dir = workspace.join("cli-store").join(STORE_VERSION);
+    let cli_store_dir = workspace
+        .join("cli-store")
+        .join(STORE_VERSION);
     eprintln!("CLI store must be resolved from --dir and populated: {cli_store_dir:?}");
     assert!(cli_store_dir.join("index.db").is_file());
 
@@ -316,13 +298,8 @@ fn store_dir_cli_option_overrides_config_and_resolves_from_dir() {
 #[cfg(unix)]
 #[test]
 fn store_dir_cli_option_updates_derived_global_virtual_store() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     enable_gvs_in_workspace_yaml(&workspace, "");
@@ -340,9 +317,15 @@ fn store_dir_cli_option_updates_derived_global_virtual_store() {
         .success();
 
     let symlink_path = workspace.join("node_modules/@pnpm.e2e/hello-world-js-bin-parent");
-    let canonical = symlink_path.pipe(fs::canonicalize).expect("canonicalize symlink");
-    let cli_store_dir = workspace.join("cli-store").join(STORE_VERSION);
-    let canonical_store = cli_store_dir.pipe(fs::canonicalize).expect("canonicalize CLI store");
+    let canonical = symlink_path
+        .pipe(fs::canonicalize)
+        .expect("canonicalize symlink");
+    let cli_store_dir = workspace
+        .join("cli-store")
+        .join(STORE_VERSION);
+    let canonical_store = cli_store_dir
+        .pipe(fs::canonicalize)
+        .expect("canonicalize CLI store");
     let gvs_root = canonical_store.join("links");
     eprintln!("Derived global virtual store must follow the CLI store: {gvs_root:?}");
     assert!(
@@ -355,13 +338,8 @@ fn store_dir_cli_option_updates_derived_global_virtual_store() {
 
 #[test]
 fn install_resolves_env_var_in_user_npmrc_registry() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, npmrc_path, .. } = npmrc_info;
 
     let mocked_registry_url = mock_instance.url();
@@ -403,21 +381,14 @@ fn install_resolves_env_var_in_user_npmrc_registry() {
 
 #[test]
 fn install_ignores_env_var_in_project_npmrc_registry() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, npmrc_path, .. } = npmrc_info;
 
     let mocked_registry_url = mock_instance.url();
     let original = fs::read_to_string(&npmrc_path).expect("read .npmrc");
-    let patched = original.replace(
-        &format!("registry={mocked_registry_url}"),
-        "registry=${PACQUET_TEST_REGISTRY}",
-    );
+    let patched = original
+        .replace(&format!("registry={mocked_registry_url}"), "registry=${PACQUET_TEST_REGISTRY}");
     eprintln!("npmrc_path={npmrc_path:?}\noriginal_npmrc={original:?}\npatched_npmrc={patched:?}");
     assert_ne!(original, patched, ".npmrc layout drifted; update this test");
     fs::write(&npmrc_path, &patched).expect("rewrite .npmrc");
@@ -468,13 +439,8 @@ fn install_ignores_env_var_in_project_npmrc_registry() {
 #[cfg(unix)]
 #[test]
 fn fresh_install_honors_enable_global_virtual_store() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     enable_gvs_in_workspace_yaml(&workspace, "");
@@ -497,16 +463,24 @@ fn fresh_install_honors_enable_global_virtual_store() {
     eprintln!("Direct-dep symlink must resolve under <store_dir>/v11/links/...");
     let symlink_path = workspace.join("node_modules/@pnpm.e2e/hello-world-js-bin-parent");
     assert!(is_symlink_or_junction(&symlink_path).unwrap());
-    let canonical = symlink_path.pipe(fs::canonicalize).expect("canonicalize symlink");
-    let canonical_store = store_dir.pipe(fs::canonicalize).expect("canonicalize store_dir");
-    let gvs_root = canonical_store.join("v11").join("links");
+    let canonical = symlink_path
+        .pipe(fs::canonicalize)
+        .expect("canonicalize symlink");
+    let canonical_store = store_dir
+        .pipe(fs::canonicalize)
+        .expect("canonicalize store_dir");
+    let gvs_root = canonical_store
+        .join("v11")
+        .join("links");
     assert!(
         canonical.starts_with(&gvs_root),
         "expected the package directory to live under {gvs_root:?}, got {canonical:?}",
     );
 
     eprintln!("Project must be registered under <store_dir>/v11/projects/...");
-    let projects_dir = canonical_store.join("v11").join("projects");
+    let projects_dir = canonical_store
+        .join("v11")
+        .join("projects");
     let projects_entries =
         fs::read_dir(&projects_dir).expect("v11/projects must exist after a GVS install");
     let project_count = projects_entries.count();
@@ -528,13 +502,8 @@ fn fresh_install_honors_enable_global_virtual_store() {
 /// `frozenLockfile`, so only a plain install reaches this one.
 #[test]
 fn virtual_store_only_install_under_pnp_does_not_write_the_loader() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { store_dir, mock_instance, .. } = npmrc_info;
 
     // Append: the harness's own workspace manifest carries `storeDir` /
@@ -591,13 +560,8 @@ fn store_holds(workspace: &std::path::Path, (name, version): (&str, &str)) -> bo
 /// `install::lockfile` covers the other half, that the lockfile keeps recording
 /// every group (pnpm/pnpm#14912).
 fn assert_prod_install_downloads_no_dev_only_package(extra_install_args: &[&str]) {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(

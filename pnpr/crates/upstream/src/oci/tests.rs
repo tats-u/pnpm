@@ -55,8 +55,10 @@ async fn negotiates_pull_scope_and_reuses_token_without_forwarding_client_scope(
         &UpstreamConfig::with_defaults(format!("{}/", server.url()), HeaderMap::new()),
     );
     for _ in 0..2 {
-        let FetchOutcome::Ok(response) =
-            upstream.fetch_oci("acme/app", "manifests/latest", "application/json").await.unwrap()
+        let FetchOutcome::Ok(response) = upstream
+            .fetch_oci("acme/app", "manifests/latest", "application/json")
+            .await
+            .unwrap()
         else {
             panic!("expected manifest")
         };
@@ -94,7 +96,12 @@ async fn rejects_an_untrusted_token_realm_without_contacting_it() {
         "registry",
         &UpstreamConfig::with_defaults(format!("{}/", server.url()), headers),
     );
-    assert!(upstream.fetch_oci("acme/app", "manifests/latest", "application/json").await.is_err());
+    assert!(
+        upstream
+            .fetch_oci("acme/app", "manifests/latest", "application/json")
+            .await
+            .is_err()
+    );
     challenge.assert_async().await;
     stolen.assert_async().await;
 }

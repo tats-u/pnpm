@@ -46,7 +46,9 @@ pub fn integrity_addressed_tarball_integrity(digest: &str) -> Option<Integrity> 
     if bytes.len() != 64 || URL_SAFE_NO_PAD.encode(&bytes) != digest {
         return None;
     }
-    format!("sha512-{}", BASE64.encode(bytes)).parse().ok()
+    format!("sha512-{}", BASE64.encode(bytes))
+        .parse()
+        .ok()
 }
 
 /// Compute the `sha256-<base64>` digest of `input`.

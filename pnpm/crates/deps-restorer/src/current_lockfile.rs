@@ -72,14 +72,16 @@ pub fn materialization_closure(
         .iter()
         .map(PackageKey::without_peer)
         .collect::<HashSet<_>>();
-    let importers = lockfile.importers
+    let importers = lockfile
+        .importers
         .iter()
         .filter(|(id, _)| reachable.importer_ids.contains(*id))
         .map(|(id, importer)| {
             (id.clone(), filter_importer(importer, included, &reachable.snapshot_keys))
         })
         .collect();
-    let snapshots = lockfile.snapshots
+    let snapshots = lockfile
+        .snapshots
         .as_ref()
         .map(|snapshots| {
             snapshots
@@ -117,13 +119,14 @@ pub fn merge_filtered_wanted_lockfile(
     selected_importer_ids: &HashSet<String>,
     workspace_root: &Path,
 ) -> Result<Lockfile, MergeFilteredWantedLockfileError> {
-    let can_reuse_unselected_importers = previous_wanted.is_some_and(|previous| {
-        resolution_inputs_match(previous, &freshly_resolved)
-    });
+    let can_reuse_unselected_importers = previous_wanted
+        .is_some_and(|previous| resolution_inputs_match(previous, &freshly_resolved));
     let mut fresh_importers = std::mem::take(&mut freshly_resolved.importers);
     let fresh_packages = freshly_resolved.packages.take();
     let fresh_snapshots = freshly_resolved.snapshots.take();
-    let mut importer_ids = real_importer_ids.iter().collect::<Vec<_>>();
+    let mut importer_ids = real_importer_ids
+        .iter()
+        .collect::<Vec<_>>();
     importer_ids.sort();
     freshly_resolved.importers = importer_ids
         .into_iter()
@@ -193,7 +196,10 @@ pub fn merge_filtered_current_lockfile(
     let merged = overlay_lockfiles(wanted, previous_current, retained, selected.lockfile);
     let mut final_lockfile = full_closure(&merged, workspace_root);
     if let Some(selected_packages) = selected_packages {
-        final_lockfile.packages.get_or_insert_default().extend(selected_packages);
+        final_lockfile
+            .packages
+            .get_or_insert_default()
+            .extend(selected_packages);
     }
     restore_skipped_package_metadata(&mut final_lockfile, &merged, skipped);
     final_lockfile
@@ -206,7 +212,8 @@ fn retained_closure(
     selected_importer_ids: &HashSet<String>,
     workspace_root: &Path,
 ) -> Lockfile {
-    let retained_importers = previous_current.importers
+    let retained_importers = previous_current
+        .importers
         .iter()
         .filter(|(importer_id, _)| !selected_importer_ids.contains(*importer_id))
         .map(|(importer_id, importer)| (importer_id.clone(), importer.clone()))
@@ -248,7 +255,8 @@ fn overlay_lockfiles(
 
 /// The closure over every importer and dependency group of `lockfile`.
 fn full_closure(lockfile: &Lockfile, workspace_root: &Path) -> Lockfile {
-    let importer_ids = lockfile.importers
+    let importer_ids = lockfile
+        .importers
         .keys()
         .cloned()
         .collect();
@@ -355,9 +363,13 @@ fn lockfile_with_graph(
         settings: source.settings.clone(),
         catalogs: source.catalogs.clone(),
         overrides: source.overrides.clone(),
-        package_extensions_checksum: source.package_extensions_checksum.clone(),
+        package_extensions_checksum: source
+            .package_extensions_checksum
+            .clone(),
         pnpmfile_checksum: source.pnpmfile_checksum.clone(),
-        ignored_optional_dependencies: source.ignored_optional_dependencies.clone(),
+        ignored_optional_dependencies: source
+            .ignored_optional_dependencies
+            .clone(),
         patched_dependencies: source.patched_dependencies.clone(),
         importers,
         packages,
@@ -383,7 +395,8 @@ pub fn filter_lockfile_for_current(
     included: IncludedDependencies,
     skipped: &SkippedSnapshots,
 ) -> Lockfile {
-    let all_importer_ids = lockfile.importers
+    let all_importer_ids = lockfile
+        .importers
         .keys()
         .cloned()
         .collect();
@@ -446,7 +459,8 @@ fn reachable_package_metadata(
     lockfile: &Lockfile,
     reachable: &HashSet<PackageKey>,
 ) -> Option<HashMap<PackageKey, pnpm_lockfile::PackageMetadata>> {
-    lockfile.packages
+    lockfile
+        .packages
         .as_ref()
         .map(|packages| {
             packages

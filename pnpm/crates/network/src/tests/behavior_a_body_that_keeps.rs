@@ -28,7 +28,10 @@ async fn a_body_that_keeps_arriving_outlives_the_fetch_timeout() {
         .send()
         .await
         .expect("the mock server responds");
-    let body = response.bytes().await.expect("a body that keeps arriving must not time out");
+    let body = response
+        .bytes()
+        .await
+        .expect("a body that keeps arriving must not time out");
 
     assert_eq!(body.len(), CHUNKS * "chunk".len());
     mock.assert_async().await;
@@ -55,7 +58,10 @@ async fn a_stalled_body_fails_after_the_fetch_timeout() {
         .send()
         .await
         .expect("the mock server responds");
-    let error = response.bytes().await.expect_err("a stalled body must time out");
+    let error = response
+        .bytes()
+        .await
+        .expect_err("a stalled body must time out");
 
     assert!(error.is_timeout(), "got {error:?}");
 }
@@ -160,7 +166,9 @@ async fn max_sockets_caps_concurrent_sockets_per_origin() {
     use std::time::Duration;
 
     let client = ThrottledClient::new_for_installs().with_max_sockets_per_host(Some(1));
-    let held = client.acquire_for_url("https://registry.example.com/a").await;
+    let held = client
+        .acquire_for_url("https://registry.example.com/a")
+        .await;
 
     // A second socket to the same origin must wait for `held` to drop.
     let blocked = tokio::time::timeout(
@@ -195,7 +203,9 @@ async fn no_max_sockets_leaves_per_origin_uncapped() {
     use std::time::Duration;
 
     let client = ThrottledClient::new_for_installs();
-    let _g1 = client.acquire_for_url("https://registry.example.com/a").await;
+    let _g1 = client
+        .acquire_for_url("https://registry.example.com/a")
+        .await;
     tokio::time::timeout(
         Duration::from_millis(150),
         client.acquire_for_url("https://registry.example.com/b"),
@@ -222,7 +232,11 @@ async fn stalled_consumers_release_permits_on_deadline_or_cancellation() {
         let guard = client.acquire_for_url(&url).await;
         let response = guard.get(&url).send().await.unwrap();
         let budget = if cancel { Duration::from_secs(30) } else { Duration::from_millis(100) };
-        let mut stream = Box::pin(guard.retain_for_body(response, budget).bytes_stream());
+        let mut stream = Box::pin(
+            guard
+                .retain_for_body(response, budget)
+                .bytes_stream(),
+        );
         stream.next().await.unwrap().unwrap();
         assert!(
             tokio::time::timeout(Duration::from_millis(20), client.acquire_for_url(&url))

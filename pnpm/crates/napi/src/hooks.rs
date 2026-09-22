@@ -80,7 +80,11 @@ impl PnpmfileHooks for JsReadPackageHook {
         pkg: Value,
         ctx: HookContext,
     ) -> Result<ReadPackageResult, HookError> {
-        match self.read_package.call_async(FnArgs::from((pkg, ctx.dir))).await {
+        match self
+            .read_package
+            .call_async(FnArgs::from((pkg, ctx.dir)))
+            .await
+        {
             Ok(transformed) => Ok(Arc::new(transformed)),
             Err(error) => Err(HookError::Execution {
                 pnpmfile: "<napi readPackage>".to_string(),
@@ -157,7 +161,8 @@ impl JsBatchedReadPackageHook {
 
     fn ensure_driver(&self) {
         self.driver_started.call_once(|| {
-            let (rx, sink) = self.driver_seed
+            let (rx, sink) = self
+                .driver_seed
                 .lock()
                 .expect("driver seed lock")
                 .take()
@@ -194,7 +199,10 @@ async fn run_hook_batch(sink: &BatchHookSink, batch: Vec<BatchHookRequest>) {
         replies.push(request.reply);
     }
 
-    let results = match sink.call_async(FnArgs::from((manifests, dirs))).await {
+    let results = match sink
+        .call_async(FnArgs::from((manifests, dirs)))
+        .await
+    {
         Ok(results) if results.len() == replies.len() => results,
         Ok(results) => {
             let message = format!(

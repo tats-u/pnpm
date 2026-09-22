@@ -66,7 +66,10 @@ pub(super) fn check_requires_python<Reporter: self::Reporter + 'static>(
     requires_python: Option<&pep440_rs::VersionSpecifiers>,
     mismatch: Mismatch,
 ) -> Result<()> {
-    let version = interpreter.target.environment.python_full_version();
+    let version = interpreter
+        .target
+        .environment
+        .python_full_version();
     let Some(specifiers) = requires_python.filter(|specifiers| !specifiers.contains(version))
     else {
         return Ok(());

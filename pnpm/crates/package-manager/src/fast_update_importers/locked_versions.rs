@@ -135,7 +135,11 @@ pub(super) fn locked_candidate(
     if &key.name != alias {
         return LockedCandidate::Ignored;
     }
-    if key.suffix.registry_qualified().is_some() {
+    if key
+        .suffix
+        .registry_qualified()
+        .is_some()
+    {
         return LockedCandidate::Unsupported;
     }
     let Some(version) = key.suffix.version_semver() else {

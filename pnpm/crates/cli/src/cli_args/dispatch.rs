@@ -116,19 +116,30 @@ impl CliArgs {
     /// path fails with a proper diagnostic in [`Self::run`], and the
     /// reporter only uses it to shorten the paths it prints.
     pub fn configure_reporter(&self) {
-        if let Some(color) = self.output.presentation.color.or_else(|| {
-            self.output.presentation.no_color.then_some(ColorMode::Never)
-        }) {
+        if let Some(color) = self
+            .output
+            .presentation
+            .color
+            .or_else(|| {
+                self.output
+                    .presentation
+                    .no_color
+                    .then_some(ColorMode::Never)
+            })
+        {
             configure_color(color);
         }
-        let dir = dunce::canonicalize(&self.paths.dir)
-            .unwrap_or_else(|_| self.paths.dir.clone());
+        let dir = dunce::canonicalize(&self.paths.dir).unwrap_or_else(|_| self.paths.dir.clone());
         pnpm_default_reporter::set_progress(self.progress_enabled(true));
         configure_default_reporter(&DefaultReporterSetup {
             reporter: self.effective_reporter(),
             dir: &dir,
-            summary_scope: self.command.default_reporter_summary_scope(),
-            reports_scope: self.command.reports_scope(self.workspace.recursive),
+            summary_scope: self
+                .command
+                .default_reporter_summary_scope(),
+            reports_scope: self
+                .command
+                .reports_scope(self.workspace.recursive),
             hide_added_pkgs_progress: false,
             is_recursive: self.workspace.recursive,
             lifecycle: crate::cli_args::reporter::LifecycleReporterSetup {
@@ -187,8 +198,16 @@ impl CliArgs {
         let CliCommand::Install(install_args) = &self.command else {
             return false;
         };
-        if !self.workspace.selection.filter.is_empty()
-            || !self.workspace.selection.filter_prod.is_empty()
+        if !self
+            .workspace
+            .selection
+            .filter
+            .is_empty()
+            || !self
+                .workspace
+                .selection
+                .filter_prod
+                .is_empty()
         {
             return false;
         }
@@ -211,7 +230,10 @@ impl CliArgs {
         if let Some(state_dir) = self.paths.state_dir.as_deref() {
             apply_state_dir_override::<Host>(&mut config, state_dir, &dir);
         }
-        install_args.lockfile.directory.apply_to(&mut config, &dir);
+        install_args
+            .lockfile
+            .directory
+            .apply_to(&mut config, &dir);
         config.progress = self.progress_enabled(config.progress);
         self.configure_reporter();
         pnpm_default_reporter::set_progress(config.progress);
@@ -244,9 +266,9 @@ impl CliArgs {
         let setup = RunSetup::of(&self);
         let command = std::mem::replace(&mut self.command, CliCommand::Recursive);
 
-        let builtin_replaced_by_script =
-            self.run_command(command, config_overrides, builtin_command_forced, &setup, &anchors)
-                .await?;
+        let builtin_replaced_by_script = self
+            .run_command(command, config_overrides, builtin_command_forced, &setup, &anchors)
+            .await?;
 
         // The `Done in ...` footer covers the whole command, mirroring pnpm's
         // `pnpm:execution-time` emit in `main.ts`. Only the install-family
@@ -352,7 +374,10 @@ impl CliArgs {
                 filter: &self.workspace.selection.filter,
                 filter_prod: &self.workspace.selection.filter_prod,
                 workspace_root: self.workspace.selection.workspace_root,
-                fail_if_no_match: self.workspace.selection.fail_if_no_match,
+                fail_if_no_match: self
+                    .workspace
+                    .selection
+                    .fail_if_no_match,
             },
         );
         self.apply_run_output_config(&mut cfg);
@@ -373,7 +398,9 @@ impl CliArgs {
                 use_stderr: cfg.use_stderr || setup.uses_stderr_reporter,
                 stream_output: cfg.stream,
                 aggregate_output: cfg.aggregate_output,
-                hide_prefix: cfg.reporter_hide_prefix.unwrap_or(false),
+                hide_prefix: cfg
+                    .reporter_hide_prefix
+                    .unwrap_or(false),
             },
         });
     }
@@ -399,8 +426,12 @@ impl CliArgs {
             cfg.reverse,
         );
         cfg.include_workspace_root = resolve_bool_override(
-            self.workspace.selection.include_workspace_root,
-            self.workspace.selection.no_include_workspace_root,
+            self.workspace
+                .selection
+                .include_workspace_root,
+            self.workspace
+                .selection
+                .no_include_workspace_root,
             cfg.include_workspace_root,
         );
         apply_output_overrides(
@@ -410,7 +441,9 @@ impl CliArgs {
                 no_reporter_hide_prefix: self.output.lifecycle.no_hide_prefix,
                 workspace_packages: &self.paths.workspace_packages,
                 test_pattern: &self.workspace.selection.test_pattern,
-                changed_files_ignore_pattern: &self.workspace.selection
+                changed_files_ignore_pattern: &self
+                    .workspace
+                    .selection
                     .changed_files_ignore_pattern,
                 workspace_concurrency: self.workspace.ordering.concurrency,
             },

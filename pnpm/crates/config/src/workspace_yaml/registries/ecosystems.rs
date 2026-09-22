@@ -96,7 +96,10 @@ impl DeclaredIndexes {
     pub(super) fn finish(&self) -> Result<(), LoadWorkspaceYamlError> {
         match self.urls.get(&Ecosystem::Cargo) {
             Some(urls) if urls.len() > 1 => Err(LoadWorkspaceYamlError::CargoIndexDeclaredTwice {
-                registries: quote_and_join(urls.iter().map(|index| index.url.as_str())),
+                registries: quote_and_join(
+                    urls.iter()
+                        .map(|index| index.url.as_str()),
+                ),
             }),
             _ => super::python::validate_routes(
                 self.urls
@@ -114,7 +117,12 @@ fn npm_only_field(declaration: &RegistryDeclaration) -> Option<&'static str> {
         ("scopes", declaration.scopes.is_some()),
         ("prefix", declaration.prefix.is_some()),
         ("serverType", declaration.server_type.is_some()),
-        ("supportsTimeField", declaration.supports_time_field.is_some()),
+        (
+            "supportsTimeField",
+            declaration
+                .supports_time_field
+                .is_some(),
+        ),
     ]
     .into_iter()
     .find_map(|(field, is_set)| is_set.then_some(field))
@@ -147,9 +155,13 @@ pub(super) fn extend_with_indexes(
 ) {
     for (&ecosystem, indexes) in indexes_by_ecosystem {
         for index in indexes {
-            let declaration = declarations.entry(index.url.clone()).or_default();
+            let declaration = declarations
+                .entry(index.url.clone())
+                .or_default();
             declaration.ecosystem = Some(ecosystem);
-            declaration.packages.clone_from(&index.packages);
+            declaration
+                .packages
+                .clone_from(&index.packages);
         }
     }
 }
@@ -173,7 +185,8 @@ pub fn take_roles_from_earlier_layers(
     indexes_by_ecosystem: &mut BTreeMap<Ecosystem, Vec<EcosystemIndex>>,
     layer: &RegistryLookups,
 ) {
-    let declared_as_index: BTreeSet<&str> = layer.indexes_by_ecosystem
+    let declared_as_index: BTreeSet<&str> = layer
+        .indexes_by_ecosystem
         .values()
         .flatten()
         .map(|index| index.url.as_str())
@@ -181,9 +194,24 @@ pub fn take_roles_from_earlier_layers(
     let declared_at_all: BTreeSet<String> = declared_as_index
         .iter()
         .map(|registry| (*registry).to_owned())
-        .chain(layer.registries_by_scope.values().cloned())
-        .chain(layer.registries_by_prefix.values().map(|registry| normalize_registry_url(registry)))
-        .chain(layer.registry_options_by_url.keys().cloned())
+        .chain(
+            layer
+                .registries_by_scope
+                .values()
+                .cloned(),
+        )
+        .chain(
+            layer
+                .registries_by_prefix
+                .values()
+                .map(|registry| normalize_registry_url(registry)),
+        )
+        .chain(
+            layer
+                .registry_options_by_url
+                .keys()
+                .cloned(),
+        )
         .chain(layer.default_registry.clone())
         .collect();
     if declared_at_all.is_empty() {

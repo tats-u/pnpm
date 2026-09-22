@@ -18,7 +18,10 @@ impl WorkEnv {
     /// `pnpr@<rev>` row a duplicate of its `pacquet@<rev>` row. Better to
     /// abort than to publish meaningless pnpr-vs-direct numbers.
     pub(super) fn verify_pnpr_targets_were_routed(&self) {
-        for id in self.target_ids().filter(|id| id.is_pnpr()) {
+        for id in self
+            .target_ids()
+            .filter(|id| id.is_pnpr())
+        {
             let storage = self.bench_dir(id).join("pnpr-storage");
             assert!(
                 dir_contains_file(&storage),
@@ -32,14 +35,26 @@ impl WorkEnv {
     pub(super) fn write_benchmark_diagnostics(&self) {
         let diagnostics = self.collect_benchmark_diagnostics();
         let json = serde_json::to_string_pretty(&diagnostics).expect("serialize diagnostics JSON");
-        fs::write(self.root().join(BENCHMARK_DIAGNOSTICS_JSON), json)
-            .expect("write benchmark diagnostics JSON");
+        fs::write(
+            self.root()
+                .join(BENCHMARK_DIAGNOSTICS_JSON),
+            json,
+        )
+        .expect("write benchmark diagnostics JSON");
         let markdown = render_diagnostics_markdown(&diagnostics, self.options.selection.scenario);
-        fs::write(self.root().join(BENCHMARK_DIAGNOSTICS_MD), &markdown)
-            .expect("write benchmark diagnostics markdown");
+        fs::write(
+            self.root()
+                .join(BENCHMARK_DIAGNOSTICS_MD),
+            &markdown,
+        )
+        .expect("write benchmark diagnostics markdown");
     }
     pub(super) fn collect_benchmark_diagnostics(&self) -> BenchmarkDiagnostics {
-        let hyperfine = read_hyperfine_report(&self.root().join("BENCHMARK_REPORT.json"));
+        let hyperfine = read_hyperfine_report(
+            &self
+                .root()
+                .join("BENCHMARK_REPORT.json"),
+        );
         let commands_by_name: HashMap<String, HyperfineCommand> = hyperfine
             .results
             .into_iter()
@@ -72,7 +87,11 @@ impl WorkEnv {
         }
     }
     pub(super) fn verify_benchmark_diagnostics(&self) {
-        let diagnostics = read_benchmark_diagnostics(&self.root().join(BENCHMARK_DIAGNOSTICS_JSON));
+        let diagnostics = read_benchmark_diagnostics(
+            &self
+                .root()
+                .join(BENCHMARK_DIAGNOSTICS_JSON),
+        );
         self.verify_peer_heavy_lockfiles();
         self.verify_fresh_pnpr_cold_batch(&diagnostics);
         self.verify_pnpr_direct_ratios(&diagnostics);
@@ -84,16 +103,17 @@ impl WorkEnv {
         {
             return;
         }
-        let mut lockfiles = self
-            .target_ids()
-            .map(|id| {
-                let path = self.bench_dir(id).join("pnpm-lock.yaml");
-                let contents = fs::read(&path)
-                    .unwrap_or_else(|error| panic!("read {path:?} for {id}: {error}"));
-                (id.to_string(), contents)
-            });
-        let (reference_id, reference) =
-            lockfiles.next().expect("peer-heavy benchmark has at least one target");
+        let mut lockfiles = self.target_ids().map(|id| {
+            let path = self
+                .bench_dir(id)
+                .join("pnpm-lock.yaml");
+            let contents =
+                fs::read(&path).unwrap_or_else(|error| panic!("read {path:?} for {id}: {error}"));
+            (id.to_string(), contents)
+        });
+        let (reference_id, reference) = lockfiles
+            .next()
+            .expect("peer-heavy benchmark has at least one target");
         for (target_id, lockfile) in lockfiles {
             assert!(
                 lockfile == reference,
@@ -107,7 +127,8 @@ impl WorkEnv {
         {
             return;
         }
-        for target in diagnostics.targets
+        for target in diagnostics
+            .targets
             .iter()
             .filter(|target| requires_fresh_pnpr_cold_batch_metrics(&target.id))
         {
@@ -155,10 +176,16 @@ impl WorkEnv {
     pub(super) fn verify_peer_heavy_pacquet_pnpm_ratio(&self, diagnostics: &BenchmarkDiagnostics) {
         if self.options.selection.scenario
             != Some(BenchmarkScenario::IsolatedPeerHeavyResolveHotCacheOffline)
-            || !self.options.selection.targets
+            || !self
+                .options
+                .selection
+                .targets
                 .iter()
                 .any(|target| target.kind == TargetKind::Pnpm && target.rev == "HEAD")
-            || !self.options.selection.targets
+            || !self
+                .options
+                .selection
+                .targets
                 .iter()
                 .any(|target| target.kind == TargetKind::Pacquet && target.rev == "HEAD")
         {

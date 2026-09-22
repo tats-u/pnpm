@@ -34,7 +34,14 @@ use crate::resolved_tree::ResolvedPackage;
 /// into a package still under inspection adds no package the walk has
 /// not already checked.
 pub(super) fn announce_finalized_packages(ctx: &TreeCtx) {
-    let Some(finalized_package) = ctx.workspace.hooks.finalized_package.as_ref() else { return };
+    let Some(finalized_package) = ctx
+        .workspace
+        .hooks
+        .finalized_package
+        .as_ref()
+    else {
+        return;
+    };
     let announcements = collect_finalized(ctx);
     for package in announcements {
         finalized_package(package);
@@ -42,8 +49,11 @@ pub(super) fn announce_finalized_packages(ctx: &TreeCtx) {
 }
 
 fn collect_finalized(ctx: &TreeCtx) -> Vec<FinalizedPackage> {
-    let mut worklist =
-        std::mem::take(&mut *lock_recoverable(&ctx.workspace.finalization.finalization_pending));
+    let mut worklist = std::mem::take(&mut *lock_recoverable(
+        &ctx.workspace
+            .finalization
+            .finalization_pending,
+    ));
     if worklist.is_empty() {
         return Vec::new();
     }
@@ -119,20 +129,27 @@ impl Sweep<'_> {
         if let Some(verdict) = self.verdicts.get(pkg_id) {
             return *verdict;
         }
-        if self.inspecting
+        if self
+            .inspecting
             .iter()
             .any(|inspected| inspected == pkg_id)
         {
             return true;
         }
         let verdict = self.subtree_is_finalized(pkg_id);
-        self.verdicts.insert(Arc::clone(pkg_id), verdict);
+        self.verdicts
+            .insert(Arc::clone(pkg_id), verdict);
         verdict
     }
 
     fn subtree_is_finalized(&mut self, pkg_id: &Arc<str>) -> bool {
         let Some(package) = self.packages.get(pkg_id) else { return false };
-        if !package.peer_dependencies.is_empty() || package.result.id.as_str().starts_with("link:")
+        if !package.peer_dependencies.is_empty()
+            || package
+                .result
+                .id
+                .as_str()
+                .starts_with("link:")
         {
             return false;
         }

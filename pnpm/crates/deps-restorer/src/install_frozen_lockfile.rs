@@ -259,7 +259,9 @@ fn build_extra_env(
 ) -> HashMap<String, String> {
     let mut extra_env = config.extra_env_with_node_options();
     if matches!(node_linker, NodeLinker::Pnp) {
-        let node_options = extra_env.get("NODE_OPTIONS").map(String::as_str);
+        let node_options = extra_env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
         extra_env.insert(
             "NODE_OPTIONS".to_string(),
             crate::make_node_require_option(
@@ -269,8 +271,12 @@ fn build_extra_env(
         );
     }
     if config.node_experimental_package_map && !matches!(node_linker, NodeLinker::Pnp) {
-        let package_map_path = config.modules_dir.join(crate::package_map::PACKAGE_MAP_FILENAME);
-        let node_options = extra_env.get("NODE_OPTIONS").map(String::as_str);
+        let package_map_path = config
+            .modules_dir
+            .join(crate::package_map::PACKAGE_MAP_FILENAME);
+        let node_options = extra_env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
         extra_env.insert(
             "NODE_OPTIONS".to_string(),
             crate::make_node_package_map_option(&package_map_path, node_options),
@@ -303,12 +309,13 @@ impl<'a> InstallFrozenLockfile<'a> {
         // why it lives here rather than in the plan.
         let allow_build_policy = AllowBuildPolicy::from_config(self.drivers.config)
             .map_err(InstallFrozenLockfileError::VersionPolicy)?;
-        let plan = self.plan_materialization(
-            &allow_build_policy,
-            owned.early_host_detection,
-            owned.node_version,
-        )
-        .await?;
+        let plan = self
+            .plan_materialization(
+                &allow_build_policy,
+                owned.early_host_detection,
+                owned.node_version,
+            )
+            .await?;
 
         self.run_plan::<Reporter>(
             &allow_build_policy,
@@ -359,19 +366,22 @@ impl<'a> InstallFrozenLockfile<'a> {
         let (store_index_writer, writer_task) =
             StoreIndexWriter::spawn_for(&ctx.config.store_dir, ctx.config.frozen_store);
 
-        let settled = self.settle_skip_set::<Reporter>(plan.host, seed_skipped).await?;
+        let settled = self
+            .settle_skip_set::<Reporter>(plan.host, seed_skipped)
+            .await?;
 
-        let fetched = self.fetch::<Reporter>(
-            &ctx,
-            FetchInputs {
-                cas_prefetch: plan.cas_prefetch,
-                dir_clone_cache: plan.dir_clone_cache.as_ref(),
-                store_index_writer: &store_index_writer,
-                skipped: &settled.skipped,
-                verification_override,
-            },
-        )
-        .await?;
+        let fetched = self
+            .fetch::<Reporter>(
+                &ctx,
+                FetchInputs {
+                    cas_prefetch: plan.cas_prefetch,
+                    dir_clone_cache: plan.dir_clone_cache.as_ref(),
+                    store_index_writer: &store_index_writer,
+                    skipped: &settled.skipped,
+                    verification_override,
+                },
+            )
+            .await?;
 
         self.finish_materialization::<Reporter>(
             &ctx,
@@ -394,24 +404,27 @@ impl<'a> InstallFrozenLockfile<'a> {
         store_index_writer: Arc<StoreIndexWriter>,
         writer_task: tokio::task::JoinHandle<Result<(), StoreIndexError>>,
     ) -> Result<InstallFrozenLockfileOutput, InstallFrozenLockfileError> {
-        settled.skipped.add_fetch_failed_all(fetched.fetch_failed.drain());
+        settled
+            .skipped
+            .add_fetch_failed_all(fetched.fetch_failed.drain());
 
         let (linked, injected_deps) =
             self.link_fetched::<Reporter>(ctx, &mut fetched, &mut settled)?;
 
         let phase_start = std::time::Instant::now();
-        let built = self.build::<Reporter>(
-            ctx,
-            BuildInputs {
-                fetched: &fetched,
-                linked: &linked,
-                skipped: &settled.skipped,
-                store_index_writer: &store_index_writer,
-                engine_name: settled.engine_name,
-                deferred_engine_name,
-            },
-        )
-        .await?;
+        let built = self
+            .build::<Reporter>(
+                ctx,
+                BuildInputs {
+                    fetched: &fetched,
+                    linked: &linked,
+                    skipped: &settled.skipped,
+                    store_index_writer: &store_index_writer,
+                    engine_name: settled.engine_name,
+                    deferred_engine_name,
+                },
+            )
+            .await?;
         tracing::info!(
             target: "pacquet::install::phase",
             phase = "build_phase",
@@ -536,6 +549,7 @@ fn injected_deps(
         ctx.workspace_root,
         LockfileEntries::from(current_lockfile),
         skipped,
-        ctx.is_hoisted().then_some(hoisted_locations),
+        ctx.is_hoisted()
+            .then_some(hoisted_locations),
     )
 }

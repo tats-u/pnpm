@@ -113,11 +113,10 @@ pub(crate) fn deserialize_text_or_absent<'de, Deser>(
 where
     Deser: Deserializer<'de>,
 {
-    Ok(Option::<Value>::deserialize(deserializer)?
-        .and_then(|value| match value {
-            Value::String(text) => Some(text),
-            _ => None,
-        }))
+    Ok(Option::<Value>::deserialize(deserializer)?.and_then(|value| match value {
+        Value::String(text) => Some(text),
+        _ => None,
+    }))
 }
 
 /// Deserialize a byte/entry count the resolver treats as advisory,

@@ -10,7 +10,9 @@ fn minimal_lockfile() -> Lockfile {
 #[test]
 fn preloaded_returns_the_stored_lockfile_without_io() {
     let lazy = LazyLockfile::preloaded(Some(minimal_lockfile()));
-    let loaded = lazy.get().expect("preloaded lockfile loads infallibly");
+    let loaded = lazy
+        .get()
+        .expect("preloaded lockfile loads infallibly");
     assert!(loaded.is_some());
     assert!(lazy.is_loaded_or_on_disk());
 }
@@ -26,7 +28,9 @@ fn preloaded_repair_preserves_the_merge_view() {
     })
     .expect("parse preloaded lockfile");
     let lazy = LazyLockfile::preloaded(Some(lockfile));
-    let package_key = "pkg@1.0.0".parse().expect("package key");
+    let package_key = "pkg@1.0.0"
+        .parse()
+        .expect("package key");
 
     let seed = lazy
         .get_for_fix()
@@ -44,7 +48,8 @@ fn preloaded_repair_preserves_the_merge_view() {
         .expect("merge load succeeds")
         .expect("merge lockfile");
     assert_eq!(
-        merge.packages
+        merge
+            .packages
             .as_ref()
             .and_then(|packages| packages.get(&package_key))
             .and_then(|metadata| metadata.deprecated.as_deref()),
@@ -127,9 +132,12 @@ fn normal_load_does_not_fill_the_repair_cache() {
         .get()
         .expect("normal load succeeds")
         .expect("normal lockfile");
-    let package_key = "pkg@1.0.0".parse().expect("package key");
+    let package_key = "pkg@1.0.0"
+        .parse()
+        .expect("package key");
     assert_eq!(
-        normal.packages
+        normal
+            .packages
             .as_ref()
             .and_then(|packages| packages.get(&package_key))
             .and_then(|metadata| metadata.deprecated.as_deref()),
@@ -141,7 +149,8 @@ fn normal_load_does_not_fill_the_repair_cache() {
         .expect("repair load succeeds")
         .expect("repair lockfile");
     assert!(
-        repaired.packages
+        repaired
+            .packages
             .as_ref()
             .and_then(|packages| packages.get(&package_key))
             .is_some_and(|metadata| metadata.deprecated.is_none()),
@@ -152,7 +161,8 @@ fn normal_load_does_not_fill_the_repair_cache() {
         .expect("merge load succeeds")
         .expect("merge lockfile");
     assert_eq!(
-        merge.packages
+        merge
+            .packages
             .as_ref()
             .and_then(|packages| packages.get(&package_key))
             .and_then(|metadata| metadata.deprecated.as_deref()),
@@ -185,24 +195,31 @@ fn repair_merge_preserves_valid_metadata_when_strict_parsing_fails() {
     let lazy = LazyLockfile::deferred(dir.path().to_path_buf(), WantedLockfileSelection::default());
     assert!(lazy.get().is_err(), "strict parsing must reject the malformed settings");
 
-    let package_key = "pkg@1.0.0".parse().expect("package key");
+    let package_key = "pkg@1.0.0"
+        .parse()
+        .expect("package key");
     let repaired = lazy
         .get_for_fix()
         .expect("repair load succeeds")
         .expect("repair lockfile");
     assert!(repaired.settings.is_none());
     assert!(
-        repaired.packages
+        repaired
+            .packages
             .as_ref()
             .and_then(|packages| packages.get(&package_key))
             .is_some_and(|metadata| metadata.deprecated.is_none()),
     );
     assert!(
-        repaired.snapshots
+        repaired
+            .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.get(&package_key))
             .is_some_and(|snapshot| {
-                !snapshot.optional && snapshot.transitive_peer_dependencies.is_none()
+                !snapshot.optional
+                    && snapshot
+                        .transitive_peer_dependencies
+                        .is_none()
             }),
     );
 
@@ -212,19 +229,24 @@ fn repair_merge_preserves_valid_metadata_when_strict_parsing_fails() {
         .expect("merge lockfile");
     assert!(merge.settings.is_none());
     assert_eq!(
-        merge.packages
+        merge
+            .packages
             .as_ref()
             .and_then(|packages| packages.get(&package_key))
             .and_then(|metadata| metadata.deprecated.as_deref()),
         Some("stale"),
     );
     assert!(
-        merge.snapshots
+        merge
+            .snapshots
             .as_ref()
             .and_then(|snapshots| snapshots.get(&package_key))
             .is_some_and(|snapshot| {
                 snapshot.optional
-                    && snapshot.transitive_peer_dependencies.as_deref() == Some(&["peer".into()])
+                    && snapshot
+                        .transitive_peer_dependencies
+                        .as_deref()
+                        == Some(&["peer".into()])
             }),
     );
 }
@@ -270,9 +292,12 @@ fn repair_views_stay_on_the_same_file_generation() {
         .get_for_merge()
         .expect("merge load succeeds")
         .expect("merge lockfile");
-    let package_key = "pkg@1.0.0".parse().expect("package key");
+    let package_key = "pkg@1.0.0"
+        .parse()
+        .expect("package key");
     assert_eq!(
-        merge.packages
+        merge
+            .packages
             .as_ref()
             .and_then(|packages| packages.get(&package_key))
             .and_then(|metadata| metadata.deprecated.as_deref()),
@@ -287,7 +312,9 @@ fn a_failed_repair_load_is_retried_rather_than_cached() {
     fs::write(&path, "lockfileVersion: '9.0'\nimporters: [\n").expect("write broken lockfile");
 
     let lazy = LazyLockfile::deferred(dir.path().to_path_buf(), WantedLockfileSelection::default());
-    let error = lazy.get_for_fix().expect_err("a repair load cannot parse broken YAML");
+    let error = lazy
+        .get_for_fix()
+        .expect_err("a repair load cannot parse broken YAML");
     eprintln!("ERROR:\n{error}\n");
     assert!(matches!(error, LoadLockfileError::ParseYaml { .. }));
 
@@ -353,9 +380,17 @@ fn repair_views_fold_branch_lockfiles_together() {
         .pre_merge_importers()
         .expect("pre-merge importers load")
         .expect("branch merge records base importers");
-    let branch_key = "branch@1.0.0".parse().expect("branch package key");
-    let seed_branch = &seed.snapshots.as_ref().expect("seed snapshots")[&branch_key];
-    let merge_branch = &merge.snapshots.as_ref().expect("merge snapshots")[&branch_key];
+    let branch_key = "branch@1.0.0"
+        .parse()
+        .expect("branch package key");
+    let seed_branch = &seed
+        .snapshots
+        .as_ref()
+        .expect("seed snapshots")[&branch_key];
+    let merge_branch = &merge
+        .snapshots
+        .as_ref()
+        .expect("merge snapshots")[&branch_key];
 
     dbg!(seed_branch, merge_branch, pre_merge_importers);
     assert!(!seed_branch.optional);
@@ -436,7 +471,8 @@ fn prefetch_hands_get_the_background_parse() {
     // parse, never from an inline load.
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
     loop {
-        let finished = lazy.prefetch
+        let finished = lazy
+            .prefetch
             .lock()
             .expect("prefetch slot lock")
             .as_ref()
@@ -480,7 +516,8 @@ fn a_failed_prefetch_is_surfaced_and_then_retried() {
 
     let lazy = LazyLockfile::deferred(dir.path().to_path_buf(), WantedLockfileSelection::default());
     lazy.prefetch();
-    lazy.get().expect_err("the background parse failure must surface");
+    lazy.get()
+        .expect_err("the background parse failure must surface");
 
     // The error is not cached: a repaired file loads on the next call.
     fs::write(dir.path().join(Lockfile::FILE_NAME), "lockfileVersion: '9.0'\n")

@@ -29,7 +29,8 @@ fn setup() -> (TempDir, std::path::PathBuf, AddMockedRegistry) {
 
 fn root_dependency<'a>(lockfile: &'a Lockfile, alias: &str) -> &'a ResolvedDependencySpec {
     let alias: PkgName = alias.parse().expect("parse alias");
-    lockfile.importers
+    lockfile
+        .importers
         .get(Lockfile::ROOT_IMPORTER_KEY)
         .expect("root importer")
         .dependencies
@@ -56,7 +57,11 @@ fn add_saves_a_jsr_selector_under_its_jsr_name() {
     let entry = root_dependency(&lockfile, "@pnpm-e2e/bar");
     assert_eq!(entry.specifier, "jsr:^2.0.0");
     assert_eq!(entry.version.to_string(), "@jsr/pnpm-e2e__bar@2.0.0");
-    assert!(workspace.join("node_modules/@pnpm-e2e/bar/package.json").exists());
+    assert!(
+        workspace
+            .join("node_modules/@pnpm-e2e/bar/package.json")
+            .exists()
+    );
 
     drop((root, anchor));
 }

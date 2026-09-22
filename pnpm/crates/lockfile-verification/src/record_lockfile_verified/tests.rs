@@ -52,8 +52,18 @@ fn records_the_hash_read_by_the_next_install() {
     let dir = TempDir::new().expect("tempdir");
     let first_path = dir.path().join("first/pnpm-lock.yaml");
     let second_path = dir.path().join("second/pnpm-lock.yaml");
-    fs::create_dir_all(first_path.parent().expect("first parent")).expect("create first dir");
-    fs::create_dir_all(second_path.parent().expect("second parent")).expect("create second dir");
+    fs::create_dir_all(
+        first_path
+            .parent()
+            .expect("first parent"),
+    )
+    .expect("create first dir");
+    fs::create_dir_all(
+        second_path
+            .parent()
+            .expect("second parent"),
+    )
+    .expect("create second dir");
     fs::write(&first_path, LOCKFILE).expect("write first lockfile");
     fs::write(&second_path, LOCKFILE).expect("write second lockfile");
     let written = parse_lockfile();
@@ -81,7 +91,9 @@ fn records_the_hash_read_by_the_next_install() {
 #[test]
 fn records_the_caller_supplied_lockfile_path() {
     let dir = TempDir::new().expect("tempdir");
-    let lockfile_path = dir.path().join("pnpm-lock.feature.yaml");
+    let lockfile_path = dir
+        .path()
+        .join("pnpm-lock.feature.yaml");
     fs::write(&lockfile_path, LOCKFILE).expect("write lockfile");
     let verifier = verifier();
 

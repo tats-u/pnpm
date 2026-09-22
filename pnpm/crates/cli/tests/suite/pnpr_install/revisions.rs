@@ -24,19 +24,9 @@ fn revision_install_and_frozen_reinstall_work_through_pnpr() {
         .create();
     let registry = start_pnpr_registry(&upstream.url(), Ecosystem::Npm);
 
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
-    let AddMockedRegistry {
-        npmrc_path,
-        store_dir,
-        mock_instance,
-        ..
-    } = npmrc_info;
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
+    let AddMockedRegistry { npmrc_path, store_dir, mock_instance, .. } = npmrc_info;
     point_npmrc_registry_at(&npmrc_path, &registry);
     fs::write(
         workspace.join("package.json"),
@@ -48,7 +38,11 @@ fn revision_install_and_frozen_reinstall_work_through_pnpr() {
         .with_arg("install")
         .assert()
         .success();
-    assert!(workspace.join("node_modules/revision-pkg/index.js").exists());
+    assert!(
+        workspace
+            .join("node_modules/revision-pkg/index.js")
+            .exists()
+    );
     let lockfile = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
     assert!(lockfile.contains("revision: 2"), "{lockfile}");
     assert!(!lockfile.contains("tarball:"), "{lockfile}");
@@ -59,7 +53,11 @@ fn revision_install_and_frozen_reinstall_work_through_pnpr() {
         .with_args(["install", "--frozen-lockfile"])
         .assert()
         .success();
-    assert!(workspace.join("node_modules/revision-pkg/index.js").exists());
+    assert!(
+        workspace
+            .join("node_modules/revision-pkg/index.js")
+            .exists()
+    );
 
     packument_mock.assert();
     tarball_mock.assert();
@@ -101,13 +99,8 @@ fn update_patches_refreshes_a_pnpr_revision_without_changing_the_version() {
         .create();
     let second_registry = start_pnpr_registry(&second_upstream.url(), Ecosystem::Npm);
 
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { npmrc_path, mock_instance, .. } = npmrc_info;
     point_npmrc_registry_at(&npmrc_path, &first_registry);
     let manifest = serde_json::json!({ "dependencies": { "revision-pkg": "^1.0.0" } });
@@ -163,13 +156,8 @@ fn update_patches_refreshes_a_revision_through_the_pnpr_resolver() {
         .create();
     let (pnpr_url, token) = start_pnpr(&upstream.url());
 
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { npmrc_path, mock_instance, .. } = npmrc_info;
     configure_pnpr_auth(&npmrc_path, &pnpr_url, &token);
     let manifest = serde_json::json!({ "dependencies": { "revision-pkg": "^1.0.0" } });

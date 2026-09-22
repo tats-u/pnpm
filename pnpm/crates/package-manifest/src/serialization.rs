@@ -30,9 +30,8 @@ fn detect_indent(contents: &str) -> &str {
         .lines()
         .find_map(|line| {
             let trimmed = line.trim_start_matches([' ', '\t']);
-            (!trimmed.is_empty() && trimmed.len() < line.len()).then(|| {
-                &line[..line.len() - trimmed.len()]
-            })
+            (!trimmed.is_empty() && trimmed.len() < line.len())
+                .then(|| &line[..line.len() - trimmed.len()])
         })
         .unwrap_or("")
 }
@@ -91,11 +90,17 @@ pub fn parse_manifest(contents: &str) -> serde_json::Result<Value> {
 /// [`parse_manifest`] for manifest bytes that have not been decoded yet,
 /// such as an entry read straight out of a tarball.
 pub fn parse_manifest_bytes(bytes: &[u8]) -> serde_json::Result<Value> {
-    serde_json::from_slice(bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes))
+    serde_json::from_slice(
+        bytes
+            .strip_prefix(b"\xEF\xBB\xBF")
+            .unwrap_or(bytes),
+    )
 }
 
 fn strip_utf8_bom(contents: &str) -> &str {
-    contents.strip_prefix('\u{feff}').unwrap_or(contents)
+    contents
+        .strip_prefix('\u{feff}')
+        .unwrap_or(contents)
 }
 
 impl PackageManifest {
@@ -104,11 +109,9 @@ impl PackageManifest {
         manifest: &Value,
     ) -> Result<String, PackageManifestError> {
         let contents = if is_yaml_path(path) {
-            let mut contents = pnpm_yaml_document_sync::serialize(manifest)
-                .map_err(|source| PackageManifestError::EditYaml {
-                    path: path.to_path_buf(),
-                    source,
-                })?;
+            let mut contents = pnpm_yaml_document_sync::serialize(manifest).map_err(|source| {
+                PackageManifestError::EditYaml { path: path.to_path_buf(), source }
+            })?;
             if contents.ends_with('\n') {
                 contents.pop();
             }
@@ -148,10 +151,12 @@ impl PackageManifest {
         let mut tmp = NamedTempFile::new_in(dir)?;
         tmp.write_all(contents.as_bytes())?;
         if let Some(permissions) = permissions {
-            tmp.as_file().set_permissions(permissions)?;
+            tmp.as_file()
+                .set_permissions(permissions)?;
         }
         tmp.as_file().sync_all()?;
-        tmp.persist(path).map_err(|err| err.error)?;
+        tmp.persist(path)
+            .map_err(|err| err.error)?;
         Ok(())
     }
 
@@ -192,15 +197,12 @@ impl PackageManifest {
         // same missing-manifest error a pre-check would raise, without
         // paying a stat before every successful read.
         let rendered_path = path.display().to_string();
-        PackageManifest::read_from_file(path)
-            .map_err(|error| match error {
-                PackageManifestError::Io(io_error)
-                    if io_error.kind() == io::ErrorKind::NotFound =>
-                {
-                    PackageManifestError::NoImporterManifestFound(rendered_path)
-                }
-                other => other,
-            })
+        PackageManifest::read_from_file(path).map_err(|error| match error {
+            PackageManifestError::Io(io_error) if io_error.kind() == io::ErrorKind::NotFound => {
+                PackageManifestError::NoImporterManifestFound(rendered_path)
+            }
+            other => other,
+        })
     }
 
     pub fn create_if_needed(path: PathBuf) -> Result<PackageManifest, PackageManifestError> {
@@ -229,11 +231,9 @@ impl PackageManifest {
         let text = match fs::read_to_string(&self.path) {
             Ok(text) => text,
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                return pnpm_yaml_document_sync::serialize(value)
-                    .map_err(|source| PackageManifestError::EditYaml {
-                        path: self.path.clone(),
-                        source,
-                    });
+                return pnpm_yaml_document_sync::serialize(value).map_err(|source| {
+                    PackageManifestError::EditYaml { path: self.path.clone(), source }
+                });
             }
             Err(source) => {
                 return Err(PackageManifestError::Read { path: self.path.clone(), source });

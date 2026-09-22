@@ -45,7 +45,8 @@ fn collapsed_peer_variants_reuse_the_hoisters_recorded_placements() {
         ..LockfileToHoistedDepGraphOptions::default()
     };
     let hoisted = lockfile_to_hoisted_dep_graph(&lockfile, None, &options).unwrap();
-    let foo_locations: Vec<_> = hoisted.hoisted_locations
+    let foo_locations: Vec<_> = hoisted
+        .hoisted_locations
         .iter()
         .filter(|(key, _)| key.starts_with("foo@"))
         .collect();

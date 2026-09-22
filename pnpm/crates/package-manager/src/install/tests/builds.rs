@@ -90,7 +90,9 @@ fn build_modules_manifest_serializes_skipped_set() {
     let config = config.leak();
 
     let key1: PackageKey = "darwin-only-pkg@1.0.0".parse().unwrap();
-    let key2: PackageKey = "@scope/linux-only@2.3.4".parse().unwrap();
+    let key2: PackageKey = "@scope/linux-only@2.3.4"
+        .parse()
+        .unwrap();
     let mut set = HashSet::new();
     set.insert(key1.clone());
     set.insert(key2.clone());
@@ -118,11 +120,14 @@ fn build_modules_manifest_serializes_skipped_set() {
     // Sort-on-write happens later inside `write_modules_manifest`;
     // the read-after-write order is covered by the integration
     // test on the full install path.
-    let actual: HashSet<String> = manifest.skipped
+    let actual: HashSet<String> = manifest
+        .skipped
         .iter()
         .cloned()
         .collect();
-    let expected: HashSet<String> = [key1.to_string(), key2.to_string()].into_iter().collect();
+    let expected: HashSet<String> = [key1.to_string(), key2.to_string()]
+        .into_iter()
+        .collect();
     assert_eq!(actual, expected);
 }
 /// Empty `SkippedSnapshots` produces an empty `Modules.skipped`. The
@@ -167,8 +172,12 @@ async fn fresh_install_uses_final_peer_suffix_for_transitive_pending_peer() {
 
     let manifest_path = dirs.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path.clone()).unwrap();
-    manifest.add_dependency("@pnpm.e2e/final-peer-a", "1.0.0", DependencyGroup::Prod).unwrap();
-    manifest.add_dependency("@pnpm.e2e/final-peer-c", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("@pnpm.e2e/final-peer-a", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
+    manifest
+        .add_dependency("@pnpm.e2e/final-peer-c", "1.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -263,7 +272,9 @@ fn unapproved_recorded_ignored_builds_surfaces_invalid_allow_builds() {
         ..Default::default()
     };
     let mut config = Config::new();
-    config.allow_builds.insert("foo@not-a-version".to_string(), true);
+    config
+        .allow_builds
+        .insert("foo@not-a-version".to_string(), true);
     let config = config.leak();
 
     assert!(super::super::unapproved_recorded_ignored_builds(&modules, config).is_err());

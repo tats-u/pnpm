@@ -144,7 +144,9 @@ fn every_representation_of_a_hosted_specifier_keeps_its_committish() {
         (auth_url("semver:^1.0.0"), auth_url("semver:^1.0.0"), None, Some("^1.0.0")),
     ];
     for (input, expected_specifier, expected_committish, expected_range) in &cases {
-        let spec = parse_bare_specifier(input).expect("hosted").finalize();
+        let spec = parse_bare_specifier(input)
+            .expect("hosted")
+            .finalize();
         assert!(!spec.fetch_spec.contains('#'), "ls-remote target keeps a committish: {input}");
         assert_eq!(
             (

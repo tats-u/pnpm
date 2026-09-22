@@ -74,7 +74,9 @@ fn to_string() {
 
 #[test]
 fn serialize() {
-    let received = name_ver("ts-node", (10, 9, 1)).pipe_ref(serde_saphyr::to_string).unwrap();
+    let received = name_ver("ts-node", (10, 9, 1))
+        .pipe_ref(serde_saphyr::to_string)
+        .unwrap();
     let expected = "ts-node@10.9.1\n";
     assert_eq!(received, expected);
 }

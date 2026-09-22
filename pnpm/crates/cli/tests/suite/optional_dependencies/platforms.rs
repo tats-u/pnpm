@@ -9,13 +9,8 @@ use assert_cmd::assert::OutputAssertExt;
 /// version` (`optionalDependencies.ts:143`).
 #[test]
 fn skip_optional_dependency_that_does_not_support_the_current_node_version() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_manifest(
         &workspace,
         &serde_json::json!({
@@ -29,7 +24,9 @@ fn skip_optional_dependency_that_does_not_support_the_current_node_version() {
         .success();
 
     assert!(
-        !workspace.join("node_modules/@pnpm.e2e/for-legacy-node").exists(),
+        !workspace
+            .join("node_modules/@pnpm.e2e/for-legacy-node")
+            .exists(),
         "an optional dependency for a legacy Node version must not be linked",
     );
     assert_eq!(read_skipped(&workspace), ["@pnpm.e2e/for-legacy-node@1.0.0"]);
@@ -41,13 +38,8 @@ fn skip_optional_dependency_that_does_not_support_the_current_node_version() {
 /// current OS when forcing` (`optionalDependencies.ts:199`).
 #[test]
 fn do_not_skip_unsupported_os_optional_dependency_when_forcing() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_manifest(
         &workspace,
         &serde_json::json!({
@@ -61,7 +53,9 @@ fn do_not_skip_unsupported_os_optional_dependency_when_forcing() {
         .success();
 
     assert!(
-        workspace.join("node_modules/@pnpm.e2e/not-compatible-with-any-os/package.json").exists(),
+        workspace
+            .join("node_modules/@pnpm.e2e/not-compatible-with-any-os/package.json")
+            .exists(),
         "--force must install the platform-incompatible optional dependency",
     );
     assert_eq!(read_skipped(&workspace), Vec::<String>::new());
@@ -75,13 +69,8 @@ fn do_not_skip_unsupported_os_optional_dependency_when_forcing() {
 /// `.modules.yaml.skipped`.
 #[test]
 pub(super) fn forced_frozen_install_materializes_incompatible_optionals() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .with_args(["add", "@pnpm.e2e/pkg-with-optional", "@pnpm.e2e/dep-of-optional-pkg"])
@@ -95,7 +84,9 @@ pub(super) fn forced_frozen_install_materializes_incompatible_optionals() {
         .success();
 
     assert!(
-        workspace.join("node_modules/.pnpm/@pnpm.e2e+not-compatible-with-any-os@1.0.0").exists(),
+        workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+not-compatible-with-any-os@1.0.0")
+            .exists(),
         "the forced headless install must materialize the incompatible optional",
     );
     assert_eq!(read_skipped(&workspace), Vec::<String>::new());
@@ -141,13 +132,8 @@ fn skip_unsupported_optional_when_installing_a_workspace_subset() {
 /// keep the skip set across a frozen reinstall.
 #[test]
 fn skip_optional_dependency_that_does_not_support_the_current_os() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     write_manifest(
         &workspace,
         &serde_json::json!({
@@ -161,16 +147,23 @@ fn skip_optional_dependency_that_does_not_support_the_current_os() {
         .success();
 
     assert!(
-        !workspace.join("node_modules/@pnpm.e2e/not-compatible-with-any-os").exists(),
+        !workspace
+            .join("node_modules/@pnpm.e2e/not-compatible-with-any-os")
+            .exists(),
         "the platform-incompatible optional dependency must not be linked",
     );
     assert!(
-        !workspace.join("node_modules/.pnpm/@pnpm.e2e+dep-of-optional-pkg@1.0.0").exists(),
+        !workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+dep-of-optional-pkg@1.0.0")
+            .exists(),
         "the dependency of the skipped optional must not be materialized",
     );
 
     let lockfile = read_wanted_lockfile(&workspace);
-    let packages = lockfile.packages.as_ref().expect("lockfile has packages");
+    let packages = lockfile
+        .packages
+        .as_ref()
+        .expect("lockfile has packages");
     for name in
         ["@pnpm.e2e/not-compatible-with-any-os@1.0.0", "@pnpm.e2e/dep-of-optional-pkg@1.0.0"]
     {
@@ -182,7 +175,10 @@ fn skip_optional_dependency_that_does_not_support_the_current_os() {
         );
     }
     let current = read_current_lockfile(&workspace);
-    let current_packages = current.packages.as_ref().expect("current lockfile has packages");
+    let current_packages = current
+        .packages
+        .as_ref()
+        .expect("current lockfile has packages");
     assert_eq!(
         sorted_keys(current_packages),
         sorted_keys(packages),
@@ -201,7 +197,9 @@ fn skip_optional_dependency_that_does_not_support_the_current_os() {
         .assert()
         .success();
     assert!(
-        workspace.join("node_modules/@pnpm.e2e/dep-of-optional-pkg/package.json").exists(),
+        workspace
+            .join("node_modules/@pnpm.e2e/dep-of-optional-pkg/package.json")
+            .exists(),
         "the package must be installed once it is a regular dependency",
     );
     assert_eq!(read_skipped(&workspace), ["@pnpm.e2e/not-compatible-with-any-os@1.0.0"]);
@@ -213,8 +211,16 @@ fn skip_optional_dependency_that_does_not_support_the_current_os() {
         .assert()
         .success();
 
-    assert!(!workspace.join("node_modules/@pnpm.e2e/not-compatible-with-any-os").exists());
-    assert!(workspace.join("node_modules/@pnpm.e2e/dep-of-optional-pkg/package.json").exists());
+    assert!(
+        !workspace
+            .join("node_modules/@pnpm.e2e/not-compatible-with-any-os")
+            .exists()
+    );
+    assert!(
+        workspace
+            .join("node_modules/@pnpm.e2e/dep-of-optional-pkg/package.json")
+            .exists()
+    );
     assert_eq!(read_skipped(&workspace), ["@pnpm.e2e/not-compatible-with-any-os@1.0.0"]);
 
     drop((root, npmrc_info)); // cleanup
@@ -227,13 +233,8 @@ fn skip_optional_dependency_that_does_not_support_the_current_os() {
 #[test]
 fn install_optional_dependency_for_the_supported_architectures() {
     for node_linker in ["isolated", "hoisted"] {
-        let CommandTempCwd {
-            pacquet,
-            root,
-            workspace,
-            npmrc_info,
-            ..
-        } = CommandTempCwd::init().add_mocked_registry();
+        let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+            CommandTempCwd::init().add_mocked_registry();
         append_workspace_yaml_key(&workspace, "nodeLinker", node_linker);
 
         // Upstream verifies with `deepRequireCwd` — Node resolution
@@ -297,13 +298,8 @@ fn install_optional_dependency_for_the_supported_architectures() {
 /// package inside a skipped optional's subtree must not fail the install.
 #[test]
 fn do_not_fail_on_unsupported_dependency_of_optional_dependency() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     append_workspace_yaml_key(&workspace, "engineStrict", "true");
 
     pacquet
@@ -316,7 +312,10 @@ fn do_not_fail_on_unsupported_dependency_of_optional_dependency() {
         .success();
 
     let lockfile = read_wanted_lockfile(&workspace);
-    let snapshots = lockfile.snapshots.as_ref().expect("lockfile has snapshots");
+    let snapshots = lockfile
+        .snapshots
+        .as_ref()
+        .expect("lockfile has snapshots");
     let not_compatible = snapshots
         .iter()
         .find(|(key, _)| key.to_string() == "@pnpm.e2e/not-compatible-with-any-os@1.0.0")
@@ -339,13 +338,8 @@ fn do_not_fail_on_unsupported_dependency_of_optional_dependency() {
 /// fails the install.
 #[test]
 fn fail_on_unsupported_dependency_of_optional_dependency() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     append_workspace_yaml_key(&workspace, "engineStrict", "true");
 
     let assert = pacquet
@@ -368,13 +362,8 @@ fn fail_on_unsupported_dependency_of_optional_dependency() {
 /// `engineStrict` failure on the frozen path too.
 #[test]
 fn fail_on_unsupported_dependency_of_optional_dependency_during_a_headless_install() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .with_args(["add", "--save-optional", "@pnpm.e2e/has-not-compatible-dep@1.0.0"])
@@ -400,13 +389,8 @@ fn fail_on_unsupported_dependency_of_optional_dependency_during_a_headless_insta
 /// changed and a new dependency is added` (`optionalDependencies.ts:648`).
 #[test]
 fn remove_optional_dependencies_when_architectures_change_and_a_dependency_is_added() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     append_workspace_yaml_key(&workspace, "modulesCacheMaxAge", "0");
 
     pacquet
@@ -435,7 +419,11 @@ fn remove_optional_dependencies_when_architectures_change_and_a_dependency_is_ad
             "{name} must survive the narrowed architecture set",
         );
     }
-    assert!(virtual_store.join("is-positive@1.0.0").exists());
+    assert!(
+        virtual_store
+            .join("is-positive@1.0.0")
+            .exists()
+    );
     for name in ["darwin-arm64", "linux-x64", "windows-x64"] {
         assert!(
             !virtual_store
@@ -455,13 +443,8 @@ fn remove_optional_dependencies_when_architectures_change_and_a_dependency_is_ad
 /// are re-evaluated and pruned.
 #[test]
 fn cli_architecture_flags_invalidate_the_up_to_date_fast_path() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     append_workspace_yaml_key(&workspace, "modulesCacheMaxAge", "0");
 
     pacquet
@@ -482,7 +465,11 @@ fn cli_architecture_flags_invalidate_the_up_to_date_fast_path() {
         .success();
 
     let virtual_store = workspace.join("node_modules/.pnpm");
-    assert!(virtual_store.join("@pnpm.e2e+darwin-x64@1.0.0").exists());
+    assert!(
+        virtual_store
+            .join("@pnpm.e2e+darwin-x64@1.0.0")
+            .exists()
+    );
     for name in ["darwin-arm64", "linux-x64", "windows-x64"] {
         assert!(
             !virtual_store

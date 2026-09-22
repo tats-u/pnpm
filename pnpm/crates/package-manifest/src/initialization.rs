@@ -49,7 +49,9 @@ impl PackageManifest {
             "author": "",
             "license": "ISC"
         });
-        let fields = manifest.as_object_mut().expect("the scaffold is a JSON object");
+        let fields = manifest
+            .as_object_mut()
+            .expect("the scaffold is a JSON object");
         if let Some(version) = options.pinned_pnpm_version {
             // The pin is written twice on purpose: pnpm reads
             // `devEngines.packageManager`, corepack reads only the legacy

@@ -134,5 +134,8 @@ fn completion_server_treats_pn_as_the_pnpm_binary() {
 fn completion_can_run_before_async_runtime_setup() {
     let args = CliArgs::parse_from(["pnpm", "completion-server", "--", "pnpm", "completion", ""]);
 
-    assert!(args.run_completion_if_requested().expect("completion dispatch succeeds"));
+    assert!(
+        args.run_completion_if_requested()
+            .expect("completion dispatch succeeds")
+    );
 }

@@ -27,7 +27,9 @@ fn discovered_workspace_packages(
 }
 
 fn actions_selector_matcher(update_actions: bool, selectors: &[String]) -> Option<Matcher> {
-    update_actions.then(|| github_actions::selector_matcher(selectors)).flatten()
+    update_actions
+        .then(|| github_actions::selector_matcher(selectors))
+        .flatten()
 }
 
 fn filter_package_selectors(packages: &[String], include_github_actions: bool) -> Vec<String> {
@@ -51,7 +53,13 @@ fn update_actions_root(
     selection: Option<&InstallFamilySelection>,
 ) -> std::path::PathBuf {
     selection.map_or_else(
-        || state.config.workspace_dir.clone().unwrap_or_else(|| manifest_root(&state.manifest)),
+        || {
+            state
+                .config
+                .workspace_dir
+                .clone()
+                .unwrap_or_else(|| manifest_root(&state.manifest))
+        },
         |selection| selection.workspace_root.clone(),
     )
 }
@@ -63,7 +71,9 @@ impl UpdateArgs {
         selection: Option<InstallFamilySelection>,
     ) -> miette::Result<()> {
         self.check_patches_options()?;
-        state.http_client.set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+        state
+            .http_client
+            .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
         let workspace_root = self.check_workspace_option(state.config.workspace_dir.as_deref())?;
         let include_direct = self.dependency_options.include_direct();
         let update_actions = self.should_update_github_actions(state.config, &include_direct);
@@ -71,13 +81,14 @@ impl UpdateArgs {
         if let Some(pnpr_server) =
             self.delegated_pnpr_server(state.config, update_actions, &include_direct)
         {
-            return self.run_patch_refresh::<Reporter>(
-                &state,
-                selection.as_ref(),
-                pnpr_server,
-                &lockfile_path,
-            )
-            .await;
+            return self
+                .run_patch_refresh::<Reporter>(
+                    &state,
+                    selection.as_ref(),
+                    pnpr_server,
+                    &lockfile_path,
+                )
+                .await;
         }
         let workspace_packages = match &selection {
             Some(selection) => {
@@ -130,8 +141,9 @@ impl UpdateArgs {
         mut selection: Option<InstallFamilySelection>,
         inputs: &UpdateInputs,
     ) -> miette::Result<()> {
-        let Some(packages) =
-            self.select_local_packages::<Reporter>(&state, selection.as_ref(), inputs).await?
+        let Some(packages) = self
+            .select_local_packages::<Reporter>(&state, selection.as_ref(), inputs)
+            .await?
         else {
             return Ok(());
         };
@@ -145,7 +157,9 @@ impl UpdateArgs {
             let update = self.prepare_update(&mut state, inputs, &packages)?;
             match &mut selection {
                 Some(selection) => {
-                    update.run_selected::<Reporter>(selection.selected_projects()).await
+                    update
+                        .run_selected::<Reporter>(selection.selected_projects())
+                        .await
                 }
                 None => update.run::<Reporter>().await,
             }
@@ -220,7 +234,10 @@ impl UpdateArgs {
                 lockfile_only: self.install.lockfile_only,
                 selection: pnpm_package_manager::UpdateSelection {
                     packages,
-                    depth: self.selection.depth.unwrap_or(usize::MAX),
+                    depth: self
+                        .selection
+                        .depth
+                        .unwrap_or(usize::MAX),
                     workspace_packages: inputs.workspace_packages.as_ref(),
                 },
                 version: pnpm_package_manager::UpdateVersionOptions {
@@ -235,7 +252,10 @@ impl UpdateArgs {
                 http_client_arc: std::sync::Arc::clone(&state.http_client),
                 include_direct: inputs.include_direct.clone(),
                 supported_architectures: self.supported_architectures.apply_to(
-                    state.config.supported_architectures.clone(),
+                    state
+                        .config
+                        .supported_architectures
+                        .clone(),
                 ),
                 resolution_observer: None,
             },
@@ -257,7 +277,10 @@ impl UpdateArgs {
             actions_root,
             self.selection.latest,
             matcher,
-            config.update_config.github_actions_server.as_deref(),
+            config
+                .update_config
+                .github_actions_server
+                .as_deref(),
         )
         .await?;
         Ok(())

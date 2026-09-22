@@ -12,7 +12,9 @@ fn allow_builds_rejects_a_manifest_with_duplicate_keys() {
     // occurrence and leaving the effective (last) value untouched. The
     // policy change fails loudly instead of being silently bypassed.
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     let original = "allowBuilds:\n  esbuild: false\n  esbuild: true\n";
     fs::write(&path, original).expect("seed manifest");
 
@@ -59,7 +61,9 @@ fn patched_dependency_empty_map_preserves_manifest_without_patch_block() {
 #[test]
 fn write_or_remove_manifest_ignores_missing_empty_manifest() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     let manifest = crate::model::Manifest::parse(Some("")).expect("empty manifest");
 
     crate::write_or_remove_manifest(&path, manifest).expect("remove missing empty manifest");
@@ -70,7 +74,9 @@ fn write_or_remove_manifest_ignores_missing_empty_manifest() {
 #[test]
 fn write_or_remove_manifest_reports_remove_errors() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir
+        .path()
+        .join(WORKSPACE_MANIFEST_FILENAME);
     fs::create_dir(&path).expect("create manifest dir");
     let manifest = crate::model::Manifest::parse(Some("")).expect("empty manifest");
 

@@ -144,7 +144,8 @@ fn summarize_tarball_reads_the_manifest_files_and_digests() {
     assert_eq!(summary.filename, "scope-pkg-1.0.0.tgz");
     assert_eq!(summary.entry_count, 3);
     assert_eq!(summary.size, tarball.len() as u64);
-    let paths: Vec<&str> = summary.files
+    let paths: Vec<&str> = summary
+        .files
         .iter()
         .map(|file| file.path.as_str())
         .collect();
@@ -284,14 +285,20 @@ fn plain_tarball(entries: &[(&str, &str)]) -> Vec<u8> {
         header.set_size(contents.len() as u64);
         header.set_mode(0o644);
         header.set_cksum();
-        builder.append_data(&mut header, path, contents.as_bytes()).expect("append tar entry");
+        builder
+            .append_data(&mut header, path, contents.as_bytes())
+            .expect("append tar entry");
     }
-    builder.into_inner().expect("finish the tar archive")
+    builder
+        .into_inner()
+        .expect("finish the tar archive")
 }
 
 fn gzipped_tarball(entries: &[(&str, &str)]) -> Vec<u8> {
     let tar = plain_tarball(entries);
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     std::io::Write::write_all(&mut encoder, &tar).expect("gzip the tarball");
-    encoder.finish().expect("finish the gzip stream")
+    encoder
+        .finish()
+        .expect("finish the gzip stream")
 }

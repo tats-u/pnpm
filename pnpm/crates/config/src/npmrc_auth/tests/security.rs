@@ -24,6 +24,10 @@ fn cafile_absolute_path_passes_through_unchanged() {
 #[test]
 fn scoped_n_escape_expansion_only_on_inline() {
     let auth = NpmrcAuth::from_ini::<NoEnv>("//reg.example.com/:ca=line1\\nline2\n", Path::new(""));
-    let entry = auth.tls.by_uri.get("//reg.example.com/").expect("entry present");
+    let entry = auth
+        .tls
+        .by_uri
+        .get("//reg.example.com/")
+        .expect("entry present");
     assert_eq!(entry.ca.as_deref(), Some("line1\nline2"));
 }

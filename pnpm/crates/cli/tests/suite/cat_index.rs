@@ -96,7 +96,9 @@ fn should_cat_index_with_dir_pointing_to_workspace_project() {
         .assert()
         .success();
 
-    let project_dir_arg = project_dir.to_string_lossy().into_owned();
+    let project_dir_arg = project_dir
+        .to_string_lossy()
+        .into_owned();
     let mut pacquet2 = Command::cargo_bin("pnpm").unwrap();
     pacquet2.current_dir(&workspace);
     let output = pacquet2

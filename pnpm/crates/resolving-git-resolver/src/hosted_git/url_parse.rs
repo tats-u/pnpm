@@ -139,7 +139,9 @@ pub(super) struct UrlSegments {
 /// upstream's shortcut branch verbatim.
 pub(super) fn shortcut_segments(parsed: &ParsedUrl) -> UrlSegments {
     let mut pathname = parsed.pathname.as_str();
-    pathname = pathname.strip_prefix('/').unwrap_or(pathname);
+    pathname = pathname
+        .strip_prefix('/')
+        .unwrap_or(pathname);
     // Strip auth from the path. Upstream notes "we ignore auth
     // for shortcuts, so just trim it out".
     if let Some(at) = pathname.find('@') {
@@ -152,7 +154,8 @@ pub(super) fn shortcut_segments(parsed: &ParsedUrl) -> UrlSegments {
     UrlSegments {
         user,
         project: strip_dot_git(&project),
-        committish: parsed.hash
+        committish: parsed
+            .hash
             .as_ref()
             .map(|hash| percent_decode(hash.strip_prefix('#').unwrap_or(hash)))
             .filter(|committish| !committish.is_empty()),
@@ -168,7 +171,8 @@ pub(super) fn host_segments(host_type: HostedGitType, parsed: &ParsedUrl) -> Opt
     Some(UrlSegments {
         user: percent_decode(&segments.user),
         project: percent_decode(&segments.project),
-        committish: segments.committish
+        committish: segments
+            .committish
             .map(|raw| percent_decode(&raw))
             .filter(|decoded| !decoded.is_empty()),
         representation: protocol_to_representation(&parsed.scheme),
@@ -256,13 +260,11 @@ pub(super) fn extract_github(parsed: &ParsedUrl) -> Option<Segments> {
     }
 
     if r#type.is_none() {
-        committish = parsed.hash
-            .as_deref()
-            .map(|hash| {
-                hash.strip_prefix('#')
-                    .unwrap_or(hash)
-                    .to_string()
-            });
+        committish = parsed.hash.as_deref().map(|hash| {
+            hash.strip_prefix('#')
+                .unwrap_or(hash)
+                .to_string()
+        });
     }
 
     if project.ends_with(".git") {
@@ -293,7 +295,8 @@ pub(super) fn extract_bitbucket(parsed: &ParsedUrl) -> Option<Segments> {
     if user.is_empty() || project.is_empty() {
         return None;
     }
-    let committish = parsed.hash
+    let committish = parsed
+        .hash
         .as_deref()
         .map(|hash| {
             hash.strip_prefix('#')
@@ -306,7 +309,10 @@ pub(super) fn extract_bitbucket(parsed: &ParsedUrl) -> Option<Segments> {
 
 /// Port of `gitHosts.gitlab.extract`.
 pub(super) fn extract_gitlab(parsed: &ParsedUrl) -> Option<Segments> {
-    let path = parsed.pathname.trim_start_matches('/').to_string();
+    let path = parsed
+        .pathname
+        .trim_start_matches('/')
+        .to_string();
     if path.contains("/-/") || path.contains("/archive.tar.gz") {
         return None;
     }
@@ -319,7 +325,8 @@ pub(super) fn extract_gitlab(parsed: &ParsedUrl) -> Option<Segments> {
     if user.is_empty() || project.is_empty() {
         return None;
     }
-    let committish = parsed.hash
+    let committish = parsed
+        .hash
         .as_deref()
         .map(|hash| {
             hash.strip_prefix('#')

@@ -151,7 +151,10 @@ pub(crate) fn extract_tarball_entries_streaming(
     let mut archive = Archive::new(reader);
     let mut extract = StreamingExtract::new(store_dir);
 
-    for entry in archive.entries().map_err(TarballError::ReadTarballEntries)? {
+    for entry in archive
+        .entries()
+        .map_err(TarballError::ReadTarballEntries)?
+    {
         let mut entry = entry.map_err(TarballError::ReadTarballEntries)?;
         if !entry.header().entry_type().is_file() {
             continue;
@@ -193,7 +196,9 @@ pub(super) fn entry_meta<Source: Read>(
         .size()
         .map_err(TarballError::ReadTarballEntries)?;
     let cleaned_path = {
-        let entry_path = entry.path().map_err(TarballError::ReadTarballEntries)?;
+        let entry_path = entry
+            .path()
+            .map_err(TarballError::ReadTarballEntries)?;
         clean_archive_entry_path(&entry_path.to_string_lossy())?
     };
     if ignore_file_pattern.is_some_and(|filter| filter(&cleaned_path)) {

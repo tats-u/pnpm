@@ -26,7 +26,11 @@ pub fn package_version_should_include_peers() {
         deprecated: None,
     };
 
-    let dependencies = |peer| version.dependencies(peer).collect::<HashMap<_, _>>();
+    let dependencies = |peer| {
+        version
+            .dependencies(peer)
+            .collect::<HashMap<_, _>>()
+    };
     assert!(dependencies(false).contains_key("fastify"));
     assert!(!dependencies(false).contains_key("fast-querystring"));
     assert!(dependencies(true).contains_key("fastify"));
@@ -140,14 +144,21 @@ fn package_equality_compares_by_name_only() {
 fn latest_returns_version_pointed_to_by_dist_tag() {
     let pkg = package_with_versions("acme", &["1.0.0", "2.0.0", "3.0.0"], "2.0.0");
     let latest = pkg.latest();
-    assert_eq!(latest.expect("latest manifest decodes").version.to_string(), "2.0.0");
+    assert_eq!(
+        latest
+            .expect("latest manifest decodes")
+            .version
+            .to_string(),
+        "2.0.0"
+    );
 }
 
 #[test]
 fn pinned_version_picks_highest_matching() {
     let pkg = package_with_versions("acme", &["1.0.0", "1.2.0", "1.5.3", "2.0.0"], "2.0.0");
-    let picked =
-        pkg.pinned_version("^1.0.0").expect("at least one 1.x version satisfies the range");
+    let picked = pkg
+        .pinned_version("^1.0.0")
+        .expect("at least one 1.x version satisfies the range");
     assert_eq!(picked.version.to_string(), "1.5.3");
 }
 
@@ -160,7 +171,10 @@ fn pinned_version_returns_none_when_no_match() {
 #[test]
 fn pinned_version_returns_none_for_invalid_range() {
     let pkg = package_with_versions("acme", &["1.0.0", "1.2.0"], "1.2.0");
-    assert!(pkg.pinned_version("not-a-range").is_none());
+    assert!(
+        pkg.pinned_version("not-a-range")
+            .is_none()
+    );
 }
 
 #[test]
@@ -206,15 +220,31 @@ fn package_deserializes_full_provenance_packument() {
     assert_eq!(pkg.published_at("1.0.0"), Some("2025-01-10T08:30:00.000Z"));
     assert_eq!(pkg.published_at("9.9.9"), None);
 
-    let version = pkg.versions.get("1.0.0").expect("1.0.0 deserialized");
-    let user = version.npm_user.as_ref().expect("_npmUser present");
-    let publisher = user.trusted_publisher.as_ref().expect("trustedPublisher present");
+    let version = pkg
+        .versions
+        .get("1.0.0")
+        .expect("1.0.0 deserialized");
+    let user = version
+        .npm_user
+        .as_ref()
+        .expect("_npmUser present");
+    let publisher = user
+        .trusted_publisher
+        .as_ref()
+        .expect("trustedPublisher present");
     assert_eq!(publisher.id.as_deref(), Some("github"));
     assert_eq!(publisher.oidc_config_id.as_deref(), Some("release-pipeline"));
     assert_eq!(pkg.latest_decode_error(), None, "a healthy latest reports no decode error");
 
-    let attestations = version.dist.attestations.as_ref().expect("attestations present");
-    let provenance = attestations.provenance.as_ref().expect("provenance present");
+    let attestations = version
+        .dist
+        .attestations
+        .as_ref()
+        .expect("attestations present");
+    let provenance = attestations
+        .provenance
+        .as_ref()
+        .expect("provenance present");
     assert_eq!(provenance.predicate_type.as_deref(), Some("https://slsa.dev/provenance/v1"));
 }
 
@@ -245,9 +275,18 @@ fn package_deserializes_approver_packument() {
         }
     }"#;
     let pkg: Package = serde_json::from_str(body).expect("deserialize approver packument");
-    let version = pkg.versions.get("1.0.0").expect("1.0.0 deserialized");
-    let user = version.npm_user.as_ref().expect("_npmUser present");
-    let approver = user.approver.as_ref().expect("approver present");
+    let version = pkg
+        .versions
+        .get("1.0.0")
+        .expect("1.0.0 deserialized");
+    let user = version
+        .npm_user
+        .as_ref()
+        .expect("_npmUser present");
+    let approver = user
+        .approver
+        .as_ref()
+        .expect("approver present");
     assert_eq!(approver.name.as_deref(), Some("bob"));
     assert_eq!(approver.email.as_deref(), Some("bob@example.com"));
 }
@@ -271,7 +310,10 @@ fn package_deserializes_without_npm_user_or_attestations() {
         }
     }"#;
     let pkg: Package = serde_json::from_str(body).expect("deserialize minimal packument");
-    let version = pkg.versions.get("1.0.0").expect("1.0.0 deserialized");
+    let version = pkg
+        .versions
+        .get("1.0.0")
+        .expect("1.0.0 deserialized");
     assert!(version.npm_user.is_none(), "missing _npmUser stays None");
     assert!(version.dist.attestations.is_none(), "missing attestations stays None");
     assert!(pkg.modified.is_none(), "missing modified stays None");
@@ -308,7 +350,10 @@ fn package_deserializes_deprecated_boolean_false() {
     }"#;
     let pkg: Package =
         serde_json::from_str(body).expect("deserialize packument with deprecated:false");
-    let version = pkg.versions.get("1.0.0").expect("1.0.0 deserialized");
+    let version = pkg
+        .versions
+        .get("1.0.0")
+        .expect("1.0.0 deserialized");
     assert!(version.deprecated.is_none(), "deprecated:false maps to None");
 }
 
@@ -332,7 +377,10 @@ fn package_deserializes_deprecated_boolean_true() {
     }"#;
     let pkg: Package =
         serde_json::from_str(body).expect("deserialize packument with deprecated:true");
-    let version = pkg.versions.get("1.0.0").expect("1.0.0 deserialized");
+    let version = pkg
+        .versions
+        .get("1.0.0")
+        .expect("1.0.0 deserialized");
     assert_eq!(
         version.deprecated.as_deref(),
         Some(""),
@@ -360,7 +408,10 @@ fn package_deserializes_deprecated_reason_string() {
     }"#;
     let pkg: Package =
         serde_json::from_str(body).expect("deserialize packument with deprecation reason");
-    let version = pkg.versions.get("1.0.0").expect("1.0.0 deserialized");
+    let version = pkg
+        .versions
+        .get("1.0.0")
+        .expect("1.0.0 deserialized");
     assert_eq!(version.deprecated.as_deref(), Some("use acme@2 instead"));
 }
 
@@ -431,14 +482,36 @@ fn package_tolerates_object_valued_dependency_entries() {
     let pkg: Package = serde_json::from_str(body)
         .expect("deserialize packument with object-valued devDependencies entries");
 
-    let old = pkg.versions.get("0.1.0").expect("0.1.0 deserialized");
-    let old_dev = old.dev_dependencies.as_ref().expect("devDependencies present");
-    assert_eq!(old_dev.get("should").map(String::as_str), Some("1.2.1"));
+    let old = pkg
+        .versions
+        .get("0.1.0")
+        .expect("0.1.0 deserialized");
+    let old_dev = old
+        .dev_dependencies
+        .as_ref()
+        .expect("devDependencies present");
+    assert_eq!(
+        old_dev
+            .get("should")
+            .map(String::as_str),
+        Some("1.2.1")
+    );
     assert!(!old_dev.contains_key("vows"), "object-valued entries are dropped");
 
-    let current = pkg.versions.get("0.3.8").expect("0.3.8 deserialized");
-    let current_dev = current.dev_dependencies.as_ref().expect("devDependencies present");
-    assert_eq!(current_dev.get("mocha").map(String::as_str), Some("^2.0.0"));
+    let current = pkg
+        .versions
+        .get("0.3.8")
+        .expect("0.3.8 deserialized");
+    let current_dev = current
+        .dev_dependencies
+        .as_ref()
+        .expect("devDependencies present");
+    assert_eq!(
+        current_dev
+            .get("mocha")
+            .map(String::as_str),
+        Some("^2.0.0")
+    );
 }
 
 #[test]
@@ -532,7 +605,9 @@ fn latest_decode_error_names_the_version_and_the_parse_failure() {
     assert!(pkg.versions.contains_key("2.0.0"), "the packument lists the version");
     assert!(pkg.latest().is_none(), "but it cannot be hydrated");
 
-    let (version, error) = pkg.latest_decode_error().expect("latest reports a decode error");
+    let (version, error) = pkg
+        .latest_decode_error()
+        .expect("latest reports a decode error");
     assert_eq!(version, "2.0.0");
     assert!(error.contains("integrity"), "error names the offending field: {error}");
 

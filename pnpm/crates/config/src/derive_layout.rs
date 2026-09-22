@@ -15,26 +15,23 @@ impl Config {
         // `globalPkgDir = (globalDir ?? <pnpm-home>/global)/v11` and
         // `bin = globalBinDir ?? <pnpm-home>/bin`.
         let pnpm_home_dir = default_pnpm_home_dir::<Sys>();
-        let global_dir_root = self.global_dir
-            .clone()
-            .or_else(|| {
-                pnpm_home_dir
-                    .as_ref()
-                    .map(|home| home.join("global"))
-            });
+        let global_dir_root = self.global_dir.clone().or_else(|| {
+            pnpm_home_dir
+                .as_ref()
+                .map(|home| home.join("global"))
+        });
         self.global_pkg_dir = global_dir_root.map(|root| root.join(GLOBAL_LAYOUT_VERSION));
-        self.global_bin = self.global_bin_dir
-            .clone()
-            .or_else(|| {
-                pnpm_home_dir
-                    .as_ref()
-                    .map(|home| home.join("bin"))
-            });
+        self.global_bin = self.global_bin_dir.clone().or_else(|| {
+            pnpm_home_dir
+                .as_ref()
+                .map(|home| home.join("bin"))
+        });
 
         // Inside a workspace, scripts and `pnpm exec` also get the
         // workspace root's `node_modules/.bin` on PATH — pnpm's
         // `extraBinPaths = [join(workspaceDir, 'node_modules', '.bin')]`.
-        self.extra_bin_paths = self.workspace_dir
+        self.extra_bin_paths = self
+            .workspace_dir
             .as_deref()
             .map(|dir| vec![dir.join("node_modules").join(".bin")])
             .unwrap_or_default();
@@ -50,12 +47,13 @@ impl Config {
         // `true` fires — the hoisted-linker derivation below runs after
         // this block, mirroring pnpm's config-reader ordering.
         if cfg!(unix) && self.prefer_symlinked_executables == Some(true) {
-            let hidden_modules_dir =
-                pnpm_fs::lexical_normalize(&self.virtual_store_dir.join("node_modules"));
-            self.extra_env.insert(
-                "NODE_PATH".to_string(),
-                hidden_modules_dir.display().to_string(),
+            let hidden_modules_dir = pnpm_fs::lexical_normalize(
+                &self
+                    .virtual_store_dir
+                    .join("node_modules"),
             );
+            self.extra_env
+                .insert("NODE_PATH".to_string(), hidden_modules_dir.display().to_string());
         }
         self.apply_prefer_symlinked_executables_derivation();
 
@@ -80,7 +78,8 @@ impl Config {
             return;
         }
         let path_delimiter = if cfg!(windows) { ';' } else { ':' };
-        let mut node_paths: Vec<String> = self.extra_env
+        let mut node_paths: Vec<String> = self
+            .extra_env
             .get("NODE_PATH")
             .map(|value| {
                 value
@@ -89,19 +88,23 @@ impl Config {
                     .collect()
             })
             .unwrap_or_default();
-        for dir in [self.virtual_store_dir.join("node_modules"), self.modules_dir.clone()] {
+        for dir in [
+            self.virtual_store_dir
+                .join("node_modules"),
+            self.modules_dir.clone(),
+        ] {
             // `virtual_store_dir` is built by joining a multi-segment
             // literal, which keeps `/` separators on Windows; normalize
             // so NODE_PATH carries native separators like the shims do.
-            let dir = pnpm_fs::lexical_normalize(&dir).display().to_string();
+            let dir = pnpm_fs::lexical_normalize(&dir)
+                .display()
+                .to_string();
             if !node_paths.contains(&dir) {
                 node_paths.push(dir);
             }
         }
-        self.extra_env.insert(
-            "NODE_PATH".to_string(),
-            node_paths.join(&path_delimiter.to_string()),
-        );
+        self.extra_env
+            .insert("NODE_PATH".to_string(), node_paths.join(&path_delimiter.to_string()));
         self.extra_env.insert(
             "NODE_OPTIONS".to_string(),
             esm_node_path_loader::add_esm_node_path_loader_option(

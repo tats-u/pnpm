@@ -92,7 +92,9 @@ fn hardlink_method_survives_staging_swap() {
     .expect("hardlink import should succeed on same-FS tempdir");
 
     let src_ino = fs::metadata(&src).unwrap().ino();
-    let dst_ino = fs::metadata(target.join("package.json")).unwrap().ino();
+    let dst_ino = fs::metadata(target.join("package.json"))
+        .unwrap()
+        .ino();
     assert_eq!(src_ino, dst_ino, "hardlinked re-import must share inode with the store source");
 }
 // `fs::copy` overwrites, so only a linking tier can adopt a damaged file and keep it.

@@ -121,10 +121,11 @@ where
     }
     // Refuse to overwrite a hand-written non-string (parent-scoped object)
     // override value with a scalar — that would corrupt config.
-    if let Some((selector, _)) = entries
-        .iter()
-        .find(|(selector, _)| manifest.non_scalar_overrides.contains(*selector))
-    {
+    if let Some((selector, _)) = entries.iter().find(|(selector, _)| {
+        manifest
+            .non_scalar_overrides
+            .contains(*selector)
+    }) {
         return Err(UpdateWorkspaceManifestError::OverrideConflict {
             key: (*selector).to_string(),
             path,
@@ -176,7 +177,10 @@ pub fn set_audit_ignore_ghsas(
     let mut manifest = Manifest::parse(original.as_deref())
         .map_err(|source| UpdateWorkspaceManifestError::Parse { path: path.clone(), source })?;
 
-    if let Some(bad) = ghsas.iter().find(|ghsa| has_control_char(ghsa)) {
+    if let Some(bad) = ghsas
+        .iter()
+        .find(|ghsa| has_control_char(ghsa))
+    {
         return Err(UpdateWorkspaceManifestError::InvalidControlCharacter {
             path,
             value: bad.clone(),
@@ -217,7 +221,10 @@ pub fn set_minimum_release_age_excludes(
         Err(source) => return Err(UpdateWorkspaceManifestError::Read { path, source }),
     };
 
-    if let Some(bad) = excludes.iter().find(|exclude| has_control_char(exclude)) {
+    if let Some(bad) = excludes
+        .iter()
+        .find(|exclude| has_control_char(exclude))
+    {
         return Err(UpdateWorkspaceManifestError::InvalidControlCharacter {
             path,
             value: bad.clone(),

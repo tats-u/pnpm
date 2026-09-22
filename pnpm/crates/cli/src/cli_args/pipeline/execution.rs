@@ -38,10 +38,18 @@ pub(super) fn run_pipeline_task(
 ) -> miette::Result<ExecutionStatus> {
     let root = options.node.project.as_path();
     let summary_key = options.reporting.summary_key;
-    let settings = options.config.tasks.get(&options.node.task_name);
-    let cache_key = options.task_key.filter(|_| task_cacheable(options.invocation, settings));
+    let settings = options
+        .config
+        .tasks
+        .get(&options.node.task_name);
+    let cache_key = options
+        .task_key
+        .filter(|_| task_cacheable(options.invocation, settings));
     let start = Instant::now();
-    options.reporting.report.task_started(summary_key, options.task_key);
+    options
+        .reporting
+        .report
+        .task_started(summary_key, options.task_key);
 
     if let Some(cache_key) = cache_key
         && let Some(restored) = try_restore(options, cache_key, start)?
@@ -55,8 +63,13 @@ pub(super) fn run_pipeline_task(
         && let Some(cache_key) = cache_key
         && let Some(captured) = execution.captured
     {
-        let outputs = settings.and_then(|settings| settings.outputs.as_deref()).unwrap_or_default();
-        if let Err(error) = options.cache.store(cache_key, root, summary_key, outputs, captured) {
+        let outputs = settings
+            .and_then(|settings| settings.outputs.as_deref())
+            .unwrap_or_default();
+        if let Err(error) = options
+            .cache
+            .store(cache_key, root, summary_key, outputs, captured)
+        {
             (options.reporting.emit)(&LogEvent::Pnpm(PnpmLog {
                 level: LogLevel::Warn,
                 message: format!("{summary_key}: failed to store the task in the cache: {error}"),
@@ -66,7 +79,10 @@ pub(super) fn run_pipeline_task(
     }
     let disposition =
         if cache_key.is_some() { CacheDisposition::Miss } else { CacheDisposition::Bypass };
-    options.reporting.report.task_finished(summary_key, execution.status, disposition, duration);
+    options
+        .reporting
+        .report
+        .task_finished(summary_key, execution.status, disposition, duration);
     Ok(ExecutionStatus {
         status: execution.status,
         duration: Some(duration),
@@ -87,7 +103,10 @@ fn try_restore(
     let Some(stored) = options.cache.lookup(cache_key) else {
         return Ok(None);
     };
-    match options.cache.restore(&stored, root, summary_key) {
+    match options
+        .cache
+        .restore(&stored, root, summary_key)
+    {
         Ok(()) => {
             capture::replay(&stored.scripts, root, options.reporting.emit);
             sync_injected_deps_if_configured(options.config, options.node, options.graph)?;
@@ -135,7 +154,9 @@ fn execute_task_with_cargo_cache(
     let cargo = cargo_cache::CargoCache::open(root, directory).into_diagnostic()?;
     let environment = cargo_cache::cache_environment(
         options.environment.extra_env,
-        settings.and_then(|settings| settings.env.as_deref()).unwrap_or_default(),
+        settings
+            .and_then(|settings| settings.env.as_deref())
+            .unwrap_or_default(),
     );
     let cargo_cacheable = !options.invocation.no_cache
         && settings.is_some_and(|settings| settings.cache != Some(false));
@@ -175,7 +196,11 @@ fn restore_cargo_snapshot(
         Ok(true) => (options.reporting.emit)(&LogEvent::Pnpm(PnpmLog {
             level: LogLevel::Info,
             message: format!("{}: restored Cargo build state", options.reporting.summary_key),
-            prefix: options.node.project.to_string_lossy().into_owned(),
+            prefix: options
+                .node
+                .project
+                .to_string_lossy()
+                .into_owned(),
         })),
         // A snapshot that is not there yet is the ordinary first run.
         Ok(false) => {}
@@ -192,7 +217,13 @@ fn cargo_build_env(
 ) -> HashMap<String, String> {
     let mut extra_env = base_extra_env.clone();
     for name in ["CARGO_TARGET_DIR", "CARGO_BUILD_BUILD_DIR"] {
-        extra_env.insert(name.to_string(), cargo.target.to_string_lossy().into_owned());
+        extra_env.insert(
+            name.to_string(),
+            cargo
+                .target
+                .to_string_lossy()
+                .into_owned(),
+        );
     }
     extra_env
 }
@@ -225,7 +256,11 @@ fn cargo_cache_warning(options: &RunTaskOptions<'_, '_>, reason: &str) {
     (options.reporting.emit)(&LogEvent::Pnpm(PnpmLog {
         level: LogLevel::Warn,
         message: format!("{}: Cargo build cache: {reason}", options.reporting.summary_key),
-        prefix: options.node.project.to_string_lossy().into_owned(),
+        prefix: options
+            .node
+            .project
+            .to_string_lossy()
+            .into_owned(),
     }));
 }
 
@@ -239,11 +274,20 @@ struct TaskExecution {
 /// the cache alongside the live reporter rendering.
 fn execute_task_scripts(options: &RunTaskOptions<'_, '_>) -> miette::Result<TaskExecution> {
     let root = options.node.project.as_path();
-    let manifest = &options.graph[root].package.project.manifest;
+    let manifest = &options.graph[root]
+        .package
+        .project
+        .manifest;
 
     let extra_env = task_environment(options.config, root, options.environment.extra_env);
     let capture_output = options.task_key.is_some()
-        && task_cacheable(options.invocation, options.config.tasks.get(&options.node.task_name));
+        && task_cacheable(
+            options.invocation,
+            options
+                .config
+                .tasks
+                .get(&options.node.task_name),
+        );
     let root_str = root.to_string_lossy().into_owned();
     let mut execution = TaskExecution {
         status: Status::Passed,
@@ -312,7 +356,10 @@ fn runnable_script(
     selected: &str,
     root: &Path,
 ) -> miette::Result<Option<String>> {
-    let Some(script) = manifest.script(selected, true).map_err(miette::Report::new)? else {
+    let Some(script) = manifest
+        .script(selected, true)
+        .map_err(miette::Report::new)?
+    else {
         return Ok(None);
     };
     if script.is_empty() || script == "npx only-allow pnpm" {
@@ -334,15 +381,22 @@ fn sync_injected_deps_if_configured(
     node: &TaskNode,
     graph: &ProjectGraph<GraphPkg<'_>>,
 ) -> miette::Result<()> {
-    if !config.sync_injected_deps_after_scripts
+    if !config
+        .sync_injected_deps_after_scripts
         .iter()
         .any(|script| node.scripts.contains(script))
     {
         return Ok(());
     }
-    let manifest = graph[node.project.as_path()].package.project.manifest.value();
+    let manifest = graph[node.project.as_path()]
+        .package
+        .project
+        .manifest
+        .value();
     sync_injected_deps(&SyncInjectedDeps {
-        pkg_name: manifest.get("name").and_then(Value::as_str),
+        pkg_name: manifest
+            .get("name")
+            .and_then(Value::as_str),
         pkg_root_dir: &node.project,
         workspace_dir: config.workspace_dir.as_deref(),
         manifest_before_scripts: Some(manifest),
@@ -369,14 +423,16 @@ pub(super) fn task_environment(
 ) -> HashMap<String, String> {
     let mut extra_env = base_extra_env.clone();
     if let Some(pnp_path) = pnp_path_for_execution(config, root) {
-        let node_options = extra_env.get("NODE_OPTIONS").map(String::as_str);
-        extra_env.insert(
-            "NODE_OPTIONS".to_string(),
-            make_node_require_option(&pnp_path, node_options),
-        );
+        let node_options = extra_env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
+        extra_env
+            .insert("NODE_OPTIONS".to_string(), make_node_require_option(&pnp_path, node_options));
     }
     if let Some(package_map_path) = package_map_path_for_execution(config, root) {
-        let node_options = extra_env.get("NODE_OPTIONS").map(String::as_str);
+        let node_options = extra_env
+            .get("NODE_OPTIONS")
+            .map(String::as_str);
         extra_env.insert(
             "NODE_OPTIONS".to_string(),
             make_node_package_map_option(&package_map_path, node_options),
@@ -394,7 +450,10 @@ fn pipeline_script_context<'a>(
 ) -> RunContext<'a> {
     let root = options.node.project.as_path();
     RunContext {
-        manifest: &options.graph[root].package.project.manifest,
+        manifest: &options.graph[root]
+            .package
+            .project
+            .manifest,
         dir: root,
         init_cwd: options.environment.init_cwd,
         config: options.config,

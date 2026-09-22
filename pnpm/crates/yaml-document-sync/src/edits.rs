@@ -45,14 +45,20 @@ pub(super) fn replace(
     value: &Value,
 ) -> Result<(), Box<Error>> {
     let rendered = inline(value)?;
-    let feature = document.query_exact(route).map_err(Error::from)?;
+    let feature = document
+        .query_exact(route)
+        .map_err(Error::from)?;
     if let Some(feature) = feature {
         let (start, end) = feature.location.byte_span;
-        let trailing_newline = document.extract(&feature).ends_with('\n');
+        let trailing_newline = document
+            .extract(&feature)
+            .ends_with('\n');
         edits.push((start..end, format!("{rendered}{}", if trailing_newline { "\n" } else { "" })));
         Ok(())
     } else {
-        let pair = document.query_pretty(route).map_err(Error::from)?;
+        let pair = document
+            .query_pretty(route)
+            .map_err(Error::from)?;
         let end = pair.location.byte_span.1;
         edits.push((end..end, format!(" {rendered}")));
         Ok(())
@@ -95,17 +101,20 @@ fn append_flow(document: &Document, edits: &mut Vec<Edit>, range: Range<usize>, 
     let line_start = source[..close]
         .rfind('\n')
         .map_or(close, |index| index + 1);
-    let (insert_at, addition) =
-        if line_start > range.start && source[line_start..close].trim().is_empty() {
-            let indent = source[range]
-                .lines()
-                .skip(1)
-                .find(|line| !line.trim().is_empty() && !line.trim_start().starts_with('#'))
-                .map_or("  ", |line| &line[..line.len() - line.trim_start().len()]);
-            (line_start, format!("{indent}{entry}{}", newline(source)))
-        } else {
-            (close, format!(" {entry}"))
-        };
+    let (insert_at, addition) = if line_start > range.start
+        && source[line_start..close]
+            .trim()
+            .is_empty()
+    {
+        let indent = source[range]
+            .lines()
+            .skip(1)
+            .find(|line| !line.trim().is_empty() && !line.trim_start().starts_with('#'))
+            .map_or("  ", |line| &line[..line.len() - line.trim_start().len()]);
+        (line_start, format!("{indent}{entry}{}", newline(source)))
+    } else {
+        (close, format!(" {entry}"))
+    };
     edits.push((content_end..content_end, comma.to_string()));
     edits.push((insert_at..insert_at, addition));
 }

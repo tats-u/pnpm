@@ -37,7 +37,9 @@ pub(super) async fn resolve_aliasless_specifier(
     manifest: &PackageManifest,
 ) -> Result<Option<AliaslessDependency>, AddError> {
     if pnpm_resolving_git_resolver::parse_bare_specifier(specifier).is_some() {
-        return resolve_aliasless_git(specifier, inputs).await.map(Some);
+        return resolve_aliasless_git(specifier, inputs)
+            .await
+            .map(Some);
     }
     if specifier.starts_with("http:") || specifier.starts_with("https:") {
         return resolve_aliasless_tarball(specifier, inputs.add.config, inputs.http_client_arc)
@@ -73,17 +75,20 @@ pub(super) async fn resolve_aliasless_local(
         current_pkg: None,
         update: LocalResolverUpdate::On,
     };
-    let mut claimed =
-        resolve_from_local_scheme(&ctx, &wanted, &opts).await.map_err(AddError::ResolveLocal)?;
+    let mut claimed = resolve_from_local_scheme(&ctx, &wanted, &opts)
+        .await
+        .map_err(AddError::ResolveLocal)?;
     if claimed.is_none() {
-        claimed =
-            resolve_from_local_path(&ctx, &wanted, &opts).await.map_err(AddError::ResolveLocal)?;
+        claimed = resolve_from_local_path(&ctx, &wanted, &opts)
+            .await
+            .map_err(AddError::ResolveLocal)?;
     }
     let Some(resolved) = claimed else {
         return Ok(None);
     };
-    let manifest_specifier =
-        resolved.normalized_bare_specifier.unwrap_or_else(|| normalized_save_specifier(specifier));
+    let manifest_specifier = resolved
+        .normalized_bare_specifier
+        .unwrap_or_else(|| normalized_save_specifier(specifier));
     let package_name = aliasless_package_name(resolved.manifest.as_deref(), specifier)?;
     Ok(Some(AliaslessDependency { package_name, manifest_specifier }))
 }
@@ -135,8 +140,9 @@ pub(super) async fn resolve_aliasless_tarball(
         },
     })?
     .ok_or_else(|| AddError::MissingPackageName { specifier: redact_url_for_display(specifier) })?;
-    let manifest_specifier =
-        result.normalized_bare_specifier.unwrap_or_else(|| normalized_save_specifier(specifier));
+    let manifest_specifier = result
+        .normalized_bare_specifier
+        .unwrap_or_else(|| normalized_save_specifier(specifier));
     let package_name = aliasless_package_name(result.package.manifest.as_deref(), specifier)?;
     Ok(AliaslessDependency { package_name, manifest_specifier })
 }
@@ -217,7 +223,9 @@ pub(super) fn redact_url_token(token: &str) -> String {
     let after_scheme = token
         .find("://")
         .map_or(token, |pos| &token[pos + "://".len()..]);
-    let authority = &after_scheme[..after_scheme.find('/').unwrap_or(after_scheme.len())];
+    let authority = &after_scheme[..after_scheme
+        .find('/')
+        .unwrap_or(after_scheme.len())];
     if authority.contains('@') {
         return "[hidden]".to_string();
     }
@@ -307,8 +315,9 @@ pub(super) async fn resolve_aliasless_git(
             name: package_name,
         });
     }
-    let manifest_specifier =
-        result.normalized_bare_specifier.unwrap_or_else(|| normalized_save_specifier(specifier));
+    let manifest_specifier = result
+        .normalized_bare_specifier
+        .unwrap_or_else(|| normalized_save_specifier(specifier));
     Ok(AliaslessDependency { package_name, manifest_specifier })
 }
 pub(super) fn aliasless_git_resolver(

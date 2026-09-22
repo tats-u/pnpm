@@ -25,7 +25,9 @@ use pretty_assertions::assert_eq;
 use std::{fs, path::Path, process::Command};
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
+    Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(workspace)
 }
 
 fn two_project_workspace(
@@ -39,7 +41,9 @@ fn two_project_workspace(
     )
     .expect("write root package.json");
 
-    let workspace_yaml_path = fixture.workspace.join("pnpm-workspace.yaml");
+    let workspace_yaml_path = fixture
+        .workspace
+        .join("pnpm-workspace.yaml");
     let mut workspace_yaml =
         fs::read_to_string(&workspace_yaml_path).expect("read pnpm-workspace.yaml");
     if !workspace_yaml.ends_with('\n') {
@@ -49,11 +53,21 @@ fn two_project_workspace(
     fs::write(&workspace_yaml_path, workspace_yaml).expect("write pnpm-workspace.yaml");
 
     fs::create_dir(fixture.workspace.join("pkg-a")).expect("mkdir pkg-a");
-    fs::write(fixture.workspace.join("pkg-a/package.json"), pkg_a.to_string())
-        .expect("write pkg-a/package.json");
+    fs::write(
+        fixture
+            .workspace
+            .join("pkg-a/package.json"),
+        pkg_a.to_string(),
+    )
+    .expect("write pkg-a/package.json");
     fs::create_dir(fixture.workspace.join("pkg-b")).expect("mkdir pkg-b");
-    fs::write(fixture.workspace.join("pkg-b/package.json"), pkg_b.to_string())
-        .expect("write pkg-b/package.json");
+    fs::write(
+        fixture
+            .workspace
+            .join("pkg-b/package.json"),
+        pkg_b.to_string(),
+    )
+    .expect("write pkg-b/package.json");
     fixture
 }
 
@@ -260,8 +274,16 @@ fn recursive_install_false_selects_the_current_project_and_its_dependencies() {
         .assert()
         .success();
 
-    assert!(workspace.join("packages/a/node_modules/is-positive/package.json").exists());
-    assert!(workspace.join("packages/b/node_modules/is-negative/package.json").exists());
+    assert!(
+        workspace
+            .join("packages/a/node_modules/is-positive/package.json")
+            .exists()
+    );
+    assert!(
+        workspace
+            .join("packages/b/node_modules/is-negative/package.json")
+            .exists()
+    );
     assert!(
         !workspace
             .join("packages/unrelated/node_modules/@pnpm.e2e/hello-world-js-bin/package.json")
@@ -278,13 +300,8 @@ fn recursive_install_false_selects_the_current_project_and_its_dependencies() {
 /// `node_modules` symlinks.
 #[test]
 fn fresh_resolve_walks_every_workspace_importer() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // Workspace root manifest: empty so any deps installed are
@@ -363,11 +380,15 @@ fn fresh_resolve_walks_every_workspace_importer() {
     // Shared virtual store: both packages land under
     // `<workspace>/node_modules/.pnpm/<name>@<version>` exactly once.
     assert!(
-        workspace.join("node_modules/.pnpm/@pnpm.e2e+hello-world-js-bin-parent@1.0.0").exists(),
+        workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+hello-world-js-bin-parent@1.0.0")
+            .exists(),
         "hello-world-js-bin-parent virtual-store entry missing",
     );
     assert!(
-        workspace.join("node_modules/.pnpm/@pnpm.e2e+hello-world-js-bin@1.0.0").exists(),
+        workspace
+            .join("node_modules/.pnpm/@pnpm.e2e+hello-world-js-bin@1.0.0")
+            .exists(),
         "hello-world-js-bin virtual-store entry missing",
     );
 
@@ -482,7 +503,9 @@ fn optional_peer_stays_out_of_the_importer_without_auto_install_peers() {
 
     let lockfile = read_lockfile(&workspace.join("pnpm-lock.yaml"));
     let pkg_a = importer(&lockfile, "pkg-a");
-    let peer_c: PkgName = "@pnpm.e2e/peer-c".parse().expect("parse peer name");
+    let peer_c: PkgName = "@pnpm.e2e/peer-c"
+        .parse()
+        .expect("parse peer name");
     for group in [&pkg_a.dependencies, &pkg_a.dev_dependencies, &pkg_a.optional_dependencies] {
         assert!(
             !group
@@ -576,13 +599,8 @@ fn no_peer_is_hoisted_when_auto_install_peers_and_dedupe_peer_dependents_are_off
 /// `packages/app`.
 #[test]
 fn shared_workspace_dep_link_is_relative_to_each_importer() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -639,7 +657,8 @@ fn shared_workspace_dep_link_is_relative_to_each_importer() {
         .unwrap_or_else(|err| panic!("re-parse pnpm-lock.yaml: {err}\n{lockfile}"));
     let lib_name: pnpm_lockfile::PkgName = "@scope/lib".parse().unwrap();
     let importer_link = |importer_id: &str| -> String {
-        parsed.importers
+        parsed
+            .importers
             .get(importer_id)
             .and_then(|importer| importer.dependencies.as_ref())
             .and_then(|deps| deps.get(&lib_name))
@@ -663,7 +682,9 @@ fn shared_workspace_dep_link_is_relative_to_each_importer() {
         "packages/app/node_modules/@scope/lib symlink missing",
     );
     assert!(
-        app_link_path.join("package.json").exists(),
+        app_link_path
+            .join("package.json")
+            .exists(),
         "packages/app/node_modules/@scope/lib must resolve to @scope/lib's manifest, not dangle",
     );
 
@@ -672,13 +693,8 @@ fn shared_workspace_dep_link_is_relative_to_each_importer() {
 
 #[test]
 fn workspace_specs_resolve_a_versionless_private_package() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -734,9 +750,12 @@ fn workspace_specs_resolve_a_versionless_private_package() {
         fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read pnpm-lock.yaml");
     let parsed: pnpm_lockfile::Lockfile = serde_saphyr::from_str(&lockfile)
         .unwrap_or_else(|err| panic!("re-parse pnpm-lock.yaml: {err}\n{lockfile}"));
-    let sa_name: pnpm_lockfile::PkgName = "sa".parse().expect("parse package name");
+    let sa_name: pnpm_lockfile::PkgName = "sa"
+        .parse()
+        .expect("parse package name");
     let resolved = |importer_id: &str| {
-        parsed.importers
+        parsed
+            .importers
             .get(importer_id)
             .and_then(|importer| importer.dependencies.as_ref())
             .and_then(|dependencies| dependencies.get(&sa_name))
@@ -752,13 +771,8 @@ fn workspace_specs_resolve_a_versionless_private_package() {
 
 #[test]
 fn workspace_specs_do_not_resolve_a_non_string_version_as_zero() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -817,13 +831,8 @@ fn workspace_specs_do_not_resolve_a_non_string_version_as_zero() {
 /// `test` script) would become a selectable project for recursive commands.
 #[test]
 fn install_does_not_scaffold_a_root_manifest_in_a_workspace() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");

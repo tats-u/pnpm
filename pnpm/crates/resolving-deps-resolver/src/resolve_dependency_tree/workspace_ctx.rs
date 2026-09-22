@@ -302,7 +302,10 @@ impl<Map, Snapshot> SnapshotCell<Map, Snapshot> {
     /// invalidated the last one. Snapshots already handed out keep the
     /// contents they were built from.
     fn snapshot(&mut self, project: impl FnOnce(&Map) -> Snapshot) -> Arc<Snapshot> {
-        Arc::clone(self.snapshot.get_or_insert_with(|| Arc::new(project(&self.map))))
+        Arc::clone(
+            self.snapshot
+                .get_or_insert_with(|| Arc::new(project(&self.map))),
+        )
     }
 }
 
@@ -445,7 +448,10 @@ impl WorkspaceTreeCtx {
         if matches!(self.reuse.scope, UpdateReuseScope::None) {
             return &self.reuse.scope;
         }
-        self.reuse.scopes_by_importer.get(importer_id).unwrap_or(&self.reuse.scope)
+        self.reuse
+            .scopes_by_importer
+            .get(importer_id)
+            .unwrap_or(&self.reuse.scope)
     }
 
     #[must_use]
@@ -519,7 +525,10 @@ impl WorkspaceTreeCtx {
 /// Take a mutex-held map out of a context this thread solely owns,
 /// recovering from poisoning like every other read of these maps.
 fn take_locked<Value: Default>(cell: &mut Mutex<Value>) -> Value {
-    std::mem::take(cell.get_mut().unwrap_or_else(std::sync::PoisonError::into_inner))
+    std::mem::take(
+        cell.get_mut()
+            .unwrap_or_else(std::sync::PoisonError::into_inner),
+    )
 }
 
 #[cfg(test)]

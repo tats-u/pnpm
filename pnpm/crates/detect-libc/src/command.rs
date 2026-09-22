@@ -81,14 +81,17 @@ fn parse_glibc_version(output: &str) -> Option<(u32, u32)> {
         .split_ascii_whitespace()
         .rev()
         .find_map(|token| {
-            let token = token.trim_matches(|character: char| {
-                !character.is_ascii_digit() && character != '.'
-            });
+            let token = token
+                .trim_matches(|character: char| !character.is_ascii_digit() && character != '.');
             let (major, minor) = token.split_once('.')?;
             if major.is_empty()
                 || minor.is_empty()
-                || !major.bytes().all(|byte| byte.is_ascii_digit())
-                || !minor.bytes().all(|byte| byte.is_ascii_digit())
+                || !major
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit())
+                || !minor
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit())
             {
                 return None;
             }

@@ -93,7 +93,13 @@ fn version_conflict_keeps_loser_at_parent() {
     let b_under_c_refs = b_under_c.references.borrow();
     assert!(b_under_c_refs.contains("b@2.0.0"), "loser stays under c: {b_under_c_refs:?}");
     assert_eq!(b_under_c_refs.len(), 1);
-    assert!(b_under_c.dependencies.borrow().is_empty(), "b's descendants hoist to nested root c");
+    assert!(
+        b_under_c
+            .dependencies
+            .borrow()
+            .is_empty(),
+        "b's descendants hoist to nested root c"
+    );
     let d_under_c_refs = c_kids
         .iter()
         .find(|dep| dep.0.name == "d")
@@ -229,7 +235,8 @@ fn external_dependencies_are_stripped_from_the_result() {
         ..HoistOpts::default()
     };
     let result = hoist(&lockfile, &opts).expect("hoist should succeed");
-    let names: Vec<String> = result.dependencies
+    let names: Vec<String> = result
+        .dependencies
         .borrow()
         .iter()
         .map(|dep| dep.name.clone())
@@ -374,7 +381,8 @@ fn file_dep_peer_variants_keep_their_own_copies() {
                     .find(|dep| dep.0.name == "comp")
             })
             .unwrap_or_else(|| panic!("no comp reachable from {importer}"));
-        comp.0.references
+        comp.0
+            .references
             .borrow()
             .iter()
             .next()
@@ -438,7 +446,10 @@ fn file_tarball_peer_variants_collapse_like_registry_packages() {
         .unwrap()
         .0;
     assert!(
-        tarpkg.references.borrow().contains("tarpkg@file:tarpkg.tgz(p@1.0.0)"),
+        tarpkg
+            .references
+            .borrow()
+            .contains("tarpkg@file:tarpkg.tgz(p@1.0.0)"),
         "the first-seen variant is the canonical reference: {tarpkg:#?}",
     );
     for importer in ["packages%2Fa", "packages%2Fb"] {
@@ -448,7 +459,8 @@ fn file_tarball_peer_variants_collapse_like_registry_packages() {
             .unwrap()
             .0;
         assert!(
-            !importer_node.dependencies
+            !importer_node
+                .dependencies
                 .borrow()
                 .iter()
                 .any(|dep| dep.0.name == "tarpkg"),

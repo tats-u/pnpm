@@ -13,7 +13,11 @@ pub(super) fn env_lockfile_sync_plan(
     package_manager: PackageManagerToSync,
 ) -> PreCommandPlan {
     PreCommandPlan::SyncEnvLockfile(EnvLockfileSync {
-        frozen_lockfile: input.switch.frozen_lockfile.or(config.frozen_lockfile).unwrap_or(false),
+        frozen_lockfile: input
+            .switch
+            .frozen_lockfile
+            .or(config.frozen_lockfile)
+            .unwrap_or(false),
         config,
         env_root,
         package_manager,
@@ -107,9 +111,14 @@ pub(super) fn locked_package_manager_version(
     env: &EnvLockfile,
     wanted_range: &str,
 ) -> miette::Result<Option<String>> {
-    let Some(version) = env.importers
+    let Some(version) = env
+        .importers
         .get(EnvLockfile::ROOT_IMPORTER_KEY)
-        .and_then(|importer| importer.package_manager_dependencies.as_ref())
+        .and_then(|importer| {
+            importer
+                .package_manager_dependencies
+                .as_ref()
+        })
         .and_then(|dependencies| dependencies.get("pnpm"))
         .map(|dependency| dependency.version.clone())
     else {
@@ -125,9 +134,14 @@ pub(super) fn locked_package_manager_version(
 }
 
 fn package_manager_dependencies_are_resolved(env: &EnvLockfile, version: &str) -> bool {
-    let Some(dependencies) = env.importers
+    let Some(dependencies) = env
+        .importers
         .get(EnvLockfile::ROOT_IMPORTER_KEY)
-        .and_then(|importer| importer.package_manager_dependencies.as_ref())
+        .and_then(|importer| {
+            importer
+                .package_manager_dependencies
+                .as_ref()
+        })
     else {
         return false;
     };
@@ -155,10 +169,14 @@ fn assert_package_manager_lockfile_uses_registry_resolutions(
         }
 
         let package_key = key.without_peer();
-        let package_info =
-            env.packages.get(&package_key).ok_or_else(|| invalid_package_manager_lockfile(&key))?;
-        let snapshot =
-            env.snapshots.get(&key).ok_or_else(|| invalid_package_manager_lockfile(&key))?;
+        let package_info = env
+            .packages
+            .get(&package_key)
+            .ok_or_else(|| invalid_package_manager_lockfile(&key))?;
+        let snapshot = env
+            .snapshots
+            .get(&key)
+            .ok_or_else(|| invalid_package_manager_lockfile(&key))?;
 
         assert_registry_package_path(&key, package_info)?;
         assert_integrity_only_resolution(&key, &package_info.resolution)?;
@@ -173,12 +191,14 @@ fn append_snapshot_dependencies(
     key: &PackageKey,
     pending: &mut Vec<PackageKey>,
 ) -> miette::Result<()> {
-    for dependencies in
-        [&snapshot.dependencies, &snapshot.optional_dependencies].into_iter().flatten()
+    for dependencies in [&snapshot.dependencies, &snapshot.optional_dependencies]
+        .into_iter()
+        .flatten()
     {
         for (name, reference) in dependencies {
-            let next_key =
-                reference.resolve(name).ok_or_else(|| invalid_package_manager_lockfile(key))?;
+            let next_key = reference
+                .resolve(name)
+                .ok_or_else(|| invalid_package_manager_lockfile(key))?;
             pending.push(next_key);
         }
     }
@@ -187,9 +207,14 @@ fn append_snapshot_dependencies(
 
 /// The lockfile keys of the root importer's `packageManager` dependencies.
 fn package_manager_root_keys(env: &EnvLockfile) -> miette::Result<Vec<PackageKey>> {
-    let Some(package_manager_dependencies) = env.importers
+    let Some(package_manager_dependencies) = env
+        .importers
         .get(EnvLockfile::ROOT_IMPORTER_KEY)
-        .and_then(|importer| importer.package_manager_dependencies.as_ref())
+        .and_then(|importer| {
+            importer
+                .package_manager_dependencies
+                .as_ref()
+        })
     else {
         return Err(miette::miette!(
             "The packageManager dependencies were not found in pnpm-lock.yaml"
@@ -228,7 +253,10 @@ fn assert_integrity_only_resolution(
 ) -> miette::Result<()> {
     match resolution {
         LockfileResolution::Registry(resolution)
-            if !resolution.integrity.to_string().is_empty() =>
+            if !resolution
+                .integrity
+                .to_string()
+                .is_empty() =>
         {
             Ok(())
         }

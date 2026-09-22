@@ -13,9 +13,13 @@ fn update_with_selector_only_rewrites_the_matched_dependency() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0", "{FOO}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", DEP]).assert().success();
+    pacquet(&workspace, ["update", DEP])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("^100.1.0"));
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("^1.0.0"));
@@ -40,14 +44,18 @@ fn update_transitive_mixed_with_direct_selector() {
         &workspace,
         &format!(r#"{{ "{FOO}": "1.0.0", "{PARENT}": "100.0.0", "{DEP}": "100.0.0" }}"#),
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0"));
 
     write_manifest(&workspace, &format!(r#"{{ "{FOO}": "1.0.0", "{PARENT}": "100.0.0" }}"#));
 
     // DEP is a transitive selector; FOO is a direct dependency selector.
-    pacquet(&workspace, ["update", DEP, FOO]).assert().success();
+    pacquet(&workspace, ["update", DEP, FOO])
+        .assert()
+        .success();
 
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(
@@ -73,7 +81,9 @@ fn update_transitive_glob_mixed_with_direct_selector() {
         &workspace,
         &format!(r#"{{ "{FOO}": "1.0.0", "{PARENT}": "100.0.0", "{DEP}": "100.0.0" }}"#),
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0"));
 
@@ -81,7 +91,9 @@ fn update_transitive_glob_mixed_with_direct_selector() {
 
     // "@pnpm.e2e/dep-of-*" matches the transitive dep-of-pkg-with-1-dep
     // only; FOO is a direct dependency selector.
-    pacquet(&workspace, ["update", "@pnpm.e2e/dep-of-*", FOO]).assert().success();
+    pacquet(&workspace, ["update", "@pnpm.e2e/dep-of-*", FOO])
+        .assert()
+        .success();
 
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(
@@ -105,7 +117,9 @@ fn update_transitive_rejects_a_requested_version() {
     // Pin the transitive dep-of-pkg-with-1-dep at 100.0.0 (via a direct
     // exact entry), then drop it to a pure transitive of pkg-with-1-dep.
     write_manifest(&workspace, &format!(r#"{{ "{PARENT}": "100.0.0", "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0"));
 
@@ -143,9 +157,13 @@ fn update_latest_with_selector_is_scoped() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0", "{FOO}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest", FOO]).assert().success();
+    pacquet(&workspace, ["update", "--latest", FOO])
+        .assert()
+        .success();
 
     // foo's latest is 100.1.0; dep-of-pkg-with-1-dep is untouched.
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("^100.1.0"));
@@ -161,10 +179,14 @@ fn update_latest_with_negation_selector() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0", "{FOO}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     // Update everything except dep-of-pkg-with-1-dep.
-    pacquet(&workspace, ["update", "--latest", &format!("!{DEP}")]).assert().success();
+    pacquet(&workspace, ["update", "--latest", &format!("!{DEP}")])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("^100.1.0"));
     assert_eq!(dep_spec(&workspace, DEP).as_deref(), Some("^100.0.0"));
@@ -179,7 +201,9 @@ fn update_depth_zero_unknown_package_errors() {
     let (root, workspace, anchor) = setup();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let output = pacquet(&workspace, ["update", "--depth", "0", "@pnpm.e2e/not-a-dependency"])
         .output()
@@ -206,10 +230,14 @@ fn update_depth_zero_leaves_transitive_dependencies_locked() {
     // pkg-with-1-dep, whose ^100.0.0 range a fresh resolve answers with
     // 100.1.0.
     write_manifest(&workspace, &format!(r#"{{ "{PARENT}": "100.0.0", "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     write_manifest(&workspace, &format!(r#"{{ "{PARENT}": "100.0.0" }}"#));
 
-    pacquet(&workspace, ["update", "--depth", "0"]).assert().success();
+    pacquet(&workspace, ["update", "--depth", "0"])
+        .assert()
+        .success();
 
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(
@@ -217,7 +245,9 @@ fn update_depth_zero_leaves_transitive_dependencies_locked() {
         "a depth-0 update should not reach a transitive dependency",
     );
 
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(
@@ -237,9 +267,13 @@ fn update_latest_honors_ignore_dependencies() {
     set_ignore_dependencies(&workspace, &[DEP]);
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0", "{FOO}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     // foo is updated to its latest; the ignored dep keeps its range.
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("^100.1.0"));
@@ -258,10 +292,14 @@ fn update_compatible_honors_ignore_dependencies() {
     // Pin both exactly, then widen the ranges. A plain `update` would
     // bump both to the highest in range; ignoring foo must keep it pinned.
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "100.0.0", "{FOO}": "1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     write_manifest(&workspace, &format!(r#"{{ "{DEP}": "^100.0.0", "{FOO}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     // dep re-resolved to the highest in range; foo kept its old pin.
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
@@ -284,9 +322,13 @@ fn update_prod_scopes_and_honors_ignore() {
         r#"{{ "name": "test-update", "version": "1.0.0", "dependencies": {{ "{DEP}": "^100.0.0", "{FOO}": "^1.0.0" }}, "devDependencies": {{ "@pnpm.e2e/peer-c": "^1.0.0" }} }}"#,
     );
     fs::write(workspace.join("package.json"), manifest).expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--prod", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--prod", "--latest"])
+        .assert()
+        .success();
 
     // dep (prod, not ignored) → latest; foo (prod, ignored) unchanged;
     // peer-c (dev, excluded by --prod) unchanged.
@@ -313,12 +355,16 @@ fn update_latest_all_direct_ignored_does_not_touch_indirect() {
     // Pin the transitive dep-of-pkg-with-1-dep at 100.0.0 (via a direct
     // exact entry), then drop it to a pure transitive of pkg-with-1-dep.
     write_manifest(&workspace, &format!(r#"{{ "{PARENT}": "100.0.0", "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0"));
 
     write_manifest(&workspace, &format!(r#"{{ "{PARENT}": "100.0.0" }}"#));
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     // No-op: the indirect dep stays pinned at 100.0.0.
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
@@ -339,10 +385,14 @@ fn update_compatible_all_direct_ignored_still_updates_indirect() {
     set_ignore_dependencies(&workspace, &[PARENT]);
 
     write_manifest(&workspace, &format!(r#"{{ "{PARENT}": "100.0.0", "{DEP}": "100.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     write_manifest(&workspace, &format!(r#"{{ "{PARENT}": "100.0.0" }}"#));
-    pacquet(&workspace, ["update"]).assert().success();
+    pacquet(&workspace, ["update"])
+        .assert()
+        .success();
 
     // The indirect dep bumps within range (100.0.0 -> 100.1.0).
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
@@ -360,9 +410,13 @@ fn update_latest_all_ignored_is_noop() {
     set_ignore_dependencies(&workspace, &[FOO]);
 
     write_manifest(&workspace, &format!(r#"{{ "{FOO}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest"]).assert().success();
+    pacquet(&workspace, ["update", "--latest"])
+        .assert()
+        .success();
 
     // The only dependency is ignored, so its range is untouched.
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("^1.0.0"));
@@ -382,10 +436,14 @@ fn update_ignore_scripts_skips_project_scripts() {
     )
     .expect("write package.json");
 
-    pacquet(&workspace, ["update", "--ignore-scripts"]).assert().success();
+    pacquet(&workspace, ["update", "--ignore-scripts"])
+        .assert()
+        .success();
 
     assert!(
-        !workspace.join("postinstall-ran").exists(),
+        !workspace
+            .join("postinstall-ran")
+            .exists(),
         "--ignore-scripts should skip the project's lifecycle scripts",
     );
 
@@ -406,11 +464,15 @@ fn update_npm_alias_selector_targets_the_aliased_package() {
         &workspace,
         &format!(r#"{{ "dep-alias": "npm:{DEP}@^100.0.0", "{DEP}": "100.0.0" }}"#),
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
     assert!(virtual_store_has(&workspace, "@pnpm.e2e+dep-of-pkg-with-1-dep@100.0.0"));
     write_manifest(&workspace, &format!(r#"{{ "dep-alias": "npm:{DEP}@^100.0.0" }}"#));
 
-    pacquet(&workspace, ["update", &format!("dep-alias@npm:{DEP}@^100.0.0")]).assert().success();
+    pacquet(&workspace, ["update", &format!("dep-alias@npm:{DEP}@^100.0.0")])
+        .assert()
+        .success();
 
     eprintln!("virtual store contents: {:?}", list_virtual_store(&workspace));
     assert!(
@@ -441,7 +503,9 @@ fn update_preserves_unrelated_transitives_without_peer_dedupe() {
     disable_dedupe_peer_dependents(&workspace);
 
     write_manifest(&workspace, &format!(r#"{{ "{PARENT}": "100.0.0", "{FOO}": "100.1.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     let lockfile_before =
         fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
@@ -450,7 +514,9 @@ fn update_preserves_unrelated_transitives_without_peer_dedupe() {
         "the parent's transitive dependency should be in the lockfile after install:\n{lockfile_before}",
     );
 
-    pacquet(&workspace, ["update", FOO]).assert().success();
+    pacquet(&workspace, ["update", FOO])
+        .assert()
+        .success();
 
     let lockfile_after =
         fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
@@ -476,7 +542,9 @@ fn update_latest_unmatched_noop_ignores_invalid_minimum_release_age_exclude() {
         format!(r#"["{BRAVO_DEP}@^1.0.0"]"#),
     );
 
-    pacquet(&workspace, ["update", "--latest", "@pnpm.e2e/does-not-exist"]).assert().success();
+    pacquet(&workspace, ["update", "--latest", "@pnpm.e2e/does-not-exist"])
+        .assert()
+        .success();
 
     drop((root, anchor));
 }
@@ -493,9 +561,13 @@ fn update_latest_with_glob_selector_is_scoped() {
         &workspace,
         &format!(r#"{{ "{PEER_A}": "1.0.0", "{PEER_C}": "1.0.0", "{FOO}": "1.0.0" }}"#),
     );
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest", "@pnpm.e2e/peer-*"]).assert().success();
+    pacquet(&workspace, ["update", "--latest", "@pnpm.e2e/peer-*"])
+        .assert()
+        .success();
 
     let packages = lockfile_package_keys(&workspace);
     assert!(packages.contains(&format!("{PEER_A}@1.0.1")), "{packages:?}");
@@ -523,9 +595,13 @@ fn update_latest_star_selector_updates_an_empty_specifier() {
         ),
     )
     .expect("write package.json");
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
-    pacquet(&workspace, ["update", "--latest", "*"]).assert().success();
+    pacquet(&workspace, ["update", "--latest", "*"])
+        .assert()
+        .success();
 
     let packages = lockfile_package_keys(&workspace);
     assert!(packages.contains(&format!("{PEER_A}@1.0.1")), "{packages:?}");
@@ -541,10 +617,14 @@ fn update_latest_star_selector_updates_an_empty_specifier() {
 fn update_tag_selector_resolves_the_named_tag() {
     let (root, workspace, anchor) = setup_with_own_registry();
     write_manifest(&workspace, &format!(r#"{{ "{FOO}": "^1.0.0" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     anchor.set_dist_tag(FOO, "100.0.0", "canary");
-    pacquet(&workspace, ["update", &format!("{FOO}@canary")]).assert().success();
+    pacquet(&workspace, ["update", &format!("{FOO}@canary")])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("^100.0.0"));
     let packages = lockfile_package_keys(&workspace);
@@ -560,10 +640,14 @@ fn update_tag_selector_replaces_a_declared_tag() {
     let (root, workspace, anchor) = setup_with_own_registry();
     anchor.set_dist_tag(FOO, "100.1.0", "latest");
     write_manifest(&workspace, &format!(r#"{{ "{FOO}": "latest" }}"#));
-    pacquet(&workspace, ["install"]).assert().success();
+    pacquet(&workspace, ["install"])
+        .assert()
+        .success();
 
     anchor.set_dist_tag(FOO, "100.0.0", "canary");
-    pacquet(&workspace, ["update", &format!("{FOO}@canary")]).assert().success();
+    pacquet(&workspace, ["update", &format!("{FOO}@canary")])
+        .assert()
+        .success();
 
     assert_eq!(dep_spec(&workspace, FOO).as_deref(), Some("canary"));
     let packages = lockfile_package_keys(&workspace);

@@ -55,7 +55,10 @@ pub(crate) fn build_resolve_result(
     let version_str = picked.version.to_string();
     let name_ver = PkgNameVer::new(pkg_name.clone(), picked.version.clone());
     let (resolution, revision) = picked_tarball_resolution(picked, args.registry.registry)?;
-    let published_at = args.meta.published_at(&version_str).map(str::to_string);
+    let published_at = args
+        .meta
+        .published_at(&version_str)
+        .map(str::to_string);
     let manifest = args.manifest_for_revision(picked, &version_str, revision)?;
     let id = resolution_id(args.registry.registry_name, picked, &name_ver);
     let policy_violation = detect_min_release_age_violation(
@@ -72,7 +75,10 @@ pub(crate) fn build_resolve_result(
         policy_violation,
         resolution,
         resolved_via: args.registry.resolved_via.to_string(),
-        normalized_bare_specifier: args.specifier.spec.normalized_bare_specifier
+        normalized_bare_specifier: args
+            .specifier
+            .spec
+            .normalized_bare_specifier
             .clone()
             .or(args.specifier.calculated_specifier),
         alias: args.specifier.alias.map(str::to_string),
@@ -113,16 +119,19 @@ pub(super) fn calculated_specifier(
 ) -> Option<String> {
     revision_specifier(wanted_dependency, opts, spec, None, &spec.name, &picked.version.version)
         .or_else(|| {
-            calc_specifier_from(wanted_dependency, opts, spec)
-                .map(|(bare_specifier, default_pin)| {
+            calc_specifier_from(wanted_dependency, opts, spec).map(
+                |(bare_specifier, default_pin)| {
                     crate::calc_specifier(
                         bare_specifier,
-                        wanted_dependency.prev_specifier.as_deref(),
+                        wanted_dependency
+                            .prev_specifier
+                            .as_deref(),
                         wanted_dependency.alias.as_deref(),
                         &picked.version,
                         default_pin,
                     )
-                })
+                },
+            )
         })
 }
 
@@ -173,7 +182,8 @@ pub(super) fn dist_integrity(
     if let Some(integrity) = &dist.integrity {
         return Ok(Some(integrity.clone()));
     }
-    let Some(shasum) = dist.shasum
+    let Some(shasum) = dist
+        .shasum
         .as_deref()
         .filter(|shasum| !shasum.is_empty())
     else {
@@ -200,8 +210,15 @@ pub(crate) fn calc_specifier_from<'a>(
     if !opts.specifier.calc_specifier || spec.normalized_bare_specifier.is_some() {
         return None;
     }
-    let bare_specifier = wanted_dependency.bare_specifier.as_deref()?;
-    Some((bare_specifier, opts.specifier.range_spec_style.unwrap_or(RangeSpecStyle::Major)))
+    let bare_specifier = wanted_dependency
+        .bare_specifier
+        .as_deref()?;
+    Some((
+        bare_specifier,
+        opts.specifier
+            .range_spec_style
+            .unwrap_or(RangeSpecStyle::Major),
+    ))
 }
 
 pub(crate) fn revision_specifier(
@@ -219,7 +236,8 @@ pub(crate) fn revision_specifier(
         return None;
     };
     let target = format!("{version}+r{revision}");
-    let alias_matches = wanted_dependency.alias
+    let alias_matches = wanted_dependency
+        .alias
         .as_deref()
         .is_none_or(|alias| alias == package_name);
     match prefix {
@@ -245,7 +263,10 @@ pub(super) fn fail_if_trust_downgraded_for_pick(
         return Ok(());
     }
     let trust_opts = TrustCheckOptions {
-        trust_policy_exclude: opts.policy.trust_policy_exclude.as_ref(),
+        trust_policy_exclude: opts
+            .policy
+            .trust_policy_exclude
+            .as_ref(),
         trust_policy_ignore_after_minutes: opts.policy.trust_policy_ignore_after,
         now: None,
         ignore_missing_time_field,
@@ -269,10 +290,14 @@ fn find_non_deprecated_alternative(
     published_by: Option<DateTime<Utc>>,
     published_by_exclude: Option<&PackageVersionPolicy>,
 ) -> Option<NonDeprecatedAlternative> {
-    if !meta.versions.is_deprecated(picked_version) {
+    if !meta
+        .versions
+        .is_deprecated(picked_version)
+    {
         return None;
     }
-    let newest = meta.versions
+    let newest = meta
+        .versions
         .keys()
         .filter(|version| !meta.versions.is_deprecated(version))
         .filter(|version| {
@@ -324,21 +349,25 @@ pub(crate) fn prefixed_calculated_specifier(
     name: &str,
     picked: &PackageVersion,
 ) -> Option<String> {
-    revision_specifier(wanted_dependency, opts, spec, Some(prefix), name, &picked.version)
-        .or_else(|| {
-            calc_specifier_from(wanted_dependency, opts, spec)
-                .map(|(bare_specifier, default_pin)| {
+    revision_specifier(wanted_dependency, opts, spec, Some(prefix), name, &picked.version).or_else(
+        || {
+            calc_specifier_from(wanted_dependency, opts, spec).map(
+                |(bare_specifier, default_pin)| {
                     crate::calc_prefixed_specifier(
                         prefix,
                         name,
                         bare_specifier,
-                        wanted_dependency.prev_specifier.as_deref(),
+                        wanted_dependency
+                            .prev_specifier
+                            .as_deref(),
                         wanted_dependency.alias.as_deref(),
                         picked,
                         default_pin,
                     )
-                })
-        })
+                },
+            )
+        },
+    )
 }
 
 /// Emit the tarball URL already supplied by the picker, which the install path

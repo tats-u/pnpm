@@ -33,7 +33,14 @@ fn config(yaml: &str) -> Config {
     let directory = tempfile::TempDir::new().unwrap();
     let path = directory.path().join("config.yaml");
     std::fs::write(&path, yaml).unwrap();
-    Config::from_yaml(&path, "127.0.0.1:0".parse::<SocketAddr>().unwrap(), None).unwrap()
+    Config::from_yaml(
+        &path,
+        "127.0.0.1:0"
+            .parse::<SocketAddr>()
+            .unwrap(),
+        None,
+    )
+    .unwrap()
 }
 
 #[test]
@@ -80,13 +87,17 @@ fn workload_targets_validate_at_startup() {
     config.identity.auth.oidc[0].workloads[0].registry = "private".to_string();
     config.identity.auth.oidc[0].workloads[0].packages = vec!["@org/*".to_string()];
     assert!(validate_workloads(&config).is_err());
-    config.identity.auth.oidc[0].workloads[0].packages.clear();
+    config.identity.auth.oidc[0].workloads[0]
+        .packages
+        .clear();
     assert!(validate_workloads(&config).is_err());
 }
 
 #[test]
 fn callback_secrets_never_appear_in_request_logs() {
-    let uri: Uri = "/-/oidc/example/callback?code=secret&state=secret-state".parse().unwrap();
+    let uri: Uri = "/-/oidc/example/callback?code=secret&state=secret-state"
+        .parse()
+        .unwrap();
     assert_eq!(super::super::loggable_uri(&uri), "/-/oidc/example/callback");
 }
 

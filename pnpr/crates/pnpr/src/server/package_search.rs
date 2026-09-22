@@ -43,7 +43,9 @@ impl<Item> SearchPage<Item> {
     }
 
     pub(super) fn total(&self) -> usize {
-        self.names.len().saturating_add(self.unscanned)
+        self.names
+            .len()
+            .saturating_add(self.unscanned)
     }
 }
 
@@ -110,7 +112,9 @@ impl UpstreamSearchBudget {
     }
 
     pub(super) fn add_results(&mut self, object_count: usize) {
-        self.results = self.results.saturating_add(object_count);
+        self.results = self
+            .results
+            .saturating_add(object_count);
     }
 }
 
@@ -128,8 +132,9 @@ pub(super) async fn serve_search(
     let Some(params) = pnpr_search::parse_params(query_string, 20) else {
         return search_response(&[], 0);
     };
-    let Some(registry) =
-        registry.map(str::to_string).or_else(|| default_registry_target(state, Ecosystem::Npm))
+    let Some(registry) = registry
+        .map(str::to_string)
+        .or_else(|| default_registry_target(state, Ecosystem::Npm))
     else {
         return search_response(&[], 0);
     };
@@ -200,7 +205,8 @@ pub(super) async fn append_hosted_search(
     };
     for name in names {
         if page.push_name(&name) {
-            page.objects.push(pnpr_search::local_search_entry(&storage, &name).await);
+            page.objects
+                .push(pnpr_search::local_search_entry(&storage, &name).await);
         }
     }
     Ok(())
@@ -224,13 +230,24 @@ pub(super) async fn append_upstream_source(
     page: &mut SearchPage<Value>,
     budget: &mut UpstreamSearchBudget,
 ) -> Result<(), RegistryError> {
-    let Some(config) = state.inner.config.routing.upstreams.get(search.source) else {
+    let Some(config) = state
+        .inner
+        .config
+        .routing
+        .upstreams
+        .get(search.source)
+    else {
         return Ok(());
     };
     if search.browse || !config.search || !upstream_search_admits(config, identity) {
         return Ok(());
     }
-    let Some(upstream) = state.inner.proxy.upstreams.get(search.source) else {
+    let Some(upstream) = state
+        .inner
+        .proxy
+        .upstreams
+        .get(search.source)
+    else {
         return Ok(());
     };
     let context = UpstreamSearchContext {
@@ -249,7 +266,8 @@ pub(super) fn upstream_search_admits(
     config: &pnpr_config::UpstreamConfig,
     identity: &Identity,
 ) -> bool {
-    config.access
+    config
+        .access
         .as_ref()
         .is_none_or(|access| access.allows(identity))
         && config.rules.all_access_admit(identity)
@@ -267,7 +285,13 @@ pub(super) async fn hosted_search_names(
     ecosystem: Ecosystem,
     text: &pnpr_search::SearchText,
 ) -> Result<Option<(Storage, Vec<String>)>, RegistryError> {
-    let Some(hosted) = state.inner.config.routing.hosted.get(source) else {
+    let Some(hosted) = state
+        .inner
+        .config
+        .routing
+        .hosted
+        .get(source)
+    else {
         return Ok(None);
     };
     if !hosted.rules.any_access_admits(identity) {
@@ -301,9 +325,15 @@ pub(super) async fn append_upstream_search(
         if !budget.try_take_request() {
             return Ok(());
         }
-        let size = budget.remaining_results().clamp(1, FETCH_SIZE);
+        let size = budget
+            .remaining_results()
+            .clamp(1, FETCH_SIZE);
         let query = upstream_search_query(context.query_string, from, size);
-        let response = match context.upstream.fetch_search(&query).await? {
+        let response = match context
+            .upstream
+            .fetch_search(&query)
+            .await?
+        {
             FetchOutcome::Ok(response) => response,
             FetchOutcome::NotFound => return Ok(()),
         };
@@ -348,7 +378,9 @@ pub(super) fn consume_upstream_page(
         // Raw, unfiltered by `search_result_is_visible`, yet no leak:
         // `upstream_search_admits` withholds a source from any caller its
         // access or package rules deny.
-        page.unscanned = page.unscanned.saturating_add(response.total.saturating_sub(*from));
+        page.unscanned = page
+            .unscanned
+            .saturating_add(response.total.saturating_sub(*from));
         return Ok(PageOutcome::Done);
     }
     Ok(PageOutcome::More)

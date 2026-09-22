@@ -54,7 +54,11 @@ fn tls_error_invalid_client_identity_includes_reason_in_display() {
 fn per_registry_tls_default_is_empty() {
     let tls_map = PerRegistryTls::default();
     assert!(tls_map.is_empty());
-    assert!(tls_map.pick_for_url("https://example.com/").is_none());
+    assert!(
+        tls_map
+            .pick_for_url("https://example.com/")
+            .is_none()
+    );
 }
 
 #[test]

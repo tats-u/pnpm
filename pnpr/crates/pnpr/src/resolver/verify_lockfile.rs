@@ -123,7 +123,8 @@ pub(super) async fn verify_input_lockfile(
             return Err(VerifyFailure::Internal(json_error(StatusCode::BAD_GATEWAY, &message)));
         }
     };
-    let osv_violations = runtime.osv_index
+    let osv_violations = runtime
+        .osv_index
         .as_ref()
         .map_or_else(Vec::new, |index| osv_violations_for_lockfile(index, lockfile));
     if violations.is_empty() && osv_violations.is_empty() {
@@ -145,14 +146,17 @@ pub(super) fn past_verdict_trusted(
     hash: &str,
     verifiers: &[Arc<dyn ResolutionVerifier>],
 ) -> bool {
-    runtime.cache.verdicts
+    runtime
+        .cache
+        .verdicts
         .as_ref()
         .is_some_and(|cache| {
             cache.is_verified(hash, |policy| {
                 verifiers
                     .iter()
                     .all(|verifier| verifier.can_trust_past_check(policy))
-                    && runtime.osv_index
+                    && runtime
+                        .osv_index
                         .as_ref()
                         .is_none_or(|index| index.can_trust_policy(policy))
             })

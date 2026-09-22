@@ -79,10 +79,16 @@ pub(in super::super) async fn validate_publish_doc(
 }
 
 pub(super) fn record_publisher(incoming: &mut Value, identity: &Identity) {
-    let Some(versions) = incoming.get_mut("versions").and_then(Value::as_object_mut) else {
+    let Some(versions) = incoming
+        .get_mut("versions")
+        .and_then(Value::as_object_mut)
+    else {
         return;
     };
-    for manifest in versions.values_mut().filter_map(Value::as_object_mut) {
+    for manifest in versions
+        .values_mut()
+        .filter_map(Value::as_object_mut)
+    {
         match identity {
             Identity::User { username } => {
                 manifest.insert("_npmUser".to_string(), json!({ "name": username }));
@@ -122,8 +128,11 @@ pub(in super::super) async fn stage_publish(
     let ValidatedPublish { name, incoming, prepared } = doc;
     let storage = hosted_storage(state, org);
 
-    let (hosted, base_version) =
-        parse_hosted_packument(storage.read_hosted_document_for_update(&name).await?)?;
+    let (hosted, base_version) = parse_hosted_packument(
+        storage
+            .read_hosted_document_for_update(&name)
+            .await?,
+    )?;
 
     check_publishable_versions(&name, &incoming, hosted.as_ref(), &prepared)?;
 
@@ -195,13 +204,10 @@ pub(super) async fn write_attachment_slot(
     name: &CanonicalPackageName,
     prepared: PreparedAttachment,
 ) -> Result<pnpr_storage::BlobSlot, RegistryError> {
-    let PreparedAttachment {
-        attachment,
-        canonical,
-        version: _,
-        dist,
-    } = prepared;
-    let slot = storage.reserve_hosted_blob(name, &canonical).await?;
+    let PreparedAttachment { attachment, canonical, version: _, dist } = prepared;
+    let slot = storage
+        .reserve_hosted_blob(name, &canonical)
+        .await?;
     let PendingAttachment { filename, data, declared_length } = attachment;
     let tmp_path = slot.tmp_path.clone();
     let dist_for_task = (!dist.is_null()).then_some(dist);
@@ -256,7 +262,10 @@ pub(super) fn check_publishable_versions(
     let hosted_versions = hosted
         .and_then(|h| h.get("versions"))
         .and_then(Value::as_object);
-    let Some(incoming_versions) = incoming.get("versions").and_then(Value::as_object) else {
+    let Some(incoming_versions) = incoming
+        .get("versions")
+        .and_then(Value::as_object)
+    else {
         return Ok(());
     };
     for (version, incoming_manifest) in incoming_versions {
@@ -285,8 +294,12 @@ pub(super) fn check_publishable_versions(
 /// Whether the incoming manifest declares an integrity other than the one
 /// the hosted manifest carries.
 pub(super) fn integrity_changed(incoming_manifest: &Value, hosted_manifest: &Value) -> bool {
-    let incoming_integrity = incoming_manifest.pointer("/dist/integrity").and_then(Value::as_str);
-    let hosted_integrity = hosted_manifest.pointer("/dist/integrity").and_then(Value::as_str);
+    let incoming_integrity = incoming_manifest
+        .pointer("/dist/integrity")
+        .and_then(Value::as_str);
+    let hosted_integrity = hosted_manifest
+        .pointer("/dist/integrity")
+        .and_then(Value::as_str);
     incoming_integrity.is_some_and(|integrity| Some(integrity) != hosted_integrity)
 }
 
@@ -294,13 +307,16 @@ pub(super) fn staged_hosted_original_ref(
     package: &CanonicalPackageName,
     attachment: &PreparedAttachment,
 ) -> Option<JournaledRevisionRef> {
-    let integrity: Integrity = attachment.dist
+    let integrity: Integrity = attachment
+        .dist
         .get("integrity")?
         .as_str()?
         .parse()
         .ok()?;
     let path = integrity_addressed_tarball_path(&integrity)?;
-    let digest = path.strip_prefix("-/tarballs/sha512/")?.to_string();
+    let digest = path
+        .strip_prefix("-/tarballs/sha512/")?
+        .to_string();
     let record = HostedOriginalRef {
         package: package.as_str().to_string(),
         version: attachment.version.clone(),

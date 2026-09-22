@@ -189,9 +189,10 @@ where
             AddOwned {
                 tarball_mem_cache: self.resources.tarball_mem_cache,
                 http_client_arc: self.resources.http_client_arc,
-                dependency_groups: self.resources.dependency_groups.map(|groups| {
-                    groups.into_iter().collect()
-                }),
+                dependency_groups: self
+                    .resources
+                    .dependency_groups
+                    .map(|groups| groups.into_iter().collect()),
                 included_groups: self.resources.included_groups,
                 save_catalog_name: self.resources.save_catalog_name,
                 supported_architectures: self.resources.supported_architectures,
@@ -334,8 +335,11 @@ pub struct AddResources<DependencyGroupList> {
 }
 
 fn begin<Reporter: self::Reporter>(add: AddOptions<'_>, owned: &AddOwned) {
-    add.http_client.set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
-    owned.http_client_arc.set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+    add.http_client
+        .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
+    owned
+        .http_client_arc
+        .set_warning_handler(pnpm_reporter::emit_global_warning::<Reporter>);
 }
 
 /// What one add pass shares across the selectors it resolves, and across

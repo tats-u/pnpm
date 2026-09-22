@@ -115,9 +115,8 @@ pub(super) fn validate_windows_kernel_version(
     minor: u32,
     build: u32,
 ) -> Option<(u32, u32, u32)> {
-    (major > 0 && major < 1_000 && minor < 1_000 && build > 0 && build < 1_000_000).then_some((
-        major, minor, build,
-    ))
+    (major > 0 && major < 1_000 && minor < 1_000 && build > 0 && build < 1_000_000)
+        .then_some((major, minor, build))
 }
 pub(super) fn patch_hash(snapshot_key: &PackageKey) -> Option<String> {
     let rendered = snapshot_key.to_string();

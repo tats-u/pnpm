@@ -58,7 +58,8 @@ impl WorkspaceSettings {
             lockfile_dir: opt_path(config.lockfile_dir.as_deref()),
             npmrc_auth_file: opt_path(config.npmrc_auth_file.as_deref()),
             global_pnpmfile: opt_path(config.global_pnpmfile.as_deref()),
-            pnpmfile: config.pnpmfile
+            pnpmfile: config
+                .pnpmfile
                 .as_ref()
                 .map(|paths| PnpmfileSetting::Multiple(paths.iter().map(|p| path(p)).collect())),
 
@@ -114,7 +115,9 @@ impl WorkspaceSettings {
             patched_dependencies: config.patched_dependencies.clone(),
             patches_dir: config.patches_dir.clone(),
             config_dependencies: config.config_dependencies.clone(),
-            packages: config.workspace_package_patterns.clone(),
+            packages: config
+                .workspace_package_patterns
+                .clone(),
             ..self
         }
     }
@@ -135,19 +138,26 @@ impl WorkspaceSettings {
             node_options: Some(config.node_options.clone()),
             unsafe_perm: Some(config.unsafe_perm),
             supported_architectures: config.supported_architectures.clone(),
-            ignored_optional_dependencies: config.ignored_optional_dependencies.clone(),
+            ignored_optional_dependencies: config
+                .ignored_optional_dependencies
+                .clone(),
             overrides: config.overrides.clone(),
             package_extensions: config.package_extensions.clone(),
             // The flattened lookup, which is the by-name form of the setting
             // whichever of the two forms the file wrote it in.
-            package_configs: config.package_configs.clone().map(PackageConfigsSetting::ByName),
+            package_configs: config
+                .package_configs
+                .clone()
+                .map(PackageConfigsSetting::ByName),
             ..self
         }
     }
 
     pub(super) fn with_resolved_policy(self, config: &Config) -> Self {
         Self {
-            minimum_release_age_exclude: config.minimum_release_age_exclude.clone(),
+            minimum_release_age_exclude: config
+                .minimum_release_age_exclude
+                .clone(),
             minimum_release_age_ignore_missing_time: Some(
                 config.minimum_release_age_ignore_missing_time,
             ),
@@ -184,7 +194,8 @@ impl WorkspaceSettings {
 
     pub(super) fn with_resolved_collections(self, config: &Config) -> Self {
         Self {
-            catalogs: config.catalogs
+            catalogs: config
+                .catalogs
                 .as_ref()
                 .map(|catalogs| {
                     catalogs
@@ -201,7 +212,8 @@ impl WorkspaceSettings {
                         .collect()
                 }),
             allow_builds: Some(
-                config.allow_builds
+                config
+                    .allow_builds
                     .iter()
                     .map(|(name, allowed)| (name.clone(), AllowBuild::Decided(*allowed)))
                     .collect(),
@@ -209,7 +221,9 @@ impl WorkspaceSettings {
 
             https_proxy: config.proxy.https_proxy.clone(),
             http_proxy: config.proxy.http_proxy.clone(),
-            no_proxy: config.proxy.no_proxy
+            no_proxy: config
+                .proxy
+                .no_proxy
                 .as_ref()
                 .map(|no_proxy| match no_proxy {
                     pnpm_network::NoProxySetting::Bypass => serde_json::Value::Bool(true),

@@ -68,7 +68,9 @@ fn workspace_without_packages_field_enumerates_root_only() {
         r#"{"name":"root","version":"0.0.0","scripts":{"prepare":"node root.js"}}"#,
     )
     .expect("write root package.json");
-    let nested = dir.path().join("test-e2e/fixtures/vendor/preact/.cache/10.10.2");
+    let nested = dir
+        .path()
+        .join("test-e2e/fixtures/vendor/preact/.cache/10.10.2");
     fs::create_dir_all(&nested).expect("mkdir vendored package");
     fs::write(
         nested.join("package.json"),
@@ -88,7 +90,8 @@ fn workspace_without_packages_field_enumerates_root_only() {
     let names: Vec<&str> = projects
         .iter()
         .filter_map(|project| {
-            project.manifest
+            project
+                .manifest
                 .value()
                 .get("name")
                 .and_then(|name| name.as_str())
@@ -302,7 +305,8 @@ async fn install_writes_workspace_state() {
         .path()
         .to_string_lossy()
         .into_owned();
-    let project = state.projects
+    let project = state
+        .projects
         .get(&project_key)
         .unwrap_or_else(|| panic!("project entry for {project_key:?} should exist"));
     assert_eq!(
@@ -346,7 +350,9 @@ fn filtered_modules_metadata_preserves_only_retained_unselected_entries() {
     let package_key = |name: &str, version: &str| {
         pnpm_lockfile::PackageKey::new(
             pnpm_lockfile::PkgName::parse(name).unwrap(),
-            version.parse::<pnpm_lockfile::PkgVerPeer>().unwrap(),
+            version
+                .parse::<pnpm_lockfile::PkgVerPeer>()
+                .unwrap(),
         )
     };
     let retained = "retained@1.0.0";
@@ -450,10 +456,24 @@ fn filtered_modules_metadata_preserves_only_retained_unselected_entries() {
         &selected_current,
     );
 
-    assert!(next.hoisted_dependencies.contains_key(retained));
-    assert!(next.hoisted_dependencies.contains_key(selected));
-    assert!(!next.hoisted_dependencies.contains_key(shared));
-    assert!(!next.hoisted_dependencies.contains_key(stale_selected));
+    assert!(
+        next.hoisted_dependencies
+            .contains_key(retained)
+    );
+    assert!(
+        next.hoisted_dependencies
+            .contains_key(selected)
+    );
+    assert!(
+        !next
+            .hoisted_dependencies
+            .contains_key(shared)
+    );
+    assert!(
+        !next
+            .hoisted_dependencies
+            .contains_key(stale_selected)
+    );
     assert_eq!(
         next.hoisted_locations.as_ref().unwrap(),
         &std::collections::BTreeMap::from([
@@ -602,11 +622,15 @@ async fn optimistic_repeat_install_round_trips_on_single_project_install() {
     // Sanity check the first install left both artifacts the
     // optimistic check keys off on disk.
     assert!(
-        dirs.project_root.join("pnpm-lock.yaml").exists(),
+        dirs.project_root
+            .join("pnpm-lock.yaml")
+            .exists(),
         "first install must write pnpm-lock.yaml next to the manifest",
     );
     assert!(
-        load_workspace_state(&dirs.project_root).expect("read workspace state").is_some(),
+        load_workspace_state(&dirs.project_root)
+            .expect("read workspace state")
+            .is_some(),
         "first install must record .pnpm-workspace-state-v1.json",
     );
 
@@ -684,12 +708,10 @@ async fn optimistic_repeat_install_round_trips_on_single_project_install() {
 
     let captured = EVENTS.lock().unwrap();
     assert!(
-        captured
-            .iter()
-            .any(|event| matches!(
-                event,
-                LogEvent::Pnpm(log) if log.message == "Already up to date"
-            )),
+        captured.iter().any(|event| matches!(
+            event,
+            LogEvent::Pnpm(log) if log.message == "Already up to date"
+        )),
         "second install must emit `Already up to date`; got events: {captured:#?}",
     );
 
@@ -744,7 +766,9 @@ async fn read_package_hook_rewrites_the_project_own_specifier() {
         .as_ref()
         .expect("dependencies map");
     let key = pnpm_lockfile::PkgName::parse("@pnpm.e2e/pkg-with-1-dep").unwrap();
-    let recorded = root_deps.get(&key).expect("pkg-with-1-dep recorded at root");
+    let recorded = root_deps
+        .get(&key)
+        .expect("pkg-with-1-dep recorded at root");
     assert_eq!(recorded.specifier, "100.0.0");
     assert_eq!(recorded.version.to_string(), "100.0.0");
 
@@ -774,8 +798,10 @@ async fn read_package_hook_rewrites_a_workspace_member_own_specifier() {
 
     let key = pnpm_lockfile::PkgName::parse("@pnpm.e2e/pkg-with-1-dep").unwrap();
     let member_dependency = |lockfile: &Lockfile| {
-        lockfile.importers["packages/member"].dependencies.as_ref().expect("member dependencies")
-            [&key]
+        lockfile.importers["packages/member"]
+            .dependencies
+            .as_ref()
+            .expect("member dependencies")[&key]
             .clone()
     };
     let read_lockfile = || {

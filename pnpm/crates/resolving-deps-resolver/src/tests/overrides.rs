@@ -89,7 +89,9 @@ async fn overrides_hook_applies_after_the_pnpmfile_hook() {
     };
     let overrides_hook: crate::ManifestHook = std::sync::Arc::new(|manifest| {
         let mut owned = (*manifest).clone();
-        if let Some(deps) = owned.get_mut("dependencies").and_then(serde_json::Value::as_object_mut)
+        if let Some(deps) = owned
+            .get_mut("dependencies")
+            .and_then(serde_json::Value::as_object_mut)
             && deps.contains_key("bar")
         {
             deps.insert("bar".to_string(), serde_json::Value::String("^3.0.0".to_string()));

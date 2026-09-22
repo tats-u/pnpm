@@ -12,11 +12,16 @@ use std::{
 fn should_list_registries() {
     let cwd = CommandTempCwd::init().add_mocked_registry();
 
-    let cache_dir = cwd.npmrc_info.cache_dir.join("v11").join("metadata");
+    let cache_dir = cwd
+        .npmrc_info
+        .cache_dir
+        .join("v11")
+        .join("metadata");
     fs::create_dir_all(cache_dir.join("registry.npmjs.org")).unwrap();
     fs::create_dir_all(cache_dir.join("registry.yarnpkg.com")).unwrap();
 
-    let output = cwd.pacquet
+    let output = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("list-registries")
         .assert()
@@ -37,14 +42,19 @@ fn should_list_registries() {
 fn should_list_registries_as_decoded_urls() {
     let cwd = CommandTempCwd::init().add_mocked_registry();
 
-    let cache_dir = cwd.npmrc_info.cache_dir.join("v11").join("metadata");
+    let cache_dir = cwd
+        .npmrc_info
+        .cache_dir
+        .join("v11")
+        .join("metadata");
     for registry in ["https://registry.npmjs.org/", "https://npm.example:8443/team/a/"] {
         let registry_name =
             pnpm_resolving_npm_resolver::mirror::get_registry_name(registry).unwrap();
         fs::create_dir_all(cache_dir.join(&registry_name)).unwrap();
     }
 
-    let output = cwd.pacquet
+    let output = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("list-registries")
         .assert()
@@ -62,14 +72,31 @@ fn should_list_registries_as_decoded_urls() {
 fn should_list_packages() {
     let cwd = CommandTempCwd::init().add_mocked_registry();
 
-    let cache_dir = cwd.npmrc_info.cache_dir.join("v11").join("metadata");
+    let cache_dir = cwd
+        .npmrc_info
+        .cache_dir
+        .join("v11")
+        .join("metadata");
     let url_str = cwd.npmrc_info.mock_instance.url();
     let registry_name = pnpm_resolving_npm_resolver::mirror::get_registry_name(url_str).unwrap();
     fs::create_dir_all(cache_dir.join(&registry_name)).unwrap();
-    fs::write(cache_dir.join(&registry_name).join("is-positive.jsonl"), "{}").unwrap();
-    fs::write(cache_dir.join(&registry_name).join("is-negative.jsonl"), "{}").unwrap();
+    fs::write(
+        cache_dir
+            .join(&registry_name)
+            .join("is-positive.jsonl"),
+        "{}",
+    )
+    .unwrap();
+    fs::write(
+        cache_dir
+            .join(&registry_name)
+            .join("is-negative.jsonl"),
+        "{}",
+    )
+    .unwrap();
 
-    let output = cwd.pacquet
+    let output = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("list")
         .assert()
@@ -87,14 +114,29 @@ fn should_list_packages() {
 fn should_list_only_files_not_directories() {
     let cwd = CommandTempCwd::init().add_mocked_registry();
 
-    let cache_dir = cwd.npmrc_info.cache_dir.join("v11").join("metadata");
+    let cache_dir = cwd
+        .npmrc_info
+        .cache_dir
+        .join("v11")
+        .join("metadata");
     let url_str = cwd.npmrc_info.mock_instance.url();
     let registry_name = pnpm_resolving_npm_resolver::mirror::get_registry_name(url_str).unwrap();
     fs::create_dir_all(cache_dir.join(&registry_name)).unwrap();
-    fs::write(cache_dir.join(&registry_name).join("is-positive.jsonl"), "{}").unwrap();
+    fs::write(
+        cache_dir
+            .join(&registry_name)
+            .join("is-positive.jsonl"),
+        "{}",
+    )
+    .unwrap();
     // A scoped package lives in its own directory, which the glob also matches.
     // Only the file underneath it, not the directory itself, should be listed.
-    fs::create_dir_all(cache_dir.join(&registry_name).join("@scope")).unwrap();
+    fs::create_dir_all(
+        cache_dir
+            .join(&registry_name)
+            .join("@scope"),
+    )
+    .unwrap();
     fs::write(
         cache_dir
             .join(&registry_name)
@@ -104,7 +146,8 @@ fn should_list_only_files_not_directories() {
     )
     .unwrap();
 
-    let output = cwd.pacquet
+    let output = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("list")
         .assert()
@@ -129,14 +172,31 @@ fn should_list_only_files_not_directories() {
 fn should_delete_packages() {
     let cwd = CommandTempCwd::init().add_mocked_registry();
 
-    let cache_dir = cwd.npmrc_info.cache_dir.join("v11").join("metadata");
+    let cache_dir = cwd
+        .npmrc_info
+        .cache_dir
+        .join("v11")
+        .join("metadata");
     let url_str = cwd.npmrc_info.mock_instance.url();
     let registry_name = pnpm_resolving_npm_resolver::mirror::get_registry_name(url_str).unwrap();
     fs::create_dir_all(cache_dir.join(&registry_name)).unwrap();
-    fs::write(cache_dir.join(&registry_name).join("is-positive.jsonl"), "{}").unwrap();
-    fs::write(cache_dir.join(&registry_name).join("is-negative.jsonl"), "{}").unwrap();
+    fs::write(
+        cache_dir
+            .join(&registry_name)
+            .join("is-positive.jsonl"),
+        "{}",
+    )
+    .unwrap();
+    fs::write(
+        cache_dir
+            .join(&registry_name)
+            .join("is-negative.jsonl"),
+        "{}",
+    )
+    .unwrap();
 
-    let output = cwd.pacquet
+    let output = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("delete")
         .with_arg("is-positive")
@@ -176,7 +236,11 @@ fn should_delete_packages_from_all_metadata_dirs() {
         pnpm_resolving_npm_resolver::mirror::FULL_FILTERED_META_DIR,
     ];
     for meta_dir in meta_dirs {
-        let dir = cwd.npmrc_info.cache_dir.join(meta_dir).join(&registry_name);
+        let dir = cwd
+            .npmrc_info
+            .cache_dir
+            .join(meta_dir)
+            .join(&registry_name);
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("is-positive.jsonl"), "{}").unwrap();
     }
@@ -189,7 +253,9 @@ fn should_delete_packages_from_all_metadata_dirs() {
         .success();
 
     for meta_dir in meta_dirs {
-        let file = cwd.npmrc_info.cache_dir
+        let file = cwd
+            .npmrc_info
+            .cache_dir
             .join(meta_dir)
             .join(&registry_name)
             .join("is-positive.jsonl");
@@ -219,13 +285,18 @@ fn should_prune_registries_written_before_the_scheme_joined_the_key() {
     ];
     for meta_dir in meta_dirs {
         for registry_name in [live.as_str(), "registry.npmjs.org"] {
-            let dir = cwd.npmrc_info.cache_dir.join(meta_dir).join(registry_name);
+            let dir = cwd
+                .npmrc_info
+                .cache_dir
+                .join(meta_dir)
+                .join(registry_name);
             fs::create_dir_all(&dir).unwrap();
             fs::write(dir.join("is-positive.jsonl"), "{}").unwrap();
         }
     }
 
-    let output = cwd.pacquet
+    let output = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("prune")
         .assert()
@@ -242,9 +313,15 @@ fn should_prune_registries_written_before_the_scheme_joined_the_key() {
     expected.sort();
     assert_eq!(pruned, expected);
     for meta_dir in meta_dirs {
-        let stale = cwd.npmrc_info.cache_dir.join(meta_dir).join("registry.npmjs.org");
+        let stale = cwd
+            .npmrc_info
+            .cache_dir
+            .join(meta_dir)
+            .join("registry.npmjs.org");
         assert!(!stale.exists(), "expected {stale:?} to be pruned");
-        let kept = cwd.npmrc_info.cache_dir
+        let kept = cwd
+            .npmrc_info
+            .cache_dir
             .join(meta_dir)
             .join(&live)
             .join("is-positive.jsonl");
@@ -259,13 +336,16 @@ fn should_prune_registries_written_before_the_scheme_joined_the_key() {
 fn should_report_but_keep_stale_registries_on_a_dry_run() {
     let cwd = CommandTempCwd::init().add_mocked_registry();
 
-    let stale = cwd.npmrc_info.cache_dir
+    let stale = cwd
+        .npmrc_info
+        .cache_dir
         .join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR)
         .join("registry.npmjs.org");
     fs::create_dir_all(&stale).unwrap();
     fs::write(stale.join("is-positive.jsonl"), "{}").unwrap();
 
-    let assertion = cwd.pacquet
+    let assertion = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("prune")
         .with_arg("--dry-run")
@@ -317,17 +397,22 @@ fn should_prune_the_readable_roots_when_another_root_cannot_be_read() {
 
     let cwd = CommandTempCwd::init().add_mocked_registry();
 
-    let sealed =
-        cwd.npmrc_info.cache_dir.join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR);
+    let sealed = cwd
+        .npmrc_info
+        .cache_dir
+        .join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR);
     fs::create_dir_all(sealed.join("registry.npmjs.org")).unwrap();
-    let reachable = cwd.npmrc_info.cache_dir
+    let reachable = cwd
+        .npmrc_info
+        .cache_dir
         .join(pnpm_resolving_npm_resolver::mirror::FULL_META_DIR)
         .join("registry.yarnpkg.com");
     fs::create_dir_all(&reachable).unwrap();
     fs::set_permissions(&sealed, fs::Permissions::from_mode(0o000)).unwrap();
     let _restore = RestoreMode(&sealed);
 
-    let assertion = cwd.pacquet
+    let assertion = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("prune")
         .assert()
@@ -360,8 +445,10 @@ fn should_name_the_directory_it_could_not_remove() {
 
     let cwd = CommandTempCwd::init().add_mocked_registry();
 
-    let root =
-        cwd.npmrc_info.cache_dir.join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR);
+    let root = cwd
+        .npmrc_info
+        .cache_dir
+        .join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR);
     let stale = root.join("registry.npmjs.org");
     fs::create_dir_all(&stale).unwrap();
     // Listing the root stays allowed, so the stale directory is still found;
@@ -369,7 +456,8 @@ fn should_name_the_directory_it_could_not_remove() {
     fs::set_permissions(&root, fs::Permissions::from_mode(0o555)).unwrap();
     let _restore = RestoreMode(&root);
 
-    let assertion = cwd.pacquet
+    let assertion = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("prune")
         .assert()
@@ -402,12 +490,15 @@ fn should_refuse_to_prune_through_a_symlinked_metadata_root() {
     fs::create_dir_all(&bystander).unwrap();
     fs::write(bystander.join("keep.txt"), "not pnpm's to delete").unwrap();
 
-    let root =
-        cwd.npmrc_info.cache_dir.join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR);
+    let root = cwd
+        .npmrc_info
+        .cache_dir
+        .join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR);
     fs::create_dir_all(root.parent().unwrap()).unwrap();
     std::os::unix::fs::symlink(&outside, &root).unwrap();
 
-    let assertion = cwd.pacquet
+    let assertion = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("prune")
         .assert()
@@ -437,12 +528,15 @@ fn should_refuse_to_prune_a_metadata_root_linked_to_the_cache_directory() {
     fs::create_dir_all(&bystander).unwrap();
     fs::write(bystander.join("keep.txt"), "not prune's to delete").unwrap();
 
-    let root =
-        cwd.npmrc_info.cache_dir.join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR);
+    let root = cwd
+        .npmrc_info
+        .cache_dir
+        .join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR);
     fs::create_dir_all(root.parent().unwrap()).unwrap();
     std::os::unix::fs::symlink(&cwd.npmrc_info.cache_dir, &root).unwrap();
 
-    let assertion = cwd.pacquet
+    let assertion = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("prune")
         .assert()
@@ -466,12 +560,15 @@ fn should_report_a_zero_count_on_a_dry_run_of_a_clean_cache() {
     let cwd = CommandTempCwd::init().add_mocked_registry();
 
     let live = pnpm_resolving_npm_resolver::mirror::get_registry_name(LIVE_REGISTRY).unwrap();
-    let dir = cwd.npmrc_info.cache_dir
+    let dir = cwd
+        .npmrc_info
+        .cache_dir
         .join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR)
         .join(&live);
     fs::create_dir_all(&dir).unwrap();
 
-    let assertion = cwd.pacquet
+    let assertion = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("prune")
         .with_arg("--dry-run")
@@ -496,7 +593,9 @@ fn should_prune_nothing_when_every_registry_is_readable() {
     // Any registry in the current key shape proves the point; a literal keeps
     // the surviving name visible next to the stale one it is contrasted with.
     let live = pnpm_resolving_npm_resolver::mirror::get_registry_name(LIVE_REGISTRY).unwrap();
-    let dir = cwd.npmrc_info.cache_dir
+    let dir = cwd
+        .npmrc_info
+        .cache_dir
         .join(pnpm_resolving_npm_resolver::mirror::ABBREVIATED_META_DIR)
         .join(&live);
     fs::create_dir_all(&dir).unwrap();
@@ -515,7 +614,11 @@ fn should_prune_nothing_when_every_registry_is_readable() {
 #[test]
 fn should_view_package_cache() {
     let cwd = CommandTempCwd::init().add_mocked_registry();
-    let cache_dir = cwd.npmrc_info.cache_dir.join("v11").join("metadata");
+    let cache_dir = cwd
+        .npmrc_info
+        .cache_dir
+        .join("v11")
+        .join("metadata");
     let url_str = cwd.npmrc_info.mock_instance.url();
     let registry_name = pnpm_resolving_npm_resolver::mirror::get_registry_name(url_str).unwrap();
     fs::create_dir_all(cache_dir.join(&registry_name)).unwrap();
@@ -533,9 +636,16 @@ fn should_view_package_cache() {
             }\
         }\
     }";
-    fs::write(cache_dir.join(&registry_name).join("is-positive.jsonl"), package_jsonl).unwrap();
+    fs::write(
+        cache_dir
+            .join(&registry_name)
+            .join("is-positive.jsonl"),
+        package_jsonl,
+    )
+    .unwrap();
 
-    let output = cwd.pacquet
+    let output = cwd
+        .pacquet
         .with_args(["cache", "view", "is-positive"])
         .assert()
         .success()
@@ -556,13 +666,8 @@ fn should_view_package_cache() {
 
 #[test]
 fn import_populates_metadata_cache() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, cache_dir, .. } = npmrc_info;
 
     let manifest_path = workspace.join("package.json");
@@ -602,11 +707,15 @@ fn import_populates_metadata_cache() {
 
     assert!(cache_metadata_dir.exists(), "metadata cache directory must exist");
     assert!(
-        cache_metadata_dir.join("@pnpm.e2e/pkg-with-1-dep.jsonl").exists(),
+        cache_metadata_dir
+            .join("@pnpm.e2e/pkg-with-1-dep.jsonl")
+            .exists(),
         "cached metadata file for @pnpm.e2e/pkg-with-1-dep must exist",
     );
     assert!(
-        cache_metadata_dir.join("@pnpm.e2e/dep-of-pkg-with-1-dep.jsonl").exists(),
+        cache_metadata_dir
+            .join("@pnpm.e2e/dep-of-pkg-with-1-dep.jsonl")
+            .exists(),
         "cached metadata file for transitive dependency @pnpm.e2e/dep-of-pkg-with-1-dep must exist",
     );
 
@@ -618,7 +727,8 @@ fn should_print_cache_path() {
     let cwd = CommandTempCwd::init().add_mocked_registry();
     let cache_dir = cwd.npmrc_info.cache_dir.clone();
 
-    let output = cwd.pacquet
+    let output = cwd
+        .pacquet
         .with_arg("cache")
         .with_arg("path")
         .assert()
@@ -627,7 +737,11 @@ fn should_print_cache_path() {
         .stdout
         .clone();
 
-    let printed = PathBuf::from(String::from_utf8(output).unwrap().trim());
+    let printed = PathBuf::from(
+        String::from_utf8(output)
+            .unwrap()
+            .trim(),
+    );
     // The path is meant to be handed to other tools, so it must be absolute
     // and free of `..` — the configured `cacheDir` is relative to the
     // workspace. Its textual form is not pinned any further: macOS resolves

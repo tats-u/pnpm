@@ -17,7 +17,9 @@ fn convert_engines_runtime_only_reifies_onfail_download() {
         });
         convert_engines_runtime_to_dependencies(&mut manifest, "devEngines", "devDependencies");
         assert!(
-            manifest.get("devDependencies").is_none(),
+            manifest
+                .get("devDependencies")
+                .is_none(),
             "onFail={on_fail} should not reify; manifest: {manifest}",
         );
     }
@@ -58,7 +60,9 @@ fn convert_engines_runtime_handles_array_form_with_multiple_runtimes() {
         },
     });
     convert_engines_runtime_to_dependencies(&mut manifest, "devEngines", "devDependencies");
-    let dev = manifest.get("devDependencies").expect("devDependencies inserted");
+    let dev = manifest
+        .get("devDependencies")
+        .expect("devDependencies inserted");
     assert_eq!(dev.get("node").and_then(|v| v.as_str()), Some("runtime:24.6.0"));
     assert_eq!(dev.get("bun").and_then(|v| v.as_str()), Some("runtime:1.1.40"));
 }

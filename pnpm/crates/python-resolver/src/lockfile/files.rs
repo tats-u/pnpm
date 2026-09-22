@@ -22,10 +22,9 @@ impl LockedWheel {
     /// `name==version`: what a lockfile pins under a package has to be
     /// that package.
     pub(super) fn filename(&self, name: &PackageName, version: &Version) -> Result<WheelFilename> {
-        let filename = WheelFilename::parse(&self.name)?
-            .ok_or_else(|| {
-                miette::miette!("Python lockfile pins a file that is not a wheel: {}", self.name)
-            })?;
+        let filename = WheelFilename::parse(&self.name)?.ok_or_else(|| {
+            miette::miette!("Python lockfile pins a file that is not a wheel: {}", self.name)
+        })?;
         if filename.name != *name || filename.version != *version {
             bail!("Python lockfile wheel identity mismatch: {}", self.name);
         }
@@ -81,13 +80,12 @@ impl LockedSdist {
     pub fn check_published(&self, name: &PackageName, version: &Version) -> Result<()> {
         crate::validate_url(&self.url.parse().into_diagnostic()?)?;
         self.integrity()?;
-        let carried = source_version(&self.name, name)?
-            .ok_or_else(|| {
-                miette::miette!(
-                    "Python lockfile pins a file that is not a source distribution of {name}: {}",
-                    self.name,
-                )
-            })?;
+        let carried = source_version(&self.name, name)?.ok_or_else(|| {
+            miette::miette!(
+                "Python lockfile pins a file that is not a source distribution of {name}: {}",
+                self.name,
+            )
+        })?;
         if carried != *version {
             bail!("Python lockfile source distribution identity mismatch: {}", self.name);
         }
@@ -122,7 +120,11 @@ fn published_integrity(
     let digest = hashes
         .get("sha256")
         .ok_or_else(|| miette::miette!("Python file {filename} has no SHA-256 digest"))?;
-    if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    if digest.len() != 64
+        || !digest
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    {
         bail!("invalid Python SHA-256 digest for {filename}");
     }
     ssri::Integrity::from_hex(digest, ssri::Algorithm::Sha256).into_diagnostic()

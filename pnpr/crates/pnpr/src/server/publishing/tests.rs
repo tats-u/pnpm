@@ -14,5 +14,9 @@ fn publisher_attribution_comes_only_from_an_authenticated_identity() {
         "versions": { "1.0.0": { "_npmUser": { "name": "mallory" } } },
     });
     record_publisher(&mut anonymous, &Identity::Anonymous);
-    assert!(anonymous["versions"]["1.0.0"].get("_npmUser").is_none());
+    assert!(
+        anonymous["versions"]["1.0.0"]
+            .get("_npmUser")
+            .is_none()
+    );
 }

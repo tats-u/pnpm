@@ -20,7 +20,8 @@ pub(super) fn parse_content_range(range: &str) -> Option<(u64, u64)> {
 }
 
 pub(super) async fn collect_body(body: Body, limit: usize) -> Result<Bytes, Refusal> {
-    axum::body::to_bytes(body, limit).await
+    axum::body::to_bytes(body, limit)
+        .await
         .map_err(|_| Refusal::new(ErrorCode::SizeInvalid, "request body is too large or truncated"))
 }
 
@@ -46,7 +47,9 @@ pub(super) async fn append_body(
 ) -> Result<(), Refusal> {
     let mut written = upload.offset().await?;
     if written > limit {
-        storage.abort_blob_upload(upload.id()).await?;
+        storage
+            .abort_blob_upload(upload.id())
+            .await?;
         return Err(Refusal::new(
             ErrorCode::SizeInvalid,
             format!("a blob may not exceed {limit} bytes"),
@@ -60,7 +63,9 @@ pub(super) async fn append_body(
             return Err(Refusal::new(ErrorCode::BlobUploadInvalid, "upload stream ended early"));
         };
         let Some(next) = advance_within_ceiling(written, chunk.len(), limit) else {
-            let _ = storage.abort_blob_upload(upload.id()).await;
+            let _ = storage
+                .abort_blob_upload(upload.id())
+                .await;
             return Err(Refusal::new(
                 ErrorCode::SizeInvalid,
                 format!("a blob may not exceed {limit} bytes"),
@@ -96,11 +101,16 @@ pub(super) fn upload_lock_key(id: &str) -> String {
 /// Hash a finished upload without holding it in memory.
 pub(super) async fn hash_upload(upload: &BlobUpload) -> Result<Digest, RegistryError> {
     upload.materialize().await?;
-    let mut file = tokio::fs::File::open(upload.path()).await.map_err(RegistryError::Io)?;
+    let mut file = tokio::fs::File::open(upload.path())
+        .await
+        .map_err(RegistryError::Io)?;
     let mut hasher = Sha256::new();
     let mut buffer = vec![0u8; HASH_CHUNK];
     loop {
-        let read = file.read(&mut buffer).await.map_err(RegistryError::Io)?;
+        let read = file
+            .read(&mut buffer)
+            .await
+            .map_err(RegistryError::Io)?;
         if read == 0 {
             break;
         }
@@ -116,10 +126,14 @@ pub(super) async fn read_manifest_bytes(
     filename: &str,
     limit: usize,
 ) -> Result<Option<Vec<u8>>, RegistryError> {
-    let Some((body, _)) = storage.open_hosted_blob(key, filename).await? else {
+    let Some((body, _)) = storage
+        .open_hosted_blob(key, filename)
+        .await?
+    else {
         return Ok(None);
     };
-    let bytes = axum::body::to_bytes(body, limit).await
+    let bytes = axum::body::to_bytes(body, limit)
+        .await
         .map_err(|_| RegistryError::BadRequest { reason: "manifest is too large".to_string() })?;
     Ok(Some(bytes.to_vec()))
 }

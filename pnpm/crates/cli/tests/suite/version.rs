@@ -71,13 +71,8 @@ fn short_version_flag_prints_the_bare_version() {
 
 #[test]
 fn version_flag_switches_to_project_package_manager_version() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(workspace.join("package.json"), r#"{"packageManager":"pnpm@9.3.0"}"#)
         .expect("write package.json");
@@ -100,13 +95,8 @@ fn version_flag_switches_to_project_package_manager_version() {
 /// (pnpm/pnpm#14595).
 #[test]
 fn version_flag_switches_to_the_pinned_version_under_the_hoisted_node_linker() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(workspace.join("package.json"), r#"{"packageManager":"pnpm@9.3.0"}"#)
         .expect("write package.json");
@@ -174,13 +164,8 @@ fn child_pnpm_selects_the_version_for_its_own_directory() {
 /// which command the project saw first.
 #[test]
 fn version_flag_records_a_pinned_package_manager_it_does_not_need_to_switch_to() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let pinned = pnpm_config::PNPM_VERSION;
     fs::write(
@@ -239,13 +224,8 @@ fn version_flag_switches_to_the_version_a_range_pin_resolved_to() {
 #[test]
 #[cfg(unix)]
 fn version_flag_reports_a_pin_it_cannot_record() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry_with_pnpm_version(pnpm_config::PNPM_VERSION);
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let pinned = pnpm_config::PNPM_VERSION;
     fs::write(
@@ -254,18 +234,19 @@ fn version_flag_reports_a_pin_it_cannot_record() {
     )
     .expect("write package.json");
 
-    let writable = fs::metadata(&workspace).expect("read the workspace permissions").permissions();
+    let writable = fs::metadata(&workspace)
+        .expect("read the workspace permissions")
+        .permissions();
     let mut read_only = writable.clone();
     read_only.set_readonly(true);
     fs::set_permissions(&workspace, read_only).expect("make the workspace read-only");
-    let output = workspace_rejects_writes(&workspace)
-        .then(|| {
-            test_command(pacquet, root.path())
-                .env("PNPM_CONFIG_REGISTRY", mock_instance.url())
-                .args(["--version"])
-                .output()
-                .expect("run pacquet --version")
-        });
+    let output = workspace_rejects_writes(&workspace).then(|| {
+        test_command(pacquet, root.path())
+            .env("PNPM_CONFIG_REGISTRY", mock_instance.url())
+            .args(["--version"])
+            .output()
+            .expect("run pacquet --version")
+    });
     fs::set_permissions(&workspace, writable).expect("make the workspace writable again");
 
     let output =
@@ -276,7 +257,9 @@ fn version_flag_reports_a_pin_it_cannot_record() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("Cannot use the pnpm version this project pins"), "{stderr}");
     assert!(
-        EnvLockfile::read(&workspace).expect("read the env lockfile").is_none(),
+        EnvLockfile::read(&workspace)
+            .expect("read the env lockfile")
+            .is_none(),
         "a read-only project cannot have recorded the pin",
     );
 
@@ -366,7 +349,9 @@ fn pacquet_version(workspace: &Path, args: &[&str]) -> std::process::Output {
         .current_dir(workspace)
         .arg("version")
         .args(args);
-    command.output().expect("run pacquet version")
+    command
+        .output()
+        .expect("run pacquet version")
 }
 
 fn write_manifest(dir: &Path, json: &str) {
@@ -424,7 +409,9 @@ fn git_stdout(dir: &Path, args: &[&str]) -> String {
         .output()
         .expect("run git");
     assert!(output.status.success(), "git {args:?} should succeed");
-    String::from_utf8_lossy(&output.stdout).trim().to_string()
+    String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .to_string()
 }
 
 fn stderr_of(output: &std::process::Output) -> String {
@@ -509,9 +496,24 @@ fn json_flag_reports_the_changes_as_json() {
         serde_json::from_str(String::from_utf8_lossy(&output.stdout).trim())
             .expect("stdout must be JSON");
     let entry = &parsed.as_array().expect("a JSON array")[0];
-    assert_eq!(entry.get("name").and_then(serde_json::Value::as_str), Some("test-pkg"));
-    assert_eq!(entry.get("currentVersion").and_then(serde_json::Value::as_str), Some("1.0.0"));
-    assert_eq!(entry.get("newVersion").and_then(serde_json::Value::as_str), Some("1.0.1"));
+    assert_eq!(
+        entry
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("test-pkg")
+    );
+    assert_eq!(
+        entry
+            .get("currentVersion")
+            .and_then(serde_json::Value::as_str),
+        Some("1.0.0")
+    );
+    assert_eq!(
+        entry
+            .get("newVersion")
+            .and_then(serde_json::Value::as_str),
+        Some("1.0.1")
+    );
     assert!(entry.get("manifestPath").is_none(), "manifestPath must not be reported");
     drop(root);
 }
@@ -621,8 +623,12 @@ fn write_two_package_workspace(workspace: &Path) -> (PathBuf, PathBuf) {
 fn pacquet_recursive_version(workspace: &Path, args: &[&str]) -> std::process::Output {
     use assert_cmd::cargo::CommandCargoExt as _;
     let mut command = Command::cargo_bin("pnpm").expect("find the pnpm binary");
-    command.current_dir(workspace).args(args);
-    command.output().expect("run pacquet -r version")
+    command
+        .current_dir(workspace)
+        .args(args);
+    command
+        .output()
+        .expect("run pacquet -r version")
 }
 
 #[test]
@@ -700,7 +706,9 @@ fn npm_style_bump_in_a_workspace_without_recursive_bumps_only_the_root() {
     let (pkg_a, pkg_b) = write_two_package_workspace(&workspace);
     write_manifest(&workspace, r#"{"name":"my-workspace","version":"1.0.0"}"#);
     fs::create_dir_all(workspace.join(".changeset")).expect("create .changeset");
-    let intent = workspace.join(".changeset").join("calm-cats-smile.md");
+    let intent = workspace
+        .join(".changeset")
+        .join("calm-cats-smile.md");
     fs::write(&intent, "---\n\"pkg-a\": minor\n---\n\nA pending change intent.\n")
         .expect("write change intent");
 
@@ -797,9 +805,24 @@ fn version_json_outputs_release_details_in_json() {
     let arr = parsed.as_array().expect("a JSON array");
     assert_eq!(arr.len(), 1, "expected exactly one release entry");
     let entry = &arr[0];
-    assert_eq!(entry.get("name").and_then(serde_json::Value::as_str), Some("test-pkg"));
-    assert_eq!(entry.get("currentVersion").and_then(serde_json::Value::as_str), Some("1.0.0"));
-    assert_eq!(entry.get("newVersion").and_then(serde_json::Value::as_str), Some("1.0.1"));
+    assert_eq!(
+        entry
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("test-pkg")
+    );
+    assert_eq!(
+        entry
+            .get("currentVersion")
+            .and_then(serde_json::Value::as_str),
+        Some("1.0.0")
+    );
+    assert_eq!(
+        entry
+            .get("newVersion")
+            .and_then(serde_json::Value::as_str),
+        Some("1.0.1")
+    );
     drop(root);
 }
 
@@ -827,7 +850,9 @@ fn version_recursive_json_prints_applied_releases_when_pending_changes() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
     let (_pkg_a, _pkg_b) = write_two_package_workspace(&workspace);
     fs::create_dir_all(workspace.join(".changeset")).expect("create .changeset");
-    let intent = workspace.join(".changeset").join("calm-cats-smile.md");
+    let intent = workspace
+        .join(".changeset")
+        .join("calm-cats-smile.md");
     fs::write(&intent, "---\n\"pkg-a\": minor\n---\n\nA pending change intent.\n")
         .expect("write change intent");
 
@@ -845,9 +870,24 @@ fn version_recursive_json_prints_applied_releases_when_pending_changes() {
     let arr = parsed.as_array().expect("a JSON array");
     assert_eq!(arr.len(), 1, "expected exactly one release entry");
     let entry = &arr[0];
-    assert_eq!(entry.get("name").and_then(serde_json::Value::as_str), Some("pkg-a"));
-    assert_eq!(entry.get("currentVersion").and_then(serde_json::Value::as_str), Some("1.0.0"));
-    assert_eq!(entry.get("newVersion").and_then(serde_json::Value::as_str), Some("1.1.0"));
+    assert_eq!(
+        entry
+            .get("name")
+            .and_then(serde_json::Value::as_str),
+        Some("pkg-a")
+    );
+    assert_eq!(
+        entry
+            .get("currentVersion")
+            .and_then(serde_json::Value::as_str),
+        Some("1.0.0")
+    );
+    assert_eq!(
+        entry
+            .get("newVersion")
+            .and_then(serde_json::Value::as_str),
+        Some("1.1.0")
+    );
 
     drop(root);
 }
@@ -912,7 +952,11 @@ fn release_inputs(workspace: &Path) -> BTreeMap<PathBuf, String> {
         .into_iter();
     let intents = fs::read_dir(workspace.join(".changeset"))
         .expect("read .changeset")
-        .map(|entry| entry.expect("read a .changeset entry").path());
+        .map(|entry| {
+            entry
+                .expect("read a .changeset entry")
+                .path()
+        });
     manifests
         .chain(intents)
         .map(|path| {
@@ -933,7 +977,9 @@ fn pacquet_version_assuming_published(workspace: &Path, args: &[&str]) -> std::p
         .current_dir(workspace)
         .env("PACQUET_ASSUME_VERSIONS_PUBLISHED", "1")
         .args(args);
-    command.output().expect("run pacquet version")
+    command
+        .output()
+        .expect("run pacquet version")
 }
 
 mod git;

@@ -100,7 +100,8 @@ impl PackumentFetchState {
     }
 
     pub(super) fn mark_release_age_upgrade_checked(&self, cache_key: &str, meta: &Arc<Package>) {
-        self.release_age_upgrade_checked.insert(cache_key.to_string(), Arc::clone(meta));
+        self.release_age_upgrade_checked
+            .insert(cache_key.to_string(), Arc::clone(meta));
     }
 }
 
@@ -164,11 +165,13 @@ impl PackageMetaCache for InMemoryPackageMetaCache {
     }
 
     fn set(&self, key: String, meta: Arc<Package>) {
-        self.inner.insert(key, CachedPackument { meta, registry_verified: true });
+        self.inner
+            .insert(key, CachedPackument { meta, registry_verified: true });
     }
 
     fn set_unverified(&self, key: String, meta: Arc<Package>) {
-        self.inner.insert(key, CachedPackument { meta, registry_verified: false });
+        self.inner
+            .insert(key, CachedPackument { meta, registry_verified: false });
     }
 }
 

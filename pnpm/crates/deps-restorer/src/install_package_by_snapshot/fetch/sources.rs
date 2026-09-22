@@ -39,15 +39,20 @@ impl InstallPackageBySnapshot<'_> {
                 false, package_id, !config.ignore_scripts,
             ),
         });
-        Ok(match session.fetch::<Reporter>(download.clone(), &metadata.resolution, opts).await? {
-            CustomFetchOutcome::Declined(resolution)
-            | CustomFetchOutcome::Delegate { delegate: resolution, .. } => {
-                CustomFetched { resolution: Some(resolution), cas_paths: None }
-            }
-            CustomFetchOutcome::Fetched { tarball, .. } => {
-                CustomFetched { resolution: None, cas_paths: Some(tarball.files_map.clone()) }
-            }
-        })
+        Ok(
+            match session
+                .fetch::<Reporter>(download.clone(), &metadata.resolution, opts)
+                .await?
+            {
+                CustomFetchOutcome::Declined(resolution)
+                | CustomFetchOutcome::Delegate { delegate: resolution, .. } => {
+                    CustomFetched { resolution: Some(resolution), cas_paths: None }
+                }
+                CustomFetchOutcome::Fetched { tarball, .. } => {
+                    CustomFetched { resolution: None, cas_paths: Some(tarball.files_map.clone()) }
+                }
+            },
+        )
     }
     pub(in super::super) async fn fetch_binary<Reporter: self::Reporter>(
         &self,
@@ -76,7 +81,12 @@ impl InstallPackageBySnapshot<'_> {
     ) -> Result<HashMap<String, PathBuf>, InstallPackageBySnapshotError> {
         let config = self.ctx.config;
         let built = !config.ignore_scripts
-            && allow_build(&fetch.package_key.without_peer().to_string()) != Some(false);
+            && allow_build(
+                &fetch
+                    .package_key
+                    .without_peer()
+                    .to_string(),
+            ) != Some(false);
         let files_index_file = git_hosted_store_index_key(fetch.package_id, built);
         let package_name = fetch.package_key.name.to_string();
         let GitFetchOutput { cas_paths, built: _built } = GitFetcher {
@@ -143,7 +153,8 @@ impl InstallPackageBySnapshot<'_> {
         };
         let raw_cas_paths = download_tarball::<Reporter>(
             download,
-            self.fetching.tarball_mem_cache
+            self.fetching
+                .tarball_mem_cache
                 .filter(|_| matches!(fetch.resolution, LockfileResolution::Registry(_)))
                 .map(std::convert::AsRef::as_ref),
             revision_addressed,
@@ -152,7 +163,8 @@ impl InstallPackageBySnapshot<'_> {
         .map_err(InstallPackageBySnapshotError::DownloadTarball)?;
         match fetch.resolution {
             LockfileResolution::Tarball(tarball) if tarball.is_git_hosted() => {
-                self.prepare_git_hosted::<Reporter>(&fetch, tarball, raw_cas_paths).await
+                self.prepare_git_hosted::<Reporter>(&fetch, tarball, raw_cas_paths)
+                    .await
             }
             _ => Ok(raw_cas_paths),
         }
@@ -173,8 +185,12 @@ impl InstallPackageBySnapshot<'_> {
         let files_index_file = git_hosted_store_index_key(
             fetch.package_id,
             !config.ignore_scripts
-                && (fetch.allow_build)(&fetch.package_key.without_peer().to_string())
-                    != Some(false),
+                && (fetch.allow_build)(
+                    &fetch
+                        .package_key
+                        .without_peer()
+                        .to_string(),
+                ) != Some(false),
         );
         let GitFetchOutput { cas_paths, built: _built } = GitHostedTarballFetcher {
             scripts: pnpm_git_fetcher::PrepareScriptOptions {

@@ -68,7 +68,8 @@ impl PublishArgs {
             .filter(|root| to_publish.contains(root))
         {
             packed.push(
-                self.pack_directory::<Reporter>(&root, config, before_packing_hooks).await?,
+                self.pack_directory::<Reporter>(&root, config, before_packing_hooks)
+                    .await?,
             );
         }
         let packages = packed
@@ -145,7 +146,10 @@ impl PublishArgs {
         stage: bool,
         before_packing_hooks: &[Arc<dyn PnpmfileHooks>],
     ) -> miette::Result<Vec<PublishSummary>> {
-        let workspace_root = config.workspace_dir.as_deref().unwrap_or(dir);
+        let workspace_root = config
+            .workspace_dir
+            .as_deref()
+            .unwrap_or(dir);
         // `publish` is not in pnpm's root-auto-exclusion command set
         // (`run` / `exec` / `add` / `test`), so the workspace root stays in the
         // selection; its own name/version/private eligibility check drops it
@@ -171,9 +175,9 @@ impl PublishArgs {
         // their registry. The already-published probes are independent registry
         // reads, so run them concurrently rather than one round-trip at a time
         // (the `ThrottledClient` still bounds the actual in-flight fan-out).
-        let to_publish =
-            self.projects_to_publish(graph, config, &http_client, retry_opts_from_config(config))
-                .await;
+        let to_publish = self
+            .projects_to_publish(graph, config, &http_client, retry_opts_from_config(config))
+            .await;
 
         if to_publish.is_empty() {
             emit_info::<Reporter>("There are no new packages that should be published", dir);
@@ -187,15 +191,16 @@ impl PublishArgs {
             selection.prod_all.as_ref(),
             &selection.prod_only_selected,
         );
-        let published = self.publish_selected::<Reporter>(
-            config,
-            &opts,
-            &network,
-            before_packing_hooks,
-            &to_publish,
-            &project_dependencies,
-        )
-        .await?;
+        let published = self
+            .publish_selected::<Reporter>(
+                config,
+                &opts,
+                &network,
+                before_packing_hooks,
+                &to_publish,
+                &project_dependencies,
+            )
+            .await?;
         self.write_summary(workspace_root, &published)?;
         Ok(published)
     }
@@ -220,14 +225,15 @@ impl PublishArgs {
                 if !to_publish.contains(&root) {
                     return TaskCompletion::Passed;
                 }
-                let result = self.publish_directory::<Reporter>(
-                    &root,
-                    config,
-                    opts,
-                    network,
-                    before_packing_hooks,
-                )
-                .await;
+                let result = self
+                    .publish_directory::<Reporter>(
+                        &root,
+                        config,
+                        opts,
+                        network,
+                        before_packing_hooks,
+                    )
+                    .await;
                 record_publish_outcome(published, first_error, result)
             }
         };
@@ -237,10 +243,15 @@ impl PublishArgs {
             &ScheduleGraphAsyncOptions::new(1, true, &run_node, &on_node_skipped),
         )
         .await;
-        if let Some(error) = first_error.into_inner().expect("publish error lock is not poisoned") {
+        if let Some(error) = first_error
+            .into_inner()
+            .expect("publish error lock is not poisoned")
+        {
             return Err(error);
         }
-        Ok(published.into_inner().expect("publish results lock is not poisoned"))
+        Ok(published
+            .into_inner()
+            .expect("publish results lock is not poisoned"))
     }
     /// The selected projects that should be published: those with a name
     /// and version, not private, and — unless `--force` — not already on
@@ -256,26 +267,25 @@ impl PublishArgs {
         http_client: &pnpm_network::ThrottledClient,
         retry_opts: pnpm_network::RetryOpts,
     ) -> HashSet<PathBuf> {
-        let probes = graph
-            .iter()
-            .filter_map(|(root, node)| {
-                let manifest = node.package.project.manifest.value();
-                let (name, version) = publish_eligible(manifest)?;
-                Some(async move {
-                    let already = !self.flags.force
-                        && is_already_published(
-                            name,
-                            version,
-                            manifest,
-                            config,
-                            http_client,
-                            retry_opts,
-                        )
-                        .await;
-                    (root, already)
-                })
-            });
-        futures_util::future::join_all(probes).await
+        let probes = graph.iter().filter_map(|(root, node)| {
+            let manifest = node.package.project.manifest.value();
+            let (name, version) = publish_eligible(manifest)?;
+            Some(async move {
+                let already = !self.flags.force
+                    && is_already_published(
+                        name,
+                        version,
+                        manifest,
+                        config,
+                        http_client,
+                        retry_opts,
+                    )
+                    .await;
+                (root, already)
+            })
+        });
+        futures_util::future::join_all(probes)
+            .await
             .into_iter()
             .filter(|(_, already)| !already)
             .map(|(root, _)| root.clone())
@@ -312,8 +322,12 @@ fn publish_eligible(manifest: &Value) -> Option<(&str, &str)> {
     {
         return None;
     }
-    let name = manifest.get("name").and_then(Value::as_str)?;
-    let version = manifest.get("version").and_then(Value::as_str)?;
+    let name = manifest
+        .get("name")
+        .and_then(Value::as_str)?;
+    let version = manifest
+        .get("version")
+        .and_then(Value::as_str)?;
     Some((published_name(manifest).unwrap_or(name), version))
 }
 
@@ -364,7 +378,9 @@ async fn is_already_published(
 fn write_publish_summary(dir: &Path, published: &[PublishSummary]) -> miette::Result<()> {
     let path = dir.join("pnpm-publish-summary.json");
     let body = serde_json::json!({ "publishedPackages": published });
-    let json = body.pipe_ref(serde_json::to_string_pretty).into_diagnostic()?;
+    let json = body
+        .pipe_ref(serde_json::to_string_pretty)
+        .into_diagnostic()?;
     // Write atomically (temp file + rename), matching pnpm's `writeJsonFile`:
     // the target sits under the repo-controlled workspace root, and a
     // non-atomic `std::fs::write` would follow a symlink planted there and

@@ -6,13 +6,8 @@ use assert_cmd::assert::OutputAssertExt;
 
 #[test]
 fn production_deploy_does_not_require_dev_only_workspace_sources() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, true);
 
@@ -26,21 +21,24 @@ fn production_deploy_does_not_require_dev_only_workspace_sources() {
         .with_args(["--filter", "app", "deploy", "--prod", "deploy"])
         .assert()
         .success();
-    assert!(workspace.join("deploy/node_modules/lib").exists());
-    assert!(!workspace.join("deploy/node_modules/dev-only").exists());
+    assert!(
+        workspace
+            .join("deploy/node_modules/lib")
+            .exists()
+    );
+    assert!(
+        !workspace
+            .join("deploy/node_modules/dev-only")
+            .exists()
+    );
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn shared_lockfile_deploy_honors_no_optional_in_graph_and_virtual_store() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, true);
     write_project(
@@ -88,7 +86,11 @@ fn shared_lockfile_deploy_honors_no_optional_in_graph_and_virtual_store() {
         .assert()
         .success();
     let with_optional = workspace.join("deploy-with-optional");
-    assert!(with_optional.join("node_modules/optional-only").exists());
+    assert!(
+        with_optional
+            .join("node_modules/optional-only")
+            .exists()
+    );
     let graph_keys = deploy_graph_keys(&with_optional);
     for included in ["@pnpm.e2e/qar@100.0.0", "@pnpm.e2e/foo@100.0.0"] {
         assert!(
@@ -122,10 +124,16 @@ fn shared_lockfile_deploy_honors_no_optional_in_graph_and_virtual_store() {
         .success();
     let without_optional = workspace.join("deploy-without-optional");
     assert!(
-        without_optional.join("node_modules/lib").exists(),
+        without_optional
+            .join("node_modules/lib")
+            .exists(),
         "the production dependency carrying the optional edges should still be deployed",
     );
-    assert!(!without_optional.join("node_modules/optional-only").exists());
+    assert!(
+        !without_optional
+            .join("node_modules/optional-only")
+            .exists()
+    );
     let graph_keys = deploy_graph_keys(&without_optional);
     for excluded in ["optional-only@file:", "@pnpm.e2e/qar@", "@pnpm.e2e/foo@"] {
         assert!(
@@ -159,13 +167,8 @@ fn shared_lockfile_deploy_honors_no_optional_in_graph_and_virtual_store() {
 /// leave the dangling symlinks of <https://github.com/pnpm/pnpm/issues/13623>.
 #[test]
 fn shared_lockfile_deploy_drops_excluded_direct_dependencies() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { npmrc_path, mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, true);
     write_project(
@@ -228,8 +231,13 @@ fn shared_lockfile_deploy_drops_excluded_direct_dependencies() {
         serde_json::json!({ "@pnpm.e2e/peer-c": { "optional": true } }),
     );
 
-    let deploy_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir).unwrap().unwrap();
-    let importer = deploy_lockfile.importers.get(Lockfile::ROOT_IMPORTER_KEY).unwrap();
+    let deploy_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir)
+        .unwrap()
+        .unwrap();
+    let importer = deploy_lockfile
+        .importers
+        .get(Lockfile::ROOT_IMPORTER_KEY)
+        .unwrap();
     assert!(importer.dev_dependencies.is_none(), "{:#?}", importer.dev_dependencies);
     assert!(importer.optional_dependencies.is_none(), "{:#?}", importer.optional_dependencies);
     let graph_keys = deploy_graph_keys(&deploy_dir);
@@ -295,13 +303,8 @@ fn shared_lockfile_deploy_drops_excluded_direct_dependencies() {
 /// dependencies of every platform are materialized into the deploy dir.
 #[test]
 fn release_style_deploy_accepts_pre_subcommand_flags_and_forces_foreign_platform_optionals() {
-    let CommandTempCwd {
-        pacquet,
-        root,
-        workspace,
-        npmrc_info,
-        ..
-    } = CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
+        CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     write_project(
@@ -343,7 +346,9 @@ fn release_style_deploy_accepts_pre_subcommand_flags_and_forces_foreign_platform
         "without --force the platform-incompatible optional dependency stays skipped",
     );
     assert!(
-        !workspace.join("plain-deploy/node_modules/dev-only").exists(),
+        !workspace
+            .join("plain-deploy/node_modules/dev-only")
+            .exists(),
         "the hoisted deploy install must not materialize dev dependencies with --prod",
     );
 
@@ -368,11 +373,15 @@ fn release_style_deploy_accepts_pre_subcommand_flags_and_forces_foreign_platform
         "--force must install optional dependencies regardless of platform",
     );
     assert!(
-        !deploy_dir.join("node_modules/dev-only").exists(),
+        !deploy_dir
+            .join("node_modules/dev-only")
+            .exists(),
         "dev-only workspace dependency should not be linked with --prod",
     );
     assert!(
-        deploy_dir.join("node_modules/.modules.yaml").exists(),
+        deploy_dir
+            .join("node_modules/.modules.yaml")
+            .exists(),
         "the hoisted deploy install should write the modules state file",
     );
 

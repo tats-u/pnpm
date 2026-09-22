@@ -6,7 +6,9 @@ use serde_json::json;
 fn request_does_not_reuse_lockfile_entry_for_different_exact_version() {
     let dependency = ResolvedDependencySpec {
         specifier: "^3.1.0".to_string(),
-        version: "3.1.2".parse().expect("parse importer dep version"),
+        version: "3.1.2"
+            .parse()
+            .expect("parse importer dep version"),
     };
 
     assert!(request_matches_dependency("bytes", Some("^3.1.0"), &dependency, "bytes@3.1.2"));
@@ -22,7 +24,11 @@ fn sort_deep_keys_rejects_too_deep_json() {
     }
 
     let error = sort_deep_keys(&mut value, 0).expect_err("deep JSON is rejected");
-    assert!(error.to_string().contains("nested too deeply"));
+    assert!(
+        error
+            .to_string()
+            .contains("nested too deeply")
+    );
 }
 
 #[test]
@@ -41,7 +47,9 @@ fn sort_deep_keys_sorts_nested_objects_deterministically() {
 
     assert_eq!(object_keys(&value), vec!["a", "m", "z"]);
 
-    let nested = value.get("a").expect("has nested object");
+    let nested = value
+        .get("a")
+        .expect("has nested object");
     assert_eq!(object_keys(nested), vec!["b", "c", "d"]);
 
     let array_object = nested

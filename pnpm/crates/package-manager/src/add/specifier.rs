@@ -201,7 +201,10 @@ pub(super) async fn bare_save_specifier(
 /// `None` when it lists no entry for it.
 fn cataloged_specifier(package_name: &str, inputs: &AddResolveInputs<'_, '_>) -> Option<String> {
     let catalog_name = crate::per_dep_catalog_name(None, inputs.save_catalog_name);
-    inputs.catalogs.get(catalog_name)?.get(package_name)?;
+    inputs
+        .catalogs
+        .get(catalog_name)?
+        .get(package_name)?;
     Some(if catalog_name == pnpm_catalogs_types::DEFAULT_CATALOG_NAME {
         "catalog:".to_string()
     } else {
@@ -219,8 +222,12 @@ pub(super) async fn resolve_node_runtime_specifier(
         std::sync::Arc::clone(inputs.http_client_arc),
         std::sync::Arc::clone(&config.auth_headers),
     );
-    node_resolver.node_download_mirrors.clone_from(&config.node_download_mirrors);
-    node_resolver.mirror = config.tool_mirror(Tool::Node).map(ToString::to_string);
+    node_resolver
+        .node_download_mirrors
+        .clone_from(&config.node_download_mirrors);
+    node_resolver.mirror = config
+        .tool_mirror(Tool::Node)
+        .map(ToString::to_string);
     node_resolver.channel_mirrors = config.tool_channel_mirrors(Tool::Node);
     node_resolver.offline = config.offline;
     node_resolver.cache_dir = Some(config.cache_dir.clone());
@@ -276,7 +283,9 @@ pub(super) fn workspace_save_specifier(
     if config.save_workspace_protocol == SaveWorkspaceProtocol::Off
         && !explicit_spec.is_some_and(|specifier| specifier.starts_with("workspace:"))
     {
-        return workspace_specifier.strip_prefix("workspace:").map(str::to_string);
+        return workspace_specifier
+            .strip_prefix("workspace:")
+            .map(str::to_string);
     }
     Some(workspace_specifier)
 }
@@ -290,7 +299,9 @@ pub(super) fn explicit_workspace_target(
     if spec.version.starts_with('.') {
         return None;
     }
-    let target_name = spec.alias.unwrap_or_else(|| package_name.to_string());
+    let target_name = spec
+        .alias
+        .unwrap_or_else(|| package_name.to_string());
     let resolved_version = workspace_packages
         .and_then(|packages| packages.get(&target_name))
         .and_then(|versions| {
@@ -310,7 +321,10 @@ pub(super) fn implicit_workspace_target(
     config: &Config,
     workspace_packages: Option<&WorkspacePackages>,
 ) -> Option<(String, Option<String>)> {
-    if !config.link_workspace_packages.enabled_at_depth(0) {
+    if !config
+        .link_workspace_packages
+        .enabled_at_depth(0)
+    {
         return None;
     }
     if explicit_spec.is_some_and(|specifier| specifier.starts_with("npm:")) {
@@ -327,7 +341,11 @@ pub(super) fn implicit_workspace_target(
         "latest",
         &registry,
     )?;
-    if parsed.name != package_name || parsed.normalized_bare_specifier.is_some() {
+    if parsed.name != package_name
+        || parsed
+            .normalized_bare_specifier
+            .is_some()
+    {
         return None;
     }
     let versions = workspace_packages?.get(package_name)?;
@@ -417,7 +435,10 @@ pub(super) async fn resolve_jsr_save_specifier(
     manifest: &PackageManifest,
     resolution: &AddResolution<'_>,
 ) -> Result<Option<String>, AddError> {
-    let version_selector = spec.version_selector.as_deref().unwrap_or("latest");
+    let version_selector = spec
+        .version_selector
+        .as_deref()
+        .unwrap_or("latest");
     let range = resolve_explicit_registry_spec(
         &spec.npm_pkg_name,
         version_selector,

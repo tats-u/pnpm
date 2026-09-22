@@ -412,7 +412,9 @@ async fn fresh_lockfile_only_with_overrides(
     let manifest_path = dir.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
     for (name, spec) in dependencies {
-        manifest.add_dependency(name, spec, DependencyGroup::Prod).unwrap();
+        manifest
+            .add_dependency(name, spec, DependencyGroup::Prod)
+            .unwrap();
     }
     manifest.save().unwrap();
 
@@ -491,7 +493,8 @@ async fn fresh_lockfile_only_with_overrides(
 fn assert_package_present(lockfile: &Lockfile, key: &str) {
     let key: pnpm_lockfile::PackageKey = key.parse().unwrap();
     assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .as_ref()
             .is_some_and(|packages| packages.contains_key(&key)),
         "expected packages to contain {key}",
@@ -501,7 +504,8 @@ fn assert_package_present(lockfile: &Lockfile, key: &str) {
 fn assert_package_absent(lockfile: &Lockfile, key: &str) {
     let key: pnpm_lockfile::PackageKey = key.parse().unwrap();
     assert!(
-        lockfile.packages
+        lockfile
+            .packages
             .as_ref()
             .is_none_or(|packages| !packages.contains_key(&key)),
         "expected packages not to contain {key}",
@@ -520,7 +524,9 @@ async fn fresh_lockfile_only_with_compatibility_db(
 
     let manifest_path = dir.path().join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
-    manifest.add_dependency("debug", "4.0.0", DependencyGroup::Prod).unwrap();
+    manifest
+        .add_dependency("debug", "4.0.0", DependencyGroup::Prod)
+        .unwrap();
     manifest.save().unwrap();
 
     let mut config = Config::new();
@@ -617,7 +623,9 @@ async fn install_with_pnpmfile_reporter<Reporter: self::Reporter + 'static>(
     let manifest_path = root.join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path).unwrap();
     for (name, spec) in root_deps {
-        manifest.add_dependency(name, spec, DependencyGroup::Prod).unwrap();
+        manifest
+            .add_dependency(name, spec, DependencyGroup::Prod)
+            .unwrap();
     }
     manifest.save().unwrap();
 
@@ -822,7 +830,9 @@ fn recorded_verified_file_integrity_report(verified: VerifiedFileIntegrity) -> V
         }
     }
 
-    let _guard = RECORDER.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let _guard = RECORDER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     MESSAGES.lock().unwrap().clear();
     report_verified_file_integrity::<RecordingReporter>(verified);
     let messages = MESSAGES.lock().unwrap().clone();
@@ -834,12 +844,15 @@ fn assert_purge_diagnostic(error: &InstallError, path: &std::path::Path) {
     assert!(rendered.contains(&path.display().to_string()), "got: {rendered}");
     assert!(rendered.contains("denied"), "source error must survive: {rendered}");
     assert_eq!(
-        miette::Diagnostic::code(error).map(|code| code.to_string()).as_deref(),
+        miette::Diagnostic::code(error)
+            .map(|code| code.to_string())
+            .as_deref(),
         Some("ERR_PNPM_PACKAGE_MANAGER_REMOVE_MODULES_DIR"),
     );
 
     let source = std::error::Error::source(error).expect("the io error stays in the source chain");
-    let io_error =
-        source.downcast_ref::<std::io::Error>().expect("the source is the original io::Error");
+    let io_error = source
+        .downcast_ref::<std::io::Error>()
+        .expect("the source is the original io::Error");
     assert_eq!(io_error.kind(), std::io::ErrorKind::PermissionDenied);
 }

@@ -15,13 +15,20 @@ impl PickState<'_> {
         opts: &PickPackageOptions<'_>,
         disk_meta: &mut Option<Arc<Package>>,
     ) -> Option<PickPackageResult> {
-        if let Some(result) = self.version_spec_pick(ctx, spec, opts, disk_meta).await {
+        if let Some(result) = self
+            .version_spec_pick(ctx, spec, opts, disk_meta)
+            .await
+        {
             return Some(result);
         }
-        if let Some(result) = self.dominant_version_pick(ctx, spec, opts, disk_meta).await {
+        if let Some(result) = self
+            .dominant_version_pick(ctx, spec, opts, disk_meta)
+            .await
+        {
             return Some(result);
         }
-        self.published_by_pick(ctx, spec, opts, disk_meta).await
+        self.published_by_pick(ctx, spec, opts, disk_meta)
+            .await
     }
 
     /// Version-spec fast path (step 3): the disk cache already has the
@@ -46,7 +53,10 @@ impl PickState<'_> {
             return None;
         }
         let meta = self.mirror_meta(disk_meta).await?;
-        if !meta.versions.contains_key(&spec.fetch_spec) {
+        if !meta
+            .versions
+            .contains_key(&spec.fetch_spec)
+        {
             return None;
         }
         let Ok((picked_meta, Some(picked))) =
@@ -64,7 +74,9 @@ impl PickState<'_> {
         disk_meta: &mut Option<Arc<Package>>,
     ) -> Option<Arc<Package>> {
         if disk_meta.is_none() {
-            *disk_meta = load_meta_async(self.pkg_mirror.as_deref()).await.map(Arc::new);
+            *disk_meta = load_meta_async(self.pkg_mirror.as_deref())
+                .await
+                .map(Arc::new);
         }
         disk_meta.clone()
     }
@@ -133,13 +145,18 @@ impl PickState<'_> {
     ) -> Option<PickPackageResult> {
         let published_by = opts.policy.published_by?;
         let fully_excluded = matches!(
-            opts.policy.published_by_exclude.map(|policy| policy.matches(&spec.name)),
+            opts.policy
+                .published_by_exclude
+                .map(|policy| policy.matches(&spec.name)),
             Some(PolicyMatch::AnyVersion),
         );
         if fully_excluded {
             return None;
         }
-        let mtime = self.pkg_mirror.as_deref().and_then(get_file_mtime)?;
+        let mtime = self
+            .pkg_mirror
+            .as_deref()
+            .and_then(get_file_mtime)?;
         if mtime < published_by {
             return None;
         }
@@ -152,7 +169,9 @@ impl PickState<'_> {
         // Same rationale as the version-spec fast path — promote the
         // disk-loaded packument into the install-scoped in-memory cache.
         if !opts.request.dry_run {
-            ctx.metadata.meta_cache.set(self.cache_key.clone(), meta);
+            ctx.metadata
+                .meta_cache
+                .set(self.cache_key.clone(), meta);
         }
         Some(PickPackageResult { meta: picked_meta, picked_package: Some(picked) })
     }
@@ -171,7 +190,9 @@ impl PickState<'_> {
         meta: &Arc<Package>,
     ) {
         if !opts.request.dry_run {
-            ctx.metadata.meta_cache.set_unverified(self.cache_key.clone(), Arc::clone(meta));
+            ctx.metadata
+                .meta_cache
+                .set_unverified(self.cache_key.clone(), Arc::clone(meta));
         }
     }
 
@@ -190,7 +211,10 @@ impl PickState<'_> {
                 return Err(PickPackageError::NoOfflineMeta {
                     spec_name: spec.name.clone(),
                     spec_fetch_spec: spec.fetch_spec.clone(),
-                    pkg_mirror: self.pkg_mirror.clone().unwrap_or_default(),
+                    pkg_mirror: self
+                        .pkg_mirror
+                        .clone()
+                        .unwrap_or_default(),
                 });
             };
             // `maybe_upgrade_abbreviated_meta_for_release_age` short-circuits
@@ -204,7 +228,9 @@ impl PickState<'_> {
 
         let Some(meta) = meta else { return Ok(None) };
         disk_meta.take();
-        let meta = self.upgraded_meta(ctx, spec, opts, meta).await?;
+        let meta = self
+            .upgraded_meta(ctx, spec, opts, meta)
+            .await?;
         let (picked_meta, picked) =
             pick_from_meta(&self.picker_opts, spec, Arc::clone(&meta), opts.blocked_versions)?;
         if picked.is_some() {

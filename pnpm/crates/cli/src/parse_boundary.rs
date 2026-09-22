@@ -206,13 +206,11 @@ pub(crate) fn subcommand_option_names(argv: &[OsString]) -> HashSet<&'static str
         return subcommand
             .get_arguments()
             .flat_map(|arg| {
-                arg.get_long()
-                    .into_iter()
-                    .chain(
-                        arg.get_all_aliases()
-                            .into_iter()
-                            .flatten(),
-                    )
+                arg.get_long().into_iter().chain(
+                    arg.get_all_aliases()
+                        .into_iter()
+                        .flatten(),
+                )
             })
             .collect();
     }
@@ -291,7 +289,9 @@ pub(crate) fn option_width(arg: &str, next: Option<&str>, arity: &ArgTable) -> O
         .next()
         .expect("checked non-empty");
     let is_bare_short = rest.chars().count() == 1;
-    let consumes_value = arity.short_consumes_value(short).unwrap_or(false);
+    let consumes_value = arity
+        .short_consumes_value(short)
+        .unwrap_or(false);
     Some(if consumes_value && is_bare_short { 2 } else { 1 })
 }
 
@@ -330,14 +330,12 @@ fn long_option_width(long: &str, next: Option<&str>, arity: &ArgTable) -> usize 
 /// expensive part of this module, and one boundary computation must not pay
 /// for it more than once.
 fn matching_subcommand<'a>(command: &'a Command, name: &str) -> Option<&'a Command> {
-    command
-        .get_subcommands()
-        .find(|sub| {
-            sub.get_name() == name
-                || sub
-                    .get_all_aliases()
-                    .any(|alias| alias == name)
-        })
+    command.get_subcommands().find(|sub| {
+        sub.get_name() == name
+            || sub
+                .get_all_aliases()
+                .any(|alias| alias == name)
+    })
 }
 
 #[cfg(test)]

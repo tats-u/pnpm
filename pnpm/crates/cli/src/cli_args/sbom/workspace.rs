@@ -16,11 +16,17 @@ pub(super) fn selectors_narrow_the_run(config: &Config) -> bool {
 /// selected.
 fn selected_workspace_importer_ids(state: &State) -> miette::Result<HashSet<String>> {
     let project_dir = state.project_dir();
-    let workspace_root = state.config.workspace_dir.as_deref().unwrap_or(project_dir);
+    let workspace_root = state
+        .config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(project_dir);
     let (projects, _) = discover_workspace_projects(workspace_root, state.config)?;
     let selection =
         select_recursive_projects(&projects, state.config, project_dir, AutoExcludeRoot::Disabled)?;
-    Ok(selected_importer_ids(&selection, state.lockfile_dir()).into_iter().collect())
+    Ok(selected_importer_ids(&selection, state.lockfile_dir())
+        .into_iter()
+        .collect())
 }
 
 /// The selected importer ids the lockfile has no entry for, sorted so the
@@ -129,7 +135,9 @@ fn extend_dedicated_lockfile(
     }
     if let Some(snapshots) = incoming.snapshots {
         extend_dedicated_snapshots(
-            current.snapshots.get_or_insert_default(),
+            current
+                .snapshots
+                .get_or_insert_default(),
             snapshots,
             selected_dir,
         )?;
@@ -141,7 +149,8 @@ fn selected_and_reachable_project_dirs(
     selection: &crate::cli_args::recursive::RecursiveSelection<'_>,
 ) -> Vec<PathBuf> {
     let graph = selection.full_graph();
-    let mut project_dirs: Vec<PathBuf> = selection.selected
+    let mut project_dirs: Vec<PathBuf> = selection
+        .selected
         .keys()
         .cloned()
         .collect();
@@ -165,7 +174,11 @@ pub(super) fn merged_dedicated_lockfile_state(
     mut state: State,
 ) -> miette::Result<(State, Vec<PathBuf>)> {
     let project_dir = state.project_dir();
-    let workspace_root = state.config.workspace_dir.as_deref().unwrap_or(project_dir);
+    let workspace_root = state
+        .config
+        .workspace_dir
+        .as_deref()
+        .unwrap_or(project_dir);
     let (projects, _) = discover_workspace_projects(workspace_root, state.config)?;
     let selection =
         select_recursive_projects(&projects, state.config, project_dir, AutoExcludeRoot::Disabled)?;
@@ -209,7 +222,9 @@ pub(super) fn merged_dedicated_lockfile_state(
 fn anchored_virtual_store_dir(config: &Config, project_dir: &Path) -> PathBuf {
     let mut project_config = config.clone();
     project_config.anchor_lockfile_paths(project_dir);
-    project_config.effective_virtual_store_dir().to_path_buf()
+    project_config
+        .effective_virtual_store_dir()
+        .to_path_buf()
 }
 
 /// Re-key a dedicated lockfile's importers from its own root to the
@@ -240,7 +255,8 @@ fn assert_required_importers(
     let Some(lockfile) = merged else {
         return Ok(());
     };
-    let importer_ids: Vec<String> = lockfile.importers
+    let importer_ids: Vec<String> = lockfile
+        .importers
         .keys()
         .cloned()
         .collect();
@@ -302,7 +318,8 @@ pub(super) fn select_importer_ids(
 }
 
 pub(super) fn required_sbom_lockfile(state: &State) -> miette::Result<&Lockfile> {
-    let lockfile = state.lockfile
+    let lockfile = state
+        .lockfile
         .get()
         .map_err(|err| miette::Report::new(err).wrap_err("load the lockfile"))?;
 
