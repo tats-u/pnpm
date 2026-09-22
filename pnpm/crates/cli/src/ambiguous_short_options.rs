@@ -11,7 +11,6 @@ use clap::{Command, error::ErrorKind};
 use std::ffi::OsString;
 
 const AMBIGUOUS_SHORT_OPTION: char = 'T';
-const AMBIGUOUS_SHORT_TOKEN: &str = "-T";
 
 pub(crate) fn reject_for_add(
     cmd: &Command,
@@ -37,12 +36,12 @@ pub(crate) fn reject_for_add(
             continue;
         };
         if short_cluster_contains_ambiguous_t(token, &top_level, &subcommand_union) {
-            return Err(cmd.clone().error(
-                ErrorKind::UnknownArgument,
-                format!(
-                    "short option '{AMBIGUOUS_SHORT_TOKEN}' is ambiguous, use '--save-types' or '--tilde'",
-                ),
-            ));
+            return Err(cmd
+                .clone()
+                .error(
+                    ErrorKind::UnknownArgument,
+                    "short option '-T' is ambiguous, use '--save-types' or '--tilde'",
+                ));
         }
         index += token_span(token, &top_level, &subcommand_union);
     }
