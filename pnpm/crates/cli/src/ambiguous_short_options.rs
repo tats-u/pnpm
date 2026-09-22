@@ -63,8 +63,7 @@ fn short_cluster_contains_ambiguous_t(
     else {
         return false;
     };
-    let mut chars = cluster.chars();
-    while let Some(short) = chars.next() {
+    for short in cluster.chars() {
         if short == AMBIGUOUS_SHORT_OPTION {
             return true;
         }
