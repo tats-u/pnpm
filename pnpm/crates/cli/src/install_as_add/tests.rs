@@ -153,7 +153,8 @@ fn prepare(tokens: &[&str]) -> CliArgs {
             .iter()
             .map(OsString::from)
             .collect(),
-    );
+    )
+    .expect("pre-clap passes succeed");
     cmd.try_get_matches_from(argv)
         .and_then(|matches| CliArgs::from_arg_matches(&matches))
         .expect("parses after the pre-clap passes")
