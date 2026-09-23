@@ -8,6 +8,7 @@ use clap::{CommandFactory, Parser};
 use pnpm_config::Config;
 use pnpm_package_manifest::DependencyGroup;
 use pretty_assertions::assert_eq;
+use std::path::Path;
 
 #[test]
 fn allow_build_merges_into_config_and_persists_to_workspace_yaml() {
@@ -132,6 +133,21 @@ fn add_short_t_is_rejected_after_parse() {
 }
 
 #[test]
+fn add_short_t_is_rejected_inside_a_short_cluster() {
+    let parsed = CliArgs::try_parse_from(["pacquet", "add", "foo", "-DT"])
+        .expect("the hidden short option parses inside a cluster");
+    let CliCommand::Add(add) = &parsed.command else {
+        panic!("expected add");
+    };
+    assert_eq!(add.dependency_options.save_target(), Some(vec![DependencyGroup::Dev]));
+
+    let err = parsed
+        .validate_command_scoped_global_options()
+        .expect_err("`-T` inside a short cluster should still be rejected");
+    assert_eq!(err.kind(), clap::error::ErrorKind::UnknownArgument);
+}
+
+#[test]
 fn add_short_t_can_still_be_used_as_a_value_or_selector() {
     let args = add_args(&["pacquet", "add", "foo", "--save-prefix=-T"]);
     assert_eq!(args.save.prefix.as_deref(), Some("-T"));
@@ -146,6 +162,16 @@ fn add_short_t_can_still_be_used_as_a_value_or_selector() {
         ["foo", "-T"],
     );
     assert!(!args.save.hidden_ambiguous_t);
+}
+
+#[test]
+fn a_value_taking_short_keeps_a_trailing_t_in_its_value() {
+    let parsed = CliArgs::try_parse_from(["pacquet", "-CT", "add", "foo"])
+        .expect("the directory short should take the attached value");
+    assert_eq!(parsed.paths.dir, Path::new("T"));
+    parsed
+        .validate_command_scoped_global_options()
+        .expect("the attached value must not trigger the hidden `-T` check");
 }
 
 #[test]
