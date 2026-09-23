@@ -135,7 +135,7 @@ fn add_short_t_is_rejected_after_parse() {
 fn add_short_t_can_still_be_used_as_a_value_or_selector() {
     let args = add_args(&["pacquet", "add", "foo", "--save-prefix=-T"]);
     assert_eq!(args.save.prefix.as_deref(), Some("-T"));
-    assert!(!args.save.ambiguous_t);
+    assert!(!args.save.hidden_ambiguous_t);
 
     let args = add_args(&["pacquet", "add", "foo", "--", "-T"]);
     assert_eq!(
@@ -145,7 +145,7 @@ fn add_short_t_can_still_be_used_as_a_value_or_selector() {
             .collect::<Vec<_>>(),
         ["foo", "-T"],
     );
-    assert!(!args.save.ambiguous_t);
+    assert!(!args.save.hidden_ambiguous_t);
 }
 
 #[test]

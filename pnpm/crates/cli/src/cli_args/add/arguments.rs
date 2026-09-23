@@ -72,10 +72,8 @@ pub struct AddSaveArgs {
     /// Do not add `@types` packages automatically.
     #[clap(long = "no-save-types", overrides_with = "types")]
     pub no_save_types: bool,
-    /// Hidden short spelling accepted only so post-parse validation can report
-    /// that `-T` is ambiguous between `--save-types` and `--tilde`.
     #[clap(short = 'T', hide = true)]
-    pub ambiguous_t: bool,
+    pub hidden_ambiguous_t: bool,
     /// Saved dependencies will be configured with an exact version rather than using
     /// the default semver range operator.
     #[clap(short = 'E', long = "save-exact")]

@@ -41,7 +41,7 @@ impl CliArgs {
     }
 
     pub fn validate_command_scoped_global_options(&self) -> Result<(), clap::Error> {
-        if matches!(&self.command, CliCommand::Add(args) if args.save.ambiguous_t) {
+        if matches!(&self.command, CliCommand::Add(args) if args.save.hidden_ambiguous_t) {
             return Err(Self::ambiguous_add_short_option_error());
         }
         if self.workspace.ordering.resume_from.is_some() {
