@@ -4,7 +4,6 @@
 // graph; proving it `Send` walks deeper than rustc's default limit.
 #![recursion_limit = "256"]
 
-mod ambiguous_short_options;
 mod boolean_negations;
 mod boolean_values;
 mod cargo_deps;
@@ -107,10 +106,7 @@ fn run_cli() -> miette::Result<()> {
     // The default reporter's `Done in ... using pacquet v<version>` footer needs
     // the version before the first event (including the fast path's).
     pnpm_default_reporter::set_package_version(pnpm_config::PNPM_VERSION);
-    let (command, argv) = match prepare_cli_argv(argv) {
-        Ok(prepared) => prepared,
-        Err(err) => err.exit(),
-    };
+    let (command, argv) = prepare_cli_argv(argv);
     let mut args = match parse_cli_args(command, argv.clone()) {
         Ok(args) => args,
         Err(err) if err.kind() == clap::error::ErrorKind::DisplayVersion => {
@@ -343,16 +339,15 @@ fn configure_rayon_pool() {
 mod tests;
 
 /// Normalize pnpm argument syntax before passing it to clap.
-fn prepare_cli_argv(argv: Vec<OsString>) -> Result<(clap::Command, Vec<OsString>), clap::Error> {
+fn prepare_cli_argv(argv: Vec<OsString>) -> (clap::Command, Vec<OsString>) {
     let command = with_boolean_negations(CliArgs::command());
     let argv = shorthands::expand_universal_shorthands(&command, argv);
     let argv = boolean_values::resolve_boolean_values(argv);
     let argv = renamed_options::drop_shadowed_aliases(&command, argv);
     let argv = relocate_pre_subcommand_flags(&command, argv);
     let argv = install_as_add::rewrite(&command, argv);
-    let argv = ambiguous_short_options::reject_for_add(&command, argv)?;
     let argv = leading_separator::preserve_leading_separator(argv);
-    Ok((command, argv))
+    (command, argv)
 }
 
 fn configure_cli_args(args: &mut CliArgs) -> miette::Result<()> {
