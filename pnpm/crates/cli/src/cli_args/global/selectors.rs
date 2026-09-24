@@ -250,6 +250,7 @@ pub(super) fn infer_local_package_alias(selector: &str) -> miette::Result<String
     Ok(format!("{name}@{selector}"))
 }
 
+#[cfg(test)]
 pub(super) fn is_windows_drive_path(param: &str) -> bool {
     comma_separated::is_windows_drive_path(param)
 }
