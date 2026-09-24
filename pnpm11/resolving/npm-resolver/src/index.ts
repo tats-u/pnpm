@@ -15,6 +15,7 @@ import type {
   DirectoryResolution,
   LatestInfo,
   LatestQuery,
+  NonDeprecatedAlternative,
   PkgResolutionId,
   PreferredVersions,
   Resolution,
@@ -60,9 +61,11 @@ import { memoizeFetchMetadata } from './memoizeFetchMetadata.js'
 import { normalizeRegistryUrl } from './normalizeRegistryUrl.js'
 import {
   BUILTIN_REGISTRIES_BY_PREFIX,
+  type NpmAliasTarget,
   parseBareSpecifier,
   parseJsrSpecifierToRegistryPackageSpec,
   parseNamedRegistrySpecifierToRegistryPackageSpec,
+  parseNpmAliasTarget,
   type RegistryPackageSpec,
 } from './parseBareSpecifier.js'
 import {
@@ -70,7 +73,7 @@ import {
   pickPackage,
   type PickPackageOptions,
 } from './pickPackage.js'
-import { applyPublishedByPolicy, pickPackageFromMeta, pickVersionByVersionRange } from './pickPackageFromMeta.js'
+import { applyPublishedByPolicy, findNonDeprecatedAlternative, knownImmature, pickPackageFromMeta, pickVersionByVersionRange } from './pickPackageFromMeta.js'
 import { failIfTrustDowngraded } from './trustChecks.js'
 import { MINIMUM_RELEASE_AGE_VIOLATION_CODE } from './violationCodes.js'
 import { workspacePrefToNpm } from './workspacePrefToNpm.js'
@@ -124,9 +127,11 @@ export {
   BUILTIN_REGISTRIES_BY_PREFIX,
   fetchMetadataFromFromRegistry,
   type FetchMetadataFromFromRegistryOptions,
+  type NpmAliasTarget,
   type PackageMeta,
   type PackageMetaCache,
   parseBareSpecifier,
+  parseNpmAliasTarget,
   pickPackageFromMeta,
   pickVersionByVersionRange,
   type RegistryPackageSpec,
@@ -134,6 +139,7 @@ export {
   workspacePrefToNpm,
 }
 export { createNpmResolutionVerifier, type CreateNpmResolutionVerifierOptions } from './createNpmResolutionVerifier.js'
+export { decodeRegistry, encodeRegistry } from './encodeRegistry.js'
 export {
   MINIMUM_RELEASE_AGE_VIOLATION_CODE,
   TRUST_DOWNGRADE_VIOLATION_CODE,
@@ -530,6 +536,13 @@ export type ResolveFromNpmOptions = {
   injectWorkspacePackages?: boolean
   calcSpecifier?: boolean
   rangeSpecStyle?: RangeSpecStyle
+  currentPkg?: {
+    id: PkgResolutionId
+    name?: string
+    version?: string
+    resolution: Resolution
+    publishedAt?: string
+  }
 } & ({
   projectDir?: string
   workspacePackages?: undefined
@@ -541,15 +554,7 @@ export type ResolveFromNpmOptions = {
 async function resolveNpm (
   ctx: ResolveFromNpmContext,
   wantedDependency: WantedDependency & { optional?: boolean },
-  opts: ResolveFromNpmOptions & {
-    currentPkg?: {
-      id: PkgResolutionId
-      name?: string
-      version?: string
-      resolution: Resolution
-      publishedAt?: string
-    }
-  }
+  opts: ResolveFromNpmOptions
 ): Promise<NpmResolveResult | WorkspaceResolveResult | null> {
   const defaultTag = opts.defaultTag ?? 'latest'
   const registry = wantedDependency.alias
@@ -593,7 +598,9 @@ async function resolveNpm (
     opts.currentPkg?.resolution &&
     !opts.update &&
     !opts.updatePatches &&
+    !opts.updateChecksums &&
     spec.revision == null &&
+    opts.trustPolicy !== 'no-downgrade' &&
     (opts.publishedBy == null || opts.currentPkg.publishedAt != null)
   ) {
     const currentResolution = opts.currentPkg.resolution
@@ -605,11 +612,12 @@ async function resolveNpm (
         name: opts.currentPkg.name,
         version: opts.currentPkg.version,
       })
-      // Verify the manifest matches what we expect
       if (manifest?.name && manifest?.version) {
         const id = `${manifest.name}@${manifest.version}` as PkgResolutionId
-        // Only return if the ID matches what we have in currentPkg
-        if (id === opts.currentPkg.id) {
+        const satisfiesSpec =
+          (spec.type !== 'range' || spec.fetchSpec === '*' || semver.satisfies(manifest.version, spec.fetchSpec, { loose: true })) &&
+          (spec.type !== 'version' || manifest.version === spec.fetchSpec)
+        if (id === opts.currentPkg.id && satisfiesSpec) {
           return {
             id,
             manifest,
@@ -759,7 +767,7 @@ async function resolveNpm (
       }
     }
     const localVersion = pickMatchingLocalVersionOrNull(workspacePkgsMatchingName, spec)
-    if (localVersion && (semver.gt(localVersion, pickedPackage.version) || opts.preferWorkspacePackages)) {
+    if (localVersion && (opts.preferWorkspacePackages || (semver.valid(localVersion) && semver.gte(localVersion, pickedPackage.version)))) {
       return {
         ...resolveFromLocalPackage(workspacePkgsMatchingName.get(localVersion)!, spec, {
           wantedDependency,
@@ -942,6 +950,7 @@ async function pickFromSimpleRegistry (
 ): Promise<{
   id: PkgResolutionId
   latest?: string
+  nonDeprecatedAlternative?: NonDeprecatedAlternative
   manifest: DependencyManifest
   resolution: TarballResolution
   publishedAt?: string
@@ -971,6 +980,10 @@ async function pickFromSimpleRegistry (
   return {
     id: `${pickedPackage.name}@${pickedPackage.version}` as PkgResolutionId,
     latest: latestAllowedByPolicy(meta, opts),
+    // Only worked out for a deprecated pick, so the scan stays on the rare path.
+    nonDeprecatedAlternative: pickedPackage.deprecated
+      ? findNonDeprecatedAlternative(meta, spec, opts)
+      : undefined,
     manifest: selectedPackage,
     resolution,
     publishedAt,
@@ -1109,7 +1122,7 @@ function tryResolveFromWorkspacePackages (
     opts.update ? { name: spec.name, fetchSpec: '*', type: 'range' } : spec
   )
   if (!localVersion) {
-    const availableVersions = Array.from(workspacePkgsMatchingName.keys()).sort((a, b) => semver.rcompare(a, b))
+    const availableVersions = Array.from(workspacePkgsMatchingName.keys()).sort(rcompareVersions)
     throw new PnpmError(
       'NO_MATCHING_VERSION_INSIDE_WORKSPACE',
       `In ${path.relative(process.cwd(), opts.projectDir)}: No matching version found for ${opts.wantedDependency.alias ?? ''}@${opts.wantedDependency.bareSpecifier ?? ''} inside the workspace` +
@@ -1124,22 +1137,29 @@ function tryResolveFromWorkspacePackages (
   return resolveFromLocalPackage(workspacePkgsMatchingName.get(localVersion)!, spec, opts)
 }
 
-function pickMatchingLocalVersionOrNull (
+export function pickMatchingLocalVersionOrNull (
   versions: WorkspacePackagesByVersion,
   spec: RegistryPackageSpec
 ): string | null {
   switch (spec.type) {
     case 'tag':
-      return semver.maxSatisfying(Array.from(versions.keys()), '*', {
-        includePrerelease: true,
-      })
+      return resolveWorkspaceRange('*', Array.from(versions.keys()))
     case 'version':
-      return versions.has(spec.fetchSpec) ? spec.fetchSpec : null
+      if (versions.has(spec.fetchSpec)) return spec.fetchSpec
+      return resolveWorkspaceRange(spec.fetchSpec, Array.from(versions.keys()))
     case 'range':
       return resolveWorkspaceRange(spec.fetchSpec, Array.from(versions.keys()))
     default:
       return null
   }
+}
+
+function rcompareVersions (a: string, b: string): number {
+  const aIsSemver = semver.valid(a) != null
+  const bIsSemver = semver.valid(b) != null
+  if (aIsSemver !== bIsSemver) return aIsSemver ? -1 : 1
+  const bySemver = aIsSemver ? semver.rcompare(a, b) : 0
+  return bySemver || (b < a ? -1 : b > a ? 1 : 0)
 }
 
 function resolveFromLocalPackage (
@@ -1197,14 +1217,21 @@ function calcSpecifierForWorkspaceDep ({
   wantedDependency: WantedDependency
   spec: RegistryPackageSpec
   saveWorkspaceProtocol: boolean | 'rolling' | undefined
-  version: string
+  // A workspace project may omit its version, whatever its manifest type says.
+  version: string | undefined
   defaultRangeSpecStyle?: RangeSpecStyle
 }): string {
-  if (!saveWorkspaceProtocol && !wantedDependency.bareSpecifier?.startsWith('workspace:')) {
-    return calcSpecifier({ wantedDependency, spec, version, defaultRangeSpecStyle })
+  const parsedVersion = semver.parse(version)
+  if (version != null && !saveWorkspaceProtocol && !wantedDependency.bareSpecifier?.startsWith('workspace:')) {
+    if (parsedVersion != null) {
+      return calcSpecifier({ wantedDependency, spec, version, defaultRangeSpecStyle })
+    }
+    if (isPartialVersion(version)) {
+      return (!wantedDependency.alias || spec.name === wantedDependency.alias) ? version : `npm:${spec.name}@${version}`
+    }
   }
   const prefix = (!wantedDependency.alias || spec.name === wantedDependency.alias) ? 'workspace:' : `workspace:${spec.name}@`
-  if (saveWorkspaceProtocol === 'rolling') {
+  if (saveWorkspaceProtocol === 'rolling' || version == null) {
     const specifier = wantedDependency.prevSpecifier ?? wantedDependency.bareSpecifier
     if (specifier) {
       if ([`${prefix}*`, `${prefix}^`, `${prefix}~`].includes(specifier)) return specifier
@@ -1218,12 +1245,31 @@ function calcSpecifierForWorkspaceDep ({
     }
     return `${prefix}^`
   }
-  if (semver.parse(version)?.prerelease.length) {
+  if (parsedVersion == null ? isPartialVersion(version) : parsedVersion.prerelease.length) {
     return `${prefix}${version}`
   }
   const rangeSpecStyle = (wantedDependency.prevSpecifier ? inferRangeSpecStyle(wantedDependency.prevSpecifier) : undefined) ?? defaultRangeSpecStyle
   const range = versionWithRangeSpecStyle(version, rangeSpecStyle ?? 'major')
   return `${prefix}${range}`
+}
+
+/**
+ * `1`, `1.0` or `1.x`: a non-semver workspace version that is saved exactly,
+ * with or without the `workspace:` protocol, since a `^`/`~` range over it
+ * would not match it. Any other non-semver version keeps the operator: written
+ * exactly it could mean a wildcard, a tag or an alias inside `workspace:`, or
+ * a different dependency source without it.
+ */
+function isPartialVersion (version: string): boolean {
+  const [major, ...minorAndPatch] = version.split('.')
+  return isVersionNumber(major) &&
+    minorAndPatch.length <= 2 &&
+    minorAndPatch.every((part) => ['x', 'X', '*'].includes(part) || isVersionNumber(part)) &&
+    semver.validRange(version) != null
+}
+
+function isVersionNumber (part: string): boolean {
+  return part === '0' || (part !== '' && !part.startsWith('0') && [...part].every((char) => char >= '0' && char <= '9'))
 }
 
 function resolveLocalPackageDir (localPackage: WorkspacePackage): string {
@@ -1260,14 +1306,8 @@ function latestAllowedByPolicy (
   }
 ): string | undefined {
   const latest = meta['dist-tags'].latest
-  if (!latest || !opts.publishedBy) return latest
-  const excludeResult = opts.publishedByExclude?.(meta.name)
-  if (excludeResult === true) return latest
-  if (Array.isArray(excludeResult) && excludeResult.includes(latest)) return latest
-  const publishedAt = meta.time?.[latest]
-  if (publishedAt == null) return latest
-  const ts = new Date(publishedAt).getTime()
-  return (Number.isNaN(ts) || ts <= opts.publishedBy.getTime()) ? latest : undefined
+  if (!latest) return undefined
+  return knownImmature(meta, latest, opts) ? undefined : latest
 }
 
 /**

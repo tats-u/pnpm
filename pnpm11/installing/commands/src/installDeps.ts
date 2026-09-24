@@ -1,6 +1,6 @@
 import path from 'node:path'
 
-import { buildProjects } from '@pnpm/building.after-install'
+import { buildProjects, PROJECT_INSTALL_STAGES } from '@pnpm/building.after-install'
 import { mergeCatalogs } from '@pnpm/catalogs.config'
 import type { Catalogs } from '@pnpm/catalogs.types'
 import type { CommandHandler } from '@pnpm/cli.command'
@@ -25,12 +25,14 @@ import type { LockfileObject } from '@pnpm/lockfile.types'
 import { globalInfo, logger } from '@pnpm/logger'
 import { applyRuntimeOnFailOverride, filterDependenciesByType } from '@pnpm/pkg-manifest.utils'
 import { getRangeSpecStyle } from '@pnpm/pkg-manifest.utils'
-import type { PreferredVersions, VersionSelectors } from '@pnpm/resolving.resolver-base'
+import { parseWantedDependency } from '@pnpm/resolving.parse-wanted-dependency'
+import type { PreferredVersions, ResolutionPolicyViolation, VersionSelectors } from '@pnpm/resolving.resolver-base'
 import { createStoreController, type CreateStoreControllerOptions } from '@pnpm/store.connection-manager'
 import type {
   IncludedDependencies,
   PackageVulnerabilityAudit,
   Project,
+  ProjectManifest,
   ProjectRootDir,
   ProjectsGraph,
   VulnerabilitySeverity,
@@ -73,6 +75,7 @@ export type InstallDepsOptions = Pick<Config,
 | 'catalogMode'
 | 'catalogPrune'
 | 'minimumReleaseAgeExcludePrune'
+| 'trustPolicyExcludePrune'
 | 'dedupePeerDependents'
 | 'dedupePeers'
 | 'depth'
@@ -81,6 +84,7 @@ export type InstallDepsOptions = Pick<Config,
 | 'virtualStoreOnly'
 | 'engineStrict'
 | 'excludeLinksFromLockfile'
+| 'forceIgnoresPlatform'
 | 'global'
 | 'globalPnpmfile'
 | 'ignoreCurrentSpecifiers'
@@ -145,10 +149,14 @@ export type InstallDepsOptions = Pick<Config,
     remain?: string[]
   }
   allowNew?: boolean
+  deploy?: boolean
+  /** See {@link RecursiveOptions.excludeWorkspaceRootProject}. */
+  excludeWorkspaceRootProject?: boolean
   forceFullResolution?: boolean
   frozenLockfileIfExists?: boolean
   include?: IncludedDependencies
   includeDirect?: IncludedDependencies
+  peer?: boolean
   latest?: boolean
   /**
    * If specified, the installation will only be performed for comparison of the
@@ -170,8 +178,15 @@ export type InstallDepsOptions = Pick<Config,
   recursive?: boolean
   dedupe?: boolean
   workspace?: boolean
+  interactiveUpdate?: boolean
   includeOnlyPackageFiles?: boolean
   pruneLockfileImporters?: boolean
+  /**
+   * Set to `false` for an install whose projects are not the workspace's own,
+   * such as the legacy `pnpm deploy`. The workspace state file then keeps
+   * describing the workspace's last install.
+   */
+  saveWorkspaceState?: boolean
   rebuildHandler?: CommandHandler
   pnpmfile: string[]
   packageVulnerabilityAudit?: PackageVulnerabilityAudit
@@ -188,7 +203,7 @@ export async function installDeps (
   opts: InstallDepsOptions,
   params: string[]
 ): Promise<DryRunInstallResult | undefined> {
-  if (!opts.update && !opts.dedupe && params.length === 0 && opts.optimisticRepeatInstall) {
+  if (!opts.update && !opts.dedupe && !opts.force && params.length === 0 && opts.optimisticRepeatInstall) {
     const { upToDate, wantedLockfileToRestore } = await checkDepsStatus({
       ...opts,
       ignoreFilteredInstallCache: true,
@@ -250,13 +265,14 @@ export async function installDeps (
     })
     ? declaredPacquetConfigDepName
     : undefined
-  const runPacquet = pacquetConfigDepName != null
+  const runPacquet = pacquetConfigDepName != null && !opts.deploy
     ? makeRunPacquet({
       lockfileDir: opts.lockfileDir ?? opts.dir,
       packageName: pacquetConfigDepName,
       argv: { original: opts.argv.original, remain: opts.argv.remain ?? [] },
       isInstallCommand: opts.isInstallCommand === true,
       virtualStoreDirMaxLength: opts.virtualStoreDirMaxLength,
+      forceIgnoresPlatform: opts.forceIgnoresPlatform !== false,
     })
     : undefined
   const includeDirect = opts.includeDirect ?? {
@@ -413,6 +429,7 @@ export async function installDeps (
       include: includeDirect,
       workspacePackages,
       userNamedDeps,
+      fromInteractiveUpdate: opts.interactiveUpdate,
     })
   }
   if (params?.length) {
@@ -423,30 +440,65 @@ export async function installDeps (
       manifest,
       mutation: 'installSome' as const,
       peer: opts.savePeer,
+      peerAliases: opts.peer === true
+        ? new Set(params
+          .map((selector) => parseWantedDependency(selector).alias)
+          .filter((alias): alias is string => alias != null && Object.hasOwn(manifest.peerDependencies ?? {}, alias)))
+        : undefined,
       rangeSpecStyle: getRangeSpecStyle(opts),
       rootDir: opts.dir as ProjectRootDir,
       targetDependenciesField: getSaveType(opts),
     }
-    const { updatedCatalogs, updatedProject, ignoredBuilds, newLockfile, resolutionPolicyViolations, dryRunResult } = await mutateModulesInSingleProject(mutatedProject, installOpts)
-    if (opts.save !== false && !opts.dryRun) {
-      // Only pick entries when we'll actually persist. Otherwise the
-      // info log would claim we added entries the workspace manifest
-      // never saw, and the next install would re-prompt or fail
-      // verification.
-      const policyUpdates = policyHandlers?.pickManifestUpdates(resolutionPolicyViolations)
-      await Promise.all([
-        writeProjectManifest(updatedProject.manifest),
-        updateWorkspaceManifest(opts.workspaceDir ?? opts.dir, {
-          updatedCatalogs,
-          catalogPrune: opts.catalogPrune,
-          resolvedPackageVersions: resolvedPackageVersionsForPrune(opts, newLockfile),
-          minimumReleaseAgeExcludePrune: opts.minimumReleaseAgeExcludePrune,
-          allProjects: opts.allProjects,
-          ...policyUpdates,
-        }),
-      ])
+    let manifestsSaved = false
+    const saveManifests = async ({
+      updatedProject,
+      updatedCatalogs,
+      newLockfile,
+      resolutionPolicyViolations,
+    }: {
+      updatedProject?: { manifest: ProjectManifest }
+      updatedCatalogs?: Catalogs
+      newLockfile?: LockfileObject
+      resolutionPolicyViolations?: ResolutionPolicyViolation[]
+    }) => {
+      if (manifestsSaved) return
+      manifestsSaved = true
+      if (opts.save !== false && !opts.dryRun && updatedProject) {
+        // Only pick entries when we'll actually persist. Otherwise the
+        // info log would claim we added entries the workspace manifest
+        // never saw, and the next install would re-prompt or fail
+        // verification.
+        const policyUpdates = policyHandlers?.pickManifestUpdates(resolutionPolicyViolations ?? [])
+        await Promise.all([
+          writeProjectManifest(updatedProject.manifest),
+          updateWorkspaceManifest(opts.workspaceDir ?? opts.dir, {
+            updatedCatalogs,
+            catalogPrune: opts.catalogPrune,
+            resolvedPackageVersions: resolvedPackageVersionsForPrune(opts, newLockfile),
+            minimumReleaseAgeExcludePrune: opts.minimumReleaseAgeExcludePrune,
+            trustPolicyExcludePrune: opts.trustPolicyExcludePrune,
+            allProjects: opts.allProjects,
+            ...policyUpdates,
+          }),
+        ])
+      }
     }
-    if (!opts.lockfileOnly) {
+    const { updatedCatalogs, updatedProject, ignoredBuilds, newLockfile, resolutionPolicyViolations, dryRunResult } = await mutateModulesInSingleProject(mutatedProject, {
+      ...installOpts,
+      beforeLifecycleScripts: async (res) => saveManifests({
+        updatedProject: res.updatedProjects[0],
+        updatedCatalogs: res.updatedCatalogs,
+        newLockfile: res.newLockfile,
+        resolutionPolicyViolations: res.resolutionPolicyViolations,
+      }),
+    })
+    await saveManifests({
+      updatedProject,
+      updatedCatalogs,
+      newLockfile,
+      resolutionPolicyViolations,
+    })
+    if (shouldSaveWorkspaceState(opts)) {
       await updateWorkspaceState({
         allProjects,
         settings: withUpdatedCatalogs(opts, updatedCatalogs),
@@ -479,6 +531,7 @@ export async function installDeps (
           catalogPrune: opts.catalogPrune,
           resolvedPackageVersions: resolvedPackageVersionsForPrune(opts, newLockfile),
           minimumReleaseAgeExcludePrune: opts.minimumReleaseAgeExcludePrune,
+          trustPolicyExcludePrune: opts.trustPolicyExcludePrune,
           allProjects,
           ...policyUpdates,
         }),
@@ -527,10 +580,11 @@ export async function installDeps (
         storeController: store.ctrl,
         storeDir: store.dir,
         skipIfHasSideEffectsCache: true,
+        ...(userNamedDeps ? { stages: PROJECT_INSTALL_STAGES } : {}),
       }
     )
   } else {
-    if (!opts.lockfileOnly) {
+    if (shouldSaveWorkspaceState(opts)) {
       await updateWorkspaceState({
         allProjects,
         settings: withUpdatedCatalogs(opts, updatedCatalogs),
@@ -553,12 +607,12 @@ function selectProjectByDir (projects: Project[], searchedDir: string): Projects
 async function recursiveInstallThenUpdateWorkspaceState (
   allProjects: Project[],
   params: string[],
-  opts: RecursiveOptions & WorkspaceStateSettings,
+  opts: RecursiveOptions & WorkspaceStateSettings & Pick<InstallDepsOptions, 'saveWorkspaceState'>,
   cmdFullName: CommandFullName,
   updatedCatalogs?: Catalogs
 ): Promise<DryRunInstallResult | undefined> {
   const recursiveResult = await recursive(allProjects, params, opts, cmdFullName)
-  if (!opts.lockfileOnly) {
+  if (shouldSaveWorkspaceState(opts)) {
     await updateWorkspaceState({
       allProjects,
       settings: withUpdatedCatalogs(opts, updatedCatalogs, recursiveResult.updatedCatalogs),
@@ -569,6 +623,10 @@ async function recursiveInstallThenUpdateWorkspaceState (
     })
   }
   return recursiveResult.dryRunResult
+}
+
+function shouldSaveWorkspaceState (opts: Pick<InstallDepsOptions, 'lockfileOnly' | 'saveWorkspaceState'>): boolean {
+  return !opts.lockfileOnly && opts.saveWorkspaceState !== false
 }
 
 /**

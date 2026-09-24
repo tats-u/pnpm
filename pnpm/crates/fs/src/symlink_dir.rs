@@ -1,8 +1,15 @@
+pub use absolute::force_absolute_symlink_dir;
+
 use std::{
     borrow::Cow,
     error::Error,
     fmt, fs, io,
     path::{Path, PathBuf},
+};
+
+use crate::retry::{
+    is_transient_file_lock_error, remove_dir_all_with_retry, rename_with_retry,
+    retry_transient_file_locks,
 };
 
 /// Create a symlink to a directory, matching the on-disk shape pnpm
@@ -44,23 +51,29 @@ pub fn symlink_dir(original: &Path, link: &Path) -> io::Result<()> {
 ///
 /// Borrows unless a rewrite is needed; a no-op on Unix.
 #[cfg(windows)]
-fn to_native_separators(path: &Path) -> Cow<'_, Path> {
+#[must_use]
+pub fn to_native_separators(path: &Path) -> Cow<'_, Path> {
     // In WTF-8 a 0x2F byte appears iff the path holds a literal `/`, so
     // scanning bytes is a correct, allocation-free check.
-    if !path.as_os_str().as_encoded_bytes().contains(&b'/') {
+    if !path
+        .as_os_str()
+        .as_encoded_bytes()
+        .contains(&b'/')
+    {
         return Cow::Borrowed(path);
     }
     // A string replace, not `Path::components`: in a verbatim `\\?\`
     // path `components` treats `/` as a literal byte and leaves it in
     // place. Package paths are valid Unicode, so `to_str` succeeds.
     match path.to_str() {
-        Some(s) => Cow::Owned(PathBuf::from(s.replace('/', "\\"))),
+        Some(s) => Cow::Owned(PathBuf::from(s.replace('/', r"\"))),
         None => Cow::Borrowed(path),
     }
 }
 
 #[cfg(not(windows))]
-fn to_native_separators(path: &Path) -> Cow<'_, Path> {
+#[must_use]
+pub fn to_native_separators(path: &Path) -> Cow<'_, Path> {
     Cow::Borrowed(path)
 }
 
@@ -86,7 +99,7 @@ pub fn is_symlink_or_junction(link: &Path) -> io::Result<bool> {
     {
         // Check the symlink case first so a true symlink never reaches
         // `junction::exists`.
-        if link.is_symlink() {
+        if crate::symlink_metadata_with_retry(link)?.file_type().is_symlink() {
             return Ok(true);
         }
         // `junction::exists` reports a path that is not a reparse point
@@ -94,7 +107,7 @@ pub fn is_symlink_or_junction(link: &Path) -> io::Result<bool> {
         // rather than `Ok(false)`; for this question that is a plain
         // "no".
         const ERROR_NOT_A_REPARSE_POINT: i32 = 4390;
-        match junction::exists(link) {
+        match crate::retry::retry_transient_file_locks(|| junction::exists(link)) {
             Ok(is_junction) => Ok(is_junction),
             Err(error) if error.raw_os_error() == Some(ERROR_NOT_A_REPARSE_POINT) => Ok(false),
             Err(error) => Err(error),
@@ -114,11 +127,14 @@ pub fn is_symlink_or_junction(link: &Path) -> io::Result<bool> {
 /// need `fs::remove_dir` to be unlinked — `remove_file` returns
 /// `ERROR_ACCESS_DENIED`. Wrapping the platform split here keeps
 /// callers free of `#[cfg]`.
+///
+/// On Windows the unlink follows the retry policy of
+/// [`crate::rename_with_retry`].
 pub fn remove_symlink_dir(link: &Path) -> io::Result<()> {
     #[cfg(unix)]
     return std::fs::remove_file(link);
     #[cfg(windows)]
-    return std::fs::remove_dir(link);
+    return retry_transient_file_locks(|| std::fs::remove_dir(link));
 }
 
 /// Read the target of a directory symlink (or junction on Windows).
@@ -181,25 +197,27 @@ impl Error for ConcurrentCleanupWarning {}
 /// Idempotent, overwrite-on-stale symlink creator with overwrite-on
 /// semantics: an existing occupant at `link` is moved aside.
 ///
-/// When a regular file or directory occupies `link` and the rename
-/// that moves it aside fails because the source disappeared between
-/// the `AlreadyExists` and the rename, the initial `AlreadyExists`
-/// error is surfaced rather than the rename's `NotFound`.
+/// A regular file or directory occupying `link` can be gone by the time the
+/// rename that moves it aside runs, which is what a second writer racing for
+/// the same path looks like. The create is reissued once for that, since the
+/// conflict it reported no longer exists. A link that reports a conflict twice
+/// over while holding nothing surfaces the create's own error rather than the
+/// rename's `NotFound`.
 pub fn force_symlink_dir(target: &Path, link: &Path) -> io::Result<ForceSymlinkOutcome> {
     // Normalize up front so every retry-loop fs op on `link` — not just
     // the symlink syscall — sees a native path. See [`to_native_separators`].
     let target = to_native_separators(target);
     let link = to_native_separators(link);
     #[cfg(windows)]
-    return force_symlink_inner(&target, &link, false, windows::create);
+    return force_symlink_inner(&target, &link, TriedOnce::default(), windows::create);
     #[cfg(not(windows))]
-    force_symlink_inner(&target, &link, false, symlink_dir)
+    force_symlink_inner(&target, &link, TriedOnce::default(), symlink_dir)
 }
 
 fn force_symlink_inner(
     target: &Path,
     link: &Path,
-    rename_tried: bool,
+    tried: TriedOnce,
     create_symlink: fn(&Path, &Path) -> io::Result<()>,
 ) -> io::Result<ForceSymlinkOutcome> {
     let initial_err = match create_symlink(target, link) {
@@ -213,72 +231,50 @@ fn force_symlink_inner(
 
     match initial_err.kind() {
         io::ErrorKind::NotFound => {
-            // Wrap the mkdir failure so callers see *which* step
-            // tripped.
-            if let Some(parent) = link.parent() {
-                create_dir_all_healing_reparse(parent).map_err(|mkdir_err| {
-                    io::Error::new(
-                        mkdir_err.kind(),
-                        format!(
-                            "Error while trying to symlink {target:?} to {link:?}. \
-                             The error happened while trying to create the parent directory \
-                             for the symlink target. Details: {mkdir_err}",
-                        ),
-                    )
-                })?;
-            }
-            return force_symlink_inner(target, link, rename_tried, create_symlink);
+            create_symlink_parent(target, link)?;
+            return force_symlink_inner(target, link, tried, create_symlink);
         }
         io::ErrorKind::AlreadyExists | io::ErrorKind::IsADirectory => {}
         _ => return Err(initial_err),
     }
 
-    if let Ok(existing) = read_symlink_dir(link) {
-        if existing_symlink_up_to_date(target, link, &existing) {
-            return Ok(ForceSymlinkOutcome { reused: true, warning: reuse_warning });
-        }
-        // Stale link — unlink and retry. Ignore `NotFound` in
-        // case a parallel installer beat us to the unlink.
-        match remove_symlink_dir(link) {
-            Ok(()) => {}
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-            Err(error) => return Err(error),
-        }
-        force_symlink_inner(target, link, rename_tried, create_symlink)
-    } else {
-        // `link` is occupied by a regular file or directory.
-        // Move it out of the way, then retry. On the second
-        // attempt (`rename_tried`) drop down to a plain unlink
-        // as a fallback for an intermittent macOS bug, see
-        // <https://github.com/pnpm/pnpm/issues/5909#issuecomment-1400066890>.
-        let parent = link.parent().unwrap_or_else(|| Path::new(""));
-        let basename = link.file_name().unwrap_or_default().to_string_lossy().into_owned();
-        let warning = if rename_tried {
-            remove_occupant(link)?;
-            format!(
-                "Symlink wanted name was occupied by directory or file. \
-                 Old entity removed: {parent:?}{sep}{basename}",
-                sep = std::path::MAIN_SEPARATOR,
-            )
-        } else {
-            let ignore_name = format!(".ignored_{basename}");
-            let ignore_path = parent.join(&ignore_name);
-            if let Err(rename_err) = rename_overwrite(link, &ignore_path) {
-                if rename_err.kind() == io::ErrorKind::NotFound {
-                    return Err(initial_err);
-                }
-                return Err(rename_err);
-            }
-            format!(
-                "Symlink wanted name was occupied by directory or file. \
-                 Old entity moved: {parent:?}{sep}{basename} => {ignore_name}",
-                sep = std::path::MAIN_SEPARATOR,
-            )
-        };
-        let mut outcome = force_symlink_inner(target, link, true, create_symlink)?;
-        outcome.warning = Some(warning);
-        Ok(outcome)
+    // The read waits out a refusal: on Windows a link another installer
+    // created moments ago can refuse it while a handle on it is open. A real
+    // file or directory refuses for a reason that is not a lock, so it
+    // answers at once.
+    let Ok(existing) = retry_transient_file_locks(|| read_symlink_dir(link)) else {
+        return replace_unreadable_occupant(target, link, tried, create_symlink, initial_err);
+    };
+    if existing_symlink_up_to_date(target, link, &existing) {
+        return Ok(ForceSymlinkOutcome { reused: true, warning: reuse_warning });
     }
+    // Stale link — unlink and retry. Ignore `NotFound` in case a parallel
+    // installer beat us to the unlink.
+    match remove_symlink_dir(link) {
+        Ok(()) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error),
+    }
+    force_symlink_inner(target, link, tried, create_symlink)
+}
+
+/// Create the directory the link lives in, wrapping a failure so callers see
+/// *which* step tripped.
+fn create_symlink_parent(target: &Path, link: &Path) -> io::Result<()> {
+    let Some(parent) = link.parent() else {
+        return Ok(());
+    };
+    create_dir_all_healing_reparse(parent)
+        .map_err(|mkdir_err| {
+            io::Error::new(
+                mkdir_err.kind(),
+                format!(
+                    "Error while trying to symlink {target:?} to {link:?}. \
+                 The error happened while trying to create the parent directory \
+                 for the symlink target. Details: {mkdir_err}",
+                ),
+            )
+        })
 }
 
 /// Like [`std::fs::create_dir_all`], but heals a dangling reparse point
@@ -332,46 +328,11 @@ fn existing_symlink_up_to_date(wanted: &Path, link: &Path, existing_link_string:
     let existing_absolute = if existing_link_string.is_absolute() {
         existing_link_string.to_path_buf()
     } else {
-        link.parent().unwrap_or_else(|| Path::new("")).join(existing_link_string)
+        link.parent()
+            .unwrap_or_else(|| Path::new(""))
+            .join(existing_link_string)
     };
     crate::lexical_normalize(&existing_absolute) == crate::lexical_normalize(wanted)
-}
-
-/// Remove a regular file or directory that's occupying a symlink
-/// slot. Tries `remove_dir_all` first; if the target isn't a
-/// directory, falls back to `remove_file`.
-fn remove_occupant(path: &Path) -> io::Result<()> {
-    match fs::remove_dir_all(path) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(_) => fs::remove_file(path),
-    }
-}
-
-/// `fs::rename` that overwrites the destination when it exists.
-/// Follows the
-/// [`rename-overwrite`](https://github.com/zkochan/packages/tree/e65701a6ae/rename-overwrite)
-/// package's approach: if the rename fails because the destination
-/// is occupied (`AlreadyExists` for files, `DirectoryNotEmpty` for
-/// dirs, `PermissionDenied` on Windows when something holds a handle
-/// to the dest), remove the destination and retry once.
-fn rename_overwrite(src: &Path, dst: &Path) -> io::Result<()> {
-    match fs::rename(src, dst) {
-        Ok(()) => Ok(()),
-        Err(error) => {
-            let occupied = matches!(
-                error.kind(),
-                io::ErrorKind::AlreadyExists
-                    | io::ErrorKind::DirectoryNotEmpty
-                    | io::ErrorKind::PermissionDenied,
-            );
-            if !occupied {
-                return Err(error);
-            }
-            remove_occupant(dst)?;
-            fs::rename(src, dst)
-        }
-    }
 }
 
 #[cfg(windows)]
@@ -386,8 +347,8 @@ mod windows {
     };
 
     /// Cached choice of writer. `UNDECIDED` until the first successful
-    /// call resolves the EPERM probe; afterward `USE_SYMLINK` or
-    /// `USE_JUNCTION`. Caching the winning branch after the first call
+    /// call resolves the EPERM probe; afterward [`USE_SYMLINK`] or
+    /// [`USE_JUNCTION`]. Caching the winning branch after the first call
     /// avoids re-probing on every subsequent symlink.
     const UNDECIDED: u8 = 0;
     const USE_SYMLINK: u8 = 1;
@@ -396,30 +357,35 @@ mod windows {
     static JUNCTION_STAGING_ID: AtomicU64 = AtomicU64::new(0);
     static JUNCTION_COMMIT_LOCK: Mutex<()> = Mutex::new(());
 
+    /// True symlinks on Windows take a relative target —
+    /// `path.relative(dirname(dest), src)`, the same form used on Unix.
+    /// Junctions take the absolute path with a trailing backslash, but
+    /// the `junction` crate handles that internally so we pass
+    /// `original` through unchanged for the junction branch.
     pub fn create(original: &Path, link: &Path) -> io::Result<()> {
+        create_with_contents(original, &super::relative_target_for(original, link), link)
+    }
+
+    /// [`create`] with a true symlink holding `original` as given. A
+    /// junction holds the absolute path either way.
+    pub fn create_absolute(original: &Path, link: &Path) -> io::Result<()> {
+        create_with_contents(original, original, link)
+    }
+
+    fn create_with_contents(original: &Path, contents: &Path, link: &Path) -> io::Result<()> {
         match MODE.load(Ordering::Relaxed) {
-            USE_SYMLINK => match create_true_symlink(original, link) {
+            USE_SYMLINK => match std::os::windows::fs::symlink_dir(contents, link) {
                 Err(error) if should_fallback_to_junction(&error) => {
                     create_and_cache_junction(original, link)
                 }
                 result => result,
             },
             USE_JUNCTION => create_junction(original, link),
-            _ => probe_and_cache(original, link),
+            _ => probe_and_cache(original, contents, link),
         }
     }
 
-    /// True symlinks on Windows take a relative target —
-    /// `path.relative(dirname(dest), src)`, the same form used on Unix.
-    /// Junctions take the absolute path with a trailing backslash, but
-    /// the `junction` crate handles that internally so we pass
-    /// `original` through unchanged for the junction branch.
-    fn create_true_symlink(original: &Path, link: &Path) -> io::Result<()> {
-        let rel = super::relative_target_for(original, link);
-        std::os::windows::fs::symlink_dir(&rel, link)
-    }
-
-    fn probe_and_cache(original: &Path, link: &Path) -> io::Result<()> {
+    fn probe_and_cache(original: &Path, contents: &Path, link: &Path) -> io::Result<()> {
         // Try the true directory symlink first — that's what users
         // running in Developer Mode (or as Administrator) get, and
         // true symlinks are preferred over junctions when allowed.
@@ -427,7 +393,7 @@ mod windows {
         // `ERROR_PRIVILEGE_NOT_HELD` when the process can't create
         // symlinks; junctions don't carry that constraint, so fall
         // back to those.
-        match create_true_symlink(original, link) {
+        match std::os::windows::fs::symlink_dir(contents, link) {
             Ok(()) => {
                 MODE.store(USE_SYMLINK, Ordering::Relaxed);
                 Ok(())
@@ -460,9 +426,6 @@ mod windows {
 
     pub(super) fn create_junction(original: &Path, link: &Path) -> io::Result<()> {
         let staging = stage_junction(original, link)?;
-        // Serialize only the commit. The slow part — the reparse-point
-        // conversion inside `stage_junction` — already ran in parallel.
-        let _commit_guard = JUNCTION_COMMIT_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
         commit_staged_junction(link, &staging)
     }
 
@@ -480,19 +443,18 @@ mod windows {
     }
 
     /// Publish `staging` at `link` with an atomic rename, folding a lost race
-    /// into the `AlreadyExists` reuse signal. Runs under [`JUNCTION_COMMIT_LOCK`].
+    /// into the `AlreadyExists` reuse signal. A transient Windows file lock
+    /// on the rename is retried, one [`attempt_commit`] per try.
     fn commit_staged_junction(link: &Path, staging: &Path) -> io::Result<()> {
-        // A worker that took the lock before us may already have committed.
-        match inspect_destination(link) {
-            Destination::Missing => {}
-            Destination::Exists => return Err(reuse_completed_destination(link, staging, "")),
-            Destination::InspectFailed(error) => {
+        let rename_error = match super::retry_transient_file_locks(|| attempt_commit(link, staging))
+        {
+            Ok(CommitAttempt::Committed) => return Ok(()),
+            Ok(CommitAttempt::DestinationTaken) => {
+                return Err(reuse_completed_destination(link, staging, ""));
+            }
+            Ok(CommitAttempt::InspectFailed(error)) => {
                 return Err(inspect_failed(link, staging, &error, ""));
             }
-        }
-
-        let rename_error = match fs::rename(staging, link) {
-            Ok(()) => return Ok(()),
             Err(error) => error,
         };
 
@@ -506,6 +468,33 @@ mod windows {
             }
             Destination::Missing => Err(discard_staging_after_rename(staging, link, rename_error)),
         }
+    }
+
+    /// Outcome of one serialized attempt to publish a staged junction.
+    enum CommitAttempt {
+        Committed,
+        DestinationTaken,
+        InspectFailed(io::Error),
+    }
+
+    /// One try at publishing a staged junction under [`JUNCTION_COMMIT_LOCK`].
+    ///
+    /// Holding the lock for a single inspect-and-rename, rather than across
+    /// the retries in [`commit_staged_junction`], keeps one locked path from
+    /// stalling every other junction commit in the process and leaves the
+    /// slow part — the reparse-point conversion inside [`stage_junction`] —
+    /// running in parallel. Re-inspecting the destination on every try means
+    /// a race lost while waiting is reused rather than retried through the
+    /// budget. Only the rename failure is returned as `Err`, so the retry
+    /// never repeats a final verdict about the destination.
+    fn attempt_commit(link: &Path, staging: &Path) -> io::Result<CommitAttempt> {
+        let _commit_guard = JUNCTION_COMMIT_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
+        match inspect_destination(link) {
+            Destination::Missing => {}
+            Destination::Exists => return Ok(CommitAttempt::DestinationTaken),
+            Destination::InspectFailed(error) => return Ok(CommitAttempt::InspectFailed(error)),
+        }
+        fs::rename(staging, link).map(|()| CommitAttempt::Committed)
     }
 
     /// What `symlink_metadata` reports about a would-be junction destination.
@@ -603,3 +592,7 @@ mod windows {
 
 #[cfg(test)]
 mod tests;
+
+mod absolute;
+mod replace;
+use replace::{TriedOnce, replace_unreadable_occupant};

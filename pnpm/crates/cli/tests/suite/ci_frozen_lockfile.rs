@@ -19,13 +19,18 @@ fn pacquet_in_github_actions(workspace: &Path) -> Command {
     command
 }
 
+fn pacquet_in_aws_codebuild(workspace: &Path) -> Command {
+    let mut command = pacquet_without_ci(workspace);
+    command.env("CODEBUILD_BUILD_ARN", "arn:aws:codebuild:us-east-1:000000000000:build/project:1");
+    command
+}
+
 fn pacquet_without_ci(workspace: &Path) -> Command {
     let mut command = pacquet_in(workspace);
-    command
-        .env_remove("PNPM_CONFIG_CI")
-        .env_remove("CI")
-        .env_remove("GITHUB_ACTION")
-        .env_remove("GITHUB_ACTIONS");
+    command.env_remove("PNPM_CONFIG_CI").env_remove("NODE");
+    for name in pnpm_config::CI_ENV_VARS {
+        command.env_remove(name);
+    }
     command
 }
 
@@ -41,8 +46,8 @@ fn outdated_lockfile_project() -> TempDir {
     .expect("write local dependency manifest");
     fs::write(
         workspace.join("package.json"),
-        serde_json::json!({ "dependencies": { "local-dependency": "file:dependency" } })
-            .to_string(),
+        serde_json::json!({ "dependencies": { "local-dependency": "file:dependency" } }).to_string(
+        ),
     )
     .expect("write project manifest");
     fs::write(workspace.join("pnpm-lock.yaml"), OUTDATED_LOCKFILE).expect("write stale lockfile");
@@ -61,12 +66,15 @@ fn assert_lockfile_was_updated(workspace: &Path) {
 
 #[test]
 fn ci_rejects_an_outdated_lockfile_by_default() {
-    for command_in_ci in [pacquet_in_ci, pacquet_in_github_actions] {
+    for command_in_ci in [pacquet_in_ci, pacquet_in_github_actions, pacquet_in_aws_codebuild] {
         let root = outdated_lockfile_project();
         let workspace = root.path();
         let lockfile_path = workspace.join("pnpm-lock.yaml");
 
-        let assert = command_in_ci(workspace).arg("install").assert().failure();
+        let assert = command_in_ci(workspace)
+            .arg("install")
+            .assert()
+            .failure();
         let stderr = String::from_utf8_lossy(&assert.get_output().stderr);
         eprintln!("STDERR:\n{stderr}\n");
         assert!(
@@ -132,7 +140,10 @@ fn workspace_manifest_cannot_disable_ci_detection() {
     fs::write(workspace.join("pnpm-workspace.yaml"), "ci: false\n")
         .expect("write workspace manifest");
 
-    let assert = pacquet_in_ci(workspace).arg("install").assert().failure();
+    let assert = pacquet_in_ci(workspace)
+        .arg("install")
+        .assert()
+        .failure();
     let stderr = String::from_utf8_lossy(&assert.get_output().stderr);
     assert!(
         stderr.contains("ERR_PNPM_OUTDATED_LOCKFILE"),
@@ -151,7 +162,10 @@ fn ci_honors_explicit_prefer_frozen_lockfile_values() {
         let root = outdated_lockfile_project();
         let workspace = root.path();
 
-        pacquet_in_ci(workspace).args(["install", prefer_arg]).assert().success();
+        pacquet_in_ci(workspace)
+            .args(["install", prefer_arg])
+            .assert()
+            .success();
 
         assert_lockfile_was_updated(workspace);
     }
@@ -186,7 +200,10 @@ fn ci_honors_pnpmfile_prefer_frozen_lockfile_values() {
         )
         .expect("write updateConfig hook");
 
-        pacquet_in_ci(workspace).arg("install").assert().success();
+        pacquet_in_ci(workspace)
+            .arg("install")
+            .assert()
+            .success();
 
         assert_lockfile_was_updated(workspace);
     }
@@ -258,7 +275,10 @@ fn ci_install_without_a_nonempty_lockfile_generates_one() {
             fs::write(workspace.join("pnpm-lock.yaml"), "").expect("write empty lockfile");
         }
 
-        pacquet_in_ci(workspace).arg("install").assert().success();
+        pacquet_in_ci(workspace)
+            .arg("install")
+            .assert()
+            .success();
 
         let lockfile =
             fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read generated lockfile");
@@ -273,7 +293,10 @@ fn ci_install_with_a_semantically_empty_lockfile_updates_it() {
     fs::write(workspace.join("pnpm-lock.yaml"), EMPTY_LOCKFILE)
         .expect("write semantically empty lockfile");
 
-    pacquet_in_ci(workspace).arg("install").assert().success();
+    pacquet_in_ci(workspace)
+        .arg("install")
+        .assert()
+        .success();
 
     assert_lockfile_was_updated(workspace);
 }

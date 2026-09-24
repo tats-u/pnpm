@@ -1,6 +1,6 @@
 import path from 'node:path'
 
-import { linkBins, linkBinsOfPackages } from '@pnpm/bins.linker'
+import { getProjectNodePath, linkBins, linkBinsOfPackages } from '@pnpm/bins.linker'
 import { buildSelectedPkgs } from '@pnpm/building.after-install'
 import { buildModules, type DepsStateCache, linkBinsOfDependencies, linkBinsOfRuntimeDependencies } from '@pnpm/building.during-install'
 import { createAllowBuildFunction, isBuildExplicitlyDisallowed } from '@pnpm/building.policy'
@@ -9,17 +9,20 @@ import { parseCatalogProtocol } from '@pnpm/catalogs.protocol-parser'
 import { type CatalogResultMatcher, matchCatalogResolveResult, resolveFromCatalog } from '@pnpm/catalogs.resolver'
 import type { Catalogs } from '@pnpm/catalogs.types'
 import { toRegistryDeclarations } from '@pnpm/config.normalize-registries'
+import { installabilityUnderForce } from '@pnpm/config.package-is-installable'
 import { parseOverrides } from '@pnpm/config.parse-overrides'
 import { createPackageVersionPolicyOrThrow, getPublishedByPolicy } from '@pnpm/config.version-policy'
 import {
   LAYOUT_VERSION,
   LOCKFILE_MAJOR_VERSION,
   LOCKFILE_VERSION,
+  MANIFEST_BASE_NAMES,
   WANTED_LOCKFILE,
 } from '@pnpm/constants'
 import {
   ignoredScriptsLogger,
   packageManifestLogger,
+  skippedOptionalDependencyLogger,
   stageLogger,
   summaryLogger,
 } from '@pnpm/core-loggers'
@@ -29,16 +32,22 @@ import { PnpmError } from '@pnpm/error'
 import {
   makeNodePackageMapOption,
   makeNodeRequireOption,
+  makeProjectNodePathOption,
+  POST_UNINSTALL_STAGES,
+  PRE_UNINSTALL_STAGES,
+  PROJECT_INSTALL_STAGES,
+  PROJECT_LIFECYCLE_STAGES,
   runLifecycleHook,
   runLifecycleHooksConcurrently,
   type RunLifecycleHooksConcurrentlyOptions,
 } from '@pnpm/exec.lifecycle'
-import { createDependencyOverrider, createOverriddenDependencyMatcher, type OverriddenDependencyMatcher } from '@pnpm/hooks.read-package-hook'
+import { createDependencyOverrider, createOverriddenDependencyMatcher, createReadPackageHook, type OverriddenDependencyMatcher } from '@pnpm/hooks.read-package-hook'
 import { getContext, type PnpmContext } from '@pnpm/installing.context'
 import {
   type DependenciesGraph,
   type DependenciesGraphNode,
   getWantedDependencies,
+  isWorkspaceLocalPathSpecifier,
   type RangeSpecStyle,
   resolveDependencies,
   type UpdateMatchingFunction,
@@ -46,6 +55,7 @@ import {
 } from '@pnpm/installing.deps-resolver'
 import { extendProjectsWithTargetDirs, headlessInstall, type InstallationResultStats } from '@pnpm/installing.deps-restorer'
 import { type Modules, readModulesManifest, writeModulesManifest } from '@pnpm/installing.modules-yaml'
+import { filterLockfileByImportersAndEngine } from '@pnpm/lockfile.filtering'
 import {
   type CatalogSnapshots,
   cleanGitBranchLockfiles,
@@ -71,11 +81,13 @@ import {
   getOutdatedLockfileSettings,
   resolvePatchedDependencies,
 } from '@pnpm/lockfile.settings-checker'
-import { PACKAGE_MAP_FILENAME, writePackageMap, writePnpFile } from '@pnpm/lockfile.to-pnp'
-import { allProjectsAreUpToDate, catalogResolutionIsStale, catalogResolutionsAreUpToDate, satisfiesPackageManifest } from '@pnpm/lockfile.verification'
+import { PACKAGE_MAP_FILENAME, removePackageMap, writePackageMap, writePnpFile } from '@pnpm/lockfile.to-pnp'
+import { allProjectsAreUpToDate, catalogResolutionIsStale, catalogResolutionsAreUpToDate, findPackageTarballIntegrityMismatch, satisfiesPackageManifest, unresolvedOptionalDependencies } from '@pnpm/lockfile.verification'
 import { logger, streamParser } from '@pnpm/logger'
 import { groupPatchedDependencies, type PatchGroupRecord } from '@pnpm/patching.config'
-import { createVersionSpecFromResolvedVersion, getAllDependenciesFromManifest, getAllUniqueSpecs } from '@pnpm/pkg-manifest.utils'
+import { createVersionSpecFromResolvedVersion, getAllDependenciesFromManifest, getAllUniqueSpecs, getSpecFromPackageManifest, guessDependencyType } from '@pnpm/pkg-manifest.utils'
+import { isLocalFilesystemSpecifier } from '@pnpm/resolving.local-resolver'
+import { parseNpmAliasTarget } from '@pnpm/resolving.npm-resolver'
 import { parseWantedDependency } from '@pnpm/resolving.parse-wanted-dependency'
 import {
   EXISTING_VERSION_SELECTOR_WEIGHT,
@@ -83,22 +95,27 @@ import {
   type ResolutionPolicyViolation,
 } from '@pnpm/resolving.resolver-base'
 import { lexCompare } from '@pnpm/text.ordinal-comparator'
-import type {
-  AllowBuild,
-  DependenciesField,
-  DependencyManifest,
-  DepPath,
-  IgnoredBuilds,
-  PeerDependencyIssues,
-  ProjectId,
-  ProjectManifest,
-  ProjectRootDir,
-  ReadPackageHook,
+import {
+  type AllowBuild,
+  type Dependencies,
+  DEPENDENCIES_FIELDS,
+  type DependenciesField,
+  type DependencyManifest,
+  type DepPath,
+  type IgnoredBuilds,
+  type IncludedDependencies,
+  type PeerDependencyIssues,
+  type ProjectId,
+  type ProjectManifest,
+  type ProjectRootDir,
+  type ReadPackageHook,
 } from '@pnpm/types'
-import { verifiedFileIntegritySince, verifiedFileIntegritySnapshot } from '@pnpm/worker'
+import { TarballIntegrityError, verifiedFileIntegritySince, verifiedFileIntegritySnapshot } from '@pnpm/worker'
 import { safeReadProjectManifestOnly } from '@pnpm/workspace.project-manifest-reader'
 import { isSubdir } from 'is-subdir'
 import pLimit from 'p-limit'
+import { pathAbsolute } from 'path-absolute'
+import { pathExists } from 'path-exists'
 import { clone, isEmpty, map as mapValues, pipeWith, props } from 'ramda'
 import semver from 'semver'
 
@@ -107,10 +124,13 @@ import { removeDeps } from '../uninstall/removeDeps.js'
 import { CatalogVersionMismatchError } from './checkCompatibility/CatalogVersionMismatchError.js'
 import { checkCustomResolverForceResolve } from './checkCustomResolverForceResolve.js'
 import {
+  type BeforeLifecycleScriptsResult,
   extendOptions,
   type InstallOptions,
   type ProcessedInstallOptions as StrictInstallOptions,
 } from './extendInstallOptions.js'
+export type { BeforeLifecycleScriptsResult }
+import { getStaleOverrideTargets, omitPackagesNamed } from './getStaleOverrideTargets.js'
 import { linkPackages } from './link.js'
 import { reportPeerDependencyIssues } from './reportPeerDependencyIssues.js'
 import { reportVerifiedFileIntegrity } from './reportVerifiedFileIntegrity.js'
@@ -166,6 +186,8 @@ export interface InstallSomeDepsMutation extends InstallMutationOptions {
   dependencySelectors: string[]
   mutation: 'installSome'
   peer?: boolean
+  peerAliases?: Set<string>
+  savePeer?: boolean
   pruneDirectDependencies?: boolean
   rangeSpecStyle?: RangeSpecStyle
   targetDependenciesField?: DependenciesField
@@ -212,7 +234,15 @@ export async function install (
   // When a pnpr server is configured, use server-side resolution
   // instead of the normal resolution flow.
   if (opts.pnprServer && canUsePnprForInstall(opts)) {
-    return installViaPnprServer(manifest, rootDir, opts)
+    return installViaPnprServer({
+      manifest,
+      rootDir,
+      opts,
+      rootProjectPreinstallRan: rootProjectRunsPreinstallEarly(
+        [{ rootDir, mutation: 'install' }],
+        { ...opts, lockfileDir: opts.lockfileDir ?? rootDir }
+      ),
+    })
   }
 
   const { updatedCatalogs, updatedProjects: projects, ignoredBuilds, newLockfile, resolutionPolicyViolations, dryRunResult } = await mutateModules(
@@ -247,6 +277,7 @@ interface ProjectToBeInstalled {
   manifest: ProjectManifest
   modulesDir: string
   rootDir: ProjectRootDir
+  stages?: string[]
 }
 
 export type MutatedProject = DependenciesMutation & { rootDir: ProjectRootDir }
@@ -382,10 +413,6 @@ export async function mutateModules (
 
   const allowBuild = createAllowBuildFunction(opts)
 
-  if (!opts.include.dependencies && opts.include.optionalDependencies) {
-    throw new PnpmError('OPTIONAL_DEPS_REQUIRE_PROD_DEPS', 'Optional dependencies cannot be installed without production dependencies')
-  }
-
   const installsOnly = allMutationsAreInstalls(projects)
   // Removals, and additions the lockfile already holds a version for, may
   // take the fast lockfile update and the frozen-like install; an explicitly
@@ -403,7 +430,92 @@ export async function mutateModules (
     // so reading its manifest explicitly here.
     await safeReadProjectManifestOnly(opts.lockfileDir)
 
-  let ctx = await getContext(opts)
+  const isUpdate = Boolean(
+    (maybeOpts as { update?: boolean }).update ||
+    projects.some((project) => ('update' in project && project.update) || ('updateMatching' in project && project.updateMatching))
+  )
+  let ctx = await getContext(isUpdate ? { ...opts, include: maybeOpts.include } : opts)
+  if (isUpdate && !maybeOpts.include) {
+    const extraOpts = (opts as {
+      cliOptions?: Record<string, unknown>
+      dev?: boolean
+      production?: boolean
+      optional?: boolean
+      peer?: boolean
+    })
+    const cliOpts = extraOpts.cliOptions
+    const hasCliOpts = cliOpts != null
+    const isExplicitDev = hasCliOpts
+      ? cliOpts.dev === true
+      : (extraOpts.dev === true && extraOpts.production !== true)
+    const isExplicitProd = hasCliOpts
+      ? (cliOpts.production === true || cliOpts.prod === true)
+      : (extraOpts.production === true && extraOpts.dev !== true)
+    const isExplicitOptional = hasCliOpts
+      ? cliOpts.optional === true
+      : extraOpts.optional === true
+    const isNoOptional = hasCliOpts
+      ? (cliOpts.optional === false || (cliOpts.optional !== true && extraOpts.optional === false))
+      : extraOpts.optional === false
+    const hasPriorModules = ctx.modulesFile != null
+    opts.include = {
+      dependencies: hasPriorModules
+        ? (ctx.include.dependencies || isExplicitProd)
+        : true,
+      devDependencies: hasPriorModules
+        ? (ctx.include.devDependencies || isExplicitDev)
+        : (!isExplicitProd || isExplicitDev),
+      optionalDependencies: hasPriorModules
+        ? (Boolean(ctx.include.optionalDependencies || isExplicitOptional) && !isNoOptional)
+        : !isNoOptional,
+      ...(extraOpts.peer === true || (hasCliOpts && cliOpts.peer === true) ? { peerDependencies: true } : {}),
+    }
+    ctx.include = opts.include
+  }
+
+  if (!opts.include.dependencies && opts.include.optionalDependencies) {
+    throw new PnpmError('OPTIONAL_DEPS_REQUIRE_PROD_DEPS', 'Optional dependencies cannot be installed without production dependencies')
+  }
+
+  const scriptsOpts: RunLifecycleHooksConcurrentlyOptions = {
+    extraBinPaths: opts.extraBinPaths,
+    extendNodePath: opts.extendNodePath,
+    extraNodePaths: ctx.extraNodePaths,
+    extraEnv: opts.extraEnv,
+    preferSymlinkedExecutables: opts.preferSymlinkedExecutables,
+    userAgent: opts.userAgent,
+    resolveSymlinksInInjectedDirs: opts.resolveSymlinksInInjectedDirs,
+    scriptsPrependNodePath: opts.scriptsPrependNodePath,
+    scriptShell: opts.scriptShell,
+    shellEmulator: opts.shellEmulator,
+    stdio: opts.ownLifecycleHooksStdio,
+    storeController: opts.storeController,
+    unsafePerm: opts.unsafePerm || false,
+  }
+
+  // The root project's hooks run before the install touches `node_modules`,
+  // which `validateModules` below may purge.
+  const rootHookOpts = {
+    ...scriptsOpts,
+    depPath: opts.lockfileDir,
+    pkgRoot: opts.lockfileDir,
+    rootModulesDir: ctx.rootModulesDir,
+    wdBinDir: path.join(ctx.rootModulesDir, '.bin'),
+    extraEnv: {
+      ...scriptsOpts.extraEnv,
+      ...await makeProjectNodePathOption({ modulesDir: ctx.rootModulesDir, rootDir: opts.lockfileDir }, opts),
+    },
+  }
+  if (installRunsDevPreinstall(opts) && rootProjectManifest?.scripts?.[DEV_PREINSTALL]) {
+    await runLifecycleHook(DEV_PREINSTALL, rootProjectManifest, rootHookOpts)
+  }
+  // The root project's `preinstall` runs before any dependency is resolved
+  // or linked, so a guard such as `npx only-allow yarn` can still stop the
+  // install. Its remaining stages run after linking, like every project's.
+  const rootProjectPreinstallRan = rootProjectRunsPreinstallEarly(projects, opts)
+  if (rootProjectPreinstallRan && rootProjectManifest?.scripts?.preinstall) {
+    await runLifecycleHook('preinstall', rootProjectManifest, rootHookOpts)
+  }
 
   if (!opts.lockfileOnly && !isCheckOnlyInstall(opts) && ctx.modulesFile != null) {
     const { purged } = await validateModules(ctx.modulesFile, Object.values(ctx.projects), {
@@ -496,6 +608,7 @@ export async function mutateModules (
     verifyLockfilePromise = verifyLockfileResolutions(ctx.wantedLockfile, opts.resolutionVerifiers, {
       cacheDir: opts.cacheDir,
       lockfilePath: wantedLockfilePath,
+      isReplaced: matchUpdateTargetsReplacedEverywhere(projects, ctx, opts.depth),
     })
     // Keep the rejection from going unhandled in the window before
     // `settleInstall` awaits the verdict — a preResolution hook or the
@@ -660,13 +773,16 @@ export async function mutateModules (
     install: Promise<InnerInstallResult>,
     verification: Promise<void> | undefined
   ): Promise<InnerInstallResult> {
-    if (verification == null) return install
-    // Handle the install's eventual rejection up front so a fail-fast
-    // verification throw below doesn't leave the still-running install
-    // unhandled.
-    install.catch(() => {})
+    if (verification != null) {
+      // Handle the install's eventual rejection up front so a fail-fast
+      // verification throw below doesn't leave the still-running install
+      // unhandled.
+      install.catch(() => {})
+    }
     try {
-      await verification
+      if (verification != null) {
+        await verification
+      }
       return await install
     } catch (err) {
       detachReporter()
@@ -675,35 +791,33 @@ export async function mutateModules (
   }
 
   async function _install (): Promise<InnerInstallResult> {
-    const scriptsOpts: RunLifecycleHooksConcurrentlyOptions = {
-      extraBinPaths: opts.extraBinPaths,
-      extraNodePaths: ctx.extraNodePaths,
-      extraEnv: opts.extraEnv,
-      preferSymlinkedExecutables: opts.preferSymlinkedExecutables,
-      userAgent: opts.userAgent,
-      resolveSymlinksInInjectedDirs: opts.resolveSymlinksInInjectedDirs,
-      scriptsPrependNodePath: opts.scriptsPrependNodePath,
-      scriptShell: opts.scriptShell,
-      shellEmulator: opts.shellEmulator,
-      stdio: opts.ownLifecycleHooksStdio,
-      storeController: opts.storeController,
-      unsafePerm: opts.unsafePerm || false,
-    }
-
-    if (!opts.ignoreScripts && !opts.ignorePackageManifest && rootProjectManifest?.scripts?.[DEV_PREINSTALL]) {
-      await runLifecycleHook(
-        DEV_PREINSTALL,
-        rootProjectManifest,
-        {
-          ...scriptsOpts,
-          depPath: opts.lockfileDir,
-          pkgRoot: opts.lockfileDir,
-          rootModulesDir: ctx.rootModulesDir,
-        }
-      )
+    // Read before `removeDeps` edits the manifests below.
+    const projectDirsRemovingDeps = new Set(projects
+      .filter((project) => project.mutation === 'uninstallSome' && removesAnyDependency(project, ctx.projects[project.rootDir]?.manifest))
+      .map((project) => project.rootDir))
+    if (
+      !opts.ignoreScripts &&
+      !opts.ignorePackageManifest &&
+      !opts.lockfileOnly &&
+      !isCheckOnlyInstall(opts) &&
+      !opts.virtualStoreOnly &&
+      projectDirsRemovingDeps.size > 0
+    ) {
+      await verifyLockfile?.()
+      await runLifecycleHooksConcurrently({
+        childConcurrency: opts.childConcurrency,
+        importers: [...projectDirsRemovingDeps].map((rootDir) => ctx.projects[rootDir]),
+        opts: scriptsOpts,
+        projectDependencies: opts.projectDependencies,
+        skipBinLinking: true,
+        stages: PRE_UNINSTALL_STAGES,
+      })
     }
     const packageExtensionsChecksum = hashObjectNullableWithPrefix(opts.packageExtensions)
     const pnpmfileChecksum = await opts.hooks.calculatePnpmfileChecksum?.()
+    const untrackedPnpmfileReadPackageHook = getUntrackedPnpmfileReadPackageHook(opts.hooks)
+    const untrackedReadPackageHookMayHaveChanged = untrackedPnpmfileReadPackageHook === true ||
+      ctx.wantedLockfile.untrackedPnpmfileReadPackageHook !== untrackedPnpmfileReadPackageHook
     const resolvedPatchedDeps = resolvePatchedDependencies(opts.patchedDependencies, opts.lockfileDir)
     const patchedDependencies = opts.ignorePackageManifest
       ? ctx.wantedLockfile.patchedDependencies
@@ -847,8 +961,7 @@ export async function mutateModules (
       // `pnpmfileChecksum` drift. A hook the checksum cannot vouch for — a
       // programmatic one, or one from the checksum-excluded global pnpmfile
       // — keeps forcing the resolver.
-      (!opts.hooks.readPackage?.length ||
-        (opts.hooks.calculatePnpmfileChecksum != null && !opts.hooks.hasUntrackedReadPackageHook)) &&
+      !untrackedReadPackageHookMayHaveChanged &&
       !opts.hooks.preResolution?.length &&
       !opts.hooks.afterAllResolved?.length &&
       opts.hooks.customResolvers == null &&
@@ -872,6 +985,7 @@ export async function mutateModules (
         wantedLockfile: lockfile,
         workspacePackages: ctx.workspacePackages,
         lockfileDir: opts.lockfileDir,
+        workspaceDir: opts.workspaceDir,
       })
       // Built only for the rewrites that consult the resolver: deriving the
       // policies rejects a malformed pattern, which is the resolver's error
@@ -958,12 +1072,15 @@ export async function mutateModules (
       !upToDateLockfileMajorVersion ||
       opts.forceFullResolution ||
       forceResolutionFromHook
+    let staleOverrideTargets: Set<string> | undefined
     if (needsFullResolution) {
+      staleOverrideTargets = getStaleOverrideTargets(ctx.wantedLockfile.overrides, overridesMap)
       ctx.wantedLockfile.settings = { ...wantedLockfileSettings }
       ctx.wantedLockfile.overrides = overridesMap
       ctx.wantedLockfile.packageExtensionsChecksum = packageExtensionsChecksum
       ctx.wantedLockfile.ignoredOptionalDependencies = opts.ignoredOptionalDependencies
       ctx.wantedLockfile.pnpmfileChecksum = pnpmfileChecksum
+      setUntrackedPnpmfileReadPackageHook(ctx.wantedLockfile, untrackedPnpmfileReadPackageHook)
       ctx.wantedLockfile.patchedDependencies = patchedDependencies
     } else if (!frozenLockfile) {
       ctx.wantedLockfile.settings = { ...wantedLockfileSettings }
@@ -975,6 +1092,9 @@ export async function mutateModules (
       frozenLockfile,
       needsFullResolution,
       patchGroups,
+      projectDirsRemovingDeps,
+      untrackedReadPackageHookMayHaveChanged,
+      rootProjectPreinstallRan,
       upToDateLockfileMajorVersion,
     })
     if (frozenInstallResult !== null) {
@@ -987,6 +1107,12 @@ export async function mutateModules (
 
     const projectsToInstall = [] as ImporterToUpdate[]
     const installedProjectIds = new Set<string>(projects.map((project) => ctx.projects[project.rootDir].id))
+    const overriddenDependencyMatcherFor = createOverriddenDependencyMatcher(opts.parsedOverrides, opts.lockfileDir)
+    const applyOverrides = createReadPackageHook({
+      ignoreCompatibilityDb: true,
+      lockfileDir: opts.lockfileDir,
+      overrides: opts.parsedOverrides,
+    })
 
     let preferredSpecs: Record<string, string> | null = null
 
@@ -1032,16 +1158,20 @@ export async function mutateModules (
     | 'manifest'
     | 'modulesDir'
     | 'mutation'
+    | 'originalManifest'
     | 'rootDir'
     | 'updatePackageManifest'
-    >
+    > & Pick<InstallDepsMutation, 'update'>
 
     async function installCase (project: InstallCaseProject) {
+      const hookOwnedAliases = getHookOwnedAliases(project)
       const wantedDependencies = getWantedDependencies(project.manifest, {
         autoInstallPeers: opts.autoInstallPeers,
         includeDirect: opts.includeDirect,
       })
-        .map((wantedDependency) => ({ ...wantedDependency, updateSpec: true }))
+        .map((wantedDependency) => hookOwnedAliases?.has(wantedDependency.alias)
+          ? { ...wantedDependency, saveSpec: false, updateToLatestAllowed: false, updateSpec: true }
+          : { ...wantedDependency, updateSpec: true })
       if (opts.packageVulnerabilityAudit) {
         for (const dep of wantedDependencies) {
           let specifier: string | undefined = dep.bareSpecifier
@@ -1050,10 +1180,30 @@ export async function mutateModules (
             const catalogResult = resolveFromCatalog(opts.catalogs, { alias: dep.alias, bareSpecifier: specifier! })
             specifier = matchCatalogResolveResult(catalogResult, pickCatalogSpecifier)
           }
-          const validVersion = semver.valid(specifier)
+          const npmAliasTarget = specifier != null ? parseNpmAliasTarget(specifier, dep.alias) : null
+          const packageName = npmAliasTarget?.name ?? dep.alias
+          let versionSelector = npmAliasTarget != null ? npmAliasTarget.versionSelector : specifier
+          // `=1.0.0` pins as exactly as `1.0.0` does, but semver.valid() only accepts the bare version.
+          if (versionSelector?.startsWith('=')) versionSelector = versionSelector.slice(1)
+          const validVersion = semver.valid(versionSelector)
           // Only proceed if the specifier is a pinned version, not a range
           if (!validVersion) continue
-          if (opts.packageVulnerabilityAudit.isVulnerable(dep.alias, validVersion)) {
+          if (opts.packageVulnerabilityAudit.isVulnerable(packageName, validVersion)) {
+            if (hookOwnedAliases?.has(dep.alias)) {
+              // An update reaches a vulnerable version by widening the specifier the project
+              // declares, and this one is not the project's to widen. An override outranks every
+              // other hook, so that is the fix to point at.
+              logger.warn({
+                message: `Cannot update "${dep.alias}" away from ${validVersion}: its specifier "${specifier!}" comes from a package extension, readPackage hook, or override, not from the project manifest. Run "pnpm audit --fix" to add an override for it instead.`,
+                prefix: project.rootDir,
+              })
+              continue
+            }
+            // The widened specifier keeps the npm alias shape so that it still names the
+            // real package rather than the alias.
+            const widenedSpecifier = npmAliasTarget != null
+              ? `npm:${npmAliasTarget.name}@^${validVersion}`
+              : `^${validVersion}`
             // If the current version is pinned and vulnerable, expand the specifier to a range
             // that will allow updating to a non-vulnerable, semver-compatible version, if available.
             if (catalogName != null && opts.catalogs?.[catalogName]) {
@@ -1064,7 +1214,7 @@ export async function mutateModules (
                 ...opts.catalogs,
                 [catalogName]: {
                   ...opts.catalogs[catalogName],
-                  [dep.alias]: '^' + validVersion,
+                  [dep.alias]: widenedSpecifier,
                 },
               }
               // Set prevSpecifier to the original catalog specifier so the resolver
@@ -1072,7 +1222,7 @@ export async function mutateModules (
               dep.prevSpecifier = specifier
             } else {
               // If no catalog is used, we directly update the specifier.
-              dep.bareSpecifier = '^' + validVersion
+              dep.bareSpecifier = widenedSpecifier
             }
           }
         }
@@ -1097,6 +1247,7 @@ export async function mutateModules (
       projectsToInstall.push({
         pruneDirectDependencies: false,
         ...project,
+        hookOwnedAliases,
         wantedDependencies,
       } as ImporterToUpdate)
     }
@@ -1108,11 +1259,14 @@ export async function mutateModules (
     | 'manifest'
     | 'modulesDir'
     | 'mutation'
+    | 'originalManifest'
     | 'rootDir'
     | 'updatePackageManifest'
     > & Pick<InstallSomeDepsMutation,
     | 'allowNew'
     | 'dependencySelectors'
+    | 'peer'
+    | 'peerAliases'
     | 'targetDependenciesField'
     | 'update'
     | 'updatePatches'
@@ -1124,9 +1278,27 @@ export async function mutateModules (
       // on has to satisfy them, or the lockfile importer entry contradicts itself and the next
       // frozen install rejects it.
       const readonlyManifest = project.update === true && !project.updatePackageManifest
+      const effectiveBareSpecifiers = getAllDependenciesFromManifest(project.manifest, {
+        autoInstallPeers: opts.autoInstallPeers,
+        peerAliases: project.peerAliases,
+      })
       const currentBareSpecifiers = opts.ignoreCurrentSpecifiers
         ? {}
-        : getAllDependenciesFromManifest(project.manifest, { autoInstallPeers: opts.autoInstallPeers })
+        : effectiveBareSpecifiers
+      const originalBareSpecifiers = project.originalManifest == null
+        ? currentBareSpecifiers
+        : getAllDependenciesFromManifest(project.originalManifest, { autoInstallPeers: opts.autoInstallPeers, peerAliases: project.peerAliases })
+      const readonlyAliases = getHookOwnedAliases(project)
+      const hookGovernedAdds = project.update === true ? undefined : await getHookGovernedAdds(project)
+      const hookSupersededSpecifiers = hookGovernedAdds?.superseded
+      const hookGovernedAliases = readonlyAliases == null
+        ? hookSupersededSpecifiers == null ? undefined : new Set(hookSupersededSpecifiers.keys())
+        : new Set([...readonlyAliases, ...hookSupersededSpecifiers?.keys() ?? []])
+      const readonlySpecifiers = hookGovernedAliases == null
+        ? undefined
+        : Object.fromEntries(
+          Array.from(hookGovernedAliases, (alias) => [alias, hookSupersededSpecifiers?.get(alias) ?? effectiveBareSpecifiers[alias]])
+        ) as Dependencies
       const optionalDependencies = project.targetDependenciesField ? {} : project.manifest.optionalDependencies ?? {}
       const devDependencies = project.targetDependenciesField ? {} : project.manifest.devDependencies ?? {}
       if (preferredSpecs == null) {
@@ -1138,7 +1310,7 @@ export async function mutateModules (
         }
         preferredSpecs = getAllUniqueSpecs(manifests)
       }
-      const { wantedDependencies: wantedDeps, outsideKeptRange, supersededByKeptRange } = parseWantedDependencies(project.dependencySelectors, {
+      const { wantedDependencies: wantedDeps, outsideKeptRange, supersededByKeptRange, removedByHook } = parseWantedDependencies(project.dependencySelectors, {
         allowNew: project.allowNew !== false,
         currentBareSpecifiers,
         defaultTag: opts.tag,
@@ -1151,9 +1323,17 @@ export async function mutateModules (
         saveCatalogName: opts.saveCatalogName,
         overrides: opts.overrides,
         defaultCatalog: opts.catalogs?.default,
+        readonlySpecifiers,
         readonlyManifest,
+        hookRemovedAliases: hookGovernedAdds?.removed,
       })
 
+      for (const alias of removedByHook) {
+        logger.warn({
+          message: `Skipping "${alias}": a package extension, readPackage hook, or override removes it from the manifest, so it cannot be declared.`,
+          prefix: project.rootDir,
+        })
+      }
       for (const { alias, requested, kept } of outsideKeptRange) {
         logger.warn({
           message: `Skipping "${alias}@${requested}": it doesn't satisfy "${kept}", which the manifest keeps when updating without saving.`,
@@ -1161,8 +1341,11 @@ export async function mutateModules (
         })
       }
       for (const { alias, requested, kept } of supersededByKeptRange) {
+        const message = readonlySpecifiers != null && Object.hasOwn(readonlySpecifiers, alias)
+          ? `Ignoring "${alias}@${requested}": "${alias}" is controlled by a package extension, readPackage hook, or override, so its specifier "${kept}" was used instead.`
+          : `Ignoring "${alias}@${requested}": the manifest keeps "${kept}" when updating without saving, so "${alias}" was updated within that range instead.`
         logger.warn({
-          message: `Ignoring "${alias}@${requested}": the manifest keeps "${kept}" when updating without saving, so "${alias}" was updated within that range instead.`,
+          message,
           prefix: project.rootDir,
         })
       }
@@ -1179,12 +1362,17 @@ export async function mutateModules (
 
       if (opts.catalogMode !== 'manual') {
         for (const wantedDep of wantedDeps) {
+          // Promotion moves the dependency onto the catalog entry's range, and the entry resolves
+          // on its own from then on. A hook or an override supplies this specifier, so it is not
+          // this run's to hand over.
+          if (hookGovernedAliases?.has(wantedDep.alias)) continue
           // A `runtime:` specifier (e.g. node from `devEngines.runtime` or
           // `pnpm runtime set`) round-trips to `devEngines.runtime` through the
           // manifest writer, which only recognizes the `runtime:` protocol.
           // Promoting it into a catalog rewrites the entry to `catalog:`, which
           // breaks that round-trip and strands it in `devDependencies`.
           if (wantedDep.bareSpecifier?.startsWith('runtime:')) continue
+          if (wantedDep.bareSpecifier != null && isProjectRelativePath(wantedDep.bareSpecifier)) continue
           const perDepCatalogName = getPerDepCatalogName(wantedDep, opts.saveCatalogName)
           const catalogBareSpecifier = `catalog:${perDepCatalogName === 'default' ? '' : perDepCatalogName}`
           const catalog = resolveFromCatalog(opts.catalogs, { ...wantedDep, bareSpecifier: catalogBareSpecifier })
@@ -1226,9 +1414,116 @@ export async function mutateModules (
       projectsToInstall.push({
         pruneDirectDependencies: false,
         ...project,
+        hookOwnedAliases: readonlyAliases,
         updateToLatest,
-        wantedDependencies: wantedDeps.map(wantedDep => ({ ...wantedDep, isNew: !currentBareSpecifiers[wantedDep.alias], updateSpec: true })),
+        wantedDependencies: wantedDeps.map(wantedDep => ({
+          ...wantedDep,
+          isNew: project.update !== true && !Object.hasOwn(originalBareSpecifiers, wantedDep.alias),
+          // A catalog name is enough to put the dependency in the lockfile's catalogs: the
+          // resolver attaches a `catalogLookup` for it, and the entry that snapshot needs is not
+          // this run's to write, so the next frozen install would reject the pair. `catalogMode:
+          // manual` reaches here without passing the loop above, so the name is dropped here.
+          saveCatalogName: hookGovernedAliases?.has(wantedDep.alias) ? undefined : wantedDep.saveCatalogName,
+          // A superseded request is no longer the manifest's new specifier, so it loses the
+          // exemption `getDeclaredSpecifierOwnedByHook` grants an explicit one: a range or a
+          // `catalog:` reference the project already declares stays as it is.
+          saveSpec: hookSupersededSpecifiers?.has(wantedDep.alias) ? undefined : !readonlyAliases?.has(wantedDep.alias),
+          updateToLatestAllowed: !hookGovernedAliases?.has(wantedDep.alias),
+          updateSpec: true,
+        })),
       } as ImporterToUpdate)
+    }
+
+    /**
+     * The direct dependencies a `packageExtensions` entry, a `readPackage` hook, or an override
+     * governs rather than the project: absent from the manifest on disk, declared there under
+     * another dependency field, declared there with another specifier, or claimed by an override.
+     *
+     * An update leaves them as the hook supplies them. Resolving them anew moves a version the
+     * project never declared, and writing them to `package.json` hands it a declaration the next
+     * install rewrites, which `--frozen-lockfile` then rejects (pnpm/pnpm#14928).
+     *
+     * `undefined` when nothing is protected: a run that is not an update, or a project whose
+     * manifest no hook rewrote.
+     */
+    function getHookOwnedAliases (
+      project: Pick<InstallCaseProject, 'manifest' | 'originalManifest' | 'update'>
+    ): Set<string> | undefined {
+      const originalManifest = project.originalManifest
+      if (project.update !== true || originalManifest == null) return undefined
+      const isOverriddenDependency = overriddenDependencyMatcherFor?.(project.manifest)
+      const effectiveDependencies = getAllDependenciesFromManifest(project.manifest, {
+        autoInstallPeers: opts.autoInstallPeers,
+      })
+      return new Set(Object.keys(effectiveDependencies).filter((alias) => {
+        const originalDependencyType = guessDependencyType(alias, originalManifest)
+        if (originalDependencyType == null) return true
+        if (guessDependencyType(alias, project.manifest) !== originalDependencyType) return true
+        const originalSpecifier = getSpecFromPackageManifest(originalManifest, alias)
+        return effectiveDependencies[alias] !== originalSpecifier ||
+          isOverriddenDependency?.(alias, originalSpecifier) === true
+      }))
+    }
+
+    /**
+     * What the `readPackage` hooks do to the aliases an add names, once the requested declarations
+     * are in the manifest the next install reads. Saving a declaration the hooks rewrite or delete
+     * would leave the manifest and the lockfile disagreeing, which `--frozen-lockfile` then
+     * rejects (pnpm/pnpm#15156): the hook's specifier is saved in the first case, and the request
+     * is dropped in the second. Overrides are excluded: an explicit version intentionally ignores
+     * them.
+     *
+     * The hooks run over the manifest on disk carrying the requested declarations, rather than
+     * over the manifest this run has already put through them, and what they produced is judged
+     * against those declarations — which is what a selector naming no version of its own has in
+     * place of a request. A difference the overrides alone account for leaves the request
+     * standing.
+     *
+     * `undefined` when every request survives the hooks.
+     */
+    async function getHookGovernedAdds (
+      project: Pick<InstallSomeProject, 'dependencySelectors' | 'manifest' | 'originalManifest' | 'peer' | 'peerAliases' | 'rootDir' | 'targetDependenciesField'>
+    ): Promise<{ superseded?: Map<string, string>, removed?: Set<string> } | undefined> {
+      const hooks = opts.readPackageHook == null
+        ? []
+        : Array.isArray(opts.readPackageHook) ? opts.readPackageHook : [opts.readPackageHook]
+      if (hooks.length === 0) return undefined
+      const requestedByAlias = new Map<string, string | undefined>()
+      for (const selector of project.dependencySelectors) {
+        const { alias, bareSpecifier: requested } = parseWantedDependency(selector)
+        if (alias == null) continue
+        requestedByAlias.set(alias, requested)
+      }
+      if (requestedByAlias.size === 0) return undefined
+      const declared: ProjectManifest = mergeInstallSelectors(clone(project.originalManifest ?? project.manifest), {
+        dependencySelectors: project.dependencySelectors,
+        peer: project.peer,
+        targetDependenciesField: project.targetDependenciesField,
+      } as InstallSomeDepsMutation)
+      const declaredDependencies = getAllDependenciesFromManifest(declared, { autoInstallPeers: opts.autoInstallPeers, peerAliases: project.peerAliases })
+      const overriddenDependencies = applyOverrides == null
+        ? undefined
+        : getAllDependenciesFromManifest(await applyOverrides(clone(declared), project.rootDir), { autoInstallPeers: opts.autoInstallPeers, peerAliases: project.peerAliases })
+      let probed: ProjectManifest = declared
+      /* eslint-disable no-await-in-loop */
+      for (const hook of hooks) {
+        probed = await hook(probed, project.rootDir)
+      }
+      /* eslint-enable no-await-in-loop */
+      const probedDependencies = getAllDependenciesFromManifest(probed, { autoInstallPeers: opts.autoInstallPeers, peerAliases: project.peerAliases })
+      let superseded: Map<string, string> | undefined
+      let removed: Set<string> | undefined
+      for (const [alias, requested] of requestedByAlias) {
+        const probedSpecifier = probedDependencies[alias]
+        if (probedSpecifier === declaredDependencies[alias]) continue
+        if (requested != null && overriddenDependencies != null && probedSpecifier === overriddenDependencies[alias]) continue
+        if (probedSpecifier == null) {
+          (removed ??= new Set()).add(alias)
+          continue
+        }
+        (superseded ??= new Map()).set(alias, probedSpecifier)
+      }
+      return superseded == null && removed == null ? undefined : { superseded, removed }
     }
 
     /**
@@ -1280,11 +1575,14 @@ export async function mutateModules (
     const result = await installInContext(projectsToInstall, ctx, {
       ...opts,
       allowBuild,
+      projectDirsRemovingDeps,
       currentLockfileIsUpToDate: !ctx.existsNonEmptyWantedLockfile || ctx.currentLockfileIsUpToDate,
       makePartialCurrentLockfile,
       needsFullResolution,
       pruneVirtualStore,
+      rootProjectPreinstallRan,
       scriptsOpts,
+      staleOverrideTargets,
       updateLockfileMinorVersion: true,
       patchedDependencies: patchGroups,
       verifyLockfile,
@@ -1333,6 +1631,9 @@ export async function mutateModules (
     frozenLockfile,
     needsFullResolution,
     patchGroups,
+    projectDirsRemovingDeps,
+    untrackedReadPackageHookMayHaveChanged,
+    rootProjectPreinstallRan,
     upToDateLockfileMajorVersion,
   }: {
     /**
@@ -1344,8 +1645,11 @@ export async function mutateModules (
     addedManifestsAreCommitted: boolean
     didFastUpdateOverrides: boolean
     frozenLockfile: boolean
+    projectDirsRemovingDeps: Set<ProjectRootDir>
     needsFullResolution: boolean
     patchGroups?: PatchGroupRecord
+    untrackedReadPackageHookMayHaveChanged: boolean
+    rootProjectPreinstallRan: boolean
     upToDateLockfileMajorVersion: boolean
   }): Promise<InnerInstallResult | { needsFullResolution: boolean } | null> {
     const isFrozenInstallPossible =
@@ -1371,6 +1675,14 @@ export async function mutateModules (
         opts.ignorePackageManifest ||
         !needsFullResolution &&
         opts.preferFrozenLockfile &&
+        // A `readPackage` hook the pnpmfile checksum cannot vouch for — a
+        // programmatic one, or one from the checksum-excluded global
+        // pnpmfile — makes "up to date" unverifiable: an edit to it leaves
+        // no trace the lockfile comparison can see, so the lockfile must
+        // not be trusted blindly here. (The explicit `--frozen-lockfile`
+        // branch above keeps its contract: it never resolves.)
+        // https://github.com/pnpm/pnpm/issues/15136
+        !untrackedReadPackageHookMayHaveChanged &&
         (!opts.pruneLockfileImporters || Object.keys(ctx.wantedLockfile.importers).length === Object.keys(ctx.projects).length) &&
         !isEmptyLockfile(ctx.wantedLockfile) &&
         ctx.wantedLockfile.lockfileVersion === LOCKFILE_VERSION &&
@@ -1383,6 +1695,7 @@ export async function mutateModules (
           wantedLockfile: ctx.wantedLockfile,
           workspacePackages: ctx.workspacePackages,
           lockfileDir: opts.lockfileDir,
+          workspaceDir: opts.workspaceDir,
         })
       )
 
@@ -1402,6 +1715,11 @@ Note that in CI environments, this setting is enabled by default.`,
         }
       )
     }
+    // Optional dependencies the install that wrote the lockfile could not
+    // resolve. A frozen install skips them again and reports each one the way
+    // the resolver does. The report stays here on a delegated install too:
+    // pacquet runs with `--ignore-manifest-check` and reports nothing.
+    const skippedOptionalDependencies: Array<{ prefix: string, skipped: Record<string, string> }> = []
     if (!opts.ignorePackageManifest) {
       // `--frozen-lockfile` (the CI default) means "fail if pnpm-lock.yaml is
       // out of sync." Treat its absence as a sync failure even when the
@@ -1414,14 +1732,43 @@ Note that in CI environments, this setting is enabled by default.`,
             hint: 'Note that in CI environments this setting is true by default. If you still need to run install in such cases, use "pnpm install --no-frozen-lockfile"',
           })
       }
+      if (frozenLockfile && opts.pruneLockfileImporters) {
+        const removedImporterId = await findImporterWithoutProjectManifest(ctx.wantedLockfile, {
+          lockfileDir: opts.lockfileDir,
+          projectIds: Object.values(ctx.projects).map(({ id }) => id),
+        })
+        if (removedImporterId != null) {
+          throw new PnpmError('OUTDATED_LOCKFILE',
+            `Cannot install with "frozen-lockfile" because ${WANTED_LOCKFILE} is not up to date with ` +
+            path.join('<ROOT>', removedImporterId, 'package.json'), {
+              hint: `Note that in CI environments this setting is true by default. If you still need to run install in such cases, use "pnpm install --no-frozen-lockfile"
+
+  Failure reason:
+  The lockfile records importers["${removedImporterId}"], but that project's directory or package.json is missing`,
+            })
+        }
+      }
       const _satisfiesPackageManifest = satisfiesPackageManifest.bind(null, {
         autoInstallPeers: opts.autoInstallPeers,
         excludeLinksFromLockfile: opts.excludeLinksFromLockfile,
         ignoredOptionalDependencies: opts.ignoredOptionalDependencies,
+        allowUnresolvedOptionalDependencies: frozenLockfile,
       })
       for (const { id, manifest, rootDir } of Object.values(ctx.projects)) {
         const importer = ctx.wantedLockfile.importers[id]
         const { satisfies, detailedReason } = _satisfiesPackageManifest(importer, manifest)
+        if (satisfies && frozenLockfile && importer != null) {
+          const skipped = unresolvedOptionalDependencies({
+            excludeLinksFromLockfile: opts.excludeLinksFromLockfile,
+            ignoredOptionalDependencies: opts.ignoredOptionalDependencies,
+          }, importer, manifest)
+          if (Object.keys(skipped).length > 0) {
+            skippedOptionalDependencies.push({
+              prefix: rootDir,
+              skipped,
+            })
+          }
+        }
         if (!satisfies || (importer != null && !catalogResolutionsAreUpToDate(importer, ctx.wantedLockfile.catalogs))) {
           if (!ctx.existsWantedLockfile) {
             throw new PnpmError('NO_LOCKFILE',
@@ -1441,6 +1788,54 @@ Note that in CI environments, this setting is enabled by default.`,
         }
       }
     }
+    for (const { prefix, skipped } of skippedOptionalDependencies) {
+      for (const [name, bareSpecifier] of Object.entries(skipped)) {
+        skippedOptionalDependencyLogger.debug({
+          package: { name, version: bareSpecifier, bareSpecifier },
+          parents: [],
+          prefix,
+          reason: 'resolution_failure',
+        })
+      }
+    }
+    if (frozenLockfile && !opts.lockfileOnly) {
+      const fileIntegrityCache = new Map<string, Promise<string>>()
+      const importerIds = opts.ignorePackageManifest === true
+        ? Object.keys(ctx.wantedLockfile.importers) as ProjectId[]
+        : projects.map(({ rootDir }) => ctx.projects[rootDir].id)
+      const skipped = new Set<string>()
+      const { lockfile } = filterLockfileByImportersAndEngine(ctx.wantedLockfile, importerIds, {
+        include: opts.include,
+        currentEngine: {
+          nodeVersion: opts.nodeVersion,
+          pnpmVersion: opts.packageManager.name === 'pnpm' ? opts.packageManager.version : '',
+        },
+        ...installabilityUnderForce(opts),
+        failOnMissingDependencies: false,
+        lockfileDir: opts.lockfileDir,
+        resolvePeersFromWorkspaceRoot: opts.resolvePeersFromWorkspaceRoot,
+        skipped,
+        skipRuntimes: opts.skipRuntimes,
+        supportedArchitectures: opts.supportedArchitectures,
+      })
+      const limitVerification = pLimit(16)
+      await Promise.all(Object.entries(lockfile.packages ?? {}).map(([depPath, snapshot]) => limitVerification(async () => {
+        if (skipped.has(depPath)) return
+        const mismatch = await findPackageTarballIntegrityMismatch({
+          fileIntegrityCache,
+          lockfileDir: opts.lockfileDir,
+        }, snapshot, depPath)
+        if (mismatch == null) return
+        const algorithm = mismatch.expected.includes('-') ? mismatch.expected.split('-', 1)[0] : 'sha512'
+        throw new TarballIntegrityError({
+          algorithm,
+          expected: mismatch.expected,
+          found: mismatch.found,
+          sri: mismatch.expected,
+          url: mismatch.path,
+        })
+      })))
+    }
     if (opts.lockfileOnly) {
       // The lockfile will only be changed if the workspace will have new projects with no dependencies.
       await writeWantedLockfile(ctx.lockfileDir, ctx.wantedLockfile)
@@ -1449,7 +1844,7 @@ Note that in CI environments, this setting is enabled by default.`,
         ignoredBuilds: undefined,
       }
     }
-    if (isEmptyLockfile(ctx.wantedLockfile)) {
+    if (isEmptyLockfile(ctx.wantedLockfile) && skippedOptionalDependencies.length === 0) {
       if (Object.values(ctx.projects).some((project) => pkgHasDependencies(project.manifest))) {
         throw new Error(`Headless installation requires a ${WANTED_LOCKFILE} file`)
       }
@@ -1461,9 +1856,30 @@ Note that in CI environments, this setting is enabled by default.`,
     } else {
       logger.info({ message: 'Lockfile is up to date, resolution step is skipped', prefix: opts.lockfileDir })
     }
-    if (opts.runPacquet != null && opts.useLockfile && !opts.useGitBranchLockfile && !opts.mergeGitBranchLockfiles && !isCheckOnlyInstall(opts) && opts.enableModulesDir) {
+    if (
+      opts.runPacquet != null &&
+      opts.useLockfile &&
+      !opts.useGitBranchLockfile &&
+      !opts.mergeGitBranchLockfiles &&
+      !isCheckOnlyInstall(opts) &&
+      opts.enableModulesDir &&
+      !hasUninstallMutations(projects)
+    ) {
+      const updatedProjects = projects.map((mutatedProject) => {
+        const project = ctx.projects[mutatedProject.rootDir]
+        return {
+          ...project,
+          manifest: project.originalManifest ?? project.manifest,
+        }
+      })
+      await opts.beforeLifecycleScripts?.({
+        updatedProjects,
+        updatedCatalogs: undefined,
+        newLockfile: undefined,
+        resolutionPolicyViolations: undefined,
+      })
       try {
-        await opts.runPacquet.run()
+        await opts.runPacquet.run({ rootProjectPreinstallRan })
       } catch (err) {
         // Same reasoning as the verifyLockfileResolutions catch above: this
         // is the user-facing failure path, so detach the reporter listener
@@ -1472,13 +1888,7 @@ Note that in CI environments, this setting is enabled by default.`,
         throw err
       }
       return {
-        updatedProjects: projects.map((mutatedProject) => {
-          const project = ctx.projects[mutatedProject.rootDir]
-          return {
-            ...project,
-            manifest: project.originalManifest ?? project.manifest,
-          }
-        }),
+        updatedProjects,
         ignoredBuilds: undefined,
       }
     }
@@ -1494,8 +1904,13 @@ Note that in CI environments, this setting is enabled by default.`,
         patchedDependencies: patchGroups,
         selectedProjectDirs: projects.map((project) => project.rootDir),
         projectDirsRunningScripts: projects
-          .filter((project) => project.mutation !== 'uninstallSome')
+          .filter((project) => project.mutation !== 'uninstallSome' && project.mutation !== 'installSome')
           .map((project) => project.rootDir),
+        projectDirsRunningInstallOnlyScripts: projects
+          .filter((project) => project.mutation === 'installSome')
+          .map((project) => project.rootDir),
+        rootProjectPreinstallRan,
+        projectDirsRunningUninstallScripts: [...projectDirsRemovingDeps],
         allProjects: ctx.projects,
         prunedAt: ctx.modulesFile?.prunedAt,
         pruneVirtualStore,
@@ -1577,6 +1992,22 @@ async function runUnignoredDependencyBuilds (
     })).ignoredBuilds ?? previousIgnoredBuilds
   }
   return previousIgnoredBuilds
+}
+
+/**
+ * Whether `specifier` names a path resolved against the project that declares
+ * it — a `file:` / `link:` protocol, a bare path or tarball filename, or a
+ * `workspace:` pointing at a directory rather than a range.
+ *
+ * A catalog entry is read by every project that references it, so it cannot
+ * mean the same directory for all of them. `resolveFromCatalog` already
+ * refuses a `link:` / `file:` entry outright
+ * (`ERR_PNPM_CATALOG_ENTRY_INVALID_SPEC`); it accepts a `workspace:` one,
+ * which is worse — every consumer silently resolves the relative path from its
+ * own directory. Auto-cataloging leaves all of them alone.
+ */
+function isProjectRelativePath (specifier: string): boolean {
+  return isLocalFilesystemSpecifier(specifier) || isWorkspaceLocalPathSpecifier(specifier)
 }
 
 function cacheExpired (prunedAt: string, maxAgeInMinutes: number): boolean {
@@ -1721,6 +2152,7 @@ export async function addDependenciesToPackage (
     bin?: string
     allowNew?: boolean
     peer?: boolean
+    savePeer?: boolean
     rangeSpecStyle?: RangeSpecStyle
     targetDependenciesField?: DependenciesField
   } & InstallMutationOptions
@@ -1733,6 +2165,7 @@ export async function addDependenciesToPackage (
         dependencySelectors,
         mutation: 'installSome',
         peer: opts.peer,
+        savePeer: opts.savePeer,
         rangeSpecStyle: opts.rangeSpecStyle,
         rootDir,
         targetDependenciesField: opts.targetDependenciesField,
@@ -1770,7 +2203,7 @@ export type ImporterToUpdate = {
   pruneDirectDependencies: boolean
   removePackages?: string[]
   updatePackageManifest: boolean
-  wantedDependencies: Array<WantedDependency & { isNew?: boolean, updateSpec?: boolean }>
+  wantedDependencies: WantedDependency[]
 } & DependenciesMutation
 
 export interface UpdatedProject {
@@ -1800,6 +2233,62 @@ function isCheckOnlyInstall (opts: { lockfileCheck?: unknown, dryRun?: boolean }
   return opts.lockfileCheck != null || opts.dryRun === true
 }
 
+/**
+ * `pnpm:devPreinstall` prepares a development checkout, so an install that
+ * leaves out `devDependencies`, such as `pnpm install --prod`, skips it.
+ */
+function installRunsDevPreinstall (
+  opts: { ignoreScripts?: boolean, ignorePackageManifest?: boolean, include?: IncludedDependencies }
+): boolean {
+  return !opts.ignoreScripts && !opts.ignorePackageManifest && opts.include?.devDependencies !== false
+}
+
+/**
+ * Whether the root project's `preinstall` runs ahead of resolution: only when
+ * the root would run its own lifecycle scripts after linking, so `pnpm add`
+ * and `pnpm remove` keep their behavior. A check-only or lockfile-only
+ * install materializes nothing, so it runs no project script.
+ */
+function rootProjectRunsPreinstallEarly (
+  projects: Array<{ rootDir: ProjectRootDir, mutation: MutatedProject['mutation'] }>,
+  opts: {
+    ignoreScripts?: boolean
+    ignorePackageManifest?: boolean
+    lockfileCheck?: unknown
+    lockfileDir: string
+    lockfileOnly?: boolean
+    dryRun?: boolean
+    virtualStoreOnly?: boolean
+  }
+): boolean {
+  return !opts.ignoreScripts && !opts.ignorePackageManifest && !opts.virtualStoreOnly &&
+    !opts.lockfileOnly && !isCheckOnlyInstall(opts) &&
+    projects.some((project) => project.rootDir === opts.lockfileDir && project.mutation === 'install')
+}
+
+/**
+ * Whether the install materializes fewer dependency groups than it resolves.
+ * Resolution walks every group so the lockfile keeps describing the manifest
+ * rather than the `--prod` / `--dev` filter the run was invoked with, which
+ * leaves materialization as the only stage the filter can reach. Until it
+ * does, the resolver fetches the tarballs of the groups the install drops
+ * (pnpm/pnpm#881).
+ *
+ * A filter no importer has anything to drop to drops nothing, and such an
+ * install keeps its single pass: `pnpm add -g` excludes `devDependencies`
+ * from a manifest it writes `dependencies` into and nothing else.
+ * `optionalDependencies` are the exception, because every package in the
+ * graph can declare one and dropping the group drops those too, which no
+ * importer's manifest shows.
+ */
+function materializesGroupSubset (include: IncludedDependencies, projects: ImporterToUpdate[]): boolean {
+  if (!include.optionalDependencies) return true
+  return projects.some(({ manifest }) =>
+    (!include.dependencies && !isEmpty(manifest.dependencies ?? {})) ||
+    (!include.devDependencies && !isEmpty(manifest.devDependencies ?? {}))
+  )
+}
+
 interface InstallFunctionResult {
   updatedCatalogs?: Catalogs
   newLockfile: LockfileObject
@@ -1820,9 +2309,13 @@ type InstallFunction = (
     makePartialCurrentLockfile: boolean
     needsFullResolution: boolean
     overrides?: Record<string, string>
+    staleOverrideTargets?: ReadonlySet<string>
     updateLockfileMinorVersion: boolean
     preferredVersions?: PreferredVersions
     pruneVirtualStore: boolean
+    /** The root project's `preinstall` already ran, ahead of resolution. */
+    rootProjectPreinstallRan: boolean
+    projectDirsRemovingDeps: Set<ProjectRootDir>
     scriptsOpts: RunLifecycleHooksConcurrentlyOptions
     currentLockfileIsUpToDate: boolean
     hoistWorkspacePackages?: boolean
@@ -1872,13 +2365,16 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
       })
   )
 
-  // Only the projects whose manifest this run writes need the answer, and only
-  // the manifest on disk — the one the overrides hook read — can give it.
+  // Only the projects whose manifest this run writes need the answer. A parent-scoped override
+  // (`parent>child`) is selected by the name and version of the manifest it is matched against,
+  // and `createReadPackageHook` runs the overrides hook after `packageExtensions` and the
+  // `readPackage` hooks, so the manifest that hook saw is the rewritten one. Asking the same
+  // manifest keeps this answer and the override that was actually applied in agreement.
   const overriddenDependencyMatcherFor = createOverriddenDependencyMatcher(opts.parsedOverrides, opts.lockfileDir)
   if (overriddenDependencyMatcherFor != null) {
     for (const project of projects) {
       if (!project.updatePackageManifest) continue
-      project.isOverriddenDependency = overriddenDependencyMatcherFor(project.originalManifest ?? project.manifest)
+      project.isOverriddenDependency = overriddenDependencyMatcherFor(project.manifest)
     }
   }
 
@@ -1886,6 +2382,10 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
     prefix: ctx.lockfileDir,
     stage: 'resolution_started',
   })
+
+  const untrackedPnpmfileReadPackageHook = getUntrackedPnpmfileReadPackageHook(opts.hooks)
+  const untrackedReadPackageHookMayHaveChanged = untrackedPnpmfileReadPackageHook === true ||
+    ctx.wantedLockfile.untrackedPnpmfileReadPackageHook !== untrackedPnpmfileReadPackageHook
 
   // Always seed preferred versions from the lockfile, even for update
   // mutations. Gating this on `update` (the previous behavior) nullified
@@ -1902,7 +2402,11 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
   // lands as a plain own key instead of invoking the prototype setter.
   const preferredVersions: PreferredVersions = Object.assign(
     Object.create(null),
-    getPreferredVersionsFromLockfileAndManifests(ctx.wantedLockfile.packages, Object.values(ctx.projects).map(({ manifest }) => manifest))
+    getPreferredVersionsFromLockfileAndManifests(
+      omitPackagesNamed(ctx.wantedLockfile.packages, opts.staleOverrideTargets ?? new Set()),
+      Object.values(ctx.projects).map(({ manifest }) => manifest),
+      { catalogs: opts.catalogs, dedupe: opts.dedupe }
+    )
   )
   for (const [pkgName, selectors] of Object.entries(opts.preferredVersions ?? {})) {
     preferredVersions[pkgName] = { ...preferredVersions[pkgName], ...selectors }
@@ -1912,7 +2416,9 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
     opts.force ||
     opts.needsFullResolution ||
     ctx.lockfileHadConflicts ||
-    opts.dedupePeerDependents
+    opts.dedupePeerDependents ||
+    untrackedReadPackageHookMayHaveChanged
+  setUntrackedPnpmfileReadPackageHook(ctx.wantedLockfile, untrackedPnpmfileReadPackageHook)
 
   // Ignore some fields when fixing lockfile, so these fields can be regenerated
   // and make sure it's up to date
@@ -1966,11 +2472,14 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
       dedupePeerDependents: opts.dedupePeerDependents,
       dedupePeers: opts.dedupePeers,
       dryRun: opts.lockfileOnly || isCheckOnlyInstall(opts),
+      // The hoisted linker shares one tree and handles such an entry itself.
+      hideAlienModules: opts.materializeAfterResolution && opts.nodeLinker !== 'hoisted',
       enableGlobalVirtualStore: opts.enableGlobalVirtualStore,
       engineStrict: opts.engineStrict,
       excludeLinksFromLockfile: opts.excludeLinksFromLockfile,
       force: opts.force,
       forceFullResolution,
+      staleOverrideTargets: opts.staleOverrideTargets,
       updateChecksums: opts.updateChecksums,
       ignoreScripts: opts.ignoreScripts,
       hooks: {
@@ -2106,7 +2615,10 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
   }
   let stats: InstallationResultStats | undefined
   let ignoredBuilds: IgnoredBuilds | undefined
-  const shouldWritePackageMap = opts.enableModulesDir !== false && opts.nodeLinker === 'isolated' && !opts.virtualStoreOnly
+  // Nothing reads `.package-map.json` unless `nodeExperimentalPackageMap`
+  // is on: `pnpm run` / `pnpm exec` only pass it to Node under that
+  // setting.
+  const shouldWritePackageMap = opts.nodeExperimentalPackageMap && opts.enableModulesDir !== false && opts.nodeLinker === 'isolated' && !opts.virtualStoreOnly
   if (!opts.lockfileOnly && !isInstallationOnlyForLockfileCheck && opts.enableModulesDir) {
     const result = await linkPackages(
       projects,
@@ -2134,6 +2646,7 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
         pruneVirtualStore: opts.pruneVirtualStore,
         publicHoistPattern: ctx.publicHoistPattern,
         registriesByScope: ctx.registriesByScope,
+        resolvePeersFromWorkspaceRoot: opts.resolvePeersFromWorkspaceRoot,
         rootModulesDir: ctx.rootModulesDir,
         sideEffectsCacheRead: opts.sideEffectsCacheRead,
         remoteSideEffectsCache: opts.remoteSideEffectsCache,
@@ -2170,6 +2683,10 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
         virtualStoreDir: ctx.virtualStoreDir,
         virtualStoreDirMaxLength: ctx.virtualStoreDirMaxLength,
       })
+    } else if (!opts.virtualStoreOnly) {
+      // An install that stops writing the map must not leave the previous
+      // one behind for the next `pnpm run` to hand to Node.
+      await removePackageMap(ctx.rootModulesDir)
     }
     // `.pnp.cjs` is how a PnP project resolves, which makes it a
     // project-level artifact like the importer symlinks and the package
@@ -2292,12 +2809,14 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
 
     if (!opts.virtualStoreOnly) await Promise.all(projects.map(async (project, index) => {
       let linkedPackages!: string[]
+      const projectModulesDir = await getProjectNodePath(project, { extendNodePath: opts.extendNodePath })
       if (ctx.publicHoistPattern?.length && path.relative(project.rootDir, opts.lockfileDir) === '') {
         linkedPackages = await linkBins(project.modulesDir, project.binsDir, {
           allowExoticManifests: true,
           preferSymlinkedExecutables: opts.preferSymlinkedExecutables,
           projectManifest: project.manifest,
           extraNodePaths: ctx.extraNodePaths,
+          projectModulesDir,
           warn: binWarn.bind(null, project.rootDir),
         })
       } else {
@@ -2328,6 +2847,7 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
           {
             extraNodePaths: ctx.extraNodePaths,
             preferSymlinkedExecutables: opts.preferSymlinkedExecutables,
+            projectModulesDir,
           }
         )
       }
@@ -2358,7 +2878,12 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
         })
         : writeCurrentLockfile(ctx.virtualStoreDir, result.currentLockfile),
       (async () => {
-        if (result.currentLockfile.packages === undefined && result.removedDepPaths.size === 0) {
+        if (
+          result.currentLockfile.packages === undefined &&
+          result.removedDepPaths.size === 0 &&
+          Object.keys(ctx.hoistedDependencies).length === 0 &&
+          Object.keys(result.newHoistedDependencies).length === 0
+        ) {
           return Promise.resolve()
         }
         const injectedDeps: Record<string, string[]> = {}
@@ -2391,6 +2916,19 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
         })
       })(),
     ])
+    const updatedProjects = projects.map(({ id, manifest, originalManifest, rootDir }) => ({
+      originalManifest,
+      manifest,
+      peerDependencyIssues: peerDependencyIssuesByProjects[id],
+      rootDir,
+    }))
+    await opts.verifyLockfile?.()
+    await opts.beforeLifecycleScripts?.({
+      updatedProjects,
+      updatedCatalogs,
+      newLockfile,
+      resolutionPolicyViolations,
+    })
     if (!opts.ignoreScripts && !opts.virtualStoreOnly) {
       if (opts.enablePnp) {
         opts.scriptsOpts.extraEnv = {
@@ -2404,7 +2942,9 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
           ...makeNodePackageMapOption(path.join(ctx.rootModulesDir, PACKAGE_MAP_FILENAME), opts.scriptsOpts.extraEnv),
         }
       }
-      const projectsToBeBuilt = projectsWithTargetDirs.filter(({ mutation }) => mutation === 'install') as ProjectToBeInstalled[]
+      const projectsToBeBuilt = projectsWithTargetDirs
+        .filter(({ mutation, rootDir }) => mutation === 'install' || (mutation === 'uninstallSome' && opts.projectDirsRemovingDeps.has(rootDir)))
+        .map((project) => project.mutation === 'uninstallSome' ? { ...project, stages: POST_UNINSTALL_STAGES } : project) as ProjectToBeInstalled[]
       // The projects' own lifecycle scripts import dependency code linked
       // from the lockfile, so they are held to the same gate as dependency
       // builds — also when no new dep paths made the buildModules branch run.
@@ -2414,7 +2954,10 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
         importers: projectsToBeBuilt,
         opts: opts.scriptsOpts,
         projectDependencies: opts.projectDependencies,
-        stages: ['preinstall', 'install', 'postinstall', 'preprepare', 'prepare', 'postprepare'],
+        projectWithPreinstallRan: opts.rootProjectPreinstallRan ? opts.lockfileDir : undefined,
+        stages: (opts.deploy || opts.include?.devDependencies === false)
+          ? PROJECT_INSTALL_STAGES
+          : PROJECT_LIFECYCLE_STAGES,
       })
     }
   } else {
@@ -2428,7 +2971,7 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
       })
     }
 
-    if (opts.nodeLinker !== 'hoisted' && opts.runPacquet == null) {
+    if (opts.nodeLinker !== 'hoisted' && opts.runPacquet == null && !opts.materializeAfterResolution) {
       // This is only needed because otherwise the reporter will hang.
       // Skipped when pacquet is about to take over the materialization
       // phase: the default reporter completes the progress stream for
@@ -2486,7 +3029,8 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
   return {
     updatedCatalogs,
     newLockfile,
-    projects: projects.map(({ id, manifest, rootDir }) => ({
+    projects: projects.map(({ id, manifest, originalManifest, rootDir }) => ({
+      originalManifest,
       manifest,
       peerDependencyIssues: peerDependencyIssuesByProjects[id],
       rootDir,
@@ -2503,6 +3047,60 @@ const _installInContext: InstallFunction = async (projects, ctx, opts) => {
 
 function allMutationsAreInstalls (projects: MutatedProject[]): boolean {
   return projects.every((project) => project.mutation === 'install' && !project.update && !project.updateMatching)
+}
+
+/**
+ * Matches the lockfile entries this update re-resolves at every place they
+ * occur, so none of their locked versions can be reused. Returns
+ * `undefined` when a locked version of a matched package may survive: a
+ * `--depth` limit, a lockfile importer the update does not cover, or a
+ * project that is not updating by package name.
+ */
+function matchUpdateTargetsReplacedEverywhere (
+  projects: MutatedProject[],
+  ctx: Pick<PnpmContext, 'projects' | 'wantedLockfile'>,
+  depth: number
+): ((name: string, version: string) => boolean) | undefined {
+  if (depth !== Infinity || projects.length === 0) return undefined
+  const updateMatchings = new Set<UpdateMatchingFunction>()
+  for (const project of projects) {
+    if (project.mutation === 'uninstallSome' || project.updateMatching == null) return undefined
+    updateMatchings.add(project.updateMatching)
+  }
+  const updatedImporterIds = new Set<string | undefined>(projects.map(({ rootDir }) => ctx.projects[rootDir]?.id))
+  if (Object.keys(ctx.wantedLockfile.importers ?? {}).some((importerId) => !updatedImporterIds.has(importerId))) {
+    return undefined
+  }
+  const distinctUpdateMatchings = [...updateMatchings]
+  return (name, version) => distinctUpdateMatchings.every((updateMatching) => updateMatching(name, version))
+}
+
+function hasUninstallMutations (projects: MutatedProject[]): boolean {
+  return projects.some((project) => project.mutation === 'uninstallSome')
+}
+
+/**
+ * Whether pacquet resolves this install itself instead of materializing a
+ * lockfile pnpm resolved. The caller adds the guards every delegation shares
+ * (`enableModulesDir`, not `lockfileOnly`, not a check-only run).
+ *
+ * `mutateModules` waives this install's lockfile verification on the strength
+ * of it, because pacquet applies the resolver policy as it resolves. A branch
+ * that resolves in pnpm has to keep out of the way of this one, or the install
+ * both loses pacquet's resolution and is never verified.
+ */
+function pacquetResolvesInstall (
+  projects: MutatedProject[],
+  opts: Pick<StrictInstallOptions, 'frozenLockfile' | 'handleResolutionPolicyViolations' | 'mergeGitBranchLockfiles' | 'runPacquet' | 'saveLockfile' | 'useGitBranchLockfile' | 'useLockfile'>
+): boolean {
+  return opts.runPacquet?.supportsResolution === true &&
+    opts.useLockfile &&
+    opts.saveLockfile &&
+    !opts.useGitBranchLockfile &&
+    !opts.mergeGitBranchLockfiles &&
+    !opts.frozenLockfile &&
+    opts.handleResolutionPolicyViolations == null &&
+    allMutationsAreInstalls(projects)
 }
 
 /**
@@ -2546,26 +3144,29 @@ function pacquetResolveResult (projects: ImporterToUpdate[], ctx: PnpmContext): 
 async function materializeOrDelegate (
   opts: {
     mergeGitBranchLockfiles?: boolean
-    runPacquet?: { run: (opts?: { filterResolvedProgress?: boolean }) => Promise<void> }
+    rootProjectPreinstallRan?: boolean
+    runPacquet?: { run: (opts?: { filterResolvedProgress?: boolean, rootProjectPreinstallRan?: boolean }) => Promise<void> }
     saveLockfile?: boolean
     useGitBranchLockfile?: boolean
     useLockfile?: boolean
   },
-  runHeadlessInstall: () => Promise<{ stats: InstallationResultStats, ignoredBuilds: IgnoredBuilds | undefined }>
+  runHeadlessInstall: () => Promise<{ stats: InstallationResultStats, ignoredBuilds: IgnoredBuilds | undefined }>,
+  projects?: MutatedProject[]
 ): Promise<{ stats?: InstallationResultStats, ignoredBuilds?: IgnoredBuilds }> {
   if (
     opts.runPacquet != null &&
     opts.useLockfile !== false &&
     opts.saveLockfile !== false &&
     opts.useGitBranchLockfile !== true &&
-    opts.mergeGitBranchLockfiles !== true
+    opts.mergeGitBranchLockfiles !== true &&
+    (projects == null || !hasUninstallMutations(projects))
   ) {
     // Reached only from the resolve-then-materialize call sites
     // (workspace-partial, hoisted-linker, pnpr server install). Each ran a
     // lockfileOnly resolve pass that emitted one
     // `pnpm:progress status:resolved` per package, so pacquet's
     // duplicate `resolved` events would double the reporter's count.
-    await opts.runPacquet.run({ filterResolvedProgress: true })
+    await opts.runPacquet.run({ filterResolvedProgress: true, rootProjectPreinstallRan: opts.rootProjectPreinstallRan })
     return {}
   }
   return runHeadlessInstall()
@@ -2611,6 +3212,18 @@ const installInContext: InstallFunction = async (projects, ctx, opts) => {
           ...opts,
           lockfileOnly: true,
         })
+        const updatedProjects = newProjects.map(({ manifest, originalManifest, rootDir }) => ({
+          originalManifest,
+          manifest,
+          peerDependencyIssues: undefined,
+          rootDir,
+        }))
+        await opts.beforeLifecycleScripts?.({
+          updatedProjects,
+          updatedCatalogs: result.updatedCatalogs,
+          newLockfile: result.newLockfile,
+          resolutionPolicyViolations: result.resolutionPolicyViolations,
+        })
         const { stats, ignoredBuilds } = await materializeOrDelegate(opts, () => headlessInstall({
           ...ctx,
           ...opts,
@@ -2621,14 +3234,18 @@ const installInContext: InstallFunction = async (projects, ctx, opts) => {
           currentHoistedLocations: ctx.modulesFile?.hoistedLocations,
           selectedProjectDirs: projects.map((project) => project.rootDir),
           projectDirsRunningScripts: projects
-            .filter((project) => project.mutation !== 'uninstallSome')
+            .filter((project) => project.mutation !== 'uninstallSome' && project.mutation !== 'installSome')
             .map((project) => project.rootDir),
+          projectDirsRunningInstallOnlyScripts: projects
+            .filter((project) => project.mutation === 'installSome')
+            .map((project) => project.rootDir),
+          projectDirsRunningUninstallScripts: [...opts.projectDirsRemovingDeps],
           allProjects: ctx.projects,
           prunedAt: ctx.modulesFile?.prunedAt,
           wantedLockfile: result.newLockfile,
           useLockfile: opts.useLockfile && ctx.wantedLockfileIsModified,
           hoistWorkspacePackages: opts.hoistWorkspacePackages,
-        }))
+        }), newProjects)
         return {
           ...result,
           stats,
@@ -2636,14 +3253,38 @@ const installInContext: InstallFunction = async (projects, ctx, opts) => {
         }
       }
     }
-    if (opts.nodeLinker === 'hoisted' && !opts.lockfileOnly && !isCheckOnlyInstall(opts) && opts.enableModulesDir) {
+    // Both a hoisted linker and a group-filtered install resolve first and
+    // materialize from the filtered lockfile afterwards. Not a group filter
+    // pacquet resolves under, though: it applies the filter to its own fetch,
+    // and intercepting the install here would take away the resolution
+    // `mutateModules` waived the lockfile verification for.
+    if (
+      (opts.nodeLinker === 'hoisted' || (materializesGroupSubset(opts.include, projects) && !pacquetResolvesInstall(projects, opts))) &&
+      !opts.lockfileOnly && !isCheckOnlyInstall(opts) && opts.enableModulesDir
+    ) {
       const result = await _installInContext(projects, ctx, {
         ...opts,
         lockfileOnly: true,
+        omitSummaryLog: true,
+        materializeAfterResolution: true,
+      })
+      const updatedProjects = projects.map(({ manifest, originalManifest, rootDir }) => ({
+        originalManifest,
+        manifest,
+        peerDependencyIssues: undefined,
+        rootDir,
+      }))
+      await opts.beforeLifecycleScripts?.({
+        updatedProjects,
+        updatedCatalogs: result.updatedCatalogs,
+        newLockfile: result.newLockfile,
+        resolutionPolicyViolations: result.resolutionPolicyViolations,
       })
       const { stats, ignoredBuilds } = await materializeOrDelegate(opts, () => headlessInstall({
         ...ctx,
         ...opts,
+        // The resolve pass above already reported the whole graph as resolved.
+        omitResolvedProgress: true,
         currentEngine: {
           nodeVersion: opts.nodeVersion,
           pnpmVersion: opts.packageManager.name === 'pnpm' ? opts.packageManager.version : '',
@@ -2651,14 +3292,18 @@ const installInContext: InstallFunction = async (projects, ctx, opts) => {
         currentHoistedLocations: ctx.modulesFile?.hoistedLocations,
         selectedProjectDirs: projects.map((project) => project.rootDir),
         projectDirsRunningScripts: projects
-          .filter((project) => project.mutation !== 'uninstallSome')
+          .filter((project) => project.mutation !== 'uninstallSome' && project.mutation !== 'installSome')
           .map((project) => project.rootDir),
+        projectDirsRunningInstallOnlyScripts: projects
+          .filter((project) => project.mutation === 'installSome')
+          .map((project) => project.rootDir),
+        projectDirsRunningUninstallScripts: [...opts.projectDirsRemovingDeps],
         allProjects: ctx.projects,
         prunedAt: ctx.modulesFile?.prunedAt,
         wantedLockfile: result.newLockfile,
         useLockfile: opts.useLockfile && ctx.wantedLockfileIsModified,
         hoistWorkspacePackages: opts.hoistWorkspacePackages,
-      }))
+      }), projects)
       return {
         ...result,
         stats,
@@ -2667,15 +3312,25 @@ const installInContext: InstallFunction = async (projects, ctx, opts) => {
     }
     // Isolated `nodeLinker` (the default) with a non-frozen install.
     // The frozen branch is handled earlier in `tryFrozenInstall`; the
-    // hoisted branch above runs a resolve-then-materialize sequence.
-    if (opts.runPacquet != null && opts.useLockfile && opts.saveLockfile && !opts.useGitBranchLockfile && !opts.mergeGitBranchLockfiles && !opts.lockfileOnly && !isCheckOnlyInstall(opts) && opts.enableModulesDir) {
+    // branch above runs a resolve-then-materialize sequence.
+    if (
+      opts.runPacquet != null &&
+      opts.useLockfile &&
+      opts.saveLockfile &&
+      !opts.useGitBranchLockfile &&
+      !opts.mergeGitBranchLockfiles &&
+      !opts.lockfileOnly &&
+      !isCheckOnlyInstall(opts) &&
+      opts.enableModulesDir &&
+      !hasUninstallMutations(projects)
+    ) {
       // pacquet >= 0.11.7 resolves itself: hand it the whole install
       // (resolve + fetch + import + link + build, writing the lockfile)
       // in a single non-frozen pass. Only for plain installs — `add` /
       // `update` / `remove` need pnpm to mutate the manifests and
       // resolve the new specs first (pacquet's `install` reads
       // package.json from disk, which pnpm hasn't rewritten yet).
-      if (opts.runPacquet.supportsResolution && !opts.frozenLockfile && opts.handleResolutionPolicyViolations == null && allMutationsAreInstalls(projects)) {
+      if (pacquetResolvesInstall(projects, opts)) {
         // `configDependencies` are recorded in a YAML document prepended
         // to `pnpm-lock.yaml` — purely a pnpm concept that pacquet doesn't
         // model. Capture it before pacquet rewrites the lockfile and
@@ -2688,7 +3343,7 @@ const installInContext: InstallFunction = async (projects, ctx, opts) => {
         const envLockfile = await readEnvLockfile(ctx.lockfileDir)
         let pacquetError: unknown
         try {
-          await opts.runPacquet.run({ resolve: true })
+          await opts.runPacquet.run({ resolve: true, rootProjectPreinstallRan: opts.rootProjectPreinstallRan })
         } catch (err: unknown) {
           pacquetError = err
           throw err
@@ -2725,7 +3380,13 @@ const installInContext: InstallFunction = async (projects, ctx, opts) => {
       // pass emitted a `pnpm:progress status:resolved` per package; ask
       // pacquet to drop its own duplicates.
       const result = await _installInContext(projects, ctx, { ...opts, lockfileOnly: true })
-      await opts.runPacquet.run({ filterResolvedProgress: true })
+      await opts.beforeLifecycleScripts?.({
+        updatedProjects: result.projects,
+        updatedCatalogs: result.updatedCatalogs,
+        newLockfile: result.newLockfile,
+        resolutionPolicyViolations: result.resolutionPolicyViolations,
+      })
+      await opts.runPacquet.run({ filterResolvedProgress: true, rootProjectPreinstallRan: opts.rootProjectPreinstallRan })
       return result
     }
     return await _installInContext(projects, ctx, opts)
@@ -2832,9 +3493,19 @@ function getProjectsWithTargetDirs<T extends { id: ProjectId }> (
  */
 function canUsePnprForMutations (
   projects: MutatedProject[],
-  opts: Pick<MutateModulesOptions, 'allProjects' | 'depth' | 'includeDirect'>
+  opts: Pick<MutateModulesOptions, 'allProjects' | 'depth' | 'ignoreScripts' | 'includeDirect'>
 ): boolean {
   if (projects.length === 0) return false
+  if (!opts.ignoreScripts && projects.some((project) => project.mutation === 'uninstallSome')) {
+    const manifestsByRootDir = new Map(opts.allProjects?.map((project) => [project.rootDir, project.manifest]))
+    if (projects.some((project) => {
+      if (project.mutation !== 'uninstallSome') return false
+      const manifest = manifestsByRootDir.get(project.rootDir)
+      return removesAnyDependency(project, manifest) && definesUninstallStage(manifest?.scripts)
+    })) {
+      return false
+    }
+  }
   const refreshesRevisions = projects.some(project =>
     (project.mutation === 'install' || project.mutation === 'installSome') && project.updatePatches === true
   )
@@ -2860,6 +3531,10 @@ function canUsePnprForMutations (
     const m = p as InstallDepsMutation | InstallSomeDepsMutation
     return !m.update && !m.updateToLatest && m.updateMatching == null
   })
+}
+
+function definesUninstallStage (scripts: ProjectManifest['scripts']): boolean {
+  return scripts != null && [...PRE_UNINSTALL_STAGES, ...POST_UNINSTALL_STAGES].some((stage) => scripts[stage] != null)
 }
 
 function canUsePnprForInstall (opts: Opts): boolean {
@@ -3079,38 +3754,40 @@ async function mutateModulesViaPnpr (
   const pnprProjects = await preparePnprProjects(projects, opts)
   if (!pnprProjects) return null
 
+  const projectOptionsByDir = new Map(opts.allProjects?.map(project => [project.rootDir, project]))
+
+  const allInstallProjects = pnprProjects.map((p) => ({
+    ...projectOptionsByDir.get(p.rootDir),
+    rootDir: p.rootDir,
+    manifest: p.manifest,
+    mutation: p.mutation,
+    newDeps: p.newDeps,
+    rangeSpecStyle: p.rangeSpecStyle,
+  }))
+
   // installViaPnprServer runs the headless install for the first
   // project's root and the workspace path for the rest. Pass the
   // pre-processed manifests so resolution sees the post-mutation state.
-  const result = await installViaPnprServer(
-    pnprProjects[0].manifest,
-    pnprProjects[0].rootDir,
-    {
+  const result = await installViaPnprServer({
+    manifest: pnprProjects[0].manifest,
+    rootDir: pnprProjects[0].rootDir,
+    opts: {
       ...opts,
       updatePatches: projects.every(project =>
         project.mutation === 'install' && project.updatePatches === true
       ),
     },
-    pnprProjects.map((p) => ({ rootDir: p.rootDir, manifest: p.manifest }))
-  )
+    allInstallProjects,
+    rootProjectPreinstallRan: rootProjectRunsPreinstallEarly(
+      projects,
+      { ...opts, lockfileDir: opts.lockfileDir ?? projects[0].rootDir }
+    ),
+  })
 
-  // For installSome projects, copy resolved specs from the lockfile importer
-  // entries back into the client manifest so save-prefix/catalog/etc. take
-  // effect (the server applies these during its resolution step).
-  const lockfileDir = opts.lockfileDir ?? projects[0].rootDir
   const mutatedRootDirs = new Set(projects.map((p) => p.rootDir))
-  const updatedProjects = pnprProjects
+  const updatedProjects = allInstallProjects
     .filter((p) => mutatedRootDirs.has(p.rootDir))
-    .map((p) => {
-      if (p.mutation === 'installSome' && p.newDeps.length > 0) {
-        // Lockfile importer keys are POSIX-normalized paths.
-        const relative = path.relative(lockfileDir, p.rootDir).split(path.sep).join('/')
-        const importerId = (relative || '.') as ProjectId
-        const snapshot = result.lockfile?.importers?.[importerId]
-        p.manifest = applyResolvedSpecsFromLockfile(p.manifest, snapshot, p.newDeps, p.rangeSpecStyle)
-      }
-      return { rootDir: p.rootDir, manifest: p.manifest }
-    })
+    .map((p) => ({ rootDir: p.rootDir, manifest: p.manifest }))
 
   return {
     updatedProjects,
@@ -3125,12 +3802,21 @@ async function mutateModulesViaPnpr (
  * then run a headless install that fetches tarballs from the registries
  * and links packages into node_modules — like a normal install.
  */
-async function installViaPnprServer (
-  manifest: ProjectManifest,
-  rootDir: ProjectRootDir,
-  opts: Opts,
-  allInstallProjects?: Array<{ rootDir: ProjectRootDir, manifest: ProjectManifest }>
-): Promise<InstallResult & { stats: InstallationResultStats, lockfile: LockfileObject }> {
+async function installViaPnprServer ({ manifest, rootDir, opts, allInstallProjects, rootProjectPreinstallRan }: {
+  manifest: ProjectManifest
+  rootDir: ProjectRootDir
+  opts: Opts
+  allInstallProjects?: Array<{
+    rootDir: ProjectRootDir
+    manifest: ProjectManifest
+    modulesDir?: string
+    binsDir?: string
+    mutation?: MutatedProject['mutation']
+    newDeps?: PnprNewDep[]
+    rangeSpecStyle?: RangeSpecStyle
+  }>
+  rootProjectPreinstallRan: boolean
+}): Promise<InstallResult & { stats: InstallationResultStats, lockfile: LockfileObject }> {
   // The pnpr server path re-resolves and persists new `index.db` entries plus a
   // freshly written lockfile, so it inherently writes the store. `frozenStore`
   // promises the store is complete and read-only, so the two are mutually
@@ -3172,6 +3858,36 @@ async function installViaPnprServer (
       patchedDependencies,
       resolvedPatchedDependencies
     )
+
+    // The root project's hooks run before the resolution is requested and
+    // before the lockfile is written, as on the local resolution path.
+    const rootProjectManifest = (allInstallProjects ?? [{ rootDir, manifest }])
+      .find((project) => project.rootDir === lockfileDir)?.manifest ??
+      await safeReadProjectManifestOnly(lockfileDir)
+    const rootModulesDir = path.join(lockfileDir, opts.modulesDir ?? 'node_modules')
+    const rootHookOpts = {
+      depPath: lockfileDir,
+      extraBinPaths: opts.extraBinPaths,
+      extraEnv: {
+        ...opts.extraEnv,
+        ...await makeProjectNodePathOption({ modulesDir: rootModulesDir, rootDir: lockfileDir }, opts),
+      },
+      pkgRoot: lockfileDir,
+      rootModulesDir,
+      wdBinDir: path.join(rootModulesDir, '.bin'),
+      scriptShell: opts.scriptShell,
+      scriptsPrependNodePath: opts.scriptsPrependNodePath,
+      shellEmulator: opts.shellEmulator,
+      stdio: opts.ownLifecycleHooksStdio,
+      unsafePerm: opts.unsafePerm || false,
+      userAgent: opts.userAgent,
+    }
+    if (installRunsDevPreinstall(opts) && rootProjectManifest?.scripts?.[DEV_PREINSTALL]) {
+      await runLifecycleHook(DEV_PREINSTALL, rootProjectManifest, rootHookOpts)
+    }
+    if (rootProjectPreinstallRan && rootProjectManifest?.scripts?.preinstall) {
+      await runLifecycleHook('preinstall', rootProjectManifest, rootHookOpts)
+    }
 
     logger.info({ message: 'Resolving dependencies via the pnpr server', prefix: rootDir })
 
@@ -3238,6 +3954,20 @@ async function installViaPnprServer (
       mergeGitBranchLockfiles: opts.mergeGitBranchLockfiles,
     })
 
+    // For installSome projects, copy resolved specs from the lockfile importer
+    // entries back into the client manifest so save-prefix/catalog/etc. take
+    // effect (the server applies these during its resolution step).
+    if (allInstallProjects) {
+      for (const p of allInstallProjects) {
+        if (p.mutation === 'installSome' && p.newDeps && p.newDeps.length > 0) {
+          const relative = path.relative(lockfileDir, p.rootDir).split(path.sep).join('/')
+          const importerId = (relative || '.') as ProjectId
+          const snapshot = lockfile?.importers?.[importerId]
+          p.manifest = applyResolvedSpecsFromLockfile(p.manifest, snapshot, p.newDeps, p.rangeSpecStyle)
+        }
+      }
+    }
+
     logger.info({
       message: `Resolved ${pnprStats.totalPackages} packages`,
       prefix: rootDir,
@@ -3276,22 +4006,20 @@ async function installViaPnprServer (
         nodeVersion: opts.nodeVersion,
         pnpmVersion: opts.packageManager?.version ?? '',
       },
+      rootProjectPreinstallRan,
       selectedProjectDirs: (allInstallProjects ?? [{ rootDir }]).map(p => p.rootDir),
       allProjects: Object.fromEntries(
-        (allInstallProjects ?? [{ rootDir, manifest }]).map((p, i) => [
-          p.rootDir,
-          {
-            binsDir: path.join(p.rootDir, 'node_modules', '.bin'),
+        (allInstallProjects ?? [{ rootDir, manifest, binsDir: opts.binsDir }]).map((p, i) => {
+          const modulesDir = pathAbsolute(p.modulesDir ?? opts.modulesDir ?? 'node_modules', p.rootDir)
+          return [p.rootDir, {
+            binsDir: p.binsDir ?? path.join(modulesDir, '.bin'),
             buildIndex: i,
-            // POSIX-normalize so the importer id matches the lockfile keys the
-            // pnpr server emits — on Windows a nested member's `path.relative`
-            // would otherwise be `packages\foo`, missing `packages/foo`.
             id: getLockfileImporterId(lockfileDir, p.rootDir),
             manifest: p.manifest,
-            modulesDir: path.join(p.rootDir, 'node_modules'),
+            modulesDir,
             rootDir: p.rootDir,
-          },
-        ])
+          }]
+        })
       ),
       hoistedDependencies: {},
       pendingBuilds: [] as string[],
@@ -3299,8 +4027,20 @@ async function installViaPnprServer (
       skipped: new Set<DepPath>(),
       wantedLockfile: lockfile,
     }
+    if (opts.beforeLifecycleScripts) {
+      const updatedProjects = (allInstallProjects ?? [{ rootDir, manifest }]).map((p) => ({
+        manifest: p.manifest,
+        rootDir: p.rootDir,
+      }))
+      await opts.beforeLifecycleScripts({
+        updatedProjects,
+        updatedCatalogs: undefined,
+        newLockfile: lockfile,
+        resolutionPolicyViolations: [],
+      })
+    }
     const { ignoredBuilds, stats } = await materializeOrDelegate(
-      opts,
+      { ...opts, rootProjectPreinstallRan },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       () => headlessInstall(headlessOpts as any)
     )
@@ -3346,4 +4086,53 @@ function groupPatchedDependenciesWithPaths (
       return [key, { hash, patchFilePath }]
     })
   ))
+}
+
+function getUntrackedPnpmfileReadPackageHook (
+  hooks: StrictInstallOptions['hooks']
+): boolean | undefined {
+  if (hooks.untrackedPnpmfileReadPackageHook != null) {
+    return hooks.untrackedPnpmfileReadPackageHook
+  }
+  const readPackage = hooks.readPackage as ReadPackageHook[] | ReadPackageHook | undefined
+  const hasReadPackage = Array.isArray(readPackage) ? readPackage.length > 0 : readPackage != null
+  return hooks.calculatePnpmfileChecksum == null && hasReadPackage ? true : undefined
+}
+
+function setUntrackedPnpmfileReadPackageHook (
+  lockfile: LockfileObject,
+  value: boolean | undefined
+): void {
+  if (value == null) {
+    delete lockfile.untrackedPnpmfileReadPackageHook
+  } else {
+    lockfile.untrackedPnpmfileReadPackageHook = value
+  }
+}
+
+function removesAnyDependency (project: UninstallSomeDepsMutation, manifest: ProjectManifest | undefined): boolean {
+  if (manifest == null) return false
+  const fields: Array<DependenciesField | 'peerDependencies'> = project.targetDependenciesField != null
+    ? [project.targetDependenciesField, 'peerDependencies']
+    : [...DEPENDENCIES_FIELDS, 'peerDependencies']
+  return project.dependencyNames.some((name) => fields.some((field) => manifest[field]?.[name] != null))
+}
+
+/**
+ * A project removed from the workspace patterns keeps its directory and is
+ * skipped by a frozen install. One whose directory or manifest is gone cannot
+ * be installed at all, so the lockfile no longer describes the workspace.
+ */
+async function findImporterWithoutProjectManifest (
+  lockfile: LockfileObject,
+  opts: { lockfileDir: string, projectIds: string[] }
+): Promise<string | undefined> {
+  const projectIds = new Set(opts.projectIds)
+  for (const importerId of Object.keys(lockfile.importers)) {
+    if (projectIds.has(importerId)) continue
+    // eslint-disable-next-line no-await-in-loop
+    const manifestExists = await Promise.all(MANIFEST_BASE_NAMES.map(async (basename) => pathExists(path.join(opts.lockfileDir, importerId, basename))))
+    if (!manifestExists.some(Boolean)) return importerId
+  }
+  return undefined
 }

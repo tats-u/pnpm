@@ -22,6 +22,22 @@ test('switch to the pnpm version specified in the packageManager field of packag
   expect(stdout.toString()).toContain('Version 9.3.0')
 })
 
+test('switch to the pinned pnpm version although a task setting is only known to it', async () => {
+  prepare()
+  const pnpmHome = path.resolve('pnpm')
+  const env = { PNPM_HOME: pnpmHome }
+  writeJsonFileSync('package.json', {
+    packageManager: 'pnpm@9.3.0',
+  })
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    tasks: { build: { concurrencyGroup: 'cargo' } },
+  })
+
+  const { stdout } = execPnpmSync(['help'], { env, expectSuccess: true })
+
+  expect(stdout.toString()).toContain('Version 9.3.0')
+})
+
 test('child pnpm processes select the version for their own directory', () => {
   prepare()
   const rootDir = process.cwd()
@@ -319,6 +335,27 @@ test('devEngines.packageManager entries with a tarball resolution are repaired u
 
   expect(stdout.toString()).toContain('Version 9.1.1')
   expect(fs.readFileSync('pnpm-lock.yaml', 'utf8')).toBe(lockfile)
+})
+
+test('devEngines.packageManager with onFail=download writes no lockfile when lockfile is disabled (#14728)', async () => {
+  prepare()
+  const pnpmHome = path.resolve('pnpm')
+  const env = { PNPM_HOME: pnpmHome }
+  writeJsonFileSync('package.json', {
+    devEngines: {
+      packageManager: {
+        name: 'pnpm',
+        version: '9.3.0',
+        onFail: 'download',
+      },
+    },
+  })
+  writeYamlFileSync('pnpm-workspace.yaml', { lockfile: false })
+
+  const { stdout } = execPnpmSync(['help'], { env })
+
+  expect(stdout.toString()).toContain('Version 9.3.0')
+  expect(fs.existsSync('pnpm-lock.yaml')).toBe(false)
 })
 
 test('devEngines.packageManager without onFail=download does not switch version', async () => {

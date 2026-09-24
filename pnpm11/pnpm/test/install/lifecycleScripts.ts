@@ -147,6 +147,43 @@ test('dependency should not be added to package.json and lockfile if it was not 
   expect(pkg).toEqual(initialPkg)
 })
 
+// The fixture's preinstall fails if a shim of its own bin is on PATH before
+// the script creates the bin's file (pnpm/pnpm#15501).
+test('a dependency\'s own bin is not on PATH before its preinstall creates it', () => {
+  prepare({ dependencies: { '@pnpm.e2e/own-bin-created-by-preinstall': '1.0.0' } })
+  writeYamlFileSync('pnpm-workspace.yaml', { allowBuilds: { '@pnpm.e2e/own-bin-created-by-preinstall': true } })
+
+  const result = execPnpmSync(['install'])
+
+  expect(result.stderr.toString() + result.stdout.toString()).not.toMatch('on PATH before its target exists')
+  expect(result.status).toBe(0)
+  expect(fs.existsSync('node_modules/.bin/own-bin-created-by-preinstall')).toBe(true)
+})
+
+test('a dependency\'s own bin is not on PATH before its preinstall creates it, with the hoisted node linker', () => {
+  prepare({ dependencies: { '@pnpm.e2e/own-bin-created-by-preinstall': '1.0.0' } })
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    allowBuilds: { '@pnpm.e2e/own-bin-created-by-preinstall': true },
+    nodeLinker: 'hoisted',
+  })
+
+  const result = execPnpmSync(['install'])
+
+  expect(result.stderr.toString() + result.stdout.toString()).not.toMatch('on PATH before its target exists')
+  expect(result.status).toBe(0)
+  expect(fs.existsSync('node_modules/.bin/own-bin-created-by-preinstall')).toBe(true)
+})
+
+test('the missing bin of a dependency whose build is denied is linked', () => {
+  prepare({ dependencies: { '@pnpm.e2e/own-bin-created-by-preinstall': '1.0.0' } })
+  writeYamlFileSync('pnpm-workspace.yaml', { allowBuilds: { '@pnpm.e2e/own-bin-created-by-preinstall': false } })
+
+  const result = execPnpmSync(['install'])
+
+  expect(result.status).toBe(0)
+  expect(fs.existsSync('node_modules/.bin/own-bin-created-by-preinstall')).toBe(true)
+})
+
 test('node-gyp is in the PATH', async () => {
   prepare({
     scripts: {
@@ -183,6 +220,18 @@ test('selectively allow scripts in some dependencies by --allow-build flag', asy
   })
 })
 
+test('--allow-build denies scripts for a package prefixed with !', async () => {
+  const project = prepare({})
+  execPnpmSync(['add', '--allow-build=!@pnpm.e2e/install-script-example', '@pnpm.e2e/install-script-example'], { expectSuccess: true })
+
+  expect(fs.existsSync('node_modules/@pnpm.e2e/install-script-example/generated-by-install.js')).toBeFalsy()
+
+  const workspaceManifest = await readWorkspaceManifest(project.dir())
+  expect(workspaceManifest?.allowBuilds).toStrictEqual({
+    '@pnpm.e2e/install-script-example': false,
+  })
+})
+
 test('--allow-build flag keeps the packages already listed in allowBuilds', async () => {
   const project = prepare({})
   writeYamlFileSync('pnpm-workspace.yaml', {
@@ -203,10 +252,12 @@ test('--allow-build flag keeps the packages already listed in allowBuilds', asyn
 
 test('--allow-build flag should specify the package', async () => {
   const project = prepare({})
-  const result = execPnpmSync(['add', '@pnpm.e2e/pre-and-postinstall-scripts-example@1.0.0', '--allow-build'])
+  for (const allowBuild of ['--allow-build', '--allow-build=!']) {
+    const result = execPnpmSync(['add', '@pnpm.e2e/pre-and-postinstall-scripts-example@1.0.0', allowBuild])
 
-  expect(result.status).toBe(1)
-  expect(result.stdout.toString()).toContain('The --allow-build flag is missing a package name. Please specify the package name(s) that are allowed to run installation scripts.')
+    expect(result.status).toBe(1)
+    expect(result.stdout.toString()).toContain('The --allow-build flag is missing a package name. Please specify the package name(s) that are allowed to run installation scripts.')
+  }
 
   expect(fs.existsSync('node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example/generated-by-preinstall.js')).toBeFalsy()
   expect(fs.existsSync('node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example/generated-by-postinstall.js')).toBeFalsy()
@@ -280,6 +331,61 @@ test('throw an error when strict-dep-builds is true and there are ignored script
   expect(manifest.dependencies).toStrictEqual({
     '@pnpm.e2e/pre-and-postinstall-scripts-example': '1.0.0',
   })
+})
+
+test('a dependency in a project\'s custom modulesDir is not a workspace project', async () => {
+  preparePackages([
+    {
+      location: 'packages/app',
+      package: {
+        name: 'app',
+        version: '1.0.0',
+        dependencies: { '@pnpm.e2e/pre-and-postinstall-scripts-example': '1.0.0' },
+      },
+    },
+  ])
+  fs.writeFileSync('package.json', JSON.stringify({ name: 'root', private: true }))
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    packages: ['**'],
+    modulesDir: 'vendor',
+    strictDepBuilds: false,
+  })
+
+  execPnpmSync(['install'], { expectSuccess: true })
+  execPnpmSync(['install'], { expectSuccess: true })
+
+  const depDir = 'packages/app/vendor/@pnpm.e2e/pre-and-postinstall-scripts-example'
+  expect(fs.existsSync(path.join(depDir, 'package.json'))).toBeTruthy()
+  expect(fs.existsSync(path.join(depDir, 'generated-by-postinstall.js'))).toBeFalsy()
+})
+
+test('a dependency in a modulesDir that packageConfigs sets is not a workspace project', async () => {
+  preparePackages([
+    {
+      location: 'packages/app',
+      package: {
+        name: 'app',
+        version: '1.0.0',
+        dependencies: { '@pnpm.e2e/pre-and-postinstall-scripts-example': '1.0.0' },
+      },
+    },
+  ])
+  fs.writeFileSync('package.json', JSON.stringify({ name: 'root', private: true }))
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    packages: ['**'],
+    sharedWorkspaceLockfile: false,
+    packageConfigs: { app: { modulesDir: 'vendor' } },
+    strictDepBuilds: false,
+  })
+
+  execPnpmSync(['install'], { expectSuccess: true })
+  execPnpmSync(['install'], { expectSuccess: true })
+  const addFromWorkspace = execPnpmSync(['add', '-w', '--workspace', '@pnpm.e2e/pre-and-postinstall-scripts-example'])
+  expect(addFromWorkspace.status).not.toBe(0)
+
+  const depDir = 'packages/app/vendor/@pnpm.e2e/pre-and-postinstall-scripts-example'
+  expect(fs.existsSync(path.join(depDir, 'package.json'))).toBeTruthy()
+  expect(fs.existsSync(path.join(depDir, 'generated-by-postinstall.js'))).toBeFalsy()
 })
 
 test('allowBuilds false resolves a strict ignored-build failure on repeat install', async () => {

@@ -2,8 +2,9 @@ use pnpm_resolving_parse_wanted_dependency::parse_wanted_dependency;
 use std::path::{Path, PathBuf};
 
 pub(crate) fn split_comma_separated(param: &str, base_dir: &Path) -> Vec<String> {
-    let parsed = parse_wanted_dependency(param);
-    let specifier = parsed.bare_specifier.as_deref().unwrap_or(param);
+    let bare_param = param.strip_prefix('!').unwrap_or(param);
+    let parsed = parse_wanted_dependency(bare_param);
+    let specifier = parsed.bare_specifier.as_deref().unwrap_or(bare_param);
     if !specifier.contains(',') {
         return vec![param.to_string()];
     }
@@ -13,14 +14,22 @@ pub(crate) fn split_comma_separated(param: &str, base_dir: &Path) -> Vec<String>
     if refers_to_existing_local_path(specifier, base_dir) {
         return vec![param.to_string()];
     }
-    param.split(',').map(str::trim).filter(|token| !token.is_empty()).map(str::to_string).collect()
+    param
+        .split(',')
+        .map(str::trim)
+        .filter(|token| !token.is_empty())
+        .map(str::to_string)
+        .collect()
 }
 
 pub(crate) fn split_comma_separated_selectors(
     selectors: &[String],
     base_dir: &Path,
 ) -> Vec<String> {
-    selectors.iter().flat_map(|selector| split_comma_separated(selector, base_dir)).collect()
+    selectors
+        .iter()
+        .flat_map(|selector| split_comma_separated(selector, base_dir))
+        .collect()
 }
 
 pub(crate) fn is_windows_drive_path(param: &str) -> bool {

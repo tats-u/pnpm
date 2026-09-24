@@ -53,25 +53,63 @@ fn overriding_pnpmfile(registry_url: &str, should_refresh: &str) -> String {
     )
 }
 
+/// `manifest` is optional in a resolver's result, so omitting it leaves
+/// the fetched tarball as the only source of the package's own
+/// dependencies.
+fn manifest_less_pnpmfile(registry_url: &str) -> String {
+    format!(
+        r"module.exports = {{
+  resolvers: [
+    {{
+      canResolve (wanted) {{
+        return wanted.alias === '@pnpm.e2e/pkg-with-1-dep';
+      }},
+      async resolve () {{
+        const response = await fetch('{registry_url}@pnpm.e2e%2Fpkg-with-1-dep');
+        const meta = await response.json();
+        const dist = meta.versions['100.0.0'].dist;
+        return {{
+          id: '@pnpm.e2e/pkg-with-1-dep@100.0.0',
+          resolution: {{ tarball: dist.tarball, integrity: dist.integrity }},
+        }};
+      }},
+    }},
+  ],
+}}
+",
+    )
+}
+
 fn installed_version(workspace: &Path) -> String {
     let manifest_path = workspace.join("node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep/package.json");
     let manifest: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(manifest_path).expect("read installed manifest"))
             .expect("parse installed manifest");
-    manifest["version"].as_str().expect("version is a string").to_string()
+    manifest["version"]
+        .as_str()
+        .expect("version is a string")
+        .to_string()
 }
 
 #[test]
 fn custom_resolver_takes_precedence_over_builtin_resolvers() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace);
-    fs::write(workspace.join(".pnpmfile.cjs"), overriding_pnpmfile(&mock_instance.url(), "false"))
+    fs::write(workspace.join(".pnpmfile.cjs"), overriding_pnpmfile(mock_instance.url(), "false"))
         .expect("write pnpmfile");
 
-    pacquet.with_arg("install").assert().success();
+    pacquet
+        .with_arg("install")
+        .assert()
+        .success();
 
     assert_eq!(installed_version(&workspace), "100.1.0");
     let lockfile = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
@@ -85,8 +123,13 @@ fn custom_resolver_takes_precedence_over_builtin_resolvers() {
 
 #[test]
 fn should_refresh_resolution_forces_re_resolution_past_the_frozen_path() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace);
@@ -98,7 +141,10 @@ fn should_refresh_resolution_forces_re_resolution_past_the_frozen_path() {
         "module.exports = { resolvers: [{ shouldRefreshResolution: () => false }] }\n",
     )
     .expect("write pnpmfile");
-    pacquet.with_arg("install").assert().success();
+    pacquet
+        .with_arg("install")
+        .assert()
+        .success();
     assert_eq!(installed_version(&workspace), "100.0.0");
 
     fs::write(
@@ -117,9 +163,12 @@ fn should_refresh_resolution_forces_re_resolution_past_the_frozen_path() {
     // `shouldRefreshResolution` returning true must force the
     // fresh-resolve path, where the custom resolver now overrides the
     // pinned version.
-    fs::write(workspace.join(".pnpmfile.cjs"), overriding_pnpmfile(&mock_instance.url(), "true"))
+    fs::write(workspace.join(".pnpmfile.cjs"), overriding_pnpmfile(mock_instance.url(), "true"))
         .expect("rewrite pnpmfile");
-    pacquet_at(&workspace).with_arg("install").assert().success();
+    pacquet_at(&workspace)
+        .with_arg("install")
+        .assert()
+        .success();
 
     assert_eq!(installed_version(&workspace), "100.1.0");
     let lockfile = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
@@ -137,8 +186,13 @@ fn should_refresh_resolution_forces_re_resolution_past_the_frozen_path() {
 
 #[test]
 fn failing_should_refresh_resolution_aborts_the_install() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace);
@@ -147,7 +201,10 @@ fn failing_should_refresh_resolution_aborts_the_install() {
         "module.exports = { resolvers: [{ shouldRefreshResolution: () => false }] }\n",
     )
     .expect("write pnpmfile");
-    pacquet.with_arg("install").assert().success();
+    pacquet
+        .with_arg("install")
+        .assert()
+        .success();
 
     fs::write(
         workspace.join(".pnpmfile.cjs"),
@@ -155,12 +212,18 @@ fn failing_should_refresh_resolution_aborts_the_install() {
     )
     .expect("rewrite pnpmfile");
 
-    let output = pacquet_at(&workspace).with_arg("install").assert().failure();
+    let output = pacquet_at(&workspace)
+        .with_arg("install")
+        .assert()
+        .failure();
     let stderr = String::from_utf8_lossy(&output.get_output().stderr).into_owned();
     // miette wraps the report at the terminal width, and where the wrap
     // falls depends on the temp-dir path length in the message, so the
     // phrase is matched with the wrapping collapsed.
-    let unwrapped = stderr.split_whitespace().collect::<Vec<_>>().join(" ");
+    let unwrapped = stderr
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     assert!(unwrapped.contains("refresh check crashed"), "stderr: {stderr}");
 
     drop((root, mock_instance)); // cleanup
@@ -176,8 +239,13 @@ fn failing_should_refresh_resolution_aborts_the_install() {
 /// registry, and echoing it back must keep the pinned version.
 #[test]
 fn custom_resolver_receives_current_pkg_on_subsequent_installs() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace);
@@ -188,7 +256,10 @@ fn custom_resolver_receives_current_pkg_on_subsequent_installs() {
         "module.exports = { resolvers: [{ shouldRefreshResolution: () => false }] }\n",
     )
     .expect("write pnpmfile");
-    pacquet.with_arg("install").assert().success();
+    pacquet
+        .with_arg("install")
+        .assert()
+        .success();
     assert_eq!(installed_version(&workspace), "100.0.0");
 
     fs::write(
@@ -215,7 +286,10 @@ module.exports = {
 ",
     )
     .expect("rewrite pnpmfile");
-    pacquet_at(&workspace).with_arg("install").assert().success();
+    pacquet_at(&workspace)
+        .with_arg("install")
+        .assert()
+        .success();
 
     assert_eq!(installed_version(&workspace), "100.0.0", "echoing currentPkg keeps the pin");
     let opts: serde_json::Value = serde_json::from_str(
@@ -240,4 +314,169 @@ module.exports = {
     );
 
     drop((root, mock_instance)); // cleanup
+}
+
+/// Regression test for pnpm/pnpm#15000.
+#[test]
+fn custom_resolver_without_a_manifest_installs_the_package_with_its_dependencies() {
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
+    let AddMockedRegistry { mock_instance, .. } = npmrc_info;
+
+    fs::write(
+        workspace.join("package.json"),
+        serde_json::json!({
+            "dependencies": { "@pnpm.e2e/pkg-with-1-dep": "100.0.0" },
+        })
+        .to_string(),
+    )
+    .expect("write package.json");
+    fs::write(workspace.join(".pnpmfile.cjs"), manifest_less_pnpmfile(mock_instance.url()))
+        .expect("write pnpmfile");
+
+    pacquet
+        .with_arg("install")
+        .assert()
+        .success();
+
+    let dependency = workspace.join(
+        "node_modules/.pnpm/@pnpm.e2e+pkg-with-1-dep@100.0.0/node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep",
+    );
+    assert!(dependency.is_dir(), "the resolved package's own dependency is installed");
+
+    let lockfile = fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read lockfile");
+    assert!(
+        lockfile.contains("@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0"),
+        "the lockfile records the dependency read from the tarball: {lockfile}",
+    );
+
+    drop((root, mock_instance)); // cleanup
+}
+
+#[test]
+fn custom_resolver_local_tarball_without_manifest_installs_dependencies() {
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
+    let AddMockedRegistry { mock_instance, .. } = npmrc_info;
+    let manifest = serde_json::json!({
+        "name": "custom-local", "version": "1.0.0",
+        "dependencies": {"@pnpm.e2e/dep-of-pkg-with-1-dep": "100.1.0"},
+    });
+    let body = pnpm_testing_utils::fixtures::tarball_with_manifest(&manifest);
+    fs::create_dir_all(workspace.join("vendor")).unwrap();
+    fs::write(workspace.join("vendor/package.tgz"), &body).unwrap();
+    fs::write(workspace.join("package.json"), r#"{"dependencies":{"custom-local":"1.0.0"}}"#)
+        .unwrap();
+    let resolution = serde_json::json!({
+        "tarball": "file:./vendor/package.tgz",
+        "integrity": pnpm_testing_utils::fixtures::sha512_integrity(&body),
+    });
+    fs::write(
+        workspace.join(".pnpmfile.cjs"),
+        format!(
+            r"
+module.exports = {{ resolvers: [{{
+  canResolve: wanted => wanted.alias === 'custom-local',
+  resolve: () => ({{ id: 'custom-local@1.0.0', resolution: {resolution} }}),
+}}] }};
+",
+        ),
+    )
+    .unwrap();
+    pacquet
+        .with_arg("install")
+        .assert()
+        .success();
+    pacquet_at(&workspace).with_args(["exec", "node", "-e",
+        "console.log(require(require.resolve('@pnpm.e2e/dep-of-pkg-with-1-dep/package.json', { paths: [require.resolve('custom-local/package.json')] })).version)"])
+        .assert().success().stdout("100.1.0\n");
+    drop((root, mock_instance));
+}
+
+#[test]
+fn custom_resolver_git_subdirectory_installs_its_manifest_and_dependencies() {
+    assert_git_subdirectory_install(
+        "return { delegate: { ...resolution, tarball: 'file:./repo.tgz' } };",
+    );
+}
+
+#[test]
+fn custom_resolver_git_subdirectory_installs_custom_fetched_files() {
+    assert_git_subdirectory_install(
+        "return fetchers.localTarball(cafs, { ...resolution, tarball: 'file:./repo.tgz' }, opts);",
+    );
+}
+
+fn assert_git_subdirectory_install(fetch_body: &str) {
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
+    let AddMockedRegistry { mock_instance, .. } = npmrc_info;
+    let manifest = serde_json::json!({
+        "name": "custom-git", "version": "1.0.0", "files": ["index.js"],
+        "dependencies": {"@pnpm.e2e/dep-of-pkg-with-1-dep": "100.1.0"},
+    })
+    .to_string();
+    let body = pnpm_testing_utils::fixtures::tarball_entries(&[
+        ("repo/package.json", br#"{"name":"archive-root","version":"1.0.0"}"#),
+        ("repo/packages/foo/package.json", manifest.as_bytes()),
+        ("repo/packages/foo/index.js", b"module.exports = 42;"),
+        ("repo/packages/foo/excluded.txt", b"must not be installed"),
+    ]);
+    fs::write(workspace.join("repo.tgz"), &body).unwrap();
+    fs::write(workspace.join("package.json"), r#"{"dependencies":{"custom-git":"1.0.0"}}"#)
+        .unwrap();
+    let resolution = serde_json::json!({
+        "tarball": "https://codeload.github.com/example/repo/tar.gz/0123456789abcdef0123456789abcdef01234567",
+        "integrity": pnpm_testing_utils::fixtures::sha512_integrity(&body),
+        "path": "/packages/foo",
+        "gitHosted": true,
+    });
+    fs::write(
+        workspace.join(".pnpmfile.cjs"),
+        format!(
+            r"
+module.exports = {{
+  resolvers: [{{
+    canResolve: wanted => wanted.alias === 'custom-git',
+    resolve: () => ({{ id: 'custom-git@1.0.0', resolution: {resolution} }}),
+  }}],
+  fetchers: [{{
+    canFetch: (id, resolution) => resolution.gitHosted === true,
+    async fetch(cafs, resolution, opts, fetchers) {{ {fetch_body} }},
+  }}],
+}};
+",
+        ),
+    )
+    .unwrap();
+    pacquet
+        .with_args(["install", "--ignore-scripts"])
+        .assert()
+        .success();
+    let installed: serde_json::Value = serde_json::from_slice(
+        &fs::read(workspace.join("node_modules/custom-git/package.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(installed["name"], "custom-git");
+    assert!(workspace.join("node_modules/custom-git/index.js").is_file());
+    assert!(!workspace.join("node_modules/custom-git/excluded.txt").exists());
+    pacquet_at(&workspace).with_args(["exec", "node", "-e",
+        "console.log(require(require.resolve('@pnpm.e2e/dep-of-pkg-with-1-dep/package.json', { paths: [require.resolve('custom-git/package.json')] })).version)"])
+        .assert().success().stdout("100.1.0\n");
+    drop((root, mock_instance));
 }

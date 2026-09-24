@@ -1,8 +1,11 @@
 use super::{
     ImporterUpdateSeedPolicy, UpdateSeedPolicy, compute_package_extensions_checksum,
-    full_resolution_required, importers_consuming_linked_peers,
-    include_transitive_optional_dependencies, is_partial_workspace_selection, update_reuse_scopes,
-    verify_merged_repair,
+    importers_consuming_linked_peers, include_transitive_optional_dependencies,
+    is_partial_workspace_selection,
+};
+use crate::install_with_fresh_lockfile::{
+    persist::verify_merged_repair,
+    seed_policy::{full_resolution_required, update_reuse_scopes},
 };
 use pnpm_config::{Config, PackageExtension};
 use pnpm_lockfile::Lockfile;
@@ -55,8 +58,7 @@ async fn filtered_repair_verifies_the_merged_lockfile() {
     )
     .expect("parse lockfile");
 
-    let error = verify_merged_repair::<SilentReporter>(&lockfile, &[])
-        .await
+    let error = verify_merged_repair::<SilentReporter>(&lockfile, &[]).await
         .expect_err("the merged lockfile must pass structural verification");
     assert!(matches!(
         error,
@@ -186,7 +188,10 @@ fn workspace_manifests(
 
 fn linked_peer_consumers(projects: &[(&str, serde_json::Value)]) -> Vec<String> {
     let owned = workspace_manifests(projects);
-    let borrowed = owned.iter().map(|(id, manifest)| (id.clone(), manifest)).collect();
+    let borrowed = owned
+        .iter()
+        .map(|(id, manifest)| (id.clone(), manifest))
+        .collect();
     let mut consumers: Vec<String> =
         importers_consuming_linked_peers(&borrowed, std::path::Path::new("/repo"))
             .into_iter()
@@ -362,4 +367,71 @@ fn a_link_to_a_non_project_target_is_treated_as_peer_declaring() {
         ),
     ]);
     assert_eq!(escaping, vec!["packages/app".to_string()]);
+}
+
+fn two_importer_lockfile() -> Lockfile {
+    serde_saphyr::from_str("lockfileVersion: '9.0'\nimporters:\n  .: {}\n  project-b: {}\n")
+        .expect("parse the lockfile")
+}
+
+fn drop_only(names: &[&str]) -> pnpm_resolving_deps_resolver::UpdateTargets {
+    names
+        .iter()
+        .map(|name| ((*name).to_string(), None))
+        .collect()
+}
+
+fn replaces(policy: &UpdateSeedPolicy, lockfile: &Lockfile, name: &str) -> Option<bool> {
+    let name: pnpm_lockfile::PkgName = name.parse().expect("parse the package name");
+    policy.replaced_update_targets(lockfile, None).map(|is_replaced| is_replaced(&name, "1.0.0"))
+}
+
+#[test]
+fn replaced_update_targets_match_only_the_targets_of_every_importer() {
+    use pnpm_resolving_deps_resolver::UpdateDepth;
+
+    let lockfile = two_importer_lockfile();
+    let policy = UpdateSeedPolicy::ByImporter {
+        policies: std::collections::BTreeMap::from([
+            (".".to_string(), ImporterUpdateSeedPolicy::DropOnly(drop_only(&["foo", "bar"]))),
+            ("project-b".to_string(), ImporterUpdateSeedPolicy::DropOnly(drop_only(&["foo"]))),
+        ]),
+        max_depth: UpdateDepth::UNLIMITED,
+    };
+
+    assert_eq!(replaces(&policy, &lockfile, "foo"), Some(true));
+    assert_eq!(replaces(&policy, &lockfile, "bar"), Some(false));
+    assert_eq!(replaces(&policy, &lockfile, "baz"), Some(false));
+}
+
+#[test]
+fn replaced_update_targets_are_none_when_a_locked_version_may_survive() {
+    use pnpm_resolving_deps_resolver::UpdateDepth;
+
+    let lockfile = two_importer_lockfile();
+    let one_importer = UpdateSeedPolicy::ByImporter {
+        policies: std::collections::BTreeMap::from([(
+            ".".to_string(),
+            ImporterUpdateSeedPolicy::DropOnly(drop_only(&["foo"])),
+        )]),
+        max_depth: UpdateDepth::UNLIMITED,
+    };
+    assert_eq!(replaces(&one_importer, &lockfile, "foo"), None);
+
+    let depth_limited =
+        UpdateSeedPolicy::DropOnly { targets: drop_only(&["foo"]), max_depth: UpdateDepth::new(0) };
+    assert_eq!(replaces(&depth_limited, &lockfile, "foo"), None);
+
+    let unlimited = UpdateSeedPolicy::DropOnly {
+        targets: drop_only(&["foo"]),
+        max_depth: UpdateDepth::UNLIMITED,
+    };
+    let selected = std::collections::HashSet::from([".".to_string()]);
+    assert!(
+        unlimited
+            .replaced_update_targets(&lockfile, Some(&selected))
+            .is_none(),
+    );
+
+    assert_eq!(replaces(&UpdateSeedPolicy::KeepAll, &lockfile, "foo"), None);
 }

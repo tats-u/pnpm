@@ -4,28 +4,25 @@
 //! for one, error out, or warn. pnpm's counterpart is
 //! `runDepsStatusCheck` in `exec/commands`.
 
-use std::{
-    io::IsTerminal,
-    path::Path,
-    process::{Command, exit},
-};
-
+use super::reporter::ReporterType;
 use derive_more::{Display, Error};
 use dialoguer::Confirm;
 use miette::{Diagnostic, IntoDiagnostic};
 use pnpm_config::{Config, VerifyDepsBeforeRun};
 use pnpm_default_reporter::colors::Colors;
 use pnpm_package_manager::{RunDepsStatus, check_deps_status_before_run_at};
-
-use super::reporter::ReporterType;
+use std::{
+    collections::HashSet,
+    io::IsTerminal,
+    path::Path,
+    process::{Command, exit},
+};
 
 #[derive(Debug, Display, Error, Diagnostic)]
 enum VerifyDepsError {
-    #[display("{issue}")]
     #[diagnostic(code(ERR_PNPM_VERIFY_DEPS_BEFORE_RUN), help(r#"Run "pnpm install""#))]
     OutOfSync { issue: String },
 
-    #[display("{issue}")]
     #[diagnostic(
         code(ERR_PNPM_VERIFY_DEPS_BEFORE_RUN),
         help(
@@ -38,7 +35,6 @@ enum VerifyDepsError {
 /// Run the configured verify-deps-before-run action for the project at
 /// `dir`. `Ok(())` means the script may proceed — including after a
 /// spawned install, a declined prompt, or a warning.
-#[expect(clippy::exit, reason = "an interrupted prompt exits 1, like pnpm's ExitPromptError")]
 pub(crate) fn verify_deps_before_run(
     dir: &Path,
     config: &Config,
@@ -63,25 +59,7 @@ pub(crate) fn verify_deps_before_run(
     };
     match config.verify_deps_before_run {
         VerifyDepsBeforeRun::Install => spawn_install(dir, &install_args, reporter),
-        VerifyDepsBeforeRun::Prompt => {
-            if !std::io::stdin().is_terminal() {
-                return Err(VerifyDepsError::CannotPrompt { issue }.into());
-            }
-            let command = std::iter::once("install")
-                .chain(install_args.iter().map(String::as_str))
-                .collect::<Vec<_>>()
-                .join(" ");
-            let message = format!(
-                "Your \"node_modules\" directory is out of sync with the \"pnpm-lock.yaml\" file. This can lead to issues during scripts execution.\n\nWould you like to run \"pnpm {command}\" to update your \"node_modules\"?",
-            );
-            match Confirm::new().with_prompt(message).default(true).interact() {
-                Ok(true) => spawn_install(dir, &install_args, reporter),
-                Ok(false) => Ok(()),
-                // The prompt was interrupted (Esc / Ctrl-C); exit like
-                // pnpm's ExitPromptError handler.
-                Err(_) => exit(1),
-            }
-        }
+        VerifyDepsBeforeRun::Prompt => prompt_install(dir, &install_args, reporter, issue),
         VerifyDepsBeforeRun::Error => Err(VerifyDepsError::OutOfSync { issue }.into()),
         VerifyDepsBeforeRun::Warn => {
             warn(
@@ -93,6 +71,42 @@ pub(crate) fn verify_deps_before_run(
         // `true` runs the check without acting on the verdict; `false`
         // returned before the check.
         VerifyDepsBeforeRun::True | VerifyDepsBeforeRun::False => Ok(()),
+    }
+}
+
+/// Run the verify-deps-before-run check before a recursive run or exec.
+///
+/// When a single shared lockfile covers the entire workspace, verifying the
+/// workspace root checks the shared lockfile and shared workspace state once.
+///
+/// Under dedicated per-project lockfiles (`sharedWorkspaceLockfile: false`),
+/// each project owns its own lockfile and workspace state file, and the
+/// workspace root may not participate in the install. In that case, each
+/// selected project directory is verified independently.
+pub(crate) fn verify_deps_before_recursive_run<ProjectPath: AsRef<Path>>(
+    workspace_root: &Path,
+    selected_project_dirs: impl IntoIterator<Item = ProjectPath>,
+    config: &Config,
+    reporter: ReporterType,
+) -> miette::Result<()> {
+    if !config.verify_deps_before_run.is_enabled() {
+        return Ok(());
+    }
+    let mut seen = HashSet::new();
+    let project_dirs: Vec<ProjectPath> = selected_project_dirs
+        .into_iter()
+        .filter(|dir| seen.insert(dir.as_ref().to_path_buf()))
+        .collect();
+    if project_dirs.is_empty() {
+        return Ok(());
+    }
+    if config.shares_one_lockfile() {
+        verify_deps_before_run(workspace_root, config, reporter)
+    } else {
+        for project_dir in project_dirs {
+            verify_deps_before_run(project_dir.as_ref(), config, reporter)?;
+        }
+        Ok(())
     }
 }
 
@@ -109,7 +123,7 @@ fn spawn_install(
     install_args: &[String],
     reporter: ReporterType,
 ) -> miette::Result<()> {
-    let exe = std::env::current_exe().into_diagnostic()?;
+    let exe = pnpm_executor::current_pnpm_exe().into_diagnostic()?;
     let mut command = Command::new(exe);
     command
         .args(["install", "--verify-deps-before-run-install", "--use-stderr"])
@@ -147,4 +161,34 @@ fn warn(silent: bool, message: &str) {
     let colors =
         Colors { enabled: pnpm_default_reporter::colors_enabled(std::io::stderr().is_terminal()) };
     eprintln!("{} {message}", colors.warn_label());
+}
+
+#[expect(clippy::exit, reason = "an interrupted prompt exits 1, like pnpm's ExitPromptError")]
+fn prompt_install(
+    dir: &Path,
+    install_args: &[String],
+    reporter: ReporterType,
+    issue: String,
+) -> miette::Result<()> {
+    if !std::io::stdin().is_terminal() {
+        return Err(VerifyDepsError::CannotPrompt { issue }.into());
+    }
+    let command = std::iter::once("install")
+        .chain(install_args.iter().map(String::as_str))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let message = format!(
+        "Your \"node_modules\" directory is out of sync with the \"pnpm-lock.yaml\" file. This can lead to issues during scripts execution.\n\nWould you like to run \"pnpm {command}\" to update your \"node_modules\"?",
+    );
+    match Confirm::new()
+        .with_prompt(message)
+        .default(true)
+        .interact()
+    {
+        Ok(true) => spawn_install(dir, install_args, reporter),
+        Ok(false) => Ok(()),
+        // The prompt was interrupted (Esc / Ctrl-C); exit like
+        // pnpm's ExitPromptError handler.
+        Err(_) => exit(1),
+    }
 }

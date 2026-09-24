@@ -81,7 +81,10 @@ fn entries_only_one_side_records_all_survive() {
     assert!(merged.importers.contains_key("packages/theirs"));
 
     let packages = merged.packages.as_ref().unwrap();
-    let mut names: Vec<String> = packages.keys().map(ToString::to_string).collect();
+    let mut names: Vec<String> = packages
+        .keys()
+        .map(ToString::to_string)
+        .collect();
     names.sort();
     assert_eq!(
         names,
@@ -160,6 +163,24 @@ pnpmfileChecksum: theirs
         merged.ignored_optional_dependencies.as_deref(),
         Some(["fsevents".to_string(), "node-gyp".to_string()].as_slice()),
     );
+}
+
+#[test]
+fn merging_preserves_matching_untracked_hook_state() {
+    let merged = merged(
+        "lockfileVersion: '9.0'\nuntrackedPnpmfileReadPackageHook: false\n",
+        "lockfileVersion: '9.0'\nuntrackedPnpmfileReadPackageHook: false\n",
+    );
+    assert_eq!(merged.untracked_pnpmfile_read_package_hook(), Some(false));
+}
+
+#[test]
+fn merging_marks_conflicting_untracked_hook_state_for_resolution() {
+    let merged = merged(
+        "lockfileVersion: '9.0'\nuntrackedPnpmfileReadPackageHook: false\n",
+        "lockfileVersion: '9.0'\nuntrackedPnpmfileReadPackageHook: true\n",
+    );
+    assert_eq!(merged.untracked_pnpmfile_read_package_hook(), Some(true));
 }
 
 /// A tool driving pnpm records its own state in a top-level block beside

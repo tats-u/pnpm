@@ -22,7 +22,9 @@ use std::{
 };
 
 use napi_derive::napi;
-use pnpm_lockfile::{FilterByImportersOptions, IncludedDependencies, Lockfile, PackageKey};
+use pnpm_lockfile::{
+    FilterByImportersOptions, IncludedDependencies, Lockfile, PackageKey, PeerEdgeOptions,
+};
 
 use crate::error::to_napi_error;
 
@@ -95,6 +97,10 @@ pub struct FilterLockfileOptions {
     /// drops the reference and keeps walking — what a caller inspecting a
     /// possibly-stale lockfile wants.
     pub fail_on_missing_dependencies: Option<bool>,
+    /// Whether a `devDependencies` entry of the root importer provides a peer to
+    /// every importer when the filter decides which optional-peer edges to
+    /// skip. Defaults to `false`.
+    pub resolve_peers_from_workspace_root: Option<bool>,
 }
 
 /// The lockfile as JSON, or `null` when the file is absent or empty.
@@ -123,11 +129,11 @@ pub async fn read_lockfile(
 pub async fn write_lockfile(options: WriteLockfileOptions) -> napi::Result<()> {
     let kind = LockfileKind::parse(options.kind.as_deref())?;
     let path = lockfile_path(&options.dir, options.modules_dir.as_deref(), &kind);
-    let lockfile: Lockfile = serde_json::from_value(options.lockfile).map_err(|err| {
-        napi::Error::from_reason(format!("the lockfile argument is not a lockfile: {err}"))
-    })?;
-    tokio::task::spawn_blocking(move || lockfile.save_to_path(&path))
-        .await
+    let lockfile: Lockfile = serde_json::from_value(options.lockfile)
+        .map_err(|err| {
+            napi::Error::from_reason(format!("the lockfile argument is not a lockfile: {err}"))
+        })?;
+    tokio::task::spawn_blocking(move || lockfile.save_to_path(&path)).await
         .map_err(|join_error| {
             napi::Error::from_reason(format!("writeLockfile task panicked: {join_error}"))
         })?
@@ -146,18 +152,19 @@ pub fn filter_lockfile_by_importers(
     importer_ids: Vec<String>,
     options: Option<FilterLockfileOptions>,
 ) -> napi::Result<serde_json::Value> {
-    let lockfile: Lockfile = serde_json::from_value(lockfile).map_err(|err| {
-        napi::Error::from_reason(format!("the lockfile argument is not a lockfile: {err}"))
-    })?;
+    let lockfile: Lockfile = serde_json::from_value(lockfile)
+        .map_err(|err| {
+            napi::Error::from_reason(format!("the lockfile argument is not a lockfile: {err}"))
+        })?;
     let options = options.unwrap_or(FilterLockfileOptions {
         include_dependencies: None,
         include_dev_dependencies: None,
         include_optional_dependencies: None,
         skipped: None,
         fail_on_missing_dependencies: None,
+        resolve_peers_from_workspace_root: None,
     });
-    let skipped: HashSet<PackageKey> = options
-        .skipped
+    let skipped: HashSet<PackageKey> = options.skipped
         .unwrap_or_default()
         .iter()
         // An unparsable dep path matches no snapshot key, so skipping it
@@ -175,7 +182,14 @@ pub fn filter_lockfile_by_importers(
                     optional_dependencies: options.include_optional_dependencies.unwrap_or(true),
                 },
                 skipped,
-                fail_on_missing_dependencies: options.fail_on_missing_dependencies.unwrap_or(false),
+                fail_on_missing_dependencies: options
+                    .fail_on_missing_dependencies
+                    .unwrap_or(false),
+                peer_edges: PeerEdgeOptions {
+                    resolve_peers_from_workspace_root: options
+                        .resolve_peers_from_workspace_root
+                        .unwrap_or(false),
+                },
             },
         )
         .map_err(|error| to_napi_error(&error))?;
@@ -198,9 +212,10 @@ pub async fn read_modules_manifest(modules_dir: String) -> napi::Result<Option<s
     .map_err(|error| napi::Error::from_reason(format!("reading the modules manifest: {error}")))?;
     manifest
         .map(|manifest| {
-            serde_json::to_value(manifest).map_err(|err| {
-                napi::Error::from_reason(format!("serializing the modules manifest: {err}"))
-            })
+            serde_json::to_value(manifest)
+                .map_err(|err| {
+                    napi::Error::from_reason(format!("serializing the modules manifest: {err}"))
+                })
         })
         .transpose()
 }

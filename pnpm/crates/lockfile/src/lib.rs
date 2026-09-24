@@ -1,14 +1,46 @@
+#![cfg_attr(dylint_lib = "perfectionist", feature(register_tool))]
+#![cfg_attr(dylint_lib = "perfectionist", register_tool(perfectionist))]
+
+pub use catalog_snapshots::*;
+pub use comver::*;
+pub use env_lockfile::*;
+pub use filter_by_importers::*;
+pub use freshness::*;
+pub use lazy_lockfile::*;
+pub use load_lockfile::*;
+pub use lockfile_version::*;
+pub use merge_lockfile_changes::*;
+pub use package_metadata::*;
+pub use peer_edges::*;
+pub use pkg_id_with_patch_hash::*;
+pub use pkg_name::*;
+pub use pkg_name_suffix::*;
+pub use pkg_name_ver::*;
+pub use pkg_name_ver_peer::*;
+pub use pkg_ver_peer::*;
+pub use project_snapshot::*;
+pub use prune_time::*;
+pub use prune_undeclared_importer_deps::*;
+pub use resolution::*;
+pub use resolved_dependency::*;
+pub use save_lockfile::*;
+pub use snapshot_dep_ref::*;
+pub use snapshot_entry::*;
+pub use yaml_documents::*;
+
 mod catalog_snapshots;
 mod comver;
 mod env_lockfile;
 mod filter_by_importers;
 mod freshness;
 mod git_branch_lockfile;
+mod git_merge_file;
 mod lazy_lockfile;
 mod load_lockfile;
 mod lockfile_version;
 mod merge_lockfile_changes;
 mod package_metadata;
+mod peer_edges;
 mod pkg_id_with_patch_hash;
 mod pkg_name;
 mod pkg_name_suffix;
@@ -26,32 +58,6 @@ mod snapshot_dep_ref;
 mod snapshot_entry;
 mod yaml_documents;
 mod yaml_emit;
-
-pub use catalog_snapshots::*;
-pub use comver::*;
-pub use env_lockfile::*;
-pub use filter_by_importers::*;
-pub use freshness::*;
-pub use lazy_lockfile::*;
-pub use load_lockfile::*;
-pub use lockfile_version::*;
-pub use merge_lockfile_changes::*;
-pub use package_metadata::*;
-pub use pkg_id_with_patch_hash::*;
-pub use pkg_name::*;
-pub use pkg_name_suffix::*;
-pub use pkg_name_ver::*;
-pub use pkg_name_ver_peer::*;
-pub use pkg_ver_peer::*;
-pub use project_snapshot::*;
-pub use prune_time::*;
-pub use prune_undeclared_importer_deps::*;
-pub use resolution::*;
-pub use resolved_dependency::*;
-pub use save_lockfile::*;
-pub use snapshot_dep_ref::*;
-pub use snapshot_entry::*;
-pub use yaml_documents::*;
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -102,6 +108,13 @@ pub type LockfileExtra = IndexMap<String, serde_json::Value>;
 /// A pnpm lockfile using a supported wire format.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    dylint_lib = "perfectionist",
+    expect(
+        perfectionist::too_many_struct_fields,
+        reason = "The fields mirror the pnpm-lock.yaml format."
+    )
+)]
 pub struct Lockfile {
     pub lockfile_version: LockfileVersion<9>,
 
@@ -213,7 +226,64 @@ pub struct Lockfile {
     pub extra: LockfileExtra,
 }
 
+/// One lockfile's `packages:` and `snapshots:` maps, borrowed together.
+///
+/// The two are read as a pair everywhere they are read at all: a
+/// snapshot names the wiring, the matching `packages` entry carries the
+/// metadata for the same key. Passing them as one value is what keeps a
+/// caller from pairing one lockfile's snapshots with another's
+/// metadata, and it lets a phase that must be handed *the same* maps
+/// twice — `CasPrefetch` derives a cache key per snapshot that
+/// `CreateVirtualStore` then consumes — take one argument instead of
+/// two that must agree.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct LockfileEntries<'a> {
+    pub packages: Option<&'a HashMap<PackageKey, PackageMetadata>>,
+    pub snapshots: Option<&'a HashMap<PackageKey, SnapshotEntry>>,
+}
+
+impl<'a> From<&'a Lockfile> for LockfileEntries<'a> {
+    fn from(lockfile: &'a Lockfile) -> Self {
+        LockfileEntries {
+            packages: lockfile.packages.as_ref(),
+            snapshots: lockfile.snapshots.as_ref(),
+        }
+    }
+}
+
+impl<'a> LockfileEntries<'a> {
+    /// Entries recorded by the previous install, including under `--force`.
+    /// Consumers decide whether to reuse packages; cleanup always needs the
+    /// previous dependency records. Empty when no current lockfile exists.
+    pub fn of_previous_install(lockfile: Option<&'a Lockfile>) -> Self {
+        lockfile.map(LockfileEntries::from).unwrap_or_default()
+    }
+}
+
 impl Lockfile {
+    const UNTRACKED_PNPMFILE_READ_PACKAGE_HOOK: &'static str = "untrackedPnpmfileReadPackageHook";
+
+    #[must_use]
+    pub fn untracked_pnpmfile_read_package_hook(&self) -> Option<bool> {
+        self.extra
+            .get(Self::UNTRACKED_PNPMFILE_READ_PACKAGE_HOOK)
+            .and_then(serde_json::Value::as_bool)
+    }
+
+    pub fn set_untracked_pnpmfile_read_package_hook(&mut self, value: Option<bool>) {
+        match value {
+            Some(value) => {
+                self.extra.insert(
+                    Self::UNTRACKED_PNPMFILE_READ_PACKAGE_HOOK.to_string(),
+                    serde_json::Value::Bool(value),
+                );
+            }
+            None => {
+                self.extra.shift_remove(Self::UNTRACKED_PNPMFILE_READ_PACKAGE_HOOK);
+            }
+        }
+    }
+
     /// Base file name of the lockfile.
     pub const FILE_NAME: &str = "pnpm-lock.yaml";
 
@@ -270,12 +340,14 @@ impl Lockfile {
     /// misread as empty and delete its current lockfile.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.importers.values().all(|importer| {
-            importer.specifiers.as_ref().is_none_or(HashMap::is_empty)
-                && importer.dependencies.as_ref().is_none_or(HashMap::is_empty)
-                && importer.dev_dependencies.as_ref().is_none_or(HashMap::is_empty)
-                && importer.optional_dependencies.as_ref().is_none_or(HashMap::is_empty)
-        })
+        self.importers
+            .values()
+            .all(|importer| {
+                importer.specifiers.as_ref().is_none_or(HashMap::is_empty)
+                    && importer.dependencies.as_ref().is_none_or(HashMap::is_empty)
+                    && importer.dev_dependencies.as_ref().is_none_or(HashMap::is_empty)
+                    && importer.optional_dependencies.as_ref().is_none_or(HashMap::is_empty)
+            })
     }
 
     /// Defense-in-depth for pruned lockfiles (older `turbo prune --docker`,
@@ -307,20 +379,22 @@ impl Lockfile {
         }
         let packages = self.packages.get_or_insert_with(HashMap::new);
         for (key, directory_resolution) in to_insert {
-            packages.entry(key).or_insert_with(|| PackageMetadata {
-                resolution: LockfileResolution::Directory(directory_resolution),
-                version: None,
-                engines: None,
-                cpu: None,
-                os: None,
-                libc: None,
-                deprecated: None,
-                has_bin: None,
-                prepare: None,
-                bundled_dependencies: None,
-                peer_dependencies: None,
-                peer_dependencies_meta: None,
-            });
+            packages
+                .entry(key)
+                .or_insert_with(|| PackageMetadata {
+                    resolution: LockfileResolution::Directory(directory_resolution),
+                    version: None,
+                    engines: None,
+                    cpu: None,
+                    os: None,
+                    libc: None,
+                    deprecated: None,
+                    has_bin: None,
+                    prepare: None,
+                    bundled_dependencies: None,
+                    peer_dependencies: None,
+                    peer_dependencies_meta: None,
+                });
         }
     }
 }

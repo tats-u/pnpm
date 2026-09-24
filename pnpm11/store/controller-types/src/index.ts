@@ -6,6 +6,7 @@ import type {
 } from '@pnpm/fetching.fetcher-base'
 import type {
   DirectoryResolution,
+  NonDeprecatedAlternative,
   PkgResolutionId,
   PreferredVersions,
   Resolution,
@@ -30,6 +31,7 @@ import type {
   PackageManifest,
   PackageVersionPolicy,
   RangeSpecStyle,
+  ReadPackageHook,
   SupportedArchitectures,
   TrustPolicy,
 } from '@pnpm/types'
@@ -189,6 +191,7 @@ export interface RequestPackageOptions {
   trustPolicy?: TrustPolicy
   trustPolicyExclude?: PackageVersionPolicy
   trustPolicyIgnoreAfter?: number
+  readPackageHook?: ReadPackageHook
 }
 
 export type BundledManifestFunction = () => Promise<BundledManifest | undefined>
@@ -217,6 +220,12 @@ export interface PackageResponse {
     // If latest does not equal the version of the
     // resolved package, it is out-of-date.
     latest?: string
+    /**
+     * Forwarded from the resolver's `ResolveResult.nonDeprecatedAlternative`,
+     * so the deprecation warning can name a version to move to. Set only for a
+     * deprecated pick that the resolver worked out from a packument.
+     */
+    nonDeprecatedAlternative?: NonDeprecatedAlternative
     alias?: string
     /**
      * Forwarded from the resolver's `ResolveResult.policyViolation`.
@@ -225,6 +234,7 @@ export interface PackageResponse {
      * `ResolutionPolicyViolation` in `@pnpm/resolving.resolver-base`.
      */
     policyViolation?: ResolutionPolicyViolation
+    hooked?: boolean
   } & (
     {
       isLocal: true

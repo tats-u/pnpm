@@ -124,6 +124,34 @@ test('pnpm licenses: output as json', async () => {
   expect(packagesWithMIT[0].paths[0].includes(_path)).toBeTruthy()
 })
 
+test('pnpm licenses: paths point at the packages placed by the hoisted linker', async () => {
+  const workspaceDir = tempDir()
+  f.copy('simple-licenses', workspaceDir)
+
+  const storeDir = path.join(workspaceDir, 'store')
+  await install.handler({
+    ...DEFAULT_OPTS,
+    dir: workspaceDir,
+    nodeLinker: 'hoisted',
+    pnpmHomeDir: '',
+    storeDir,
+  })
+
+  const { output, exitCode } = await licenses.handler({
+    ...DEFAULT_OPTS,
+    dir: workspaceDir,
+    nodeLinker: 'hoisted',
+    pnpmHomeDir: '',
+    long: false,
+    json: true,
+    storeDir: path.resolve(storeDir, STORE_VERSION),
+  }, ['list'])
+
+  expect(exitCode).toBe(0)
+  const parsedOutput = JSON.parse(output)
+  expect(parsedOutput.MIT[0].paths).toStrictEqual([path.join(workspaceDir, 'node_modules', 'is-positive')])
+})
+
 test('pnpm licenses: path should be correct for workspaces', async () => {
   const workspaceDir = tempDir()
   f.copy('workspace-licenses', workspaceDir)
@@ -144,8 +172,7 @@ test('pnpm licenses: path should be correct for workspaces', async () => {
     selectedProjectsGraph,
   })
 
-  const barPackageDir = path.join(workspaceDir, 'bar')
-  for (const packageDir of [workspaceDir, barPackageDir]) {
+  for (const packageDir of [path.join(workspaceDir, 'foo'), path.join(workspaceDir, 'bar')]) {
     // eslint-disable-next-line no-await-in-loop
     const { output, exitCode } = await licenses.handler({
       ...DEFAULT_OPTS,
@@ -211,6 +238,43 @@ test('pnpm licenses: filter outputs', async () => {
 
   expect(exitCode).toBe(0)
   expect(stripAnsi(output)).toMatchSnapshot('show-packages')
+})
+
+test('pnpm licenses: lists only the dependencies of the project in the current directory', async () => {
+  const workspaceDir = tempDir()
+  f.copy('workspace-licenses', workspaceDir)
+
+  const { allProjects, allProjectsGraph, selectedProjectsGraph } =
+    await filterProjectsBySelectorObjectsFromDir(workspaceDir, [])
+
+  const storeDir = path.join(workspaceDir, 'store')
+  await install.handler({
+    ...DEFAULT_OPTS,
+    dir: workspaceDir,
+    workspaceDir,
+    lockfileDir: workspaceDir,
+    pnpmHomeDir: '',
+    storeDir,
+    allProjects,
+    allProjectsGraph,
+    selectedProjectsGraph,
+  })
+
+  const { output, exitCode } = await licenses.handler({
+    ...DEFAULT_OPTS,
+    dir: path.join(workspaceDir, 'bar'),
+    lockfileDir: workspaceDir,
+    pnpmHomeDir: '',
+    long: false,
+    json: true,
+    storeDir: path.resolve(storeDir, STORE_VERSION),
+  }, ['list'])
+
+  expect(exitCode).toBe(0)
+  const packageNames = Object.values(JSON.parse(output) as Record<string, Array<{ name: string }>>)
+    .flat()
+    .map(({ name }) => name)
+  expect(packageNames).toStrictEqual(['is-positive'])
 })
 
 test('pnpm licenses: fails when lockfile is missing', async () => {
@@ -315,6 +379,7 @@ test('pnpm licenses should work with git protocol dep that have peerDependencies
     dir: workspaceDir,
     allowBuilds: {
       'ajv-keywords@https://codeload.github.com/ajv-validator/ajv-keywords/tar.gz/a11389b4d1934d360fb2a24dd920ec597295c8fc': true,
+      'ajv-keywords@git+https://github.com/ajv-validator/ajv-keywords.git#a11389b4d1934d360fb2a24dd920ec597295c8fc': true,
     },
     pnpmHomeDir: '',
     storeDir,
@@ -352,4 +417,28 @@ test('pnpm licenses should work git repository name containing capital letters',
   }, ['list'])
 
   expect(exitCode).toBe(0)
+})
+
+test('pnpm licenses: reports a runtime downloaded through devEngines', async () => {
+  const workspaceDir = tempDir()
+  f.copy('with-downloaded-runtime', workspaceDir)
+
+  const storeDir = path.join(workspaceDir, 'store')
+  await install.handler({
+    ...DEFAULT_OPTS,
+    dir: workspaceDir,
+    pnpmHomeDir: '',
+    storeDir,
+  })
+
+  const { output, exitCode } = await licenses.handler({
+    ...DEFAULT_OPTS,
+    dir: workspaceDir,
+    pnpmHomeDir: '',
+    long: false,
+    storeDir: path.resolve(storeDir, STORE_VERSION),
+  }, ['list'])
+
+  expect(exitCode).toBe(0)
+  expect(stripAnsi(output)).toMatchSnapshot('show-packages')
 })

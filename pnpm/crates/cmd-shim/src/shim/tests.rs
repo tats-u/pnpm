@@ -1,8 +1,11 @@
 use super::{
-    ScriptRuntime, ShimStyle, escape_msys_cmd_switches, extension_program, generate_cmd_shim,
-    generate_pwsh_shim, generate_sh_shim, is_context_aware_shim, is_shim_pointing_at,
-    parse_shebang, parse_shebang_from_bytes, read_head_filled, relative_target,
-    search_script_runtime, strip_exe_suffix, virtual_shim_package,
+    ScriptRuntime, extension_program, generate_cmd_shim, generate_pwsh_shim, generate_sh_shim,
+    is_sh_shim_hardened, is_shim_pointing_at, parse_shebang, parse_shebang_from_bytes,
+    read_head_filled, relative_target, search_script_runtime,
+    sh::{
+        SH_SHIM_CYGPATH_LINE, SH_SHIM_HARDENED_HELPER_LINE, SH_SHIM_HELPER_PATH_FILTER_LINE,
+        SH_SHIM_PATH_PRINTF_LINE, SH_SHIM_WSLPATH_LINE, escape_msys_cmd_switches, strip_exe_suffix,
+    },
 };
 use crate::{
     capabilities::{FsReadHead, Host},
@@ -12,6 +15,8 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
+
+mod relocatable;
 
 #[test]
 fn parses_env_node_shebang() {
@@ -46,24 +51,6 @@ fn rejects_non_shebang_lines() {
 }
 
 #[test]
-fn reads_the_package_from_a_generated_virtual_shim() {
-    let body = super::generate_virtual_sh_shim("@scope/tool", Path::new("/bin/tool"));
-
-    assert_eq!(virtual_shim_package(&body), Some("@scope/tool"));
-    assert_eq!(virtual_shim_package("echo '# cmd-shim-target=pkg:@scope/tool'\n"), None);
-}
-
-#[test]
-fn rejects_malformed_virtual_shim_packages() {
-    for package in ["", "bad package", "../tool", "@scope/../tool"] {
-        let body = format!(
-            "#!/bin/sh\n# pnpm-shim-style=context-aware\n# cmd-shim-target=pkg:{package}\n",
-        );
-        assert_eq!(virtual_shim_package(&body), None, "accepted {package:?}");
-    }
-}
-
-#[test]
 fn extension_fallback_picks_node_for_js() {
     assert_eq!(extension_program("js"), Some("node"));
     assert_eq!(extension_program("cjs"), Some("node"));
@@ -77,12 +64,57 @@ fn relative_target_traverses_into_sibling_package() {
     assert_eq!(relative_target(target, shim), "../foo/bin/cli.js");
 }
 
+/// `is_sh_shim_hardened` decides whether a warm reinstall replaces a shim an
+/// older pacquet wrote, by looking for exact lines of the header. Reformat
+/// those lines and every existing shim starts looking unhardened, so pin them
+/// together.
+#[test]
+fn generate_sh_shim_header_carries_the_hardened_helper_line() {
+    let target = Path::new("/proj/node_modules/typescript/bin/tsc");
+    let shim = Path::new("/proj/node_modules/.bin/tsc");
+    let body = generate_sh_shim(target, shim, None, &[], None);
+
+    assert!(
+        is_sh_shim_hardened(&body),
+        "a freshly generated shim must count as hardened, body was:\n{body}",
+    );
+    assert!(
+        !is_sh_shim_hardened(&body.replace(SH_SHIM_HARDENED_HELPER_LINE, "  target=$(readlink)")),
+        "a shim that looks up readlink on PATH must not count as hardened",
+    );
+    assert!(
+        !is_sh_shim_hardened(&body.replace(
+            SH_SHIM_PATH_PRINTF_LINE,
+            r#"basedir=$(echo "$link" | command -p sed -e 's,\\,/,g')"#,
+        )),
+        "a shim that pipes $link through echo must not count as hardened",
+    );
+    assert!(
+        !is_sh_shim_hardened(&body.replace(
+            SH_SHIM_CYGPATH_LINE,
+            r"    if command -v cygpath > /dev/null 2>&1; then"
+        )),
+        "a shim that looks up cygpath on PATH must not count as hardened",
+    );
+    assert!(
+        !is_sh_shim_hardened(&body.replace(
+            SH_SHIM_WSLPATH_LINE,
+            r"    if command -v wslpath > /dev/null 2>&1; then"
+        )),
+        "a shim that looks up wslpath on PATH must not count as hardened",
+    );
+    assert!(
+        !is_sh_shim_hardened(&body.replace(SH_SHIM_HELPER_PATH_FILTER_LINE, "")),
+        "a shim that resolves helpers with node_modules on PATH must not count as hardened",
+    );
+}
+
 #[test]
 fn generate_sh_shim_matches_pnpm_typical_case() {
     let target = Path::new("/proj/node_modules/typescript/bin/tsc");
     let shim = Path::new("/proj/node_modules/.bin/tsc");
     let runtime = ScriptRuntime { prog: Some("node".into()), args: String::new() };
-    let body = generate_sh_shim(target, shim, Some(&runtime), &[], ShimStyle::Direct);
+    let body = generate_sh_shim(target, shim, Some(&runtime), &[], None);
 
     assert!(body.starts_with("#!/bin/sh\n"), "shebang must come first");
     assert!(
@@ -91,9 +123,41 @@ fn generate_sh_shim_matches_pnpm_typical_case() {
 exe=""
 msys=""
 
-case `uname -a` in"#
+case `command -p uname -a` in"#
         ),
         "header must track a Windows-form basedir for WSL2/Cygwin, body was:\n{body}",
+    );
+    // No test host reports itself as Cygwin, MSYS, or WSL2, so
+    // `shim_execution_ignores_helpers_from_the_callers_path` can only decoy the
+    // helpers outside the platform branch. This is what pins the rest.
+    for helper in [
+        "command -p readlink",
+        "command -p sed",
+        "command -p uname",
+        "command -p cygpath",
+        "command -p wslpath",
+    ] {
+        assert!(body.contains(helper), "the header must reach {helper}, body was:\n{body}");
+    }
+    assert!(!body.contains("dirname"), "the header must not fork dirname, body was:\n{body}");
+    // POSIX echo processes `\n` / `\t` before sed can convert the backslashes.
+    assert!(
+        body.contains(
+            r#"basedir=$(command -p printf '%s\n' "$link" | command -p sed -e 's,\\,/,g')"#
+        ),
+        "header must print $link with printf so a Windows-form path keeps its backslashes, body was:\n{body}",
+    );
+    assert!(
+        !body.contains(r#"basedir=$(echo "$link""#),
+        "header must not pipe $link through echo, body was:\n{body}",
+    );
+    // The header converts backslashes to slashes, so a Windows-form $0 is already
+    // absolute and must not be prefixed with `./`, which would reroot it on the
+    // working directory. Only a name with no separator at all came from a PATH
+    // lookup. `@zkochan/cmd-shim` carries this same guard for pnpm 11's shims.
+    assert!(
+        body.contains(r"  */*|*\\*) ;;"),
+        "the bare-name guard must count a backslash as a separator, body was:\n{body}",
     );
     assert!(
         body.contains(r#"basedir_win="$(wslpath -w "$basedir" 2> /dev/null)""#),
@@ -121,14 +185,56 @@ case `uname -a` in"#
     );
 }
 
+/// POSIX `echo` turns `\n` and `\t` into a newline and a tab, so a Windows-form
+/// `$0` such as `C:\node_modules\.bin\tsc` is corrupted before `sed` runs.
 #[test]
-fn is_shim_pointing_at_round_trips_through_marker() {
+#[cfg_attr(not(unix), ignore = "the shim shebang is /bin/sh")]
+fn posix_shim_header_normalizes_windows_backslash_paths_without_echo_escapes() {
+    let target = Path::new("/proj/node_modules/typescript/bin/tsc");
+    let shim = Path::new("/proj/node_modules/.bin/tsc");
+    let body = generate_sh_shim(target, shim, None, &[], None);
+    let conversion = body
+        .lines()
+        .find(|line| line.starts_with("basedir=$("))
+        .expect("header must assign basedir from the shim path");
+    assert_eq!(conversion, SH_SHIM_PATH_PRINTF_LINE);
+
+    let script =
+        format!("link='C:\\node_modules\\.bin\\tsc'\n{conversion}\nprintf '%s' \"$basedir\"");
+    let output = std::process::Command::new("/bin/sh")
+        .arg("-c")
+        .arg(&script)
+        .output()
+        .expect("run the header's basedir conversion");
+    assert!(output.status.success(), "stderr:\n{}", String::from_utf8_lossy(&output.stderr));
+    let basedir = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(basedir, "C:/node_modules/.bin/tsc");
+}
+
+#[test]
+#[cfg_attr(not(unix), ignore = "relocatable shims are only written on Unix")]
+fn is_shim_pointing_at_accepts_relative_and_absolute_markers() {
     let target = Path::new("/p/node_modules/typescript/bin/tsc");
     let shim = Path::new("/p/node_modules/.bin/tsc");
     let runtime = ScriptRuntime { prog: Some("node".into()), args: String::new() };
-    let body = generate_sh_shim(target, shim, Some(&runtime), &[], ShimStyle::Direct);
-    assert!(is_shim_pointing_at(&body, target));
-    assert!(!is_shim_pointing_at(&body, Path::new("/elsewhere")));
+    for relocatable_root in [None, Some(Path::new("/p"))] {
+        let body = generate_sh_shim(target, shim, Some(&runtime), &[], relocatable_root);
+        assert!(is_shim_pointing_at(&body, shim, target), "{relocatable_root:?}:\n{body}");
+        assert!(!is_shim_pointing_at(&body, shim, Path::new("/elsewhere")), "{body}");
+    }
+
+    let body = generate_sh_shim(target, shim, Some(&runtime), &[], Some(Path::new("/p")));
+    let moved_shim = Path::new("/q/node_modules/.bin/tsc");
+    let moved_target = Path::new("/q/node_modules/typescript/bin/tsc");
+    assert!(
+        is_shim_pointing_at(&body, moved_shim, moved_target),
+        "a relative marker must follow the shim to its new location:\n{body}",
+    );
+
+    // The relative marker and `is_shim_pointing_at` must normalize `\` alike.
+    let backslash_target = Path::new(r"/p/node_modules/a\b/tsc");
+    let body = generate_sh_shim(backslash_target, shim, Some(&runtime), &[], Some(Path::new("/p")));
+    assert!(is_shim_pointing_at(&body, shim, backslash_target), "{body}");
 }
 
 #[test]
@@ -167,7 +273,7 @@ fn parse_shebang_from_bytes_handles_crlf_and_lossy_utf8() {
 fn generate_sh_shim_emits_direct_exec_when_no_runtime() {
     let target = Path::new("/proj/node_modules/foo/bin/cli");
     let shim = Path::new("/proj/node_modules/.bin/cli");
-    let body = generate_sh_shim(target, shim, None, &[], ShimStyle::Direct);
+    let body = generate_sh_shim(target, shim, None, &[], None);
     assert!(
         body.contains("exec \"$basedir/../foo/bin/cli\"  \"$@\"\nexit $?\n"),
         "no-runtime arm must exec the target directly, body:\n{body}",
@@ -180,7 +286,7 @@ fn generate_sh_shim_threads_args_when_prog_is_none() {
     let target = Path::new("/p/cli");
     let shim = Path::new("/p/.bin/cli");
     let runtime = ScriptRuntime { prog: None, args: "--flag".to_string() };
-    let body = generate_sh_shim(target, shim, Some(&runtime), &[], ShimStyle::Direct);
+    let body = generate_sh_shim(target, shim, Some(&runtime), &[], None);
     assert!(
         body.contains("exec \"$basedir/../cli\" --flag \"$@\"\nexit $?\n"),
         "args must be threaded into the no-prog arm, body:\n{body}",
@@ -203,19 +309,10 @@ fn generate_sh_shim_uses_absolute_target_when_no_common_prefix() {
     let target = Path::new("/abs/elsewhere/cli");
     let shim = Path::new("local-shim");
     let runtime = ScriptRuntime { prog: Some("node".into()), args: String::new() };
-    let body = generate_sh_shim(target, shim, Some(&runtime), &[], ShimStyle::Direct);
+    let body = generate_sh_shim(target, shim, Some(&runtime), &[], None);
     assert!(
         body.contains(r#""/abs/elsewhere/cli""#),
         "absolute-target branch must skip $basedir prefix, body:\n{body}",
-    );
-
-    let context_aware_body =
-        generate_sh_shim(target, shim, Some(&runtime), &[], ShimStyle::ContextAware);
-    assert!(
-        context_aware_body.contains(
-            r#"exec "$dispatcher" --shim 'local-shim' "$dispatcher_basedir/"'local-shim' "/abs/elsewhere/cli" -- "$@""#,
-        ),
-        "context-aware dispatch must skip $dispatcher_basedir for an absolute target, body:\n{context_aware_body}",
     );
 }
 
@@ -332,7 +429,7 @@ fn generate_sh_shim_uses_windows_target_only_for_exe_branches() {
     let target = Path::new("/proj/node_modules/foo/src.bat");
     let shim = Path::new("/proj/node_modules/.bin/foo");
     let runtime = ScriptRuntime { prog: Some("cmd".into()), args: "/C".into() };
-    let body = generate_sh_shim(target, shim, Some(&runtime), &[], ShimStyle::Direct);
+    let body = generate_sh_shim(target, shim, Some(&runtime), &[], None);
 
     assert!(
         body.contains("if [ -n \"$msys\" ]; then\n  if [ -n \"$exe\" ] && [ -x \"$basedir/cmd.exe\" ]; then\n    exec \"$basedir/cmd.exe\" //C \"$basedir_win/../foo/src.bat\" \"$@\"\n  elif [ -x \"$basedir/cmd\" ]; then\n    exec \"$basedir/cmd\" //C \"$basedir/../foo/src.bat\" \"$@\"\n  elif command -v cmd >/dev/null 2>&1; then\n    exec cmd //C \"$basedir/../foo/src.bat\" \"$@\"\n  elif [ -n \"$exe\" ] && command -v cmd.exe >/dev/null 2>&1; then\n    exec cmd.exe //C \"$basedir_win/../foo/src.bat\" \"$@\"\n  else\n    exec cmd //C \"$basedir/../foo/src.bat\" \"$@\"\n  fi\nelse\n  if [ -n \"$exe\" ] && [ -x \"$basedir/cmd.exe\" ]; then\n    exec \"$basedir/cmd.exe\" /C \"$basedir_win/../foo/src.bat\" \"$@\"\n  elif [ -x \"$basedir/cmd\" ]; then\n    exec \"$basedir/cmd\" /C \"$basedir/../foo/src.bat\" \"$@\"\n  elif command -v cmd >/dev/null 2>&1; then\n    exec cmd /C \"$basedir/../foo/src.bat\" \"$@\"\n  elif [ -n \"$exe\" ] && command -v cmd.exe >/dev/null 2>&1; then\n    exec cmd.exe /C \"$basedir_win/../foo/src.bat\" \"$@\"\n  else\n    exec cmd /C \"$basedir/../foo/src.bat\" \"$@\"\n  fi\nfi\n"),
@@ -345,7 +442,7 @@ fn generate_sh_shim_checks_path_before_exe_fallback() {
     let target = Path::new("/proj/node_modules/foo/src.sh");
     let shim = Path::new("/proj/node_modules/.bin/foo");
     let runtime = ScriptRuntime { prog: Some("sh".into()), args: String::new() };
-    let body = generate_sh_shim(target, shim, Some(&runtime), &[], ShimStyle::Direct);
+    let body = generate_sh_shim(target, shim, Some(&runtime), &[], None);
 
     assert!(
         body.contains("elif command -v sh >/dev/null 2>&1; then\n  exec sh  \"$basedir/../foo/src.sh\" \"$@\"\nelif [ -n \"$exe\" ] && command -v sh.exe >/dev/null 2>&1; then\n  exec sh.exe  \"$basedir_win/../foo/src.sh\" \"$@\"\nelse\n  exec sh  \"$basedir/../foo/src.sh\" \"$@\"\nfi\n"),
@@ -358,7 +455,7 @@ fn generate_sh_shim_does_not_append_exe_twice() {
     let target = Path::new("/proj/node_modules/foo/src.bat");
     let shim = Path::new("/proj/node_modules/.bin/foo");
     let runtime = ScriptRuntime { prog: Some("cmd.exe".into()), args: "/C".into() };
-    let body = generate_sh_shim(target, shim, Some(&runtime), &[], ShimStyle::Direct);
+    let body = generate_sh_shim(target, shim, Some(&runtime), &[], None);
 
     assert!(!body.contains("cmd.exe.exe"), "explicit .exe runtime must not double suffix:\n{body}");
     assert!(
@@ -437,7 +534,9 @@ fn read_head_filled_real_fs_long_file_fills_buffer() {
     use tempfile::tempdir;
     let tmp = tempdir().unwrap();
     let path = tmp.path().join("long");
-    let payload: Vec<u8> = (0..1024).map(|index| (index % 251) as u8).collect();
+    let payload: Vec<u8> = (0..1024)
+        .map(|index| (index % 251) as u8)
+        .collect();
     std::fs::write(&path, &payload).unwrap();
 
     let mut buf = [0u8; 256];
@@ -492,7 +591,10 @@ fn read_head_filled_accumulates_short_reads_from_fake() {
                 return Ok(0); // EOF
             }
             let remaining = &PAYLOAD[off..];
-            let take = remaining.len().min(buf.len()).min(CHUNK_SIZE);
+            let take = remaining
+                .len()
+                .min(buf.len())
+                .min(CHUNK_SIZE);
             buf[..take].copy_from_slice(&remaining[..take]);
             Ok(take)
         }
@@ -548,7 +650,7 @@ fn generate_cmd_shim_matches_pnpm_template() {
     let target = Path::new("/proj/node_modules/typescript/bin/tsc");
     let shim = Path::new("/proj/node_modules/.bin/tsc.cmd");
     let runtime = ScriptRuntime { prog: Some("node".into()), args: String::new() };
-    let body = generate_cmd_shim(target, shim, Some(&runtime), &[], ShimStyle::Direct);
+    let body = generate_cmd_shim(target, shim, Some(&runtime), &[]);
 
     assert!(body.starts_with("@SETLOCAL\r\n"), "must start with @SETLOCAL CRLF");
     assert!(
@@ -561,7 +663,7 @@ fn generate_cmd_shim_matches_pnpm_template() {
 fn generate_cmd_shim_emits_direct_exec_when_no_runtime() {
     let target = Path::new("/p/cli");
     let shim = Path::new("/p/.bin/cli.cmd");
-    let body = generate_cmd_shim(target, shim, None, &[], ShimStyle::Direct);
+    let body = generate_cmd_shim(target, shim, None, &[]);
     assert!(
         body.contains(r#"@"%~dp0\..\cli""#),
         "no-runtime arm must exec the target directly, body:\n{body}",
@@ -573,7 +675,7 @@ fn generate_pwsh_shim_matches_pnpm_template() {
     let target = Path::new("/proj/node_modules/typescript/bin/tsc");
     let shim = Path::new("/proj/node_modules/.bin/tsc.ps1");
     let runtime = ScriptRuntime { prog: Some("node".into()), args: String::new() };
-    let body = generate_pwsh_shim(target, shim, Some(&runtime), &[], ShimStyle::Direct);
+    let body = generate_pwsh_shim(target, shim, Some(&runtime), &[]);
 
     assert!(body.starts_with("#!/usr/bin/env pwsh\n"), "ps1 shim must start with pwsh shebang");
     assert!(
@@ -594,7 +696,7 @@ fn generate_pwsh_shim_matches_pnpm_template() {
 fn generate_pwsh_shim_emits_direct_exec_when_no_runtime() {
     let target = Path::new("/p/cli");
     let shim = Path::new("/p/.bin/cli.ps1");
-    let body = generate_pwsh_shim(target, shim, None, &[], ShimStyle::Direct);
+    let body = generate_pwsh_shim(target, shim, None, &[]);
     assert!(
         body.contains(r#"& "$basedir/../cli""#),
         "no-runtime arm must exec the target directly, body:\n{body}",
@@ -608,35 +710,27 @@ fn generate_pwsh_shim_emits_direct_exec_when_no_runtime() {
 #[cfg(unix)]
 #[test]
 fn shim_execution_resolves_symlink_chain() {
-    use std::{
-        fs,
-        os::unix::fs::{PermissionsExt, symlink},
-        process::Command,
-    };
+    use std::{fs, os::unix::fs::symlink, process::Command};
     use tempfile::tempdir;
 
     let tmp = tempdir().unwrap();
     let tmp_path = tmp.path();
 
     let bin_dir = tmp_path.join("node_modules").join(".bin");
-    let target_dir = tmp_path.join("node_modules").join("typescript").join("bin");
+    let target_dir = tmp_path
+        .join("node_modules")
+        .join("typescript")
+        .join("bin");
     fs::create_dir_all(&bin_dir).unwrap();
     fs::create_dir_all(&target_dir).unwrap();
 
     let target_path = target_dir.join("tsc");
-    fs::write(&target_path, "#!/bin/sh\necho \"tsc-output\"\n").unwrap();
-    let mut perms = fs::metadata(&target_path).unwrap().permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&target_path, perms).unwrap();
+    write_executable(&target_path, "#!/bin/sh\necho \"tsc-output\"\n");
 
     let shim_path = bin_dir.join("tsc");
-    let shim_body = generate_sh_shim(&target_path, &shim_path, None, &[], ShimStyle::Direct);
-    fs::write(&shim_path, &shim_body).unwrap();
-    let mut perms = fs::metadata(&shim_path).unwrap().permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&shim_path, perms).unwrap();
+    write_executable(&shim_path, &generate_sh_shim(&target_path, &shim_path, None, &[], None));
 
-    // hop2's relative target exercises the shim's dirname-composition
+    // hop2's relative target exercises the shim's directory-composition
     // branch; hop1's absolute target exercises the other.
     let hop1 = tmp_path.join("symlink_hop_1");
     symlink(&shim_path, &hop1).unwrap();
@@ -655,160 +749,200 @@ fn shim_execution_resolves_symlink_chain() {
     assert!(stdout.contains("tsc-output"), "Unexpected stdout: {stdout}");
 }
 
+/// A shim runs with `node_modules/.bin` at the front of `PATH`, which is where a
+/// dependency's own bins live, so a helper taken from there could report any
+/// directory it liked and redirect what the shim finally execs.
+#[cfg(unix)]
 #[test]
-fn context_aware_sh_shim_dispatches_through_versioned_binary_then_falls_back() {
-    let target = Path::new("/g/global/v11/x/node_modules/pkg/cli.js");
-    let shim = Path::new("/g/bin/tool");
-    let runtime = ScriptRuntime { prog: Some("node".to_string()), args: String::new() };
-    let body = generate_sh_shim(target, shim, Some(&runtime), &[], ShimStyle::ContextAware);
-    assert!(
-        body.contains(r#"exec "$dispatcher" --shim 'tool' "$dispatcher_basedir/"'tool' "$dispatcher_basedir/../global/v11/x/node_modules/pkg/cli.js" -- "$@""#),
-        "body was:\n{body}",
+fn shim_execution_ignores_helpers_from_the_callers_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let bin_dir = plant_shimmed_tool(tmp.path());
+    let mut command = std::process::Command::new(bin_dir.join("tsc-link"));
+    assert_shim_reaches_its_target(tmp.path(), &mut command);
+}
+
+/// The kernel and `execvp` hand the interpreter the path they resolved, so `$0`
+/// is bare only when a shell is given the name itself.
+#[cfg(unix)]
+#[test]
+fn shim_execution_normalizes_a_bare_name() {
+    let tmp = tempfile::tempdir().unwrap();
+    let bin_dir = plant_shimmed_tool(tmp.path());
+    let mut command = std::process::Command::new("sh");
+    command.arg("tsc-link").current_dir(&bin_dir);
+    assert_shim_reaches_its_target(tmp.path(), &mut command);
+}
+
+/// A shimmed tool plus a relative symlink to it in the same directory, so the
+/// walk composes a directory with the link target instead of taking one
+/// straight from `readlink`. Returns the bin directory.
+#[cfg(unix)]
+fn plant_shimmed_tool(root: &Path) -> PathBuf {
+    let bin_dir = root.join("node_modules").join(".bin");
+    let target = root
+        .join("node_modules")
+        .join("typescript")
+        .join("bin")
+        .join("tsc.js");
+    std::fs::create_dir_all(&bin_dir).unwrap();
+    std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+    std::fs::write(&target, "console.log('tsc-output')\n").unwrap();
+    // A dependency can declare a bin named `node.exe`, and the shim's basedir is
+    // the directory those bins land in. Only a lying `uname` reaches it.
+    write_executable(&bin_dir.join("node.exe"), "#!/bin/sh\necho hijacked\n");
+
+    let shim = bin_dir.join("tsc");
+    let runtime = ScriptRuntime { prog: Some("node".into()), args: String::new() };
+    write_executable(&shim, &generate_sh_shim(&target, &shim, Some(&runtime), &[], None));
+    std::os::unix::fs::symlink("tsc", bin_dir.join("tsc-link")).unwrap();
+    bin_dir
+}
+
+/// Run `command` with the decoys first on `PATH` and require the real target's
+/// output.
+#[cfg(unix)]
+fn assert_shim_reaches_its_target(root: &Path, command: &mut std::process::Command) {
+    let decoy_dir = plant_hijack_tree_and_decoys(root);
+    let path = format!("{}:{}", decoy_dir.display(), std::env::var("PATH").unwrap_or_default());
+    let output = command
+        .env("PATH", path)
+        .output()
+        .expect("run the shim");
+
+    assert!(output.status.success(), "stderr:\n{}", String::from_utf8_lossy(&output.stderr));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.trim_end(), "tsc-output", "the shim took a helper from the caller's PATH");
+}
+
+/// Write the tree the decoys point at, and the decoys, returning the directory to
+/// put at the front of `PATH`. Each decoy answers with what its real counterpart
+/// would be asked for, so any one of them alone is enough to redirect the shim.
+#[cfg(unix)]
+fn plant_hijack_tree_and_decoys(root: &Path) -> PathBuf {
+    let hijack = root.join("hijack").join("node_modules");
+    let hijack_bin = hijack.join(".bin");
+    let hijack_target = hijack
+        .join("typescript")
+        .join("bin")
+        .join("tsc.js");
+    std::fs::create_dir_all(&hijack_bin).unwrap();
+    std::fs::create_dir_all(hijack_target.parent().unwrap()).unwrap();
+    std::fs::write(&hijack_target, "console.log('hijacked')\n").unwrap();
+
+    let decoy_dir = root.join("decoy");
+    std::fs::create_dir_all(&decoy_dir).unwrap();
+    let answer = |path: &Path| format!("#!/bin/sh\necho '{}'\n", path.display());
+    for helper in ["readlink", "sed", "printf"] {
+        write_executable(&decoy_dir.join(helper), &answer(&hijack_bin.join("tsc")));
+    }
+    write_executable(&decoy_dir.join("dirname"), &answer(&hijack_bin));
+    write_executable(&decoy_dir.join("uname"), "#!/bin/sh\necho MINGW64_NT-10.0\n");
+    decoy_dir
+}
+
+/// Cygwin, MSYS, and WSL2 convert `$basedir` to a Windows path through a helper
+/// a dependency can also ship. The system copy answers first, and when none
+/// does the shim falls back to the caller's `PATH` instead of giving up.
+#[cfg(unix)]
+#[test]
+fn the_platform_branch_prefers_the_system_path_converter_and_still_falls_back() {
+    let tmp = tempfile::tempdir().unwrap();
+    let target = Path::new("/proj/node_modules/typescript/bin/tsc");
+    let shim = Path::new("/proj/node_modules/.bin/tsc");
+    let body = generate_sh_shim(target, shim, None, &[], None);
+
+    let answering = tmp.path().join("answering");
+    write_executable(&answering, "#!/bin/sh\necho '/system/win'\n");
+    let silent = tmp.path().join("silent");
+    write_executable(&silent, "#!/bin/sh\n");
+    let absent = tmp.path().join("absent");
+    let decoys = tmp.path().join("decoy");
+    std::fs::create_dir_all(&decoys).unwrap();
+    for helper in ["cygpath", "wslpath"] {
+        write_executable(&decoys.join(helper), "#!/bin/sh\necho '/decoy/win'\n");
+    }
+
+    for uname in ["MINGW64_NT-10.0", "Linux 5.15.0 WSL2"] {
+        assert_eq!(
+            run_platform_branch(&body, uname, &answering, &decoys),
+            ("/system/win".to_owned(), ".exe".to_owned()),
+            "{uname}: the system converter must win over the one on PATH",
+        );
+        assert_eq!(
+            run_platform_branch(&body, uname, &silent, &decoys),
+            ("/decoy/win".to_owned(), ".exe".to_owned()),
+            "{uname}: an empty answer from the system converter must fall back to PATH",
+        );
+        assert_eq!(
+            run_platform_branch(&body, uname, &absent, &decoys),
+            ("/decoy/win".to_owned(), ".exe".to_owned()),
+            "{uname}: no system converter must fall back to PATH",
+        );
+    }
+    assert_eq!(
+        run_platform_branch(&body, "MINGW64_NT-10.0", &absent, Path::new("")),
+        (BRANCH_BASEDIR.to_owned(), ".exe".to_owned()),
+        "MSYS with no converter at all must keep the POSIX basedir instead of failing",
     );
-    assert!(body.contains(r#"[ -z "$PNPM_SHIM_BYPASS" ]"#), "body was:\n{body}");
-    // The classic interpreter fallback stays below the dispatch block.
-    assert!(body.contains(r#""$basedir/node""#), "body was:\n{body}");
-    assert!(is_context_aware_shim(&body));
-    assert!(is_shim_pointing_at(&body, target));
+    assert_eq!(
+        run_platform_branch(&body, "Linux 5.15.0 WSL2", &absent, Path::new("")),
+        (BRANCH_BASEDIR.to_owned(), String::new()),
+        "WSL2 with no converter at all must not claim a Windows exe",
+    );
 }
 
 #[cfg(unix)]
-#[test]
-fn context_aware_sh_shim_uses_native_dispatcher_paths_on_wsl2() {
-    use std::{env, fs, os::unix::fs::PermissionsExt, process::Command};
+const BRANCH_BASEDIR: &str = "/proj/node_modules/.bin";
 
-    let root = tempfile::tempdir().unwrap();
-    let global_bin = root.path().join("bin");
-    let tools_bin = root.path().join("tools");
-    let target = root.path().join("global/node_modules/pkg/cli.js");
-    let dispatched_target = global_bin.join("../global/node_modules/pkg/cli.js");
-    let shim = global_bin.join("tool");
-    let dispatcher = global_bin.join(".pnpm-shim-v1");
-    let uname = tools_bin.join("uname");
-    let wslpath = tools_bin.join("wslpath");
-    fs::create_dir_all(&global_bin).unwrap();
-    fs::create_dir_all(&tools_bin).unwrap();
-    fs::create_dir_all(target.parent().unwrap()).unwrap();
-    fs::write(&shim, generate_sh_shim(&target, &shim, None, &[], ShimStyle::ContextAware)).unwrap();
-    fs::write(&dispatcher, "#!/bin/sh\nprintf '<%s>\\n' \"$@\"\n").unwrap();
-    fs::write(&uname, "#!/bin/sh\nprintf 'Linux test WSL2\\n'\n").unwrap();
-    fs::write(&wslpath, "#!/bin/sh\nprintf 'C:\\\\converted\\n'\n").unwrap();
-    for executable in [&shim, &dispatcher, &uname, &wslpath] {
-        fs::set_permissions(executable, fs::Permissions::from_mode(0o755)).unwrap();
-    }
-    let path = env::join_paths(
-        std::iter::once(tools_bin).chain(env::split_paths(&env::var_os("PATH").unwrap())),
-    )
-    .unwrap();
+/// No test host reports itself as Cygwin or WSL2, and `command -p` searches the
+/// system default path, which a test cannot plant into. So the branch is taken
+/// from `body` and only its `uname` and its two converters are rewritten:
+/// `system_converter` stands in for what `command -p` would reach, and
+/// `callers_path` for what the fallback finds. That the real header reaches
+/// them through `command -p` is what
+/// [`generate_sh_shim_matches_pnpm_typical_case`] pins.
+#[cfg(unix)]
+fn run_platform_branch(
+    body: &str,
+    uname: &str,
+    system_converter: &Path,
+    callers_path: &Path,
+) -> (String, String) {
+    const CASE_HEAD: &str = "case `command -p uname -a` in";
+    let start = body.find(CASE_HEAD).expect("the header must select a platform");
+    let end = start
+        + body[start..].find("\nesac\n").expect("the platform branch must close")
+        + "\nesac\n".len();
+    let branch = body[start..end]
+        .replace("`command -p uname -a`", r#""$fake_uname""#)
+        .replace("command -p cygpath", r#""$system_converter""#)
+        .replace("command -p wslpath", r#""$system_converter""#);
+    let script = format!(
+        "basedir={BRANCH_BASEDIR}\nbasedir_win=\"$basedir\"\nexe=\"\"\nmsys=\"\"\n{branch}\nprintf '%s\\n%s' \"$basedir_win\" \"$exe\"\n",
+    );
 
-    let output = Command::new(&shim).env("PATH", path).arg("forwarded").output().unwrap();
+    let output = std::process::Command::new("/bin/sh")
+        .arg("-c")
+        .arg(&script)
+        .env("fake_uname", uname)
+        .env("system_converter", system_converter)
+        .env("PATH", callers_path)
+        .output()
+        .expect("run the header's platform branch");
+    assert!(output.status.success(), "stderr:\n{}", String::from_utf8_lossy(&output.stderr));
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    eprintln!("STDOUT:\n{stdout}\n");
-    assert!(output.status.success(), "stderr:\n{}", String::from_utf8_lossy(&output.stderr));
-    assert_eq!(
-        stdout,
-        format!(
-            "<--shim>\n<tool>\n<{}>\n<{}>\n<-->\n<forwarded>\n",
-            shim.display(),
-            dispatched_target.display(),
-        ),
-    );
+    let (basedir_win, exe) = stdout
+        .split_once('\n')
+        .expect("the branch must report a Windows-form basedir and an exe suffix");
+    (basedir_win.to_owned(), exe.to_owned())
 }
 
-#[test]
-fn direct_sh_shim_carries_no_context_marker() {
-    let body = generate_sh_shim(
-        Path::new("/g/pkg/cli.js"),
-        Path::new("/g/bin/tool"),
-        None,
-        &[],
-        ShimStyle::Direct,
-    );
-    assert!(!body.contains("--shim"), "body was:\n{body}");
-    assert!(!is_context_aware_shim(&body));
-}
-
-#[test]
-fn context_aware_sh_shim_quotes_hostile_bin_names() {
-    let body = generate_sh_shim(
-        Path::new("/g/pkg/cli.js"),
-        Path::new("/g/bin/to'ol"),
-        None,
-        &[],
-        ShimStyle::ContextAware,
-    );
-    assert!(body.contains(r"--shim 'to'\''ol'"), "body was:\n{body}");
-}
-
-#[test]
-fn context_aware_cmd_shim_dispatches_before_the_classic_body() {
-    let target = Path::new("/g/pkg/cli.js");
-    let shim = Path::new("/g/bin/tool.cmd");
-    let body = generate_cmd_shim(target, shim, None, &[], ShimStyle::ContextAware);
-    assert!(
-        body.contains("@IF DEFINED PNPM_SHIM_BYPASS GOTO :pnpm_shim_fallback")
-            && body.contains(r#"@IF NOT EXIST "%~dp0\.pnpm-shim-v1.exe" GOTO :pnpm_shim_fallback"#)
-            && body.contains(r#"--shim "tool" "%~f0""#),
-        "body was:\n{body}",
-    );
-    assert!(body.contains("@EXIT /B\r\n:pnpm_shim_fallback\r\n"), "body was:\n{body}");
-}
-
-#[test]
-fn context_aware_cmd_and_pwsh_shims_escape_hostile_bin_names() {
-    let body = generate_pwsh_shim(
-        Path::new("/g/pkg/cli.js"),
-        Path::new("/g/bin/to'ol"),
-        None,
-        &[],
-        ShimStyle::ContextAware,
-    );
-    assert!(body.contains("'--shim' 'to''ol'"), "body was:\n{body}");
-
-    let body = generate_cmd_shim(
-        Path::new("/g/pkg/cli.js"),
-        Path::new("/g/bin/to%ol"),
-        None,
-        &[],
-        ShimStyle::ContextAware,
-    );
-    assert!(body.contains(r#"--shim "to%%ol""#), "body was:\n{body}");
-}
-
-#[test]
-fn context_aware_pwsh_shim_dispatches_before_the_classic_body() {
-    let target = Path::new("/g/pkg/cli.js");
-    let shim = Path::new("/g/bin/tool.ps1");
-    let body = generate_pwsh_shim(target, shim, None, &[], ShimStyle::ContextAware);
-    assert!(
-        body.contains(
-            r#"if (!$env:PNPM_SHIM_BYPASS -and (Test-Path "$basedir/.pnpm-shim-v1$exe")) {"#,
-        ) && body.contains(r"'--shim' 'tool' $MyInvocation.MyCommand.Definition"),
-        "body was:\n{body}",
-    );
-    assert!(body.contains("exit $LASTEXITCODE"), "body was:\n{body}");
-}
-
-#[test]
-fn context_aware_windows_shims_preserve_bin_name_extensions() {
-    let target = Path::new("/g/pkg/cli.js");
-    let cmd = generate_cmd_shim(
-        target,
-        Path::new("/g/bin/tool.cmd.cmd"),
-        None,
-        &[],
-        ShimStyle::ContextAware,
-    );
-    let pwsh = generate_pwsh_shim(
-        target,
-        Path::new("/g/bin/tool.ps1.ps1"),
-        None,
-        &[],
-        ShimStyle::ContextAware,
-    );
-    assert!(cmd.contains(r#"--shim "tool.cmd""#), "body was:\n{cmd}");
-    assert!(pwsh.contains(r"'--shim' 'tool.ps1'"), "body was:\n{pwsh}");
+#[cfg(unix)]
+fn write_executable(path: &Path, body: &str) {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::write(path, body).unwrap();
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
 }
 
 /// A waiting shell would surface the death as exit code 128+N, which the
@@ -829,7 +963,7 @@ fn a_shim_lets_the_targets_signal_death_reach_the_caller() {
     std::fs::copy("/bin/sh", &target).expect("copy /bin/sh");
 
     let shim = dir.path().join("shim");
-    let body = generate_sh_shim(&target, &shim, None, &[], ShimStyle::Direct);
+    let body = generate_sh_shim(&target, &shim, None, &[], None);
     std::fs::write(&shim, body).expect("write the shim");
     std::fs::set_permissions(&shim, std::fs::Permissions::from_mode(0o755))
         .expect("make the shim executable");
@@ -841,4 +975,69 @@ fn a_shim_lets_the_targets_signal_death_reach_the_caller() {
 
     assert_eq!(status.signal(), Some(9), "the shim swallowed the signal, reporting {status:?}");
     assert_eq!(status.code(), None);
+}
+
+/// Where no default path is compiled in, as on Nix, `command -p` searches the
+/// caller's `PATH`. No test host behaves that way, so the shim's `command -p` is
+/// rewritten to the plain `command` such a shell amounts to.
+#[cfg(unix)]
+#[test]
+fn shim_execution_skips_node_modules_and_relative_path_entries_when_command_p_searches_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let bin_dir = plant_shimmed_tool(tmp.path());
+    let shim = bin_dir.join("tsc");
+    let body = std::fs::read_to_string(&shim).unwrap();
+    write_executable(&shim, &body.replace("command -p ", "command "));
+    let decoy_dir = plant_hijack_tree_and_decoys(tmp.path());
+    let callers_path = std::env::var("PATH").unwrap_or_default();
+    let run = |path: String, cwd: &Path| {
+        let output = std::process::Command::new(bin_dir.join("tsc-link"))
+            .env("PATH", path)
+            .current_dir(cwd)
+            .output()
+            .expect("run the shim");
+        String::from_utf8_lossy(&output.stdout).trim_end().to_owned()
+    };
+
+    assert_eq!(
+        run(format!("{}:{callers_path}", decoy_dir.display()), tmp.path()),
+        "hijacked",
+        "precondition: the rewritten shim resolves its helpers through PATH",
+    );
+    let node_modules_bin = tmp
+        .path()
+        .join("proj")
+        .join("node_modules")
+        .join(".bin");
+    std::fs::create_dir_all(node_modules_bin.parent().unwrap()).unwrap();
+    std::fs::rename(&decoy_dir, &node_modules_bin).unwrap();
+    assert_eq!(
+        run(format!("{}:{callers_path}", node_modules_bin.display()), tmp.path()),
+        "tsc-output",
+        "the shim took a helper from a node_modules entry of PATH",
+    );
+    assert_eq!(
+        run(format!(".bin:{callers_path}"), node_modules_bin.parent().unwrap()),
+        "tsc-output",
+        "the shim took a helper from a relative entry of PATH",
+    );
+    assert_eq!(
+        run(format!(":{callers_path}"), &node_modules_bin),
+        "tsc-output",
+        "the shim took a helper from an empty entry of PATH",
+    );
+    // Nothing survives the filter here, and an empty `PATH` would search the
+    // current directory, which holds the decoys.
+    let node_dir = node_modules_bin.join("node-dir");
+    std::fs::create_dir_all(&node_dir).unwrap();
+    let node = std::env::split_paths(&callers_path)
+        .map(|dir| dir.join("node"))
+        .find(|node| node.is_file())
+        .expect("node on PATH");
+    std::os::unix::fs::symlink(node, node_dir.join("node")).unwrap();
+    assert_ne!(
+        run("node-dir".to_owned(), &node_modules_bin),
+        "hijacked",
+        "the shim took a helper from the current directory",
+    );
 }

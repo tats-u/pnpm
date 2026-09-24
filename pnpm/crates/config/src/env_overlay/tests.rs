@@ -36,6 +36,18 @@ fn materialization_settings_read_from_the_environment() {
 }
 
 #[test]
+fn allow_unused_patches_reads_from_the_environment() {
+    struct EnvAllowUnusedPatches;
+    impl EnvVar for EnvAllowUnusedPatches {
+        fn var(name: &str) -> Option<String> {
+            (name == "PNPM_CONFIG_ALLOW_UNUSED_PATCHES").then(|| "true".to_owned())
+        }
+    }
+    let settings = WorkspaceSettings::from_pnpm_config_env::<EnvAllowUnusedPatches>();
+    assert_eq!(settings.allow_unused_patches, Some(true));
+}
+
+#[test]
 fn parity_settings_read_from_the_environment() {
     struct EnvParity;
     impl EnvVar for EnvParity {
@@ -73,6 +85,18 @@ fn parity_settings_read_from_the_environment() {
     assert_eq!(settings.skip_manifest_obfuscation, Some(true));
     assert_eq!(settings.sort, Some(false));
     assert_eq!(settings.use_beta_cli, Some(true));
+}
+
+#[test]
+fn progress_reads_from_the_environment() {
+    struct EnvProgress;
+    impl EnvVar for EnvProgress {
+        fn var(name: &str) -> Option<String> {
+            (name == "PNPM_CONFIG_PROGRESS").then(|| "false".to_owned())
+        }
+    }
+    let settings = WorkspaceSettings::from_pnpm_config_env::<EnvProgress>();
+    assert_eq!(settings.progress, Some(false));
 }
 
 /// An exported-but-empty `PNPM_CONFIG_STORE_DIR=` shouldn't clobber
@@ -303,4 +327,36 @@ sideEffectsCache:
     assert!(!config.side_effects_cache_read());
     assert!(!config.side_effects_cache_write());
     assert_eq!(config.remote_side_effects_cache.expect("shared cache config").org, "acme");
+}
+
+#[test]
+fn tag_version_prefix_reads_from_the_environment() {
+    struct EnvPrefix;
+    impl EnvVar for EnvPrefix {
+        fn var(name: &str) -> Option<String> {
+            (name == "PNPM_CONFIG_TAG_VERSION_PREFIX").then(|| "release-".to_owned())
+        }
+    }
+    let settings = WorkspaceSettings::from_pnpm_config_env::<EnvPrefix>();
+    assert_eq!(settings.tag_version_prefix.as_deref(), Some("release-"));
+
+    struct EnvEmptyPrefix;
+    impl EnvVar for EnvEmptyPrefix {
+        fn var(name: &str) -> Option<String> {
+            (name == "PNPM_CONFIG_TAG_VERSION_PREFIX").then(String::new)
+        }
+    }
+    let settings = WorkspaceSettings::from_pnpm_config_env::<EnvEmptyPrefix>();
+    assert_eq!(settings.tag_version_prefix.as_deref(), Some(""));
+}
+
+#[test]
+fn publish_wait_timeout_reads_from_environment() {
+    struct Env;
+    impl EnvVar for Env {
+        fn var(name: &str) -> Option<String> {
+            (name == "PNPM_CONFIG_PUBLISH_WAIT_TIMEOUT").then(|| "600000".to_owned())
+        }
+    }
+    assert_eq!(WorkspaceSettings::from_pnpm_config_env::<Env>().publish_wait_timeout, Some(600000));
 }

@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -14,6 +15,28 @@ import { DEFAULT_OPTS, REGISTRY_URL } from './utils/index.js'
 
 const pnpmBin = path.join(import.meta.dirname, '../../../pnpm/bin/pnpm.mjs')
 const testOnPosixOnly = process.platform === 'win32' ? test.skip : test
+
+test.each([undefined, '/parent/package-manager'])('pnpm exec sets package-manager environment variables (inherited: %s)', async (inherited) => {
+  prepare({})
+  const { stdout } = await execa(process.execPath, [pnpmBin, '--reporter=silent', 'exec', 'node', '-e',
+    'console.log(JSON.stringify({ npm_execpath: process.env.npm_execpath, INIT_CWD: process.env.INIT_CWD, npm_node_execpath: process.env.npm_node_execpath, NODE: process.env.NODE }))',
+  ], {
+    env: {
+      npm_execpath: inherited,
+      INIT_CWD: inherited,
+      npm_node_execpath: inherited,
+      NODE: undefined,
+    },
+  })
+
+  assert(typeof stdout === 'string')
+  expect(JSON.parse(stdout)).toStrictEqual({
+    npm_execpath: pnpmBin,
+    INIT_CWD: process.cwd(),
+    npm_node_execpath: process.execPath,
+    NODE: process.execPath,
+  })
+})
 
 test('pnpm recursive exec', async () => {
   await using server1 = await createTestIpcServer()
@@ -446,6 +469,52 @@ test('pnpm exec on single project', async () => {
 
   const { default: outputs } = await import(path.resolve('output.json'))
   expect(outputs).toStrictEqual([])
+})
+
+test("pnpm exec from a subdirectory of the project runs in the subdirectory with the project's bins", async () => {
+  const projectDirName = `project${path.delimiter}delimiter`
+  preparePackages([
+    {
+      name: projectDirName,
+      dependencies: {
+        cowsay: '1.5.0',
+      },
+    },
+  ])
+  const projectDir = path.resolve(projectDirName)
+  await execa(pnpmBin, [
+    'install',
+    '-r',
+    '--registry',
+    REGISTRY_URL,
+    '--store-dir',
+    path.resolve(DEFAULT_OPTS.storeDir),
+  ])
+  fs.writeFileSync(path.join(projectDir, '.pnp.cjs'), '')
+  const subdir = path.join(projectDir, 'subdir')
+  fs.mkdirSync(subdir)
+  process.chdir(subdir)
+
+  const execOpts = {
+    ...DEFAULT_OPTS,
+    dir: projectDir,
+    recursive: false,
+    selectedProjectsGraph: {},
+  }
+  await exec.handler(execOpts, ['cowsay', 'hi'])
+  await exec.handler(execOpts, [
+    'node',
+    '-e',
+    'require("fs").writeFileSync("context.json", JSON.stringify({ cwd: process.cwd(), packageName: process.env.PNPM_PACKAGE_NAME, nodeOptions: process.env.NODE_OPTIONS }), "utf8")',
+  ])
+
+  const context = JSON.parse(fs.readFileSync(path.join(subdir, 'context.json'), 'utf8'))
+  expect(context).toMatchObject({
+    cwd: subdir,
+    packageName: projectDirName,
+  })
+  expect(context.nodeOptions).toContain('--require=')
+  expect(context.nodeOptions).toContain('.pnp.cjs')
 })
 
 test('pnpm exec on single project should return non-zero exit code when the process fails', async () => {

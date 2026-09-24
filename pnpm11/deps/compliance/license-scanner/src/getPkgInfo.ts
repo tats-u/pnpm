@@ -1,13 +1,13 @@
 import path from 'node:path'
 
 import { resolveLicense } from '@pnpm/deps.compliance.license-resolver'
-import { depPathToFilename } from '@pnpm/deps.path'
+import { depPathToFilename, removeSuffix } from '@pnpm/deps.path'
 import { PnpmError } from '@pnpm/error'
 import { type PackageSnapshot, pkgSnapshotToResolution } from '@pnpm/lockfile.utils'
 import { readPackageJson } from '@pnpm/pkg-manifest.reader'
 import type { StoreIndex } from '@pnpm/store.index'
 import { readPackageFileMap } from '@pnpm/store.pkg-finder'
-import type { PackageManifest, RegistriesByScope } from '@pnpm/types'
+import type { PackageManifest, RegistriesByScope, SupportedArchitectures } from '@pnpm/types'
 import pLimit from 'p-limit'
 import { pathAbsolute } from 'path-absolute'
 
@@ -36,6 +36,12 @@ export interface GetPackageInfoOptions {
   virtualStoreDirMaxLength: number
   dir: string
   modulesDir: string
+  /**
+   * Lockfile-relative directories keyed by dependency path, recorded by a
+   * `nodeLinker: hoisted` install, which leaves the virtual store empty.
+   */
+  hoistedLocations?: Record<string, string[]>
+  supportedArchitectures?: SupportedArchitectures
 }
 
 export type PkgInfo = {
@@ -68,6 +74,7 @@ export async function getPkgInfo (
         storeDir: opts.storeDir,
         storeIndex: opts.storeIndex,
         lockfileDir: opts.dir,
+        supportedArchitectures: opts.supportedArchitectures,
         virtualStoreDirMaxLength: opts.virtualStoreDirMaxLength,
       }
     )
@@ -104,8 +111,8 @@ export async function getPkgInfo (
     opts.dir
   )
 
-  // TODO: fix issue that path is only correct when using node-linked=isolated
-  const packageModulePath = path.join(
+  const hoistedDir = hoistedPackageDir(opts.dir, (opts.hoistedLocations?.[pkg.depPath] ?? opts.hoistedLocations?.[removeSuffix(pkg.depPath)])?.[0])
+  const packageModulePath = hoistedDir ?? path.join(
     virtualStoreDir,
     depPathToFilename(pkg.depPath, opts.virtualStoreDirMaxLength),
     modulesDir,
@@ -138,4 +145,16 @@ export async function getPkgInfo (
   }
 
   return packageInfo
+}
+
+/**
+ * A lockfile-relative hoisted location resolved against `lockfileDir`, or
+ * `undefined` for a location that leaves it.
+ */
+function hoistedPackageDir (lockfileDir: string, location: string | undefined): string | undefined {
+  if (location == null || path.isAbsolute(location)) return undefined
+  const dir = path.join(lockfileDir, location)
+  const relative = path.relative(lockfileDir, dir)
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return undefined
+  return dir
 }

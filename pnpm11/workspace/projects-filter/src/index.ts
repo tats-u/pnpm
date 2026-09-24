@@ -67,12 +67,16 @@ export async function filterProjectsFromDir (
     engineStrict?: boolean
     nodeVersion?: string
     patterns?: string[]
+    modulesDir?: string
+    modulesDirsByProjectName?: Record<string, string>
     supportedArchitectures?: SupportedArchitectures
   }
 ): Promise<FilterProjectsFromDirResult> {
   const allProjects = await findWorkspaceProjects(workspaceDir, {
     engineStrict: opts?.engineStrict,
     patterns: opts.patterns,
+    modulesDir: opts.modulesDir,
+    modulesDirsByProjectName: opts.modulesDirsByProjectName,
     sharedWorkspaceLockfile: opts.sharedWorkspaceLockfile,
     nodeVersion: opts.nodeVersion,
     supportedArchitectures: opts.supportedArchitectures,
@@ -240,9 +244,12 @@ async function _filterGraph<Pkg extends BaseProject> (
         Object.keys(projectsGraph) as ProjectRootDir[],
         selector.diff,
         {
+          allProjects: Object.values(projectsGraph).map((node) => node.package),
           changedFilesIgnorePattern: opts.changedFilesIgnorePattern,
           testPattern: opts.testPattern,
-          workspaceDir: selector.parentDir ?? opts.workspaceDir,
+          useGlobDirFiltering: selector.useGlobDirFiltering ?? opts.useGlobDirFiltering,
+          workingDir: selector.parentDir,
+          workspaceDir: opts.workspaceDir,
         }
       )
       selectEntries({

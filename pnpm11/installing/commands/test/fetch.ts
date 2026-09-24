@@ -8,7 +8,7 @@ import { prepare } from '@pnpm/prepare'
 import { closeAllStoreIndexes } from '@pnpm/store.index'
 import { fixtures } from '@pnpm/test-fixtures'
 import { REGISTRY_MOCK_PORT } from '@pnpm/testing.registry-mock'
-import { finishWorkers } from '@pnpm/worker'
+import { restartWorkerPool } from '@pnpm/worker'
 import { rimrafSync } from '@zkochan/rimraf'
 
 const REGISTRY_URL = `http://localhost:${REGISTRY_MOCK_PORT}`
@@ -105,6 +105,37 @@ test('fetch production dependencies', async () => {
 
   project.storeHasNot('is-negative')
   project.storeHas('is-positive')
+})
+
+test('fetch production dependencies leaves out a devDependency that only satisfies an optional peer', async () => {
+  const project = prepare({
+    dependencies: { '@pnpm.e2e/abc-optional-peers': '1.0.0' },
+    devDependencies: { '@pnpm.e2e/peer-a': '1.0.0', '@pnpm.e2e/peer-c': '1.0.0' },
+  })
+  const storeDir = path.resolve('store')
+  await install.handler({
+    ...DEFAULT_OPTIONS,
+    cacheDir: path.resolve('cache'),
+    dir: process.cwd(),
+    linkWorkspacePackages: true,
+    storeDir,
+  })
+
+  rimrafSync(path.resolve(project.dir(), 'node_modules'))
+  rimrafSync(path.resolve(project.dir(), './package.json'))
+
+  await fetch.handler({
+    ...DEFAULT_OPTIONS,
+    cacheDir: path.resolve('cache'),
+    dev: false,
+    dir: process.cwd(),
+    production: true,
+    storeDir,
+  })
+
+  const virtualStore = fs.readdirSync('node_modules/.pnpm')
+  expect(virtualStore.filter((dir) => dir.startsWith('@pnpm.e2e+peer-c@'))).toHaveLength(0)
+  expect(virtualStore.filter((dir) => dir.startsWith('@pnpm.e2e+peer-a@'))).toHaveLength(1)
 })
 
 test('fetch only dev dependencies', async () => {
@@ -209,7 +240,7 @@ test('fetch populates global virtual store links/', async () => {
   })
 
   // Drain workers and close SQLite connections before removing the store (required on Windows)
-  await finishWorkers()
+  await restartWorkerPool()
   closeAllStoreIndexes()
 
   // Remove the store — simulate a cold start with only the lockfile

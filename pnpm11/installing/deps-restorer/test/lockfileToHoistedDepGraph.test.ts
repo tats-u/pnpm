@@ -31,9 +31,10 @@ function craftedLockfile (alias: string): LockfileObject {
   } as unknown as LockfileObject
 }
 
-// `force: true` skips the installability check so the walk reaches the
-// alias sink directly; the store controller throws if touched, proving
-// the alias is rejected before any fetch or filesystem work.
+// `includeIncompatiblePackages: true` skips the installability check so
+// the walk reaches the alias sink directly; the store controller throws
+// if touched, proving the alias is rejected before any fetch or
+// filesystem work.
 function hoistedOpts (lockfileDir: string): Parameters<typeof lockfileToHoistedDepGraph>[2] {
   const unreachable = (name: string) => () => {
     throw new Error(`${name} must not be reached for a rejected alias`)
@@ -42,6 +43,7 @@ function hoistedOpts (lockfileDir: string): Parameters<typeof lockfileToHoistedD
     autoInstallPeers: false,
     engineStrict: false,
     force: true,
+    includeIncompatiblePackages: true,
     importerIds: ['.'],
     include: { dependencies: true, devDependencies: true, optionalDependencies: true },
     ignoreScripts: false,
@@ -140,13 +142,15 @@ function peerVariantLockfile (): LockfileObject {
 // per variant, where every collapsed package funnels into one.
 test('lockfileToHoistedDepGraph keeps file-dep peer variants apart', async () => {
   const dir = tempDir(false)
+  const lockfile = fileVariantLockfile()
   const opts = hoistedOpts(dir)
+  opts.importerIds = Object.keys(lockfile.importers)
   opts.storeController = {
     fetchPackage: () => ({ filesIndexFile: '' }),
     getFilesIndexFilePath: () => ({ filesIndexFile: '' }),
   } as unknown as typeof opts.storeController
 
-  const { graph } = await lockfileToHoistedDepGraph(fileVariantLockfile(), null, opts)
+  const { graph } = await lockfileToHoistedDepGraph(lockfile, null, opts)
 
   const compDirs = Object.keys(graph).filter((dir) => path.basename(dir) === 'comp')
   expect(compDirs).toHaveLength(2)
@@ -185,6 +189,47 @@ function fileVariantLockfile (): LockfileObject {
       'comp@file:comp(peer@2.0.0)': compVariant('2.0.0'),
       'peer@1.0.0': { resolution: { integrity: 'sha512-deadbeef' } },
       'peer@2.0.0': { resolution: { integrity: 'sha512-deadbeef' } },
+    },
+  } as unknown as LockfileObject
+}
+
+test('lockfileToHoistedDepGraph does not fetch anything for the previous graph', async () => {
+  const dir = tempDir(false)
+  const opts = hoistedOpts(dir)
+  const fetchedPkgIds: string[] = []
+  opts.skipped = new Set(['opt@1.0.0'])
+  opts.storeController = {
+    fetchPackage: ({ pkg }: { pkg: { id: string } }) => {
+      fetchedPkgIds.push(pkg.id)
+      return { filesIndexFile: '' }
+    },
+    getFilesIndexFilePath: () => ({ filesIndexFile: '' }),
+  } as unknown as typeof opts.storeController
+
+  const lockfile = skippedOptionalLockfile()
+  const { prevGraph } = await lockfileToHoistedDepGraph(lockfile, lockfile, opts)
+
+  expect(fetchedPkgIds).toStrictEqual(['a@1.0.0'])
+  const modulesDir = path.join(dir, 'node_modules')
+  expect(Object.keys(prevGraph!).sort()).toStrictEqual([
+    path.join(modulesDir, 'a'),
+    path.join(modulesDir, 'opt'),
+  ])
+})
+
+function skippedOptionalLockfile (): LockfileObject {
+  return {
+    lockfileVersion: '9.0',
+    importers: {
+      '.': {
+        dependencies: { a: '1.0.0' },
+        optionalDependencies: { opt: '1.0.0' },
+        specifiers: { a: '1.0.0', opt: '1.0.0' },
+      },
+    },
+    packages: {
+      'a@1.0.0': { resolution: { integrity: 'sha512-deadbeef' } },
+      'opt@1.0.0': { resolution: { integrity: 'sha512-deadbeef' }, optional: true },
     },
   } as unknown as LockfileObject
 }

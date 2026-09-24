@@ -45,7 +45,7 @@ export class FetchError extends PnpmError {
     if (request.authHeaderValue) {
       _request.authHeaderValue = hideAuthInformation(request.authHeaderValue)
     }
-    const message = `GET ${redactUrlCredentials(request.url)}: ${response.statusText} - ${response.status}`
+    const message = `GET ${redactUrlSecrets(request.url)}: ${response.statusText} - ${response.status}`
     // NOTE: For security reasons, some registries respond with 404 on authentication errors as well.
     // So we print authorization info on 404 errors as well.
     if (response.status === 401 || response.status === 403 || response.status === 404) {
@@ -63,6 +63,41 @@ export class FetchError extends PnpmError {
 }
 
 /**
+ * undici codes for a request that made no progress for `fetchTimeout`: no
+ * response head, or a body that stopped arriving.
+ */
+const FETCH_TIMEOUT_ERROR_CODES = new Set(['UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT'])
+
+/**
+ * undici fails a timed-out request with a bare `fetch failed` or `terminated`
+ * and keeps the timeout only in the error's `cause` chain.
+ */
+export function isFetchTimeoutError (error: unknown): boolean {
+  let current = error
+  for (let depth = 0; depth < 8 && current != null && typeof current === 'object'; depth++) {
+    const { code, cause } = current as { code?: unknown, cause?: unknown }
+    if (typeof code === 'string' && FETCH_TIMEOUT_ERROR_CODES.has(code)) return true
+    current = cause
+  }
+  return false
+}
+
+export class FetchTimeoutError extends PnpmError {
+  constructor (
+    code: string,
+    url: string,
+    timeout: number | undefined,
+    opts: { attempts?: number, cause: unknown }
+  ) {
+    const reason = timeout == null ? 'waiting for data' : `no data received for ${timeout}ms`
+    super(code, `GET ${redactUrlForDisplay(url)}: timed out, ${reason}`, {
+      ...opts,
+      hint: 'The registry stopped responding. If it is just slow, increase the fetchTimeout setting.',
+    })
+  }
+}
+
+/**
  * Strip `user:pass@` (or `user@`) userinfo that follows a URL scheme in any
  * text, e.g. `GET https://user:pass@host/pkg: …` → `GET https://host/pkg: …`.
  * A registry configured as `https://user:pass@host/` would otherwise leak its
@@ -75,6 +110,32 @@ export class FetchError extends PnpmError {
  * a ReDoS vector, and the scan strips up to the **last** `@` in the authority
  * so a raw `@` inside the password (`user:p@ss@host`) doesn't leak its tail.
  */
+/**
+ * A request URL made safe to print: its `user:pass@` userinfo and control
+ * characters redacted ({@link redactAndSanitize}), then everything from the
+ * query or fragment onwards dropped — a signed tarball or registry URL
+ * carries a reusable token there, which credential redaction alone keeps.
+ *
+ * `[hidden]` when the cut would leave credential material behind. A password
+ * containing `?` or `#` defeats the userinfo scan — it reads the `?` as the
+ * end of the authority and leaves the whole `user:pa?ss@host` in place — so
+ * cutting there would publish the password's prefix. The authority is
+ * therefore checked before the cut, not after: any `@` still in front of the
+ * path means the userinfo survived.
+ *
+ * Cuts rather than re-rendering through `URL`, unlike
+ * {@link redactUrlForDisplay}: that round-trip normalizes the spelling
+ * (`https://host` gains a trailing slash, percent-escapes change case), and
+ * an error message should echo the URL the request was given.
+ */
+function redactUrlSecrets (url: string): string {
+  const sanitized = redactAndSanitize(url)
+  const schemeEnd = sanitized.indexOf('://')
+  const afterScheme = schemeEnd === -1 ? sanitized : sanitized.slice(schemeEnd + '://'.length)
+  if (afterScheme.split('/')[0].includes('@')) return '[hidden]'
+  return sanitized.split(/[?#]/)[0]
+}
+
 export function redactUrlCredentials (text: string): string {
   let result = ''
   let cursor = 0

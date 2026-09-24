@@ -25,6 +25,7 @@ import { map as mapValues } from 'ramda'
 import { quoteAndJoin } from './quoteAndJoin.js'
 
 export type OptionsFromRootManifest = {
+  scriptShell?: string
   allowedDeprecatedVersions?: AllowedDeprecatedVersions
   allowUnusedPatches?: boolean
   overrides?: Record<string, string>
@@ -58,7 +59,13 @@ interface ReplaceEnvInSettingsOptions {
   expandRequestDestinationEnv: boolean
 }
 
-const REQUEST_DESTINATION_SCALAR_KEYS = new Set(['pnprServer', 'registry', 'httpProxy', 'httpsProxy', 'noProxy', 'proxy', 'noproxy'])
+/**
+ * Scalar settings that pick where a request goes or what it carries. A
+ * repo-controlled file may not resolve an environment variable into either,
+ * since the one lets it choose the host and the other lets it send that host
+ * the variable's value.
+ */
+const REQUEST_SCALAR_KEYS = new Set(['pnprServer', 'registry', 'httpProxy', 'httpsProxy', 'noProxy', 'proxy', 'noproxy', 'userAgent'])
 
 export function getOptionsFromPnpmSettings (
   manifestDir: string | undefined,
@@ -77,6 +84,9 @@ export function getOptionsFromPnpmSettings (
   const settings: OptionsFromRootManifest = replaceEnvInSettings(pnpmSettings, {
     expandRequestDestinationEnv: opts.expandRequestDestinationEnv ?? false,
   })
+  if (manifestDir != null && settings.scriptShell != null) {
+    settings.scriptShell = resolveScriptShell(manifestDir, settings.scriptShell)
+  }
   if (settings.overrides) {
     assertValidOverrides(settings.overrides)
     if (Object.keys(settings.overrides).length === 0) {
@@ -98,6 +108,9 @@ export function getOptionsFromPnpmSettings (
       settings.patchedDependencies[dep] = path.join(manifestDir, patchFile)
     }
   }
+  if (pnpmSettings.nodeDownloadMirrors != null) {
+    assertStringRecord(pnpmSettings.nodeDownloadMirrors, 'nodeDownloadMirrors')
+  }
   translateRegistrySettings(settings)
   translateUpdateSettings(pnpmSettings, settings)
   translateAuditSettings(pnpmSettings, settings)
@@ -109,22 +122,46 @@ export function getOptionsFromPnpmSettings (
   return settings
 }
 
-/** The fields a `tasks` entry may carry. Anything else is a typo. */
-const TASK_SETTING_FIELDS = new Set(['concurrency', 'dependsOn'])
+function resolveScriptShell (manifestDir: string, scriptShell: string): string {
+  if (path.isAbsolute(scriptShell) || (!scriptShell.includes('/') && !scriptShell.includes('\\'))) {
+    return scriptShell
+  }
+  return path.join(manifestDir, scriptShell)
+}
+
+/** The fields of a `tasks` entry that this version of pnpm reads. */
+const TASK_SETTING_FIELDS = ['concurrency', 'dependsOn']
+
+/**
+ * The field of {@link TASK_SETTING_FIELDS} that {@link field} misspells, if
+ * any. `pnpm-workspace.yaml` is one format across pnpm 11 and 12, so a field
+ * this version does not read may simply be one only pnpm 12 acts on, and
+ * rejecting every such field would make a pnpm 12 workspace unreadable here.
+ * A field differing from one of ours only in case is the exception: no pnpm
+ * version declares two settings that close, so it is a typo.
+ */
+function misspelledTaskSettingField (field: string): string | undefined {
+  if (TASK_SETTING_FIELDS.includes(field)) return undefined
+  return TASK_SETTING_FIELDS.find((known) => known.toLowerCase() === field.toLowerCase())
+}
 
 // The section feeds the task-graph builder of `pnpm -r run`, which reads it
 // without further checks — a malformed entry has to be rejected here rather
-// than surface as a scheduling bug far from the setting that produced it.
+// than surface as a scheduling bug far from the setting that produced it. A
+// misspelled `dependsOn` is the costly one: the entry still exists, so the task
+// takes the empty dependency list an entry without `dependsOn` declares, and
+// runs before what it meant to wait for.
 function assertValidTasks (tasks: unknown): asserts tasks is NonNullable<PnpmSettings['tasks']> {
   assertObjectSetting(tasks, 'tasks')
   for (const [taskName, task] of Object.entries(tasks as Record<string, unknown>)) {
     const taskPath = `tasks['${taskName}']`
     assertObjectSetting(task, taskPath)
     for (const field of Object.keys(task as Record<string, unknown>)) {
-      if (TASK_SETTING_FIELDS.has(field)) continue
+      const misspelled = misspelledTaskSettingField(field)
+      if (misspelled == null) continue
       throw new PnpmError('INVALID_SETTING',
         `The "${taskPath}.${field}" setting is not a known task setting.`,
-        { hint: `A task declares ${quoteAndJoin([...TASK_SETTING_FIELDS])}.` })
+        { hint: `Did you mean "${misspelled}"?` })
     }
     const concurrency = (task as { concurrency?: unknown }).concurrency
     if (concurrency != null && (!Number.isInteger(concurrency) || (concurrency as number) < 1)) {
@@ -628,6 +665,13 @@ function assertString (value: unknown, settingName: string): asserts value is st
   }
 }
 
+function assertStringRecord (value: unknown, settingName: string): void {
+  assertObjectSetting(value, settingName)
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    assertString(item, `${settingName}.${key}`)
+  }
+}
+
 // Not an `asserts` guard on purpose: it only rejects malformed shapes at
 // runtime, without narrowing away the section's declared type at the call site.
 function assertObjectSetting (value: unknown, settingName: string): void {
@@ -644,7 +688,7 @@ function replaceEnvInSettings (
   for (const [key, value] of Object.entries(settings)) {
     const newKey = envReplace(key, process.env)
     if (typeof value === 'string') {
-      if (REQUEST_DESTINATION_SCALAR_KEYS.has(newKey) && !opts.expandRequestDestinationEnv && hasEnvPlaceholder(value)) continue
+      if (REQUEST_SCALAR_KEYS.has(newKey) && !opts.expandRequestDestinationEnv && hasEnvPlaceholder(value)) continue
       // @ts-expect-error
       newSettings[newKey as keyof PnpmSettings] = envReplace(value, process.env)
     } else if (newKey === 'namedRegistries' || (newKey === 'registries' && isScopeRouteMap(value))) {

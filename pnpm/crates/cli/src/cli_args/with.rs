@@ -13,13 +13,6 @@
 //! version / range / dist-tag spec, which it resolves, installs into the
 //! global virtual store, and spawns.
 
-use clap::Args;
-use derive_more::{Display, Error};
-use miette::{Context, Diagnostic, IntoDiagnostic};
-use pnpm_config::Config;
-use pnpm_reporter::Reporter;
-use std::{path::PathBuf, process::Command};
-
 use crate::{
     cli_args::package_manager::PACKAGE_MANAGER_SWITCH_ENV_VARS,
     engine_pm::{
@@ -29,6 +22,12 @@ use crate::{
     },
     path_env::{BadPathDir, prepend_dirs_to_path, set_command_path},
 };
+use clap::Args;
+use derive_more::{Display, Error};
+use miette::{Context, Diagnostic, IntoDiagnostic};
+use pnpm_config::Config;
+use pnpm_reporter::Reporter;
+use std::{path::PathBuf, process::Command};
 
 /// Errors specific to `pacquet with`. The codes carry the shared
 /// `ERR_PNPM_` prefix.
@@ -79,6 +78,7 @@ impl WithArgs {
         let engine = Box::pin(provision::<Reporter>(config, PackageManager::Pnpm, spec)).await?;
 
         let status = spawn_pnpm(&engine.bin_dirs, args, PackageManagerCheck::Disabled)?;
+        drop(engine);
         if !status.success() {
             // Propagate the child's exit code. A signal-terminated child
             // has no code; fall back to 1, matching pnpm's `exitCode ?? 1`.
@@ -107,16 +107,19 @@ where
     Arg: AsRef<std::ffi::OsStr>,
 {
     let bin_dir = bin_dirs.first().expect("an installed engine has a bin directory");
-    let program = engine_bin(bin_dir, "pnpm").ok_or_else(|| EngineError::MissingEngineBin {
-        name: "pnpm",
-        dir: bin_dir.display().to_string(),
-    })?;
+    let program = engine_bin(bin_dir, "pnpm")
+        .ok_or_else(|| EngineError::MissingEngineBin {
+            name: "pnpm",
+            dir: bin_dir.display().to_string(),
+        })?;
 
     let mut cmd = Command::new(program);
     cmd.args(args);
     configure_pnpm_environment(&mut cmd, bin_dirs, package_manager_check)?;
 
-    cmd.status().into_diagnostic().wrap_err("run the requested pnpm version")
+    cmd.status()
+        .into_diagnostic()
+        .wrap_err("run the requested pnpm version")
 }
 
 fn configure_pnpm_environment(

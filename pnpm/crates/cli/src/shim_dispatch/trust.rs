@@ -83,7 +83,10 @@ pub(super) fn append_trust_decision(
         "allow": allow,
         "decidedAt": decided_at,
     });
-    let mut file = std::fs::OpenOptions::new().create(true).append(true).open(trust_file)?;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(trust_file)?;
     writeln!(file, "{record}")
 }
 
@@ -92,11 +95,15 @@ pub(super) fn append_trust_decision(
 /// was interrupted) — the caller falls back to the global target and
 /// records nothing, so the next interactive invocation asks again.
 pub(super) fn prompt_for_trust(project_key: &str, name: &str) -> Option<bool> {
-    if is_ci::cached() || !std::io::stdin().is_terminal() {
+    if pnpm_config::is_ci() || !std::io::stdin().is_terminal() {
         return None;
     }
     let prompt = format!(
         "The project at \"{project_key}\" provides its own \"{name}\", which will be used instead of the globally installed one.\nDo you trust this project?",
     );
-    dialoguer::Confirm::new().with_prompt(prompt).default(false).interact().ok()
+    dialoguer::Confirm::new()
+        .with_prompt(prompt)
+        .default(false)
+        .interact()
+        .ok()
 }

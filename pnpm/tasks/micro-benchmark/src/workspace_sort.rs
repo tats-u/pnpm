@@ -48,15 +48,15 @@ impl BaseProject for SyntheticRef<'_> {
     fn manifest_name(&self) -> Option<&str> {
         Some(&self.0.name)
     }
+
+    fn merged_dependencies(&self, _ignore_dev_deps: bool) -> Vec<(String, String)> {
+        self.0.dependencies.clone()
+    }
 }
 
 impl GraphProject for SyntheticRef<'_> {
     fn manifest_version(&self) -> Option<&str> {
         Some("1.0.0")
-    }
-
-    fn merged_dependencies(&self, _ignore_dev_deps: bool) -> Vec<(String, String)> {
-        self.0.dependencies.clone()
     }
 }
 
@@ -84,32 +84,39 @@ pub fn bench_workspace_sort(criterion: &mut Criterion) {
     let projects = synthetic_workspace();
     let mut group = criterion.benchmark_group("workspace_sort");
     group.bench_function("chained_projects", |bencher| {
-        bencher.iter(|| {
-            let graph = create_projects_graph(
-                projects.iter().map(SyntheticRef).collect(),
-                &CreateProjectsGraphOptions {
-                    link_workspace_packages: Some(true),
-                    ..CreateProjectsGraphOptions::default()
-                },
-            )
-            .graph;
-            let dirs: Vec<PathBuf> = graph.keys().cloned().collect();
-            let included: HashSet<&Path> = dirs.iter().map(PathBuf::as_path).collect();
-            let edges: HashMap<PathBuf, Vec<PathBuf>> = graph
-                .iter()
-                .map(|(dir, node)| {
-                    let dependencies = node
-                        .dependencies
-                        .iter()
-                        .filter(|dependency| included.contains(dependency.as_path()))
-                        .cloned()
-                        .collect();
-                    (dir.clone(), dependencies)
-                })
-                .collect();
-            let sequenced = graph_sequencer(&edges, &dirs);
-            black_box((sequenced.cycles.len(), sequenced.order.len()))
-        });
+        bencher.iter(|| black_box(sort_workspace(&projects)));
     });
     group.finish();
+}
+
+fn sort_workspace(projects: &[SyntheticProject]) -> (usize, usize) {
+    let graph = create_projects_graph(
+        projects
+            .iter()
+            .map(SyntheticRef)
+            .collect(),
+        &CreateProjectsGraphOptions {
+            link_workspace_packages: Some(true),
+            ..CreateProjectsGraphOptions::default()
+        },
+    )
+    .graph;
+    let dirs: Vec<PathBuf> = graph.keys().cloned().collect();
+    let included: HashSet<&Path> = dirs
+        .iter()
+        .map(PathBuf::as_path)
+        .collect();
+    let edges: HashMap<PathBuf, Vec<PathBuf>> = graph
+        .iter()
+        .map(|(dir, node)| {
+            let dependencies = node.dependencies
+                .iter()
+                .filter(|dependency| included.contains(dependency.as_path()))
+                .cloned()
+                .collect();
+            (dir.clone(), dependencies)
+        })
+        .collect();
+    let sequenced = graph_sequencer(&edges, &dirs);
+    (sequenced.cycles.len(), sequenced.order.len())
 }

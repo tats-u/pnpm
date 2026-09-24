@@ -13,8 +13,9 @@ import {
   RegistryResponseError,
 } from '@pnpm/resolving.npm-resolver'
 import type { PkgResolutionId } from '@pnpm/resolving.resolver-base'
+import { StoreIndex, storeIndexKey } from '@pnpm/store.index'
 import { fixtures } from '@pnpm/test-fixtures'
-import type { ProjectRootDir, RegistriesByScope } from '@pnpm/types'
+import type { DependencyManifest, ProjectRootDir, RegistriesByScope } from '@pnpm/types'
 import { loadJsonFileSync } from 'load-json-file'
 import { omit } from 'ramda'
 import { temporaryDirectory } from 'tempy'
@@ -82,7 +83,7 @@ test('resolveFromNpm()', async () => {
 
   // The resolve function does not wait for the package meta cache file to be saved
   // so we must delay for a bit in order to read it
-  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'https%3A+registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
   expect(meta.name).toBeTruthy()
   expect(meta.versions).toBeTruthy()
   expect(meta['dist-tags']).toBeTruthy()
@@ -501,7 +502,7 @@ test('resolveFromNpm() does not save mutated meta to the cache', async () => {
 
   // The resolve function does not wait for the package meta cache file to be saved
   // so we must delay for a bit in order to read it
-  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'https%3A+registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
   expect(meta.versions['1.0.0'].version).toBe('1.0.0')
 })
 
@@ -523,7 +524,7 @@ test('resolveFromNpm() should save metadata to a unique file when the package na
 
   // The resolve function does not wait for the package meta cache file to be saved
   // so we must delay for a bit in order to read it
-  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, `registry.npmjs.org/JSON_${createHexHash('JSON')}.jsonl`)) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, `https%3A+registry.npmjs.org/JSON_${createHexHash('JSON')}.jsonl`)) // eslint-disable-line @typescript-eslint/no-explicit-any
   expect(meta.name).toBeTruthy()
   expect(meta.versions).toBeTruthy()
   expect(meta['dist-tags']).toBeTruthy()
@@ -1290,7 +1291,7 @@ test('offline resolution fails when package meta not found in the store', async 
 
   await expect(resolveFromNpm({ alias: 'is-positive', bareSpecifier: '1.0.0' }, {})).rejects
     .toThrow(
-      new PnpmError('NO_OFFLINE_META', `Failed to resolve is-positive@1.0.0 in package mirror ${path.join(cacheDir, ABBREVIATED_META_DIR, 'registry.npmjs.org/is-positive.jsonl')}`)
+      new PnpmError('NO_OFFLINE_META', `Failed to resolve is-positive@1.0.0 in package mirror ${path.join(cacheDir, ABBREVIATED_META_DIR, 'https%3A+registry.npmjs.org/is-positive.jsonl')}`)
     )
 })
 
@@ -1648,7 +1649,7 @@ test('resolve when tarball URL is requested from the registry', async () => {
 
   // The resolve function does not wait for the package meta cache file to be saved
   // so we must delay for a bit in order to read it
-  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'https%3A+registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
   expect(meta.name).toBeTruthy()
   expect(meta.versions).toBeTruthy()
   expect(meta['dist-tags']).toBeTruthy()
@@ -1681,7 +1682,7 @@ test('resolve when tarball URL is requested from the registry and alias is not s
 
   // The resolve function does not wait for the package meta cache file to be saved
   // so we must delay for a bit in order to read it
-  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'https%3A+registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
   expect(meta.name).toBeTruthy()
   expect(meta.versions).toBeTruthy()
   expect(meta['dist-tags']).toBeTruthy()
@@ -2024,6 +2025,59 @@ test('preferWorkspacePackages: use version from the workspace even if there is n
     })
   )
   expect(resolveResult!.latest).toBeUndefined()
+})
+
+test.each([
+  ['1.3.0+423423', 'workspace', 'link:is-positive'],
+  ['1.2.0+423423', 'npm-registry', 'is-positive@1.3.0'],
+  ['1.3.0-beta.0+423423', 'npm-registry', 'is-positive@1.3.0'],
+])('resolves workspace version %s by semver precedence and range', async (localVersion, resolvedVia, id) => {
+  getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+    .intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, {
+      ...isPositiveMeta,
+      'dist-tags': { latest: '1.3.0' },
+      versions: {
+        '1.3.0': {
+          name: 'is-positive',
+          version: '1.3.0',
+          dist: {
+            integrity: isPositiveMeta.versions['1.0.0'].dist.integrity,
+            tarball: 'https://registry.npmjs.org/is-positive/-/is-positive-1.3.0.tgz',
+          },
+        },
+      },
+    })
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+  })
+  const resolveResult = await resolveFromNpm({
+    alias: 'is-positive',
+    bareSpecifier: '^1.0.0',
+  }, {
+    projectDir: '/home/istvan/src',
+    workspacePackages: new Map([
+      ['is-positive', new Map([
+        [localVersion, {
+          rootDir: '/home/istvan/src/is-positive' as ProjectRootDir,
+          manifest: {
+            name: 'is-positive',
+            version: localVersion,
+          },
+        }],
+      ])],
+    ]),
+  })
+
+  expect(resolveResult).toStrictEqual(
+    expect.objectContaining({
+      resolvedVia,
+      id,
+    })
+  )
 })
 
 test('preferWorkspacePackages: still consults the registry when several workspace copies share a name', async () => {
@@ -2742,6 +2796,139 @@ test('workspace protocol: resolution fails if there is no matching local package
   expect(err.message).toBe(`In ${path.relative(process.cwd(), projectDir)}: No matching version found for is-positive@workspace:^3.0.0 inside the workspace. Available versions: 2.0.0`)
 })
 
+test.each([
+  'workspace:0.5.6-next.3+f60facc',
+  'workspace:0.5.6-next.3',
+  'workspace:^0.5.6-next.3+f60facc',
+  'workspace:^0.5.6-next.3',
+  'workspace:~0.5.6-next.3+f60facc',
+  'workspace:*',
+])('workspace protocol: resolves a package with build metadata in version (%s)', async (bareSpecifier) => {
+  const cacheDir = temporaryDirectory()
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir,
+    registriesByScope,
+  })
+
+  const projectDir = '/home/istvan/src'
+  const workspacePackages = new Map([
+    ['is-positive', new Map([
+      ['0.5.6-next.3+f60facc', {
+        rootDir: '/home/istvan/src/is-positive' as ProjectRootDir,
+        manifest: {
+          name: 'is-positive',
+          version: '0.5.6-next.3+f60facc',
+        },
+      }],
+    ])],
+  ])
+
+  const resolution = await resolveFromNpm({ alias: 'is-positive', bareSpecifier }, {
+    projectDir,
+    workspacePackages,
+  })
+
+  expect(resolution).toBeTruthy()
+  expect(resolution!.resolvedVia).toBe('workspace')
+  expect(resolution!.manifest.version).toBe('0.5.6-next.3+f60facc')
+})
+
+test('workspace protocol: resolution fails with deterministic ordinal ordering for available versions with equal semver precedence', async () => {
+  const cacheDir = temporaryDirectory()
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir,
+    registriesByScope,
+  })
+
+  const projectDir = '/home/istvan/src'
+  const workspacePackages = new Map([
+    ['is-positive', new Map([
+      ['1.0.0+B', {
+        rootDir: '/home/istvan/src/is-positive-b' as ProjectRootDir,
+        manifest: {
+          name: 'is-positive',
+          version: '1.0.0+B',
+        },
+      }],
+      ['1.0.0+a', {
+        rootDir: '/home/istvan/src/is-positive-a' as ProjectRootDir,
+        manifest: {
+          name: 'is-positive',
+          version: '1.0.0+a',
+        },
+      }],
+    ])],
+  ])
+
+  let err!: Error
+  try {
+    await resolveFromNpm({ alias: 'is-positive', bareSpecifier: 'workspace:^2.0.0' }, {
+      projectDir,
+      workspacePackages,
+    })
+  } catch (_err: any) { // eslint-disable-line
+    err = _err
+  }
+
+  expect(err).toBeTruthy()
+  expect(err.message).toBe(`In ${path.relative(process.cwd(), projectDir)}: No matching version found for is-positive@workspace:^2.0.0 inside the workspace. Available versions: 1.0.0+a, 1.0.0+B`)
+})
+
+
+test('workspace protocol: resolution fails listing available versions that are not valid semver', async () => {
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+  })
+
+  const projectDir = '/home/istvan/src'
+  const workspacePackages = new Map([
+    ['is-positive', new Map(['1', '2'].map((version) => [version, {
+      rootDir: `/home/istvan/src/is-positive-${version}` as ProjectRootDir,
+      manifest: {
+        name: 'is-positive',
+        version,
+      },
+    }]))],
+  ])
+
+  await expect(resolveFromNpm({ alias: 'is-positive', bareSpecifier: 'workspace:^5.0.0' }, {
+    projectDir,
+    workspacePackages,
+  })).rejects.toThrow(`In ${path.relative(process.cwd(), projectDir)}: No matching version found for is-positive@workspace:^5.0.0 inside the workspace. Available versions: 2, 1`)
+})
+
+test.each([
+  [['10.0.0', '100', '2.0.0', '3', '\u{E000}', '\u{10000}']],
+  [['100', '\u{10000}', '2.0.0', '3', '10.0.0', '\u{E000}']],
+  [['\u{E000}', '3', '2.0.0', '100', '\u{10000}', '10.0.0']],
+])('workspace protocol: resolution fails listing semver versions before non-semver ones (insertion order: %j)', async (versions) => {
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+  })
+
+  const projectDir = '/home/istvan/src'
+  const workspacePackages = new Map([
+    ['is-positive', new Map(versions.map((version) => [version, {
+      rootDir: `/home/istvan/src/is-positive-${version}` as ProjectRootDir,
+      manifest: {
+        name: 'is-positive',
+        version,
+      },
+    }]))],
+  ])
+
+  await expect(resolveFromNpm({ alias: 'is-positive', bareSpecifier: 'workspace:^50.0.0' }, {
+    projectDir,
+    workspacePackages,
+  })).rejects.toThrow('Available versions: 10.0.0, 2.0.0, \u{E000}, \u{10000}, 3, 100')
+})
+
 test('workspace protocol: resolution fails if there are no local packages', async () => {
   const cacheDir = temporaryDirectory()
   const { resolveFromNpm } = createResolveFromNpm({
@@ -2801,7 +2988,7 @@ test('resolveFromNpm() should always return the name of the package that is spec
 
   // The resolve function does not wait for the package meta cache file to be saved
   // so we must delay for a bit in order to read it
-  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const meta = await retryLoadJsonFile<any>(path.join(cacheDir, ABBREVIATED_META_DIR, 'https%3A+registry.npmjs.org/is-positive.jsonl')) // eslint-disable-line @typescript-eslint/no-explicit-any
   expect(meta.name).toBeTruthy()
   expect(meta.versions).toBeTruthy()
   expect(meta['dist-tags']).toBeTruthy()
@@ -3171,3 +3358,332 @@ test('resolve from registry when workspace package version does not match the re
   expect(resolveResult!.resolvedVia).toBe('npm-registry')
   expect(resolveResult!.id).toBe('is-positive@3.1.0')
 })
+
+test('resolve a tag from the registry when the workspace version is not valid semver', async () => {
+  getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+    .intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, isPositiveMeta)
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+  })
+  const resolveResult = await resolveFromNpm({ alias: 'is-positive', bareSpecifier: 'latest' }, {
+    projectDir: '/home/istvan/src',
+    workspacePackages: new Map([
+      ['is-positive', new Map([
+        ['1', {
+          rootDir: '/home/istvan/src/is-positive' as ProjectRootDir,
+          manifest: {
+            name: 'is-positive',
+            version: '1',
+          },
+        }],
+      ])],
+    ]),
+  })
+
+  expect(resolveResult!.resolvedVia).toBe('npm-registry')
+  expect(resolveResult!.id).toBe('is-positive@3.1.0')
+})
+
+test.each([
+  ['workspace:*', '1'],
+  ['workspace:^', '1'],
+  ['workspace:*', '1.0'],
+])('workspace protocol: %s resolves to a local package at the non-semver version %s', async (bareSpecifier, version) => {
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+  })
+  const resolveResult = await resolveFromNpm({ alias: 'is-positive', bareSpecifier }, {
+    calcSpecifier: true,
+    projectDir: '/home/istvan/src',
+    workspacePackages: new Map([
+      ['is-positive', new Map([
+        [version, {
+          rootDir: '/home/istvan/src/is-positive' as ProjectRootDir,
+          manifest: {
+            name: 'is-positive',
+            version,
+          },
+        }],
+      ])],
+    ]),
+  })
+
+  expect(resolveResult!.resolvedVia).toBe('workspace')
+  expect(resolveResult!.id).toBe('link:is-positive')
+  expect(resolveResult!.normalizedBareSpecifier).toBe(`workspace:${version}`)
+})
+
+test.each([
+  [['1']],
+  [['1', '2']],
+  [['1.0']],
+  [['1.x']],
+])('preferWorkspacePackages: a tag resolves to a workspace version that is not valid semver (local versions: %j)', async (localVersions) => {
+  getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+    .intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, isPositiveMeta)
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+    saveWorkspaceProtocol: false,
+  })
+  const resolveResult = await resolveFromNpm({ alias: 'is-positive', bareSpecifier: 'latest' }, {
+    calcSpecifier: true,
+    preferWorkspacePackages: true,
+    projectDir: '/home/istvan/src',
+    workspacePackages: new Map([
+      ['is-positive', new Map(localVersions.map((version) => [version, {
+        rootDir: '/home/istvan/src/is-positive' as ProjectRootDir,
+        manifest: {
+          name: 'is-positive',
+          version,
+        },
+      }]))],
+    ]),
+  })
+
+  expect(resolveResult).toStrictEqual(
+    expect.objectContaining({
+      resolvedVia: 'workspace',
+      id: 'link:is-positive',
+    })
+  )
+  expect(resolveResult!.normalizedBareSpecifier).toBe(localVersions.at(-1))
+})
+
+test.each(['github:owner/repo', 'file:../other', 'npm:other@1', 'github:owner/repo || 1.2.3', 'file:../other || 1.2.3', '01', '1.01', '9007199254740992', '*', 'dev'])('preferWorkspacePackages: the workspace version %s is saved with the workspace protocol', async (version) => {
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+    saveWorkspaceProtocol: false,
+  })
+  const resolveResult = await resolveFromNpm({ alias: 'is-positive', bareSpecifier: 'latest' }, {
+    calcSpecifier: true,
+    preferWorkspacePackages: true,
+    projectDir: '/home/istvan/src',
+    workspacePackages: new Map([
+      ['is-positive', new Map([[version, {
+        rootDir: '/home/istvan/src/is-positive' as ProjectRootDir,
+        manifest: {
+          name: 'is-positive',
+          version,
+        },
+      }]])],
+    ]),
+  })
+
+  expect(resolveResult!.resolvedVia).toBe('workspace')
+  expect(resolveResult!.normalizedBareSpecifier).toBe(`workspace:^${version}`)
+})
+
+test.each([true, false])('workspace protocol: a local package without a version resolves with saveWorkspaceProtocol=%s', async (saveWorkspaceProtocol) => {
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir: temporaryDirectory(),
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+    saveWorkspaceProtocol,
+  })
+  const resolveResult = await resolveFromNpm({ alias: 'is-positive', bareSpecifier: 'workspace:*' }, {
+    calcSpecifier: true,
+    projectDir: '/home/istvan/src',
+    workspacePackages: new Map([
+      ['is-positive', new Map([
+        ['0.0.0', {
+          rootDir: '/home/istvan/src/is-positive' as ProjectRootDir,
+          manifest: {
+            name: 'is-positive',
+          } as DependencyManifest,
+        }],
+      ])],
+    ]),
+  })
+
+  expect(resolveResult!.resolvedVia).toBe('workspace')
+  expect(resolveResult!.normalizedBareSpecifier).toBe('workspace:*')
+})
+
+test('peekManifestFromStore: reuses store manifest and bypasses network when package is in store', async () => {
+  const storeDir = temporaryDirectory()
+  const storeIndex = new StoreIndex(storeDir)
+  const integrity = 'sha512-9cI+DmhNhA8ioT/3EJFnt0s1yehnAECyIOXdT+2uQGzcEEBaj8oNmVWj33+ZjPndMIFRQh8JeJlEu1uv5/J7pQ=='
+  const key = storeIndexKey(integrity, 'is-positive@1.0.0')
+  storeIndex.set(key, {
+    algo: 'sha512',
+    files: new Map(),
+    manifest: {
+      name: 'is-positive',
+      version: '1.0.0',
+    },
+  })
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir,
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+  })
+
+  const resolveResult = await resolveFromNpm(
+    { alias: 'is-positive', bareSpecifier: '1.0.0' },
+    {
+      currentPkg: {
+        id: 'is-positive@1.0.0' as PkgResolutionId,
+        name: 'is-positive',
+        version: '1.0.0',
+        resolution: {
+          integrity,
+          tarball: 'https://registry.npmjs.org/is-positive/-/is-positive-1.0.0.tgz',
+        },
+      },
+    }
+  )
+
+  expect(resolveResult!.resolvedVia).toBe('npm-registry')
+  expect(resolveResult!.id).toBe('is-positive@1.0.0')
+  expect(resolveResult!.manifest!.name).toBe('is-positive')
+  expect(resolveResult!.manifest!.version).toBe('1.0.0')
+})
+
+test('peekManifestFromStore: bypassed when trustPolicy=no-downgrade', async () => {
+  const storeDir = temporaryDirectory()
+  const storeIndex = new StoreIndex(storeDir)
+  const integrity = 'sha512-9cI+DmhNhA8ioT/3EJFnt0s1yehnAECyIOXdT+2uQGzcEEBaj8oNmVWj33+ZjPndMIFRQh8JeJlEu1uv5/J7pQ=='
+  const key = storeIndexKey(integrity, 'is-positive@1.0.0')
+  storeIndex.set(key, {
+    algo: 'sha512',
+    files: new Map(),
+    manifest: {
+      name: 'is-positive',
+      version: '1.0.0',
+    },
+  })
+
+  getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+    .intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, isPositiveMetaFull)
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir,
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+  })
+
+  const resolveResult = await resolveFromNpm(
+    { alias: 'is-positive', bareSpecifier: '1.0.0' },
+    {
+      trustPolicy: 'no-downgrade',
+      currentPkg: {
+        id: 'is-positive@1.0.0' as PkgResolutionId,
+        name: 'is-positive',
+        version: '1.0.0',
+        resolution: {
+          integrity,
+          tarball: 'https://registry.npmjs.org/is-positive/-/is-positive-1.0.0.tgz',
+        },
+      },
+    }
+  )
+
+  expect(resolveResult!.resolvedVia).toBe('npm-registry')
+  expect(resolveResult!.id).toBe('is-positive@1.0.0')
+  getMockAgent().assertNoPendingInterceptors()
+})
+
+test('peekManifestFromStore: bypassed when cached version does not satisfy requested spec', async () => {
+  const storeDir = temporaryDirectory()
+  const storeIndex = new StoreIndex(storeDir)
+  const integrity = 'sha512-9cI+DmhNhA8ioT/3EJFnt0s1yehnAECyIOXdT+2uQGzcEEBaj8oNmVWj33+ZjPndMIFRQh8JeJlEu1uv5/J7pQ=='
+  const key = storeIndexKey(integrity, 'is-positive@1.0.0')
+  storeIndex.set(key, {
+    algo: 'sha512',
+    files: new Map(),
+    manifest: {
+      name: 'is-positive',
+      version: '1.0.0',
+    },
+  })
+
+  getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+    .intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, isPositiveMetaFull)
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir,
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+  })
+
+  const resolveResult = await resolveFromNpm(
+    { alias: 'is-positive', bareSpecifier: '^3.0.0' },
+    {
+      currentPkg: {
+        id: 'is-positive@1.0.0' as PkgResolutionId,
+        name: 'is-positive',
+        version: '1.0.0',
+        resolution: {
+          integrity,
+          tarball: 'https://registry.npmjs.org/is-positive/-/is-positive-1.0.0.tgz',
+        },
+      },
+    }
+  )
+
+  expect(resolveResult!.resolvedVia).toBe('npm-registry')
+  expect(resolveResult!.id).toBe('is-positive@3.1.0')
+  getMockAgent().assertNoPendingInterceptors()
+})
+
+test('peekManifestFromStore: bypassed when updateChecksums is true', async () => {
+  const storeDir = temporaryDirectory()
+  const storeIndex = new StoreIndex(storeDir)
+  const integrity = 'sha512-9cI+DmhNhA8ioT/3EJFnt0s1yehnAECyIOXdT+2uQGzcEEBaj8oNmVWj33+ZjPndMIFRQh8JeJlEu1uv5/J7pQ=='
+  const key = storeIndexKey(integrity, 'is-positive@1.0.0')
+  storeIndex.set(key, {
+    algo: 'sha512',
+    files: new Map(),
+    manifest: {
+      name: 'is-positive',
+      version: '1.0.0',
+    },
+  })
+
+  getMockAgent().get(registriesByScope.default.replace(/\/$/, ''))
+    .intercept({ path: '/is-positive', method: 'GET' })
+    .reply(200, isPositiveMetaFull)
+
+  const { resolveFromNpm } = createResolveFromNpm({
+    storeDir,
+    cacheDir: temporaryDirectory(),
+    registriesByScope,
+  })
+
+  const resolveResult = await resolveFromNpm(
+    { alias: 'is-positive', bareSpecifier: '1.0.0' },
+    {
+      updateChecksums: true,
+      currentPkg: {
+        id: 'is-positive@1.0.0' as PkgResolutionId,
+        name: 'is-positive',
+        version: '1.0.0',
+        resolution: {
+          integrity,
+          tarball: 'https://registry.npmjs.org/is-positive/-/is-positive-1.0.0.tgz',
+        },
+      },
+    }
+  )
+
+  expect(resolveResult!.resolvedVia).toBe('npm-registry')
+  expect(resolveResult!.id).toBe('is-positive@1.0.0')
+  getMockAgent().assertNoPendingInterceptors()
+})
+
+

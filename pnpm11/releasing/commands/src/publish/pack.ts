@@ -9,10 +9,10 @@ import { readProjectManifest } from '@pnpm/cli.utils'
 import { type Config, type ConfigContext, getDefaultWorkspaceConcurrency, getWorkspaceConcurrency, types as allTypes, type UniversalOptions } from '@pnpm/config.reader'
 import { graphSequencer } from '@pnpm/deps.graph-sequencer'
 import { PnpmError } from '@pnpm/error'
-import { packlist } from '@pnpm/fs.packlist'
+import { packlistWithSources } from '@pnpm/fs.packlist'
 import type { Hooks } from '@pnpm/hooks.pnpmfile'
 import { logger } from '@pnpm/logger'
-import { createExportableManifest, type ExportedManifest, readReadmeFile } from '@pnpm/releasing.exportable-manifest'
+import { createExportableManifest, type ExportedManifest, readReadmeFile, type WorkspacePackageLookup } from '@pnpm/releasing.exportable-manifest'
 import { changelogStorage, readPendingChangelog, renderChangelog } from '@pnpm/releasing.versioning'
 import type { DependencyManifest, Project, ProjectManifest, ProjectRootDir, ProjectsGraph } from '@pnpm/types'
 import { filteredProjectsDependencies } from '@pnpm/workspace.projects-sorter'
@@ -136,6 +136,7 @@ export type PackOptions = Pick<UniversalOptions, 'dir'> & Pick<Config, 'catalogs
 | 'localAddress'
 >> & Partial<Pick<ConfigContext,
 | 'hooks'
+| 'allProjects'
 | 'selectedProjectsGraph'
 | 'allProjectsGraph'
 | 'prodAllProjectsGraph'
@@ -346,7 +347,7 @@ export function resolvePackOutput (
 
 export async function api (opts: PackOptions): Promise<PackResult> {
   const { manifest: entryManifest, fileName: manifestFileName } = await readProjectManifest(opts.dir, opts)
-  preventBundledDependenciesWithoutHoistedNodeLinker(opts.nodeLinker, entryManifest)
+  preventBundledDependenciesWithPnpNodeLinker(opts.nodeLinker, entryManifest)
   const _runScriptsIfPresent = runScriptsIfPresent.bind(null, {
     depPath: opts.dir,
     extraBinPaths: opts.extraBinPaths,
@@ -367,8 +368,8 @@ export async function api (opts: PackOptions): Promise<PackResult> {
     ? path.join(opts.dir, entryManifest.publishConfig.directory)
     : opts.dir
   // always read the latest manifest, as "prepack" or "prepare" script may modify package manifest.
-  const { manifest } = await readProjectManifest(dir, opts)
-  preventBundledDependenciesWithoutHoistedNodeLinker(opts.nodeLinker, manifest)
+  const { manifest, fileName: selectedManifestFileName } = await readProjectManifest(dir, opts)
+  preventBundledDependenciesWithPnpNodeLinker(opts.nodeLinker, manifest)
   if (!manifest.name) {
     throw new PnpmError('PACKAGE_NAME_NOT_FOUND', `Package name is not defined in the ${manifestFileName}.`)
   }
@@ -378,6 +379,14 @@ export async function api (opts: PackOptions): Promise<PackResult> {
   if (!manifest.version) {
     throw new PnpmError('PACKAGE_VERSION_NOT_FOUND', `Package version is not defined in the ${manifestFileName}.`)
   }
+  let workspacePackages: WorkspacePackageLookup | undefined = opts.allProjects ??
+    (opts.selectedProjectsGraph ? Object.values(opts.selectedProjectsGraph).map((p) => p.package) : undefined) ??
+    (opts.allProjectsGraph ? Object.values(opts.allProjectsGraph).map((p) => p.package) : undefined)
+  if (!workspacePackages && opts.workspaceDir) {
+    const { filterProjectsBySelectorObjectsFromDir } = await import('@pnpm/workspace.projects-filter')
+    const result = await filterProjectsBySelectorObjectsFromDir(opts.workspaceDir, [])
+    workspacePackages = result.allProjects
+  }
   const publishManifest = await createPublishManifest({
     projectDir: dir,
     modulesDir: path.join(opts.dir, 'node_modules'),
@@ -386,6 +395,7 @@ export async function api (opts: PackOptions): Promise<PackResult> {
     catalogs: opts.catalogs ?? {},
     hooks: opts.hooks,
     skipManifestObfuscation: opts.skipManifestObfuscation,
+    workspacePackages,
   })
   // Strip semver build metadata (the `+<build>` segment) from the published version so that
   // the tarball, the manifest packed inside it, and the metadata sent to the registry all agree.
@@ -411,11 +421,17 @@ export async function api (opts: PackOptions): Promise<PackResult> {
     publishedName,
     publishedVersion: publishManifest.version,
   })
-  const files = await packlist(dir, {
+  const sources = await packlistWithSources(dir, {
     manifest: publishManifest as Record<string, unknown>,
     workspaceDir: opts.workspaceDir,
+    bundledDependenciesDir: opts.dir,
   })
-  const filesMap = Object.fromEntries(files.map((file) => [`package/${file}`, path.join(dir, file)]))
+  const files = Array.from(sources.keys())
+  const filesMap = Object.fromEntries(Array.from(sources, ([file, source]) => [`package/${file}`, source]))
+  for (const name of Object.keys(filesMap)) {
+    if (isManifestEntry(name)) delete filesMap[name]
+  }
+  filesMap['package/package.json'] = path.join(dir, selectedManifestFileName)
   // cspell:disable-next-line
   if (opts.workspaceDir != null && dir !== opts.workspaceDir && !files.some((file) => /^LICEN[CS]E(?:\..+)?$/i.test(path.basename(file)))) {
     const { workspaceDir } = opts
@@ -565,13 +581,13 @@ function stripBuildMetadata (version: string): string {
   return plusIndex === -1 ? version : version.slice(0, plusIndex)
 }
 
-function preventBundledDependenciesWithoutHoistedNodeLinker (nodeLinker: Config['nodeLinker'], manifest: ProjectManifest): void {
-  if (nodeLinker === 'hoisted') return
+function preventBundledDependenciesWithPnpNodeLinker (nodeLinker: Config['nodeLinker'], manifest: ProjectManifest): void {
+  if (nodeLinker !== 'pnp') return
   for (const key of ['bundledDependencies', 'bundleDependencies'] as const) {
     const bundledDependencies = manifest[key]
     if (bundledDependencies) {
       throw new PnpmError('BUNDLED_DEPENDENCIES_WITHOUT_HOISTED', `${key} does not work with "nodeLinker: ${nodeLinker}"`, {
-        hint: `Add "nodeLinker: hoisted" to pnpm-workspace.yaml or delete ${key} from the root package.json to resolve this error`,
+        hint: `Set "nodeLinker: isolated" or "nodeLinker: hoisted" in pnpm-workspace.yaml or delete ${key} from the root package.json to resolve this error`,
       })
     }
   }
@@ -596,17 +612,17 @@ async function packPkg (opts: {
   } = opts
   const mtime = new Date('1985-10-26T08:15:00.000Z')
   const pack = tar.pack()
-  await Promise.all(Object.entries(filesMap).map(async ([name, source]) => {
-    const isExecutable = bins.some((bin) => path.relative(bin, source) === '')
-    const mode = isExecutable ? 0o755 : 0o644
-    if (isManifestEntry(name)) {
-      pack.entry({ mode, mtime, name: 'package/package.json' }, JSON.stringify(manifest, null, 2))
-      return
+  for (const entry of compressionOrderedEntries(filesMap, injectedEntries)) {
+    if ('content' in entry) {
+      pack.entry({ mode: 0o644, mtime, name: entry.name }, entry.content)
+      continue
     }
-    pack.entry({ mode, mtime, name }, fs.readFileSync(source))
-  }))
-  for (const [name, content] of Object.entries(injectedEntries ?? {})) {
-    pack.entry({ mode: 0o644, mtime, name }, content)
+    const isExecutable = bins.some((bin) => path.relative(bin, entry.source) === '') || isFileExecutable(entry.source)
+    const mode = isExecutable ? 0o755 : 0o644
+    const content = isManifestEntry(entry.name)
+      ? JSON.stringify(manifest, null, 2)
+      : fs.readFileSync(entry.source)
+    pack.entry({ mode, mtime, name: entry.name }, content)
   }
   const tarball = fs.createWriteStream(destFile)
   pack.pipe(createGzip({ level: opts.packGzipLevel })).pipe(tarball)
@@ -618,6 +634,33 @@ async function packPkg (opts: {
   })
 }
 
+type PackedEntry =
+  | { name: string, source: string }
+  | { name: string, content: string }
+
+/**
+ * Every tar entry under the name it is packed as, ordered for compression.
+ * `packlist()` already returns its own files that way; sorting here also
+ * places the entries added afterwards, such as a workspace LICENSE or a
+ * composed CHANGELOG.md.
+ */
+function compressionOrderedEntries (filesMap: Record<string, string>, injectedEntries?: Record<string, string>): PackedEntry[] {
+  const entries: PackedEntry[] = [
+    ...Object.entries(filesMap).map(([name, source]) => ({
+      name: isManifestEntry(name) ? 'package/package.json' : name,
+      source,
+    })),
+    ...Object.entries(injectedEntries ?? {}).map(([name, content]) => ({ name, content })),
+  ]
+  return entries.sort((entry1, entry2) => compareForCompression(entry1.name, entry2.name))
+}
+
+function compareForCompression (path1: string, path2: string): number {
+  return path.extname(path1).toLowerCase().localeCompare(path.extname(path2).toLowerCase(), 'en') ||
+    path.basename(path1).toLowerCase().localeCompare(path.basename(path2).toLowerCase(), 'en') ||
+    path1.localeCompare(path2, 'en')
+}
+
 async function createPublishManifest (opts: {
   projectDir: string
   embedReadme?: boolean
@@ -626,14 +669,16 @@ async function createPublishManifest (opts: {
   catalogs: Catalogs
   hooks?: Hooks
   skipManifestObfuscation?: boolean
+  workspacePackages?: WorkspacePackageLookup
 }): Promise<ExportedManifest> {
-  const { projectDir, embedReadme, modulesDir, manifest, catalogs, hooks, skipManifestObfuscation } = opts
+  const { projectDir, embedReadme, modulesDir, manifest, catalogs, hooks, skipManifestObfuscation, workspacePackages } = opts
   return createExportableManifest(projectDir, manifest, {
     catalogs,
     hooks,
     embedReadme,
     modulesDir,
     skipManifestObfuscation,
+    workspacePackages,
   })
 }
 
@@ -644,5 +689,16 @@ function toPackResultJson (packResult: PackResult): PackResultJson {
     version: publishedManifest.version as string,
     filename: tarballPath,
     files: contents.map((file) => ({ path: file })),
+  }
+}
+
+function isFileExecutable (file: string): boolean {
+  try {
+    return (fs.statSync(file).mode & 0o111) !== 0
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return false
+    }
+    throw err
   }
 }

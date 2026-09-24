@@ -1,4 +1,6 @@
 import fs from 'node:fs'
+import http from 'node:http'
+import type { AddressInfo, Socket } from 'node:net'
 import path from 'node:path'
 
 import { afterAll, expect, test } from '@jest/globals'
@@ -131,6 +133,18 @@ test('install --save-exact', async () => {
   const pkg = await readPackageJsonFromDir(process.cwd())
 
   expect(pkg.devDependencies).toStrictEqual({ 'is-positive': '3.1.0' })
+})
+
+test('install keeps an empty peerDependencies field in package.json', async () => {
+  prepareEmpty()
+  fs.writeFileSync('package.json', JSON.stringify({ name: 'project', version: '0.0.0', peerDependencies: {} }), 'utf8')
+
+  await execPnpm(['install', 'is-positive@3.1.0', '--save-exact'])
+
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+
+  expect(pkg.peerDependencies).toStrictEqual({})
+  expect(pkg.dependencies).toStrictEqual({ 'is-positive': '3.1.0' })
 })
 
 test('install to a project that uses package.yaml', async () => {
@@ -507,11 +521,52 @@ test('CI mode: frozen-lockfile can be overridden via updateConfig hook', async (
 
 test('installation fails with a timeout error', async () => {
   prepare()
+  const registry = await startStalledRegistry()
 
-  await expect(
-    execPnpm(['add', 'typescript@2.4.2', '--fetch-timeout=1', '--fetch-retries=0'])
-  ).rejects.toThrow()
+  try {
+    await expect(
+      execPnpm(['add', 'typescript@2.4.2', `--registry=${registry.url}`, '--fetch-timeout=500', '--fetch-retries=0'])
+    ).rejects.toThrow('ERR_PNPM_META_FETCH_FAIL')
+    expect(registry.requestCount()).toBeGreaterThan(0)
+  } finally {
+    registry.close()
+  }
 })
+
+interface StalledRegistry {
+  url: string
+  requestCount: () => number
+  close: () => void
+}
+
+/**
+ * A registry that accepts the request and never answers it, so the fetch
+ * timeout is the only thing that can end the install.
+ */
+async function startStalledRegistry (): Promise<StalledRegistry> {
+  const sockets = new Set<Socket>()
+  let requests = 0
+  const server = http.createServer(() => {
+    requests++
+  })
+  server.on('connection', (socket) => {
+    sockets.add(socket)
+    socket.on('close', () => {
+      sockets.delete(socket)
+    })
+  })
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', resolve)
+  })
+  return {
+    url: `http://127.0.0.1:${(server.address() as AddressInfo).port}/`,
+    requestCount: () => requests,
+    close: () => {
+      for (const socket of sockets) socket.destroy()
+      server.close()
+    },
+  }
+}
 
 test('installation fails when the stored package name and version do not match the meta of the installed package', async () => {
   prepare()
@@ -704,3 +759,105 @@ test('trustPolicyExclude set to a single string in pnpm-workspace.yaml excludes 
     '--lockfile-only',
   ], { expectSuccess: true })
 })
+
+// Windows CI volumes do not support explicit clone imports.
+const forceRepairImportMethods = isWindows()
+  ? ['auto', 'hardlink', 'copy']
+  : ['auto', 'hardlink', 'copy', 'clone']
+
+// Covers https://github.com/pnpm/pnpm/issues/919
+test.each(forceRepairImportMethods)('install --force restores a replaced dependency file in node_modules (packageImportMethod=%s)', async (packageImportMethod) => {
+  prepare({
+    dependencies: {
+      'is-positive': '1.0.0',
+    },
+  })
+  const env = { pnpm_config_package_import_method: packageImportMethod }
+
+  await execPnpm(['install'], { env })
+
+  const installedFile = path.resolve('node_modules/is-positive/index.js')
+  const pristine = fs.readFileSync(installedFile, 'utf8')
+  // Replace the file rather than writing through it, so the store stays intact
+  // under every import method.
+  fs.rmSync(installedFile)
+  fs.writeFileSync(installedFile, `${pristine}\n// tampered\n`, 'utf8')
+
+  await execPnpm(['install', '--force'], { env })
+
+  expect(fs.readFileSync(installedFile, 'utf8')).toBe(pristine)
+})
+
+// Covers https://github.com/pnpm/pnpm/issues/919
+test('install --force refetches a dependency whose store content was modified too', async () => {
+  prepare({
+    dependencies: {
+      'is-positive': '1.0.0',
+      'is-negative': '1.0.0',
+    },
+  })
+  const env = { pnpm_config_package_import_method: 'hardlink' }
+
+  await execPnpm(['install'], { env })
+
+  const installedFile = path.resolve('node_modules/is-positive/index.js')
+  const pristine = fs.readFileSync(installedFile, 'utf8')
+  // Append through the hardlink, which mutates the store's copy as well.
+  fs.appendFileSync(installedFile, '\n// tampered\n', 'utf8')
+  // The store skips verifying a file whose mtime is within 100ms of the last
+  // check, so move it past that window to make the edit observable.
+  const afterTheSkipWindow = new Date(Date.now() + 60_000)
+  fs.utimesSync(installedFile, afterTheSkipWindow, afterTheSkipWindow)
+
+  await execPnpm(['install', '--force'], { env })
+
+  expect(fs.readFileSync(installedFile, 'utf8')).toBe(pristine)
+  expect(execPnpmSync(['store', 'status']).status).toBe(0)
+})
+
+// Covers https://github.com/pnpm/pnpm/issues/919
+test('install --force reports the frozenStore conflict on a repeat install', async () => {
+  prepare({
+    dependencies: {
+      'is-positive': '1.0.0',
+    },
+  })
+
+  await execPnpm(['install'])
+
+  const { status, stdout } = execPnpmSync(['install', '--force', '--frozen-store'])
+
+  expect(status).toBe(1)
+  expect(stdout.toString()).toContain('Cannot use force together with frozenStore')
+})
+
+test('adding a dependency succeeds after deleting offline package source', async () => {
+  const project = prepareEmpty()
+
+  const pkgDir = path.resolve('..', 'offline-pkg')
+  fs.mkdirSync(path.join(pkgDir, 'package'), { recursive: true })
+  fs.writeFileSync(path.join(pkgDir, 'package', 'package.json'), JSON.stringify({
+    name: 'offline-pkg',
+    version: '1.0.0',
+    dependencies: {
+      'is-positive': '1.0.0',
+    },
+  }))
+  execPnpmSync(['pack', '--pack-destination', pkgDir], { cwd: path.join(pkgDir, 'package') })
+  const tarball = path.join(pkgDir, 'offline-pkg-1.0.0.tgz')
+
+  await execPnpm(['add', tarball])
+  project.has('offline-pkg')
+  let lockfile = project.readLockfile()
+  expect(lockfile.packages['is-positive@1.0.0']).toBeDefined()
+
+  fs.unlinkSync(tarball)
+
+  await execPnpm(['add', '@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0'])
+
+  project.has('offline-pkg')
+  project.has('@pnpm.e2e/dep-of-pkg-with-1-dep')
+  lockfile = project.readLockfile()
+  expect(lockfile.packages['is-positive@1.0.0']).toBeDefined()
+})
+

@@ -2,13 +2,14 @@ import { resolveFromCatalog } from '@pnpm/catalogs.resolver'
 import type { Catalogs } from '@pnpm/catalogs.types'
 import { pickRegistryContext } from '@pnpm/config.normalize-registries'
 import { createPackageVersionPolicyOrThrow, getPublishedByPolicy } from '@pnpm/config.version-policy'
+import * as dp from '@pnpm/deps.path'
 import type { LockfileObject } from '@pnpm/lockfile.types'
 import { globalWarn } from '@pnpm/logger'
 import type { PatchGroupRecord } from '@pnpm/patching.config'
 import { BUILTIN_REGISTRIES_BY_PREFIX } from '@pnpm/resolving.npm-resolver'
 import type { PreferredVersions, Resolution, ResolutionPolicyViolation, WorkspacePackages } from '@pnpm/resolving.resolver-base'
 import type { StoreController } from '@pnpm/store.controller-types'
-import type { AllowBuild, AllowedDeprecatedVersions, PkgResolutionId, ProjectId, ProjectManifest, ProjectRootDir, RangeSpecStyle, ReadPackageHook, RegistryContext, SupportedArchitectures, TrustPolicy } from '@pnpm/types'
+import type { AllowBuild, AllowedDeprecatedVersions, DepPath, PkgResolutionId, ProjectId, ProjectManifest, ProjectRootDir, RangeSpecStyle, ReadPackageHook, RegistryContext, SupportedArchitectures, TrustPolicy } from '@pnpm/types'
 import { partition } from 'ramda'
 
 import type { WantedDependency } from './getNonDevWantedDependencies.js'
@@ -108,9 +109,21 @@ export interface ResolveDependenciesOptions extends RegistryContext {
   currentLockfile: LockfileObject
   dedupePeerDependents?: boolean
   dryRun: boolean
+  /**
+   * Move a `node_modules` entry another package manager installed aside even
+   * though this pass writes no `node_modules` itself. Set by a resolve pass
+   * that a materialization pass follows into the same directory, which needs
+   * the entry out of the way before it links (pnpm/pnpm#881).
+   */
+  hideAlienModules?: boolean
   engineStrict: boolean
   force: boolean
   forceFullResolution: boolean
+  /**
+   * Aliases whose lockfile pins are not reused, because an override that may
+   * have produced them no longer applies.
+   */
+  staleOverrideTargets?: ReadonlySet<string>
   updateChecksums?: boolean
   ignoreScripts?: boolean
   hooks: {
@@ -185,6 +198,7 @@ export async function resolveDependencyTree<T> (
     engineStrict: opts.engineStrict,
     force: opts.force,
     forceFullResolution: opts.forceFullResolution,
+    staleOverrideTargets: opts.staleOverrideTargets,
     updateChecksums: opts.updateChecksums,
     ignoreScripts: opts.ignoreScripts,
     injectWorkspacePackages: opts.injectWorkspacePackages,
@@ -214,6 +228,7 @@ export async function resolveDependencyTree<T> (
     virtualStoreDirMaxLength: opts.virtualStoreDirMaxLength,
     wantedLockfile: opts.wantedLockfile,
     updatedSet: new Set<string>(),
+    lockedDepPathByPkgId: getLockedDepPathByPkgId(opts.wantedLockfile),
     workspacePackages: opts.workspacePackages,
     missingPeersOfChildrenByPkgId: {},
     hoistPeers: autoInstallPeers || opts.dedupePeerDependents,
@@ -240,7 +255,7 @@ export async function resolveDependencyTree<T> (
     // This may be optimized.
     // We only need to proceed resolving every dependency
     // if the newly added dependency has peer dependencies.
-    const proceed = importer.id === '.' || importer.hasRemovedDependencies === true || importer.wantedDependencies.some((wantedDep: any) => wantedDep.isNew) // eslint-disable-line @typescript-eslint/no-explicit-any
+    const proceed = importer.id === '.' || importer.hasRemovedDependencies === true || importer.wantedDependencies.some((wantedDep) => wantedDep.isNew)
     const resolveOpts: ImporterToResolveOptions = {
       currentDepth: 0,
       parentPkg: {
@@ -282,7 +297,9 @@ export async function resolveDependencyTree<T> (
     for (const directDep of directDependencies as PkgAddress[]) {
       const { alias, normalizedBareSpecifier, version, saveCatalogName } = directDep
 
-      if (saveCatalogName == null) {
+      // A dependency resolved through its `catalog:` reference already belongs to the catalog, and
+      // an update moves that entry through `updatedCatalogs`.
+      if (saveCatalogName == null || directDep.catalogLookup != null) {
         continue
       }
 
@@ -371,7 +388,7 @@ export async function resolveDependencyTree<T> (
   * In order to make sure that the latest 1.0.1 version is installed, we need to remove the duplicate dependency.
   * fix https://github.com/pnpm/pnpm/issues/6966
   */
-function dedupeSameAliasDirectDeps (directDeps: PkgAddressOrLink[], wantedDependencies: Array<WantedDependency & { isNew?: boolean }>): PkgAddressOrLink[] {
+function dedupeSameAliasDirectDeps (directDeps: PkgAddressOrLink[], wantedDependencies: WantedDependency[]): PkgAddressOrLink[] {
   const deps = new Map<string, PkgAddressOrLink>()
   for (const directDep of directDeps) {
     const { alias, normalizedBareSpecifier } = directDep
@@ -387,4 +404,15 @@ function dedupeSameAliasDirectDeps (directDeps: PkgAddressOrLink[], wantedDepend
     }
   }
   return Array.from(deps.values())
+}
+
+function getLockedDepPathByPkgId (lockfile: LockfileObject): Map<PkgResolutionId, DepPath> {
+  const lockedDepPathByPkgId = new Map<PkgResolutionId, DepPath>()
+  for (const depPath of Object.keys(lockfile.packages ?? {}) as DepPath[]) {
+    const pkgId = dp.tryGetPackageId(depPath) as string as PkgResolutionId
+    if (!lockedDepPathByPkgId.has(pkgId)) {
+      lockedDepPathByPkgId.set(pkgId, depPath)
+    }
+  }
+  return lockedDepPathByPkgId
 }

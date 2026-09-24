@@ -1,10 +1,15 @@
-use super::{InteractiveUpdateProject, PromptRow, UpdatePrompt, collect_choices};
+mod named_registry;
+
+use super::{
+    InteractiveUpdateProject, PromptRow, UpdatePrompt, collect_choices, dependencies_prompt_message,
+};
 use crate::cli_args::update::UpdateArgs;
 use clap::Parser;
 use pnpm_config::Config;
 use pnpm_lockfile::Lockfile;
 use pnpm_network::ThrottledClient;
 use pnpm_package_manifest::{DependencyGroup, PackageManifest};
+use pnpm_reporter::{GlobalLog, LogEvent, LogLevel, Reporter, SilentReporter};
 use pnpm_testing_utils::registry::TestRegistry;
 use serde_json::{Value, json};
 use std::{
@@ -128,13 +133,19 @@ importers:
     .expect("collect interactive choices");
 
     assert_eq!(
-        choices.iter().map(|choice| choice.alias.as_str()).collect::<Vec<_>>(),
+        choices
+            .iter()
+            .map(|choice| choice.alias.as_str())
+            .collect::<Vec<_>>(),
         vec!["foo", "bar"],
     );
     // Each entry remembers the project it came from, which is what the
     // interactive list's `Workspace` column shows.
     assert_eq!(
-        choices.iter().map(|choice| choice.workspace.as_deref()).collect::<Vec<_>>(),
+        choices
+            .iter()
+            .map(|choice| choice.metadata.workspace.as_deref())
+            .collect::<Vec<_>>(),
         vec![Some("packages-a"), Some("packages-b")],
     );
     foo_mock.assert_async().await;
@@ -194,7 +205,10 @@ importers:
     .expect("collect interactive choices");
 
     assert_eq!(
-        choices.iter().map(|choice| choice.alias.as_str()).collect::<Vec<_>>(),
+        choices
+            .iter()
+            .map(|choice| choice.alias.as_str())
+            .collect::<Vec<_>>(),
         vec!["foo", "fooAlias"],
     );
     foo_mock.assert_async().await;
@@ -255,7 +269,10 @@ importers:
     .expect("collect interactive choices");
 
     assert_eq!(
-        choices.iter().map(|choice| choice.workspace.as_deref()).collect::<Vec<_>>(),
+        choices
+            .iter()
+            .map(|choice| choice.metadata.workspace.as_deref())
+            .collect::<Vec<_>>(),
         vec![Some("packages-a"), Some("packages-b")],
     );
     // And they render as one row naming both.
@@ -319,7 +336,10 @@ importers:
         .expect("collect interactive choices");
 
         assert_eq!(
-            choices.iter().map(|choice| choice.workspace.as_deref()).collect::<Vec<_>>(),
+            choices
+                .iter()
+                .map(|choice| choice.metadata.workspace.as_deref())
+                .collect::<Vec<_>>(),
             vec![Some("packages/a")],
             "a {name:?} name should fall back to the importer path",
         );
@@ -492,9 +512,15 @@ struct SeenPrompt {
     rows: Vec<(String, Option<String>)>,
 }
 
+/// How a test answers one prompt: the packages to check, or Ctrl-C.
+enum ScriptedAnswer {
+    Check(Vec<String>),
+    Cancel,
+}
+
 struct PromptScript {
-    /// The packages to check, one entry per prompt, in call order.
-    answers: VecDeque<Vec<String>>,
+    /// One entry per prompt, in call order.
+    answers: VecDeque<ScriptedAnswer>,
     seen: Vec<SeenPrompt>,
 }
 
@@ -532,8 +558,17 @@ impl ScriptedPrompts {
     /// Answer the next prompt by checking the rows for these packages,
     /// the way the upstream suite resolves its `@inquirer/prompts` mock.
     fn answer_next(&self, packages: &[&str]) {
-        let answer = packages.iter().map(|package| (*package).to_string()).collect();
-        self.claimed().answers.push_back(answer);
+        let answer = packages
+            .iter()
+            .map(|package| (*package).to_string())
+            .collect();
+        self.claimed().answers
+            .push_back(ScriptedAnswer::Check(answer));
+    }
+
+    /// Leave the next prompt with Ctrl-C.
+    fn cancel_next(&self) {
+        self.claimed().answers.push_back(ScriptedAnswer::Cancel);
     }
 
     /// Take the prompts shown since the last call.
@@ -546,50 +581,62 @@ impl ScriptedPrompts {
     }
 }
 
-pub(super) fn answer_prompt(message: &str, rows: &[PromptRow]) -> Vec<usize> {
+pub(super) fn answer_prompt(message: &str, rows: &[PromptRow]) -> Option<Vec<usize>> {
     let mut script = script();
-    let answer = script
-        .answers
+    let answer = script.answers
         .pop_front()
         .unwrap_or_else(|| panic!("the test scripted no answer for the prompt {message:?}"));
     script.seen.push(SeenPrompt {
         message: message.to_string(),
-        rows: rows.iter().map(|row| (row.label.clone(), row.value.clone())).collect(),
+        rows: rows
+            .iter()
+            .map(|row| match row {
+                PromptRow::Separator(text) => (text.clone(), None),
+                PromptRow::Choice { label, value, .. } => (label.clone(), Some(value.clone())),
+            })
+            .collect(),
     });
-    rows.iter()
-        .enumerate()
-        .filter(|(_, row)| {
-            row.value.as_ref().is_some_and(|value| answer.iter().any(|name| name == value))
-        })
-        .map(|(index, _)| index)
-        .collect()
+    let ScriptedAnswer::Check(answer) = answer else { return None };
+    Some(
+        rows.iter()
+            .enumerate()
+            .filter(|(_, row)| {
+                matches!(row, PromptRow::Choice { value, .. } if answer.iter().any(|name| name == value))
+            })
+            .map(|(index, _)| index)
+            .collect(),
+    )
 }
 
 /// `(package, current, target)` for every row the user could check. The
 /// versions are read back out of the padded label; how that table is laid
 /// out is pinned by the `choices` ports.
 fn offered(prompt: &SeenPrompt) -> Vec<(String, String, String)> {
-    prompt
-        .rows
+    prompt.rows
         .iter()
         .filter_map(|(label, value)| {
             let package = value.as_ref()?;
             let columns = label.split_whitespace().collect::<Vec<_>>();
-            let arrow = columns.iter().position(|column| *column == "❯")?;
+            let arrow = columns
+                .iter()
+                .position(|column| *column == "❯")?;
             Some((package.clone(), columns[arrow - 1].to_string(), columns[arrow + 1].to_string()))
         })
         .collect()
 }
 
-/// The group headings a prompt showed, in order. A heading is the row
-/// that opens a group: the one unselectable row followed by another
-/// unselectable one, the group's column header.
+/// The group headings a prompt showed, in order: the separators drawn
+/// as `── heading ──`.
 fn headings(prompt: &SeenPrompt) -> Vec<String> {
-    prompt
-        .rows
-        .windows(2)
-        .filter(|pair| pair[0].1.is_none() && pair[1].1.is_none())
-        .map(|pair| pair[0].0.trim().to_string())
+    prompt.rows
+        .iter()
+        .filter(|(_, value)| value.is_none())
+        .filter_map(|(label, _)| {
+            console::strip_ansi_codes(label)
+                .strip_prefix("── ")?
+                .strip_suffix(" ──")
+                .map(str::to_string)
+        })
         .collect()
 }
 
@@ -603,7 +650,7 @@ const MULTI_C: &str = "@pnpm.e2e/multi-version-c";
 /// A single-project workspace against a mocked registry of its own,
 /// driven through the same `UpdateArgs` the CLI dispatches.
 struct UpdateFixture {
-    _dir: TempDir,
+    dir: TempDir,
     project: PathBuf,
     cache_dir: PathBuf,
     config: &'static Config,
@@ -616,13 +663,13 @@ impl UpdateFixture {
     }
 
     fn with_config(customize: impl FnOnce(&mut Config)) -> Self {
-        let dir = tempfile::tempdir().expect("create temporary workspace");
+        let dir = tempfile::tempdir().expect("create temporary package root");
         let registry = TestRegistry::start_with_own_storage(dir.path());
         let project = dir.path().join("project");
         fs::create_dir_all(&project).expect("create the project dir");
         let cache_dir = dir.path().join("cache");
         let mut config = Config::new();
-        config.registry = registry.url();
+        config.registry = registry.url().to_string();
         config.store_dir = dir.path().join("store").into();
         config.cache_dir = cache_dir.clone();
         config.modules_dir = project.join("node_modules");
@@ -630,7 +677,25 @@ impl UpdateFixture {
         config.enable_global_virtual_store = false;
         customize(&mut config);
         let config = Config::leak(config);
-        Self { _dir: dir, project, cache_dir, config, registry }
+        Self { dir, project, cache_dir, config, registry }
+    }
+
+    fn with_workspace() -> Self {
+        let dir = tempfile::tempdir().expect("create temporary workspace");
+        let registry = TestRegistry::start_with_own_storage(dir.path());
+        let project = dir.path().join("project");
+        fs::create_dir_all(&project).expect("create the project dir");
+        let cache_dir = dir.path().join("cache");
+        let mut config = Config::new();
+        config.workspace_dir = Some(dir.path().to_path_buf());
+        config.registry = registry.url().to_string();
+        config.store_dir = dir.path().join("store").into();
+        config.cache_dir = cache_dir.clone();
+        config.modules_dir = project.join("node_modules");
+        config.virtual_store_dir = project.join("node_modules/.pnpm");
+        config.enable_global_virtual_store = false;
+        let config = Config::leak(config);
+        Self { dir, project, cache_dir, config, registry }
     }
 
     fn write_manifest(&self, dependencies: &Value) {
@@ -640,17 +705,22 @@ impl UpdateFixture {
             .expect("write package.json");
     }
 
-    /// Move a dist tag, and drop the packument the last run cached so the
-    /// next one resolves against the move — the same pairing as
-    /// `AddMockedRegistry::set_dist_tag`.
-    fn set_dist_tag(&self, package: &str, version: &str, tag: &str) {
-        self.registry.set_dist_tag(package, version, tag);
+    fn drop_registry_cache(&self) {
         if self.cache_dir.exists() {
             fs::remove_dir_all(&self.cache_dir).expect("drop the cached registry metadata");
         }
     }
 
+    fn set_dist_tag(&self, package: &str, version: &str, tag: &str) {
+        self.registry.set_dist_tag(package, version, tag);
+        self.drop_registry_cache();
+    }
+
     async fn update(&self, args: &[&str]) {
+        self.update_reporting::<SilentReporter>(args).await;
+    }
+
+    async fn update_reporting<Reporter: self::Reporter>(&self, args: &[&str]) {
         #[derive(Parser)]
         struct Harness {
             #[clap(flatten)]
@@ -663,16 +733,19 @@ impl UpdateFixture {
         parsed.prompt = UpdatePrompt::Scripted;
         let state = crate::State::init(self.project.join("package.json"), self.config, false)
             .expect("initialize the state");
-        parsed.run::<pnpm_reporter::SilentReporter>(state).await.expect("run pacquet update");
+        parsed.run::<Reporter>(state).await.expect("run pacquet update");
     }
 
     /// The `packages:` keys of the lockfile the last run wrote.
     fn lockfile_packages(&self) -> Vec<String> {
-        let text = fs::read_to_string(self.project.join("pnpm-lock.yaml"))
-            .expect("read the wanted lockfile");
+        let lockfile_path = if self.config.workspace_dir.is_some() {
+            self.dir.path().join("pnpm-lock.yaml")
+        } else {
+            self.project.join("pnpm-lock.yaml")
+        };
+        let text = fs::read_to_string(lockfile_path).expect("read the wanted lockfile");
         let lockfile: Lockfile = serde_saphyr::from_str(&text).expect("parse the wanted lockfile");
-        let mut keys = lockfile
-            .packages
+        let mut keys = lockfile.packages
             .into_iter()
             .flatten()
             .map(|(key, _)| key.to_string())
@@ -699,10 +772,7 @@ async fn interactively_update() {
 
     let prompts = scripted.seen();
     assert_eq!(prompts.len(), 1);
-    assert_eq!(
-        prompts[0].message,
-        "Choose which dependencies to update (space to select, enter to confirm)",
-    );
+    assert_eq!(prompts[0].message, dependencies_prompt_message());
     assert_eq!(headings(&prompts[0]), ["dependencies"]);
     assert_eq!(
         offered(&prompts[0]),
@@ -763,6 +833,93 @@ async fn interactively_update_skips_ignored_dependencies() {
     );
 }
 
+#[tokio::test]
+async fn interactively_update_with_workspace_flag_allows_external_dependencies() {
+    let fixture = UpdateFixture::with_workspace();
+    let pkg_c = fixture.dir.path().join("pkg-c");
+    fs::create_dir_all(&pkg_c).expect("create pkg-c dir");
+    fs::write(
+        pkg_c.join("package.json"),
+        json!({ "name": MULTI_C, "version": "3.1.10" }).to_string(),
+    )
+    .expect("write pkg-c package.json");
+    fs::write(
+        fixture.dir.path().join("pnpm-workspace.yaml"),
+        "packages:\n  - 'project'\n  - 'pkg-c'\n",
+    )
+    .expect("write pnpm-workspace.yaml");
+
+    fixture.set_dist_tag(MULTI_A, "2.1.0", "latest");
+    fixture.set_dist_tag(MULTI_C, "4.0.0", "latest");
+
+    fixture.write_manifest(&json!({ MULTI_A: "1.0.0", MULTI_B: "2.0.0", MULTI_C: "3.0.0" }));
+    fixture.update(&["update"]).await;
+    fixture.write_manifest(&json!({ MULTI_A: "^1.0.0", MULTI_B: "^2.0.0", MULTI_C: "^3.0.0" }));
+
+    let scripted = scripted_prompts();
+    scripted.answer_next(&[MULTI_A, MULTI_C]);
+    fixture.update(&["update", "--interactive", "--workspace"]).await;
+
+    let prompts = scripted.seen();
+    assert_eq!(prompts.len(), 1);
+    assert_eq!(
+        offered(&prompts[0]),
+        [
+            (MULTI_A.to_string(), "1.0.0".to_string(), "1.0.1".to_string()),
+            (MULTI_C.to_string(), "3.0.0".to_string(), "3.1.10".to_string()),
+        ],
+    );
+
+    assert_eq!(
+        fixture.lockfile_packages(),
+        [format!("{MULTI_A}@1.0.1"), format!("{MULTI_B}@2.0.0")],
+    );
+    let project_manifest: Value = serde_json::from_str(
+        &fs::read_to_string(fixture.project.join("package.json"))
+            .expect("read updated package.json"),
+    )
+    .expect("parse updated package.json");
+    assert_eq!(project_manifest["dependencies"][MULTI_C], "workspace:^");
+}
+
+/// Ports `global interactive update leaves without an error when the
+/// prompt is canceled`, for the dependency prompt: Ctrl-C is how the
+/// user declines, so the command reports it and leaves with nothing
+/// updated and no error.
+#[tokio::test]
+async fn interactive_update_leaves_without_an_error_when_the_prompt_is_canceled() {
+    static EVENTS: Mutex<Vec<LogEvent>> = Mutex::new(Vec::new());
+    struct RecordingReporter;
+    impl Reporter for RecordingReporter {
+        fn emit(event: &LogEvent) {
+            EVENTS
+                .lock()
+                .unwrap()
+                .push(event.clone());
+        }
+    }
+
+    let fixture = UpdateFixture::new();
+    fixture.write_manifest(&json!({ MULTI_A: "1.0.0" }));
+    fixture.update(&["update"]).await;
+    fixture.write_manifest(&json!({ MULTI_A: "^1.0.0" }));
+
+    let scripted = scripted_prompts();
+    scripted.cancel_next();
+    fixture.update_reporting::<RecordingReporter>(&["update", "--interactive"]).await;
+
+    assert_eq!(scripted.seen().len(), 1);
+    assert_eq!(fixture.lockfile_packages(), [format!("{MULTI_A}@1.0.0")]);
+    let events = EVENTS.lock().unwrap();
+    let canceled = events.iter().any(|event| {
+        matches!(
+            event,
+            LogEvent::Global(GlobalLog { level: LogLevel::Info, message }) if message == "Update canceled",
+        )
+    });
+    assert!(canceled, "no `Update canceled` was reported: {events:?}");
+}
+
 /// Ports `global interactive update handles an empty global directory`.
 #[tokio::test]
 async fn global_interactive_update_handles_an_empty_global_directory() {
@@ -772,9 +929,14 @@ async fn global_interactive_update_handles_an_empty_global_directory() {
     let config = Config::leak(config);
     let scripted = scripted_prompts();
 
-    let selected = super::select_global_package_groups(config, &[], true, UpdatePrompt::Scripted)
-        .await
-        .expect("select global package groups");
+    let selected = super::select_global_package_groups::<pnpm_reporter::SilentReporter>(
+        config,
+        &[],
+        true,
+        UpdatePrompt::Scripted,
+    )
+    .await
+    .expect("select global package groups");
 
     assert!(selected.is_none());
     assert!(scripted.seen().is_empty(), "an empty global directory must not prompt");

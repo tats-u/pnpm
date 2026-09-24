@@ -1,6 +1,11 @@
-use super::{CommandOutput, Host, RunCommand, get_current_branch};
+use super::{CommandOutput, RunCommand, get_current_branch, is_head_detached};
 use std::{fs, io, path::Path};
 use tempfile::TempDir;
+
+// The real provider is only reached by the FIFO tests, which need a
+// filesystem object Windows has no equivalent of.
+#[cfg(unix)]
+use super::Host;
 
 /// A provider whose subprocess spawn is a hard error, so a test that
 /// reaches it fails instead of consulting the host's real repository.
@@ -106,6 +111,7 @@ fn a_head_that_is_not_a_plain_file_is_not_read() {
     std::os::unix::fs::symlink(&target, repo.join(".git/HEAD")).unwrap();
 
     assert_eq!(get_current_branch::<GitFails>(&repo), None);
+    assert!(!is_head_detached::<NoGit>(&repo), "refused metadata must not be queried by Git");
 }
 
 /// A FIFO at `HEAD` must be refused rather than opened: a plain `open`
@@ -149,6 +155,18 @@ fn repo_with_fifo_head() -> TempDir {
 
 #[cfg(unix)]
 fn make_fifo(path: &std::path::Path) {
-    let status = std::process::Command::new("mkfifo").arg(path).status().expect("run mkfifo");
+    let status = std::process::Command::new("mkfifo")
+        .arg(path)
+        .status()
+        .expect("run mkfifo");
     assert!(status.success(), "mkfifo failed");
+}
+
+#[test]
+fn a_failed_head_verification_is_not_detached() {
+    let repo = repo_with_head("0123456789abcdef0123456789abcdef01234567\n");
+    assert!(
+        !is_head_detached::<GitFails>(repo.path()),
+        "a failed Git query must not confirm detachment",
+    );
 }

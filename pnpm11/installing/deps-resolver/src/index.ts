@@ -60,6 +60,7 @@ import {
 import { toResolveImporter } from './toResolveImporter.js'
 import { updateLockfile } from './updateLockfile.js'
 import { updateProjectManifest } from './updateProjectManifest.js'
+import { wantedDepShouldUpdateCatalog } from './wantedDepShouldUpdateCatalog.js'
 
 export type DependenciesGraph = GenericDependenciesGraphWithResolvedChildren<ResolvedPackage>
 
@@ -73,6 +74,7 @@ export {
   type UpdateMatchingFunction,
   type WantedDependency,
 }
+export { isWorkspaceLocalPathSpecifier } from './updateProjectManifest.js'
 export { assertValidDependencyAliases, isValidDependencyAlias } from './validateDependencyAlias.js'
 
 interface ProjectToLink {
@@ -90,13 +92,13 @@ interface ProjectToLink {
 }
 
 export interface ImporterToResolve extends Importer<{
-  isNew?: boolean
   nodeExecPath?: string
   rangeSpecStyle?: RangeSpecStyle
   updateSpec?: boolean
   preserveNonSemverVersionSpec?: boolean
 }> {
   peer?: boolean
+  peerAliases?: Set<string>
   rangeSpecStyle?: RangeSpecStyle
   binsDir: string
   manifest: ProjectManifest
@@ -107,6 +109,7 @@ export interface ImporterToResolve extends Importer<{
    * Built per project by `@pnpm/hooks.read-package-hook`.
    */
   isOverriddenDependency?: (alias: string, bareSpecifier: string) => boolean
+  hookOwnedAliases?: Set<string>
   update?: boolean
   updateMatching?: UpdateMatchingFunction
   updatePackageManifest: boolean
@@ -168,7 +171,7 @@ export async function resolveDependencies (
 ): Promise<ResolveDependenciesResult> {
   const _toResolveImporter = toResolveImporter.bind(null, {
     defaultUpdateDepth: opts.defaultUpdateDepth,
-    lockfileOnly: opts.dryRun,
+    hideAlienModules: !opts.dryRun || opts.hideAlienModules === true,
     preferredVersions: opts.preferredVersions,
     virtualStoreDir: opts.virtualStoreDir,
     globalVirtualStoreDir: opts.globalVirtualStoreDir,
@@ -409,8 +412,7 @@ export async function resolveDependencies (
     if (!project.updatePackageManifest) continue
     const resolvedImporter = resolvedImporters[project.id]
     for (let i = 0; i < resolvedImporter.directDependencies.length; i++) {
-      const updateSpec = project.wantedDependencies[i]?.updateSpec ?? false
-      if (!updateSpec) continue
+      if (!wantedDepShouldUpdateCatalog(project.wantedDependencies[i])) continue
       const dep = resolvedImporter.directDependencies[i]
       if (dep.catalogLookup == null) continue
       // If normalizedBareSpecifier isn't defined, this catalog entry was resolved from cache.
@@ -530,6 +532,9 @@ function addDirectDependenciesToLockfile (
 
   if (newManifest.publishConfig?.directory) {
     newProjectSnapshot.publishDirectory = newManifest.publishConfig.directory
+    if (newManifest.publishConfig.linkDirectory === false) {
+      newProjectSnapshot.linkDirectory = false
+    }
   }
 
   for (const linkedPkg of linkedPackages) {

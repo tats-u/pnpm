@@ -8,7 +8,8 @@ export function splitCommaSeparatedSelectors (selectors: string[] | undefined, b
 }
 
 function splitCommaSeparated (selector: string, baseDir: string): string[] {
-  const specifier = parseWantedDependency(selector)?.bareSpecifier ?? selector
+  const bareSelector = selector.startsWith('!') ? selector.slice(1) : selector
+  const specifier = parseWantedDependency(bareSelector)?.bareSpecifier ?? bareSelector
 
   if (!specifier.includes(',')) return [selector]
   if (specifier.includes('://')) return [selector]

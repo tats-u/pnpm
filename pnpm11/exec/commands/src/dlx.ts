@@ -14,6 +14,7 @@ import { docsUrl, readProjectManifestOnly, splitCommaSeparatedSelectors } from '
 import { type Config, types } from '@pnpm/config.reader'
 import { getPublishedByPolicy } from '@pnpm/config.version-policy'
 import { createShortHash } from '@pnpm/crypto.hash'
+import { engineName, getSystemNodeVersion } from '@pnpm/engine.runtime.system-version'
 import { PnpmError } from '@pnpm/error'
 import { addEsmNodePathLoaderOption } from '@pnpm/exec.esm-node-path-loader'
 import { createResolver, makeResolutionStrict } from '@pnpm/installing.client'
@@ -28,7 +29,7 @@ import { renderHelp } from 'render-help'
 import { symlinkDir } from 'symlink-dir'
 
 import { makeEnv } from './makeEnv.js'
-import { trackedExeca } from './trackedExeca.js'
+import { trackedExeca, waitForTracked } from './trackedExeca.js'
 
 export const skipPackageManagerCheck = true
 
@@ -159,6 +160,7 @@ export async function handler (
     return resolved.id
   }))
   const allowBuild = splitCommaSeparatedSelectors(opts.allowBuild, opts.dir)
+  const normalizedOpts = { ...opts, allowBuild }
   const enableGlobalVirtualStore = opts.enableGlobalVirtualStore ?? true
   let { cacheLink, cacheExists, cachedDir } = findCache({
     packages: resolvedPkgs,
@@ -167,10 +169,10 @@ export async function handler (
     registriesByScope: opts.registriesByScope,
     allowBuild,
     supportedArchitectures: opts.supportedArchitectures,
+    nodeVersion: getSystemNodeVersion(),
   })
+  const allowBuilds = Object.fromEntries([...resolvedPkgAliases, ...(allowBuild ?? [])].map(pkg => [pkg, true]))
   if (!cacheExists) {
-    const allowBuilds = Object.fromEntries([...resolvedPkgAliases, ...(allowBuild ?? [])].map(pkg => [pkg, true]))
-    const normalizedOpts = { ...opts, allowBuild }
     try {
       fs.mkdirSync(cachedDir, { recursive: true })
       await add.handler({
@@ -181,6 +183,7 @@ export async function handler (
         // Without this, `pnpm dlx <pkg>` cannot launch packages whose bin
         // depends on a postinstall step (e.g. native modules).
         strictDepBuilds: false,
+        useLockfile: true,
         enableGlobalVirtualStore,
         bin: path.join(cachedDir, 'node_modules/.bin'),
         dir: cachedDir,
@@ -236,6 +239,8 @@ export async function handler (
         throw err
       }
     }
+  } else {
+    await promptApproveDlxBuilds({ cachedDir, allowBuilds, inheritedOpts: opts }, commands)
   }
   const binsDir = path.join(cachedDir, 'node_modules/.bin')
   const env = makeEnv({
@@ -257,7 +262,7 @@ export async function handler (
       stdio: 'inherit',
       shell: opts.shellMode ?? false,
     })
-    await child
+    await waitForTracked(child)
   } catch (err: unknown) {
     if (util.types.isNativeError(err) && 'exitCode' in err && err.exitCode != null) {
       return {
@@ -379,6 +384,7 @@ function findCache (opts: {
   registriesByScope: Record<string, string>
   allowBuild?: string[]
   supportedArchitectures?: SupportedArchitectures
+  nodeVersion?: string
 }): { cacheLink: string, cacheExists: boolean, cachedDir: string } {
   const dlxCommandCacheDir = createDlxCommandCacheDir(opts)
   const cacheLink = path.join(dlxCommandCacheDir, 'pkg')
@@ -397,6 +403,7 @@ function createDlxCommandCacheDir (
     cacheDir: string
     allowBuild?: string[]
     supportedArchitectures?: SupportedArchitectures
+    nodeVersion?: string
   }
 ): string {
   const dlxCacheDir = path.resolve(opts.cacheDir, 'dlx')
@@ -411,6 +418,7 @@ export function createCacheKey (opts: {
   registriesByScope: Record<string, string>
   allowBuild?: string[]
   supportedArchitectures?: SupportedArchitectures
+  nodeVersion?: string
 }): string {
   const sortedPkgs = [...opts.packages].sort(lexCompare)
   const sortedRegistries = Object.entries(opts.registriesByScope).sort(([k1], [k2]) => lexCompare(k1, k2))
@@ -430,6 +438,9 @@ export function createCacheKey (opts: {
       })
     }
   }
+  // Packages built by lifecycle scripts, native addons especially, only load
+  // on the platform, architecture, and Node.js major they were built for.
+  args.push({ engine: engineName(opts.nodeVersion) })
   const hashStr = JSON.stringify(args)
   // A short (truncated) hash keeps the dlx cache path short. The full
   // virtual-store path below it (`<key>/<prepare>/node_modules/.pnpm/<pkgId>/
@@ -456,7 +467,8 @@ function getValidCacheDir (cacheLink: string, dlxCacheMaxAge: number): string | 
     }
     throw err
   }
-  const isValid = stats.mtime.getTime() + dlxCacheMaxAge * 60_000 >= new Date().getTime()
+  const isValid = fs.existsSync(path.join(target, 'pnpm-lock.yaml')) &&
+    stats.mtime.getTime() + dlxCacheMaxAge * 60_000 >= new Date().getTime()
   return isValid ? target : undefined
 }
 

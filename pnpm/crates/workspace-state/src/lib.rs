@@ -1,3 +1,6 @@
+#![cfg_attr(dylint_lib = "perfectionist", feature(register_tool))]
+#![cfg_attr(dylint_lib = "perfectionist", register_tool(perfectionist))]
+
 //! Read and write pnpm's `node_modules/.pnpm-workspace-state-v1.json`.
 //!
 //! The file records what an install actually used (project list,
@@ -87,6 +90,13 @@ pub struct WorkspaceState {
 /// resolved value differs from pnpm's, pnpm correctly reinstalls.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    dylint_lib = "perfectionist",
+    expect(
+        perfectionist::too_many_struct_fields,
+        reason = "The fields mirror settings recorded in pnpm-workspace-state-v1.json."
+    )
+)]
 pub struct WorkspaceStateSettings {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub allow_builds: Option<BTreeMap<String, serde_json::Value>>,
@@ -102,6 +112,8 @@ pub struct WorkspaceStateSettings {
     pub dedupe_peer_dependents: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dedupe_peers: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_dedupe: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dev: Option<bool>,
     /// `None` and `Some(false)` both mean "global virtual store off" —
@@ -225,7 +237,10 @@ pub enum UpdateWorkspaceStateError {
 /// Writes to a temporary file in the same directory, then atomically
 /// renames it into place, so a concurrent reader — pnpm or pacquet —
 /// never observes a half-written file
-/// ([#12020](https://github.com/pnpm/pnpm/issues/12020)).
+/// ([#12020](https://github.com/pnpm/pnpm/issues/12020)). Two pnpm
+/// processes installing one workspace at once both write it, so the
+/// rename retries the transient lock errors Windows raises for the other
+/// writer's handle.
 ///
 /// The serialized bytes are `JSON.stringify(state, undefined, 2) + '\n'`:
 /// `serde_json`'s pretty printer uses the same 2-space indent and `": "`
@@ -237,24 +252,19 @@ pub fn update_workspace_state(
 ) -> Result<(), UpdateWorkspaceStateError> {
     let file_path = get_file_path(workspace_dir);
     let parent = file_path.parent().expect("workspace-state path always has a parent");
-    fs::create_dir_all(parent).map_err(|source| UpdateWorkspaceStateError::CreateDir {
-        path: parent.to_path_buf(),
-        source,
-    })?;
+    fs::create_dir_all(parent)
+        .map_err(|source| UpdateWorkspaceStateError::CreateDir {
+            path: parent.to_path_buf(),
+            source,
+        })?;
     let mut serialized =
         serde_json::to_string_pretty(state).map_err(UpdateWorkspaceStateError::SerializeJson)?;
     serialized.push('\n');
-    let mut temp = NamedTempFile::new_in(parent).map_err(|source| {
-        UpdateWorkspaceStateError::WriteFile { path: file_path.clone(), source }
-    })?;
-    temp.write_all(serialized.as_bytes()).map_err(|source| {
-        UpdateWorkspaceStateError::WriteFile { path: file_path.clone(), source }
-    })?;
-    temp.persist(&file_path).map_err(|error| UpdateWorkspaceStateError::WriteFile {
-        path: file_path,
-        source: error.error,
-    })?;
-    Ok(())
+    let write = |source| UpdateWorkspaceStateError::WriteFile { path: file_path.clone(), source };
+    let mut temp = NamedTempFile::new_in(parent).map_err(write)?;
+    temp.write_all(serialized.as_bytes()).map_err(write)?;
+    let temp = temp.into_temp_path();
+    pnpm_fs::rename_with_retry(&temp, &file_path).map_err(write)
 }
 
 /// Read the workspace state file at `<workspace_dir>/node_modules/.pnpm-workspace-state-v1.json`.
@@ -304,7 +314,8 @@ pub fn now_millis() -> i64 {
 /// dependency-injection seam produce the value the state file records.
 #[must_use]
 pub fn millis_since_epoch(time: SystemTime) -> i64 {
-    time.duration_since(UNIX_EPOCH).map_or(0, |duration| duration.as_millis() as i64)
+    time.duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_millis() as i64)
 }
 
 #[cfg(test)]

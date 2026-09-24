@@ -137,7 +137,7 @@ test('install only the dependencies of the specified importer, when node-linker 
 
   const rootModules = assertProject(process.cwd())
   rootModules.has('is-positive')
-  // rootModules.hasNot('is-negative') // TODO: fix
+  rootModules.hasNot('is-negative')
 
   const lockfile: any = readYamlFileSync(WANTED_LOCKFILE) // eslint-disable-line
   expect(lockfile.importers?.['project-2' as ProjectId].dependencies?.['is-negative'].version).toBe('1.0.0')
@@ -651,6 +651,48 @@ test('headless install is used with an up-to-date lockfile when package referenc
   projects['project-1'].has('is-positive')
   projects['project-1'].has('project-2')
   projects['project-2'].has('is-negative')
+})
+
+test('workspace protocol resolves package with semver build metadata', async () => {
+  const pkg1 = {
+    name: 'project-1',
+    version: '1.0.0',
+
+    dependencies: {
+      'project-2': 'workspace:0.5.6-next.3+f60facc',
+    },
+  }
+  const pkg2 = {
+    name: 'project-2',
+    version: '0.5.6-next.3+f60facc',
+  }
+  const projects = preparePackages([pkg1, pkg2])
+
+  const importers: MutatedProject[] = [
+    {
+      mutation: 'install',
+      rootDir: path.resolve('project-1') as ProjectRootDir,
+    },
+    {
+      mutation: 'install',
+      rootDir: path.resolve('project-2') as ProjectRootDir,
+    },
+  ]
+  const allProjects = [
+    {
+      buildIndex: 0,
+      manifest: pkg1,
+      rootDir: path.resolve('project-1') as ProjectRootDir,
+    },
+    {
+      buildIndex: 0,
+      manifest: pkg2,
+      rootDir: path.resolve('project-2') as ProjectRootDir,
+    },
+  ]
+  await mutateModules(importers, testDefaults({ allProjects }))
+
+  projects['project-1'].has('project-2')
 })
 
 test('headless install is used when packages are not linked from the workspace (unless workspace ranges are used)', async () => {
@@ -1482,6 +1524,58 @@ test('resolve a subdependency from the workspace', async () => {
   }))
 })
 
+test('resolve a subdependency falls back to registry when workspace prerelease does not match', async () => {
+  preparePackages([
+    {
+      location: 'project',
+      package: { name: 'project' },
+    },
+    {
+      location: '@pnpm.e2e/dep-of-pkg-with-1-dep',
+      package: { name: '@pnpm.e2e/dep-of-pkg-with-1-dep' },
+    },
+  ])
+
+  const importers: MutatedProject[] = [
+    {
+      mutation: 'install',
+      rootDir: path.resolve('project') as ProjectRootDir,
+    },
+    {
+      mutation: 'install',
+      rootDir: path.resolve('@pnpm.e2e/dep-of-pkg-with-1-dep') as ProjectRootDir,
+    },
+  ]
+  const allProjects = [
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'project',
+        version: '1.0.0',
+
+        dependencies: {
+          '@pnpm.e2e/pkg-with-1-dep': '100.0.0',
+        },
+      },
+      rootDir: path.resolve('project') as ProjectRootDir,
+    },
+    {
+      buildIndex: 0,
+      manifest: {
+        name: '@pnpm.e2e/dep-of-pkg-with-1-dep',
+        version: '100.1.0-next.0',
+      },
+      rootDir: path.resolve('@pnpm.e2e/dep-of-pkg-with-1-dep') as ProjectRootDir,
+    },
+  ]
+  await mutateModules(importers, testDefaults({ allProjects, linkWorkspacePackagesDepth: Infinity }))
+
+  const project = assertProject(process.cwd())
+
+  const wantedLockfile = project.readLockfile()
+  expect(wantedLockfile.snapshots['@pnpm.e2e/pkg-with-1-dep@100.0.0'].dependencies?.['@pnpm.e2e/dep-of-pkg-with-1-dep']).toBe('100.1.0')
+})
+
 test('resolve a subdependency from the workspace and use it as a peer', async () => {
   await addDistTag({ package: '@pnpm.e2e/peer-c', version: '1.0.1', distTag: 'latest' })
   preparePackages([
@@ -1763,7 +1857,7 @@ test('do not update dependency that has the same name as a dependency in the wor
   ])
 })
 
-test('symlink local package from the location described in its publishConfig.directory when linkDirectory is true', async () => {
+test('relink local package when publishConfig.linkDirectory changes', async () => {
   preparePackages([
     {
       location: 'project-1',
@@ -1827,6 +1921,7 @@ test('symlink local package from the location described in its publishConfig.dir
   const project = assertProject(process.cwd())
   const lockfile = project.readLockfile()
   expect(lockfile.importers['project-1'].publishDirectory).toBe('dist')
+  expect(lockfile.importers['project-1'].linkDirectory).toBeUndefined()
 
   rimrafSync('node_modules')
   await mutateModules(importers, testDefaults({ allProjects, frozenLockfile: true }))
@@ -1835,6 +1930,22 @@ test('symlink local package from the location described in its publishConfig.dir
     const linkedManifest = loadJsonFileSync<{ name: string }>('project-2/node_modules/project-1/package.json')
     expect(linkedManifest.name).toBe('project-1-dist')
   }
+
+  project1Manifest.publishConfig.linkDirectory = false
+  await expect(
+    mutateModules(importers, testDefaults({ allProjects, frozenLockfile: true }))
+  ).rejects.toMatchObject({ code: 'ERR_PNPM_OUTDATED_LOCKFILE' })
+
+  await mutateModules(importers, testDefaults({ allProjects }))
+
+  {
+    const linkedManifest = loadJsonFileSync<{ name: string }>('project-2/node_modules/project-1/package.json')
+    expect(linkedManifest.name).toBe('project-1')
+  }
+
+  const updatedLockfile = project.readLockfile()
+  expect(updatedLockfile.importers['project-1'].linkDirectory).toBe(false)
+  expect(updatedLockfile.importers['project-2'].dependencies?.['project-1'].version).toBe('link:../project-1')
 })
 
 test('do not symlink local package from the location described in its publishConfig.directory', async () => {
@@ -2011,3 +2122,137 @@ test("a direct-dependency bump in one importer converges another importer's tran
   expect(lockfile.packages).toHaveProperty(['@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0'])
   expect(lockfile.packages).not.toHaveProperty(['@pnpm.e2e/dep-of-pkg-with-1-dep@100.0.0'])
 })
+
+test('adding an unrelated dependency does not re-resolve existing dependency to sibling version', async () => {
+  preparePackages([
+    { location: 'project-1', package: { name: 'project-1' } },
+    { location: 'project-2', package: { name: 'project-2' } },
+  ])
+
+  await addDistTag({ package: '@pnpm.e2e/dep-of-pkg-with-1-dep', version: '100.0.0', distTag: 'latest' })
+
+  const allProjects1 = [
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'project-1',
+        version: '1.0.0',
+        dependencies: { '@pnpm.e2e/dep-of-pkg-with-1-dep': '^100.0.0' },
+      },
+      rootDir: path.resolve('project-1') as ProjectRootDir,
+    },
+  ]
+  await mutateModules([
+    { mutation: 'install', rootDir: path.resolve('project-1') as ProjectRootDir },
+  ], testDefaults({ allProjects: allProjects1 }))
+
+  let lockfile = readYamlFileSync<any>(WANTED_LOCKFILE) // eslint-disable-line @typescript-eslint/no-explicit-any
+  expect(lockfile.importers['project-1'].dependencies['@pnpm.e2e/dep-of-pkg-with-1-dep'].version).toBe('100.0.0')
+
+  await addDistTag({ package: '@pnpm.e2e/dep-of-pkg-with-1-dep', version: '100.1.0', distTag: 'latest' })
+  const allProjects2 = [
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'project-1',
+        version: '1.0.0',
+        dependencies: { '@pnpm.e2e/dep-of-pkg-with-1-dep': '^100.0.0' },
+      },
+      rootDir: path.resolve('project-1') as ProjectRootDir,
+    },
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'project-2',
+        version: '1.0.0',
+        dependencies: { '@pnpm.e2e/dep-of-pkg-with-1-dep': '100.1.0' },
+      },
+      rootDir: path.resolve('project-2') as ProjectRootDir,
+    },
+  ]
+  await mutateModules([
+    { mutation: 'install', rootDir: path.resolve('project-2') as ProjectRootDir },
+  ], testDefaults({ allProjects: allProjects2 }))
+
+  lockfile = readYamlFileSync<any>(WANTED_LOCKFILE) // eslint-disable-line @typescript-eslint/no-explicit-any
+  expect(lockfile.importers['project-1'].dependencies['@pnpm.e2e/dep-of-pkg-with-1-dep'].version).toBe('100.0.0')
+  expect(lockfile.importers['project-2'].dependencies['@pnpm.e2e/dep-of-pkg-with-1-dep'].version).toBe('100.1.0')
+
+  const allProjects3 = [
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'project-1',
+        version: '1.0.0',
+        dependencies: {
+          '@pnpm.e2e/dep-of-pkg-with-1-dep': '^100.0.0',
+          'is-positive': '1.0.0',
+        },
+      },
+      rootDir: path.resolve('project-1') as ProjectRootDir,
+    },
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'project-2',
+        version: '1.0.0',
+        dependencies: { '@pnpm.e2e/dep-of-pkg-with-1-dep': '100.1.0' },
+      },
+      rootDir: path.resolve('project-2') as ProjectRootDir,
+    },
+  ]
+  await mutateModules([
+    {
+      mutation: 'install',
+      rootDir: path.resolve('project-1') as ProjectRootDir,
+    },
+  ], testDefaults({ allProjects: allProjects3 }))
+
+  lockfile = readYamlFileSync<any>(WANTED_LOCKFILE) // eslint-disable-line @typescript-eslint/no-explicit-any
+  expect(lockfile.importers['project-1'].dependencies['@pnpm.e2e/dep-of-pkg-with-1-dep'].version).toBe('100.0.0')
+  expect(lockfile.importers['project-2'].dependencies['@pnpm.e2e/dep-of-pkg-with-1-dep'].version).toBe('100.1.0')
+})
+
+test('secondary dependency resolves to local project direct dependency version instead of higher version in sibling workspace (pnpm/pnpm#7191)', async () => {
+  preparePackages([
+    { location: 'project-1', package: { name: 'project-1' } },
+    { location: 'project-2', package: { name: 'project-2' } },
+  ])
+
+  await addDistTag({ package: '@pnpm.e2e/dep-of-pkg-with-1-dep', version: '100.1.0', distTag: 'latest' })
+
+  const allProjects = [
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'project-1',
+        version: '1.0.0',
+        dependencies: {
+          '@pnpm.e2e/dep-of-pkg-with-1-dep': '100.0.0',
+          '@pnpm.e2e/pkg-with-1-dep': '100.0.0',
+        },
+      },
+      rootDir: path.resolve('project-1') as ProjectRootDir,
+    },
+    {
+      buildIndex: 0,
+      manifest: {
+        name: 'project-2',
+        version: '1.0.0',
+        dependencies: { '@pnpm.e2e/dep-of-pkg-with-1-dep': '100.1.0' },
+      },
+      rootDir: path.resolve('project-2') as ProjectRootDir,
+    },
+  ]
+
+  await mutateModules([
+    { mutation: 'install', rootDir: path.resolve('project-1') as ProjectRootDir },
+    { mutation: 'install', rootDir: path.resolve('project-2') as ProjectRootDir },
+  ], testDefaults({ allProjects }))
+
+  const lockfile = readYamlFileSync<any>(WANTED_LOCKFILE) // eslint-disable-line @typescript-eslint/no-explicit-any
+  expect(lockfile.importers['project-1'].dependencies['@pnpm.e2e/dep-of-pkg-with-1-dep'].version).toBe('100.0.0')
+  expect(lockfile.importers['project-2'].dependencies['@pnpm.e2e/dep-of-pkg-with-1-dep'].version).toBe('100.1.0')
+  expect(lockfile.snapshots['@pnpm.e2e/pkg-with-1-dep@100.0.0'].dependencies['@pnpm.e2e/dep-of-pkg-with-1-dep']).toBe('100.0.0')
+})
+

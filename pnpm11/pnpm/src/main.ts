@@ -6,14 +6,16 @@ declare const global: Global
 if (!global['pnpm__startedAt']) {
   global['pnpm__startedAt'] = Date.now()
 }
+import fs from 'node:fs'
 import path from 'node:path'
-import { stripVTControlCharacters as stripAnsi } from 'node:util'
+import { stripVTControlCharacters as stripAnsi, types as utilTypes } from 'node:util'
 
+import { formatWarn } from '@pnpm/cli.default-reporter'
 import { isExecutedByCorepack, packageManager } from '@pnpm/cli.meta'
 import type { Config, ConfigContext } from '@pnpm/config.reader'
 import { executionTimeLogger, scopeLogger } from '@pnpm/core-loggers'
 import { getSystemRuntimeVersion } from '@pnpm/engine.runtime.system-version'
-import { PnpmError } from '@pnpm/error'
+import { PnpmError, redactAndSanitize } from '@pnpm/error'
 import { globalWarn, logger } from '@pnpm/logger'
 import { type EngineDependency, isRuntimeAlias, type RuntimeName } from '@pnpm/types'
 import { finishWorkers } from '@pnpm/worker'
@@ -115,14 +117,17 @@ export async function main (inputArgv: string[]): Promise<void> {
       forSelfUpdate: cmd === 'self-update',
       printWarnings: !isSingleSettingRead(cmd, cliParams),
     }) as { config: typeof config, context: ConfigContext })
-    if (cmd !== 'setup' && !shouldSkipPmHandling(cmd, cliParams)) {
+    if (cmd !== 'setup' && !shouldSkipPmHandling(cmd, cliParams, cliOptions.location)) {
       if (context.wantedPackageManager != null) {
         const pm = context.wantedPackageManager
         if (pm.onFail !== 'ignore') {
+          const printingVersion = cmd == null && cliOptions.version === true
           if (pm.name === 'pnpm' && pm.onFail === 'download' && !isExecutedByCorepack()) {
             // Corepack owns version switching; pnpm only switches versions when
             // the user is running pnpm directly.
-            await switchCliVersion(config, context)
+            await tolerateWhenPrintingVersion(printingVersion, async () => {
+              await switchCliVersion(config, context)
+            })
           } else if (cliOptions.global) {
             globalWarn('Using --global skips the package manager check for this project')
           } else {
@@ -134,7 +139,9 @@ export async function main (inputArgv: string[]): Promise<void> {
             // it only writes to the lockfile when the project opted in (via
             // `devEngines.packageManager`, or a v12+ `packageManager` pin).
             checkPackageManager(pm, { underCorepack: isExecutedByCorepack() })
-            await syncEnvLockfile(config, context)
+            await tolerateWhenPrintingVersion(printingVersion, async () => {
+              await syncEnvLockfile(config, context)
+            })
           }
         }
       }
@@ -251,9 +258,15 @@ export async function main (inputArgv: string[]): Promise<void> {
     }
   }
 
+  const hasFilter = Boolean(config.filter?.length || config.filterProd?.length)
+  const isWorkspaceSubdirectory = typeof workspaceDir === 'string' &&
+    getRealPathSync(config.dir) !== getRealPathSync(workspaceDir)
+  const isListCommand = cmd === 'list' || cmd === 'll'
+
   if (
     cmd != null && recursiveByDefaultCommands.has(cmd) &&
-    typeof workspaceDir === 'string'
+    typeof workspaceDir === 'string' &&
+    !(isListCommand && isWorkspaceSubdirectory && !hasFilter)
   ) {
     cliOptions['recursive'] = true
     config.recursive = true
@@ -264,6 +277,7 @@ export async function main (inputArgv: string[]): Promise<void> {
   }
 
   if (cliOptions['recursive']) {
+    config.recursive = true
     const wsDir = workspaceDir ?? process.cwd()
 
     config.filter = config.filter ?? []
@@ -297,6 +311,8 @@ export async function main (inputArgv: string[]): Promise<void> {
       engineStrict: config.engineStrict,
       nodeVersion: config.nodeVersion,
       patterns: config.workspacePackagePatterns,
+      modulesDir: config.modulesDir,
+      modulesDirsByProjectName: config.modulesDirsByProjectName,
       linkWorkspacePackages: !!config.linkWorkspacePackages,
       prefix: process.cwd(),
       workspaceDir: wsDir,
@@ -418,6 +434,35 @@ export async function main (inputArgv: string[]): Promise<void> {
   }
 }
 
+/**
+ * `pnpm --version` must answer even where the pinned pnpm cannot be installed
+ * or recorded: a sandbox with a read-only filesystem leaves pnpm nowhere to
+ * write. The failure is reported and the running pnpm's version is printed
+ * instead of the pinned one. Checks that reject the project outright, like a
+ * pin naming another package manager, still fail the command.
+ */
+async function tolerateWhenPrintingVersion (printingVersion: boolean, work: () => Promise<void>): Promise<void> {
+  try {
+    await work()
+  } catch (err: unknown) {
+    if (!printingVersion) throw err
+    // The version prints before the reporter subscribes to the log stream,
+    // so this warning goes straight to stderr.
+    console.error(formatWarn(`Cannot use the pnpm version this project pins: ${describeFailure(err)}`))
+  }
+}
+
+/**
+ * The code and message of `err`, made safe to print. A Node.js filesystem
+ * error opens its message with the code, so naming it again would repeat it.
+ */
+function describeFailure (err: unknown): string {
+  if (!utilTypes.isNativeError(err)) return redactAndSanitize(String(err))
+  const code = 'code' in err ? String(err.code) : ''
+  const described = code === '' || err.message.startsWith(code) ? err.message : `${code}: ${err.message}`
+  return redactAndSanitize(described)
+}
+
 function printError (message: string, hint?: string): void {
   const ERROR = chalk.bgRed.red('[') + chalk.bgRed.black('ERROR') + chalk.bgRed.red(']')
   console.error(`${message.startsWith(ERROR) ? '' : ERROR + ' '}${chalk.red(message)}`)
@@ -427,16 +472,16 @@ function printError (message: string, hint?: string): void {
 }
 
 /**
- * Whether to skip the packageManager/runtime handling block (both auto
- * download and warn/error checks). Returns true when the command itself
- * opts out via `skipPackageManagerCheck: true`, or when the user is asking
- * for help on such a command — `pnpm help <skippable>` and
- * `pnpm <skippable> --help` (which parse-cli-args rewrites to the same
- * cmd='help' form) shouldn't download an older pinned pnpm just to render
- * help for a command that older pnpm may not even have.
+ * Returns whether the command may bypass project package-manager and runtime
+ * handling. Config command aliases bypass it unless `location` is exactly
+ * `project`; an absent or unrecognized location therefore retains config's
+ * global default. Commands marked with `skipPackageManagerCheck`, and help
+ * requests targeting those commands, also bypass it. A missing command does
+ * not.
  */
-function shouldSkipPmHandling (cmd: string | null, cliParams: string[]): boolean {
+function shouldSkipPmHandling (cmd: string | null, cliParams: string[], location: unknown): boolean {
   if (cmd == null) return false
+  if ((cmd === 'config' || cmd === 'c' || cmd === 'get' || cmd === 'set') && location !== 'project') return true
   if (skipPackageManagerCheckForCommand.has(cmd)) return true
   if (cmd === 'help' && cliParams[0] != null && skipPackageManagerCheckForCommand.has(cliParams[0])) return true
   return false
@@ -486,7 +531,7 @@ const RUNTIME_DISPLAY_NAMES: Record<RuntimeName, string> = {
 // devEngines.runtime takes precedence over engines.runtime per the iteration
 // order below: the first entry seen for a given runtime wins.
 function getWantedRuntimes (context: ConfigContext): EngineDependency[] {
-  const manifest = context.rootProjectManifest
+  const manifest = context.enginePinManifest
   if (manifest == null) return []
   const result: EngineDependency[] = []
   const seen = new Set<RuntimeName>()
@@ -537,6 +582,19 @@ function failRuntimeCheck (onFail: 'error' | 'warn', message: string): void {
     throw new PnpmError('BAD_RUNTIME_VERSION', message, { hint: RUNTIME_ON_FAIL_HINT })
   }
   globalWarn(message)
+}
+
+function getRealPathSync (dir: string): string {
+  const resolved = path.resolve(dir)
+  try {
+    return fs.realpathSync.native(resolved)
+  } catch (err: unknown) {
+    throw new PnpmError(
+      'WORKSPACE_DIR_NOT_FOUND',
+      `Failed to resolve real path for "${resolved}"`,
+      { cause: err }
+    )
+  }
 }
 
 const RUNTIME_ON_FAIL_HINT = 'If you want to bypass this version check, set "runtimeOnFail" to "warn" or "ignore" (e.g. via --runtime-on-fail=ignore), or set "devEngines.runtime.onFail"/"engines.runtime.onFail" to "warn" or "ignore"'

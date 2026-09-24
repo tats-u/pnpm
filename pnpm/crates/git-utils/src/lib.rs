@@ -1,14 +1,24 @@
 //! Read-only git queries shared by the commands that branch on
 //! repository state: `pnpm publish`'s working-tree checks, `pnpm
 //! version`'s clean-tree gate, and the per-branch lockfile settings.
+//! Also the environment that keeps the git resolver's and fetcher's
+//! invocations from waiting on the terminal.
 //!
 //! Counterpart of pnpm's `@pnpm/network.git-utils`.
 
-mod capabilities;
-
 pub use capabilities::{CommandOutput, Host, RunCommand};
+pub use non_interactive::{
+    disable_git_prompts, has_configured_ssh_command, non_interactive_git_env,
+};
 
-use std::{fs, io, io::Read, path::Path};
+mod capabilities;
+mod non_interactive;
+
+use std::{
+    fs, io,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 /// Whether `cwd` is inside a git repository.
 #[must_use]
@@ -53,6 +63,17 @@ pub fn get_current_branch<Sys: RunCommand>(cwd: &Path) -> Option<String> {
     }
 }
 
+/// Verify that HEAD resolves to a detached commit. Refused metadata and failed
+/// Git queries are not treated as detached.
+#[must_use]
+pub fn is_head_detached<Sys: RunCommand>(cwd: &Path) -> bool {
+    if matches!(read_branch_from_head_file(cwd), HeadBranch::Branch(_) | HeadBranch::Refused) {
+        return false;
+    }
+    Sys::run("git", &["rev-parse", "--verify", "--symbolic-full-name", "HEAD"], Some(cwd))
+        .is_ok_and(|output| output.success && output.stdout.trim() == "HEAD")
+}
+
 /// The outcomes of reading `.git/HEAD`.
 enum HeadBranch {
     Branch(String),
@@ -71,33 +92,58 @@ fn read_branch_from_head_file(cwd: &Path) -> HeadBranch {
     let Ok(metadata) = fs::symlink_metadata(&dot_git) else {
         return HeadBranch::Unknown;
     };
-    let git_dir = if metadata.is_dir() {
-        dot_git
-    } else if metadata.is_file() {
-        let content = match read_git_metadata_file(&dot_git) {
-            GitMetadata::Content(content) => content,
-            GitMetadata::Absent => return HeadBranch::Unknown,
-            GitMetadata::Refused => return HeadBranch::Refused,
-        };
-        match content.trim().strip_prefix("gitdir:").map(str::trim) {
-            Some(path) if Path::new(path).is_absolute() => Path::new(path).to_path_buf(),
-            Some(path) => cwd.join(path),
-            None => return HeadBranch::Unknown,
-        }
-    } else {
-        return HeadBranch::Unknown;
+    let git_dir = match git_dir_of(cwd, dot_git, &metadata) {
+        Ok(git_dir) => git_dir,
+        Err(branch) => return branch,
     };
-
     match read_git_metadata_file(&git_dir.join("HEAD")) {
-        GitMetadata::Content(head) => match head.trim().strip_prefix("ref:").map(str::trim) {
-            Some(reference) => match reference.strip_prefix("refs/heads/") {
-                Some(branch) => HeadBranch::Branch(branch.to_owned()),
-                None => HeadBranch::Detached,
-            },
-            None => HeadBranch::Detached,
-        },
+        GitMetadata::Content(head) => branch_of_head(&head),
         GitMetadata::Absent => HeadBranch::Unknown,
         GitMetadata::Refused => HeadBranch::Refused,
+    }
+}
+
+/// The git directory a `.git` entry names: itself when it is one, or the
+/// `gitdir:` pointer a worktree's `.git` file holds.
+fn git_dir_of(
+    cwd: &Path,
+    dot_git: PathBuf,
+    metadata: &fs::Metadata,
+) -> Result<PathBuf, HeadBranch> {
+    if metadata.is_dir() {
+        return Ok(dot_git);
+    }
+    if !metadata.is_file() {
+        return Err(HeadBranch::Unknown);
+    }
+    let content = match read_git_metadata_file(&dot_git) {
+        GitMetadata::Content(content) => content,
+        GitMetadata::Absent => return Err(HeadBranch::Unknown),
+        GitMetadata::Refused => return Err(HeadBranch::Refused),
+    };
+    match content
+        .trim()
+        .strip_prefix("gitdir:")
+        .map(str::trim)
+    {
+        Some(path) if Path::new(path).is_absolute() => Ok(Path::new(path).to_path_buf()),
+        Some(path) => Ok(cwd.join(path)),
+        None => Err(HeadBranch::Unknown),
+    }
+}
+
+/// The branch a `HEAD` file names, or that it is detached.
+fn branch_of_head(head: &str) -> HeadBranch {
+    let Some(reference) = head
+        .trim()
+        .strip_prefix("ref:")
+        .map(str::trim)
+    else {
+        return HeadBranch::Detached;
+    };
+    match reference.strip_prefix("refs/heads/") {
+        Some(branch) => HeadBranch::Branch(branch.to_owned()),
+        None => HeadBranch::Detached,
     }
 }
 

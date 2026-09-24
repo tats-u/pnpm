@@ -22,7 +22,24 @@ pub fn is_executable(mode: u32) -> bool {
 /// mode may have lost its exec bit on a copy / reflink fallback.
 #[must_use]
 pub fn cas_path_is_executable(path: &Path) -> bool {
-    path.file_name().and_then(|name| name.to_str()).is_some_and(|name| name.ends_with("-exec"))
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.ends_with("-exec"))
+}
+
+/// Open `path` for permission changes,
+/// refusing to traverse a final symlink.
+///
+/// Callers require a regular file. A symlink there is corruption or a squatter, and
+/// following it would hand the referent an execute bit it never had:
+/// `O_NOFOLLOW` answers `ELOOP` instead, and the caller reports it.
+#[cfg(unix)]
+fn open_without_following(path: &Path) -> io::Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW)
+        .open(path)
 }
 
 /// Re-add executable bits to `target` when the CAS source path carries the
@@ -46,11 +63,26 @@ pub fn restore_exec_bit_from_cas_suffix(cas_path: &Path, target: &Path) -> io::R
         // Retry the open under fd-table exhaustion like every other open on
         // the parallel import path: a transient `EMFILE`/`ENFILE` from a
         // sibling rayon worker must not fail the install.
-        let file = crate::ensure_file::retry_on_fd_pressure(|| std::fs::File::open(target))?;
+        let file = crate::ensure_file::retry_on_fd_pressure(|| open_without_following(target))?;
         make_file_executable(&file)?;
     }
     #[cfg(not(unix))]
     let _ = (cas_path, target);
+    Ok(())
+}
+
+/// Set Unix permission bits without following a final symlink. No-op on Windows.
+pub fn set_path_permissions(path: &Path, mode: u32) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::{fs::Permissions, os::unix::fs::PermissionsExt};
+        let file = crate::ensure_file::retry_on_fd_pressure(|| open_without_following(path))?;
+        if file.metadata()?.permissions().mode() & 0o7777 != mode {
+            file.set_permissions(Permissions::from_mode(mode))?;
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = (path, mode);
     Ok(())
 }
 
@@ -59,7 +91,7 @@ pub fn restore_exec_bit_from_cas_suffix(cas_path: &Path, target: &Path) -> io::R
 /// Skips the `set_permissions` syscall (and the ctime bump it would cause) when
 /// every exec bit is already set, so re-asserting executability on a file that
 /// already has it costs only the stat.
-#[cfg_attr(windows, allow(unused))]
+#[cfg_attr(windows, allow(unused, reason = "POSIX executable bits do not apply on Windows"))]
 pub fn make_file_executable(file: &std::fs::File) -> io::Result<()> {
     #[cfg(unix)]
     return {

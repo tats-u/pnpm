@@ -2,6 +2,7 @@ import { existsSync, promises as fs } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 
+import { cmdShim, getExeExtension, isShimForMissingTarget, isShimNodePath, isShimPointingAt } from '@pnpm/bins.cmd-shim'
 import { type Command, getBinsFromPackageManifest, pkgOwnsBin } from '@pnpm/bins.resolver'
 import { PnpmError } from '@pnpm/error'
 import { readModulesDir } from '@pnpm/fs.read-modules-dir'
@@ -10,7 +11,6 @@ import { readPackageJsonFromDir } from '@pnpm/pkg-manifest.reader'
 import { getAllDependenciesFromManifest } from '@pnpm/pkg-manifest.utils'
 import type { DependencyManifest, EngineDependency, ProjectManifest } from '@pnpm/types'
 import { safeReadProjectManifestOnly } from '@pnpm/workspace.project-manifest-reader'
-import { cmdShim, isShimPointingAt } from '@zkochan/cmd-shim'
 import { rimraf } from '@zkochan/rimraf'
 import fixBin from 'bin-links/lib/fix-bin.js'
 import { isSubdir } from 'is-subdir'
@@ -21,6 +21,8 @@ import semver from 'semver'
 import { symlinkDir } from 'symlink-dir'
 
 import { getBinNodePaths } from './getBinNodePaths.js'
+
+export { getProjectNodePath } from './getProjectNodePath.js'
 
 const binsConflictLogger = logger('bins-conflict')
 const IS_WINDOWS = isWindows()
@@ -107,23 +109,37 @@ export async function linkBinsOfPackages (
   opts: LinkBinOptions & { excludeBins?: Set<string> } = {}
 ): Promise<string[]> {
   if (pkgs.length === 0) return []
+  return _linkBins(await getCommandsToLink(pkgs, opts.excludeBins), binsTarget, opts)
+}
 
-  let allCmds = unnest(
+export async function getBinsToLink (
+  pkgs: Array<{
+    manifest: DependencyManifest
+    location: string
+  }>,
+  excludeBins: Set<string> = new Set()
+): Promise<Command[]> {
+  return deduplicateCommands(await getCommandsToLink(pkgs, excludeBins))
+    .map(({ name, path }) => ({ name, path }))
+}
+
+async function getCommandsToLink (
+  pkgs: Array<{
+    manifest: DependencyManifest
+    location: string
+  }>,
+  excludeBins: Set<string> = new Set()
+): Promise<CommandInfo[]> {
+  return unnest(
     (await Promise.all(
-      pkgs
-        .map(async (pkg) => getPackageBinsFromManifest(pkg.manifest, pkg.location))
+      pkgs.map(async (pkg) => getPackageBinsFromManifest(pkg.manifest, pkg.location))
     ))
       .filter((cmds: Command[]) => cmds.length)
-  )
-  const excludeBins = opts.excludeBins
-  if (excludeBins?.size) {
-    allCmds = allCmds.filter((cmd) => !excludeBins.has(cmd.name))
-  }
-
-  return _linkBins(allCmds, binsTarget, opts)
+  ).filter((cmd) => !excludeBins.has(cmd.name))
 }
 
 interface CommandInfo extends Command {
+  pkgDir: string
   pkgName: string
   pkgVersion: string
   /**
@@ -149,10 +165,14 @@ async function _linkBins (
 
   await fs.mkdir(binsDir, { recursive: true })
 
-  const results = await Promise.allSettled(allCmds.map(async cmd => linkBin(cmd, binsDir, opts)))
+  // Removals finish before any shim is written: on Windows the siblings of a
+  // removed bin `tool` include `tool.cmd`, which may be another bin's shim.
+  const removals = await Promise.allSettled(allCmds.map(async (cmd) => removeBinIfTargetAwaited(cmd, binsDir, opts)))
+  const cmdsToLink = allCmds.filter((_, i) => removals[i].status === 'fulfilled' && !removals[i].value)
+  const results = await Promise.allSettled(cmdsToLink.map(async cmd => linkBin(cmd, binsDir, opts)))
 
   // We want to create all commands that we can create before throwing an exception
-  for (const result of results) {
+  for (const result of [...removals, ...results]) {
     if (result.status === 'rejected') {
       throw result.reason
     }
@@ -161,17 +181,17 @@ async function _linkBins (
   return allCmds.map(cmd => cmd.pkgName)
 }
 
-function deduplicateCommands (commands: CommandInfo[], binsDir: string): CommandInfo[] {
+function deduplicateCommands (commands: CommandInfo[], binsDir?: string): CommandInfo[] {
   const cmdGroups = groupBy(cmd => cmd.name, commands)
   return Object.values(cmdGroups)
     .filter((group): group is CommandInfo[] => group !== undefined && group.length !== 0)
     .map(group => resolveCommandConflicts(group, binsDir))
 }
 
-function resolveCommandConflicts (group: CommandInfo[], binsDir: string): CommandInfo {
+function resolveCommandConflicts (group: CommandInfo[], binsDir?: string): CommandInfo {
   return group.reduce((a, b) => {
     const [chosen, skipped] = compareCommandsInConflict(a, b) >= 0 ? [a, b] : [b, a]
-    logCommandConflict(chosen, skipped, binsDir)
+    if (binsDir != null) logCommandConflict(chosen, skipped, binsDir)
     return chosen
   })
 }
@@ -246,6 +266,7 @@ async function getPackageBinsFromManifest (manifest: DependencyManifest, pkgDir:
   }
   return cmds.map((cmd) => ({
     ...cmd,
+    pkgDir,
     pkgName: manifest.name,
     pkgVersion: manifest.version,
     makePowerShellShim: manifest.name !== 'pnpm',
@@ -261,8 +282,24 @@ function runtimeHasNodeDownloaded (runtime: EngineDependency | EngineDependency[
 }
 
 export interface LinkBinOptions {
+  /**
+   * `NODE_PATH` entries after the bin's own dependency directories. An empty
+   * list means none. When omitted, an existing shim keeps its `NODE_PATH`.
+   */
   extraNodePaths?: string[]
+  /**
+   * The first `NODE_PATH` entry: the modules directory of the project whose
+   * bins are linked, when Node cannot find it by walking up to `node_modules`.
+   */
+  projectModulesDir?: string
   preferSymlinkedExecutables?: boolean
+  /**
+   * Hold back every bin whose target is missing, and remove a shim an earlier
+   * install left for it, as a package's own `.bin` always does. For a pass that
+   * runs before dependency builds and is repeated after them: a build may
+   * create the target, and its scripts run with this `.bin` on PATH.
+   */
+  holdBackMissingTargets?: boolean
 }
 
 async function linkBin (cmd: CommandInfo, binsDir: string, opts?: LinkBinOptions): Promise<void> {
@@ -283,10 +320,20 @@ async function linkBin (cmd: CommandInfo, binsDir: string, opts?: LinkBinOptions
     const stat = await fs.lstat(externalBinPath)
     if (stat.isSymbolicLink()) {
       const target = await fs.readlink(externalBinPath)
-      isCorrectlyLinked = target === cmd.path || path.resolve(binsDir, target) === path.resolve(cmd.path)
+      isCorrectlyLinked = (target === cmd.path || path.resolve(binsDir, target) === path.resolve(cmd.path)) &&
+        (!EXECUTABLE_SHEBANG_SUPPORTED || await canSymlinkExecutable(cmd.path))
     } else if (stat.isFile() && stat.size < CMD_SHIM_MAX_SIZE) {
       const content = await fs.readFile(externalBinPath, 'utf8')
-      isCorrectlyLinked = isShimPointingAt(content, cmd.path)
+      isCorrectlyLinked = isShimPointingAt(content, cmd.path) && isShimHardened(content) &&
+        (!isShimForMissingTarget(content) || await isMissing(cmd.path)) &&
+        (
+          (opts?.extraNodePaths == null && opts?.projectModulesDir == null) ||
+          isShimNodePath(content, {
+            first: opts.projectModulesDir,
+            // The shim lists every entry once, at its first position.
+            last: opts.extraNodePaths && Array.from(new Set(opts.extraNodePaths)).filter((p) => p !== opts.projectModulesDir),
+          })
+        )
     }
   } catch {}
   if (isCorrectlyLinked) {
@@ -294,7 +341,7 @@ async function linkBin (cmd: CommandInfo, binsDir: string, opts?: LinkBinOptions
     // the store, but we won't necessarily have reapplied the executable bit -
     // so apply it here.
     if (EXECUTABLE_SHEBANG_SUPPORTED) {
-      await ensureExecutableIfNeeded(cmd.path, 0o755)
+      await ensureExecutableIfNeeded(cmd.path, 0o755, { allowMissing: true })
     }
     return
   }
@@ -335,10 +382,10 @@ async function linkBin (cmd: CommandInfo, binsDir: string, opts?: LinkBinOptions
     return
   }
 
-  if (opts?.preferSymlinkedExecutables && !IS_WINDOWS && cmd.nodeExecPath == null) {
+  if (opts?.preferSymlinkedExecutables && !IS_WINDOWS && cmd.nodeExecPath == null && await canSymlinkExecutable(cmd.path)) {
     try {
       await symlinkDir(cmd.path, externalBinPath)
-      await ensureExecutable(cmd.path, 0o755)
+      await ensureExecutableIfNeeded(cmd.path, 0o755, { allowMissing: true })
     } catch (err: any) { // eslint-disable-line
       if (err.code !== 'ENOENT' && err.code !== 'EISDIR') {
         throw err
@@ -350,18 +397,12 @@ async function linkBin (cmd: CommandInfo, binsDir: string, opts?: LinkBinOptions
 
   try {
     let nodePath: string[] | undefined
-    if (opts?.extraNodePaths?.length) {
-      const binNodePaths = await getBinNodePaths(cmd.path)
-      if (binNodePaths.length === 0) {
-        nodePath = opts.extraNodePaths
-      } else {
-        nodePath = [...binNodePaths]
-        for (const p of opts.extraNodePaths) {
-          if (!binNodePaths.includes(p)) {
-            nodePath.push(p)
-          }
-        }
-      }
+    if (opts?.extraNodePaths?.length || opts?.projectModulesDir) {
+      nodePath = Array.from(new Set([
+        ...(opts.projectModulesDir ? [opts.projectModulesDir] : []),
+        ...await getBinNodePaths(cmd.path, opts.projectModulesDir),
+        ...opts.extraNodePaths ?? [],
+      ]))
     }
     await cmdShim(cmd.path, externalBinPath, {
       createPwshFile: POWER_SHELL_IS_SUPPORTED && cmd.makePowerShellShim,
@@ -385,8 +426,23 @@ async function linkBin (cmd: CommandInfo, binsDir: string, opts?: LinkBinOptions
   // ensure that bin are executable and not containing
   // windows line-endings(CRLF) on the hashbang line
   if (EXECUTABLE_SHEBANG_SUPPORTED) {
-    await ensureExecutable(cmd.path, 0o755)
+    await ensureExecutableIfNeeded(cmd.path, 0o755, { allowMissing: true })
   }
+}
+
+// The target marker does not describe the header, so a shim whose target has
+// not moved can still need replacing. Keep these in step with pacquet's
+// `is_sh_shim_hardened`.
+const SH_SHIM_HARDENED_LINES = [
+  '  target=$(command -p readlink "$link")\n',
+  String.raw`basedir=$(command -p printf '%s\n' "$link" | command -p sed -e 's,\\,/,g')` + '\n',
+  '    if converted=$(command -p cygpath -w "$basedir" 2>/dev/null) && [ -n "$converted" ]; then\n',
+  '    if converted=$(command -p wslpath -w "$basedir" 2>/dev/null) && [ -n "$converted" ]; then\n',
+  '    */node_modules/*|*/node_modules) ;;\n',
+]
+
+function isShimHardened (content: string): boolean {
+  return SH_SHIM_HARDENED_LINES.every((line) => content.includes(line))
 }
 
 // Reports whether two paths refer to the same file. A matching inode/device
@@ -450,38 +506,92 @@ async function haveEqualContents (pathA: string, pathB: string): Promise<boolean
   }
 }
 
-// `fixBin` chmods the bin's source file (which lives inside the store) to make
-// it executable and rewrites a Windows CRLF shebang to LF. Under the global
-// virtual store that source is `{storeDir}/links/...`, so on a read-only store
-// (e.g. `frozenStore`) the chmod is refused — with EPERM/EACCES when the file is
-// owned but permissions forbid it, or EROFS on a genuinely read-only filesystem
-// (Nix store, RO bind mount, OCI layer). A complete seed already ships its bins
-// executable and shebang-normalized by the writable seed-build, so that work is
-// redundant: treat an already-correct target as a no-op, keeping bin-linking
-// write-free (see building/during-install: "Bin-linking reuses existing symlinks
-// write-free"). A non-executable bin — or one still carrying a CRLF shebang that
-// `fixBin` could not rewrite here — still throws, because that means the seed is
-// broken and the bin would not run.
-async function ensureExecutable (file: string, mode: number): Promise<void> {
+/**
+ * A package's own bins are on PATH while its lifecycle scripts run, and those
+ * scripts may be what creates a missing target. The `node` package's
+ * preinstall calls `node` to download bin/node, which must not resolve to a
+ * shim of bin/node itself. So a package's own bin is not linked into its own
+ * .bin while the target is missing, and neither is any bin of a pass with
+ * `holdBackMissingTargets`. Other bins get the shim (see cmd-shim).
+ *
+ * @returns `true` when the bin is held back: its target is missing, and any
+ * shim an earlier install left for it, with its Windows siblings, is removed.
+ * `false` when the bin should be linked.
+ * @throws When probing the target or removing the shim fails for a reason
+ * other than a missing path.
+ */
+async function removeBinIfTargetAwaited (cmd: CommandInfo, binsDir: string, opts: LinkBinOptions): Promise<boolean> {
+  if (!opts.holdBackMissingTargets && !isOwnBinsDir(cmd.pkgDir, binsDir)) return false
+  if (!await isBinTargetMissing(cmd.path)) return false
+  await removeBin(path.join(binsDir, cmd.name))
+  return true
+}
+
+async function removeBin (binPath: string): Promise<void> {
+  await Promise.all([
+    rimraf(binPath),
+    ...(IS_WINDOWS ? ['.cmd', '.ps1', getExeExtension()].map(async (ext) => rimraf(`${binPath}${ext}`)) : []),
+  ])
+}
+
+function isOwnBinsDir (pkgDir: string, binsDir: string): boolean {
+  return path.resolve(pkgDir, 'node_modules', '.bin') === path.resolve(binsDir)
+}
+
+// A target without an extension is run directly, and Windows then finds its .exe.
+async function isBinTargetMissing (target: string): Promise<boolean> {
+  if (!await isMissing(target)) return false
+  return !IS_WINDOWS || path.extname(target) !== '' || isMissing(`${target}${getExeExtension()}`)
+}
+
+async function isMissing (file: string): Promise<boolean> {
   try {
-    await fixBin(file, mode)
+    await fs.stat(file)
+    return false
   } catch (err: any) { // eslint-disable-line
-    if (err.code === 'EPERM' || err.code === 'EACCES' || err.code === 'EROFS') {
-      const stat = await fs.stat(file).catch(() => undefined)
-      if (stat != null && (stat.mode & 0o111) !== 0 && !(await hasWindowsShebang(file))) return
-    }
+    if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return true
     throw err
   }
 }
 
-// A missing or unreadable source is skipped rather than failing the install:
-// the existing bin was accepted as correctly linked, and before this repair
-// step the skip path returned without touching the source at all.
-async function ensureExecutableIfNeeded (file: string, mode: number): Promise<void> {
-  const stat = await fs.stat(file).catch(() => undefined)
+async function canSymlinkExecutable (file: string): Promise<boolean> {
+  try {
+    const realFile = await fs.realpath(file)
+    if (path.dirname(realFile).split(path.sep).includes('node_modules')) return true
+    const stat = await fs.stat(realFile)
+    return (stat.mode & 0o111) === 0o111 && !(await hasWindowsShebang(realFile))
+  } catch (err: any) { // eslint-disable-line
+    if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return true
+    throw err
+  }
+}
+
+async function ensureExecutableIfNeeded (file: string, mode: number, opts?: { allowMissing?: boolean }): Promise<void> {
+  const stat = await fs.stat(file).catch((err: any) => { // eslint-disable-line
+    if (opts?.allowMissing && (err.code === 'ENOENT' || err.code === 'ENOTDIR')) return undefined
+    throw err
+  })
   if (stat == null) return
-  if ((stat.mode & 0o111) === 0 || await hasWindowsShebang(file)) {
+  if ((stat.mode & 0o111) !== 0o111 || await hasWindowsShebang(file)) {
     await ensureExecutable(file, mode)
+  }
+}
+
+// Only installed package files may be repaired. Resolve symlinks before checking
+// because workspace and link: dependencies also appear under node_modules.
+async function ensureExecutable (file: string, mode: number): Promise<void> {
+  const realFile = await fs.realpath(file)
+  if (!path.dirname(realFile).split(path.sep).includes('node_modules')) return
+  const stat = await fs.stat(realFile)
+  if ((stat.mode & 0o111) === 0o111 && !(await hasWindowsShebang(realFile))) return
+  try {
+    await fixBin(realFile, mode)
+  } catch (err: any) { // eslint-disable-line
+    if (err.code === 'EPERM' || err.code === 'EACCES' || err.code === 'EROFS') {
+      const stat = await fs.stat(realFile).catch(() => undefined)
+      if (stat != null && (stat.mode & 0o111) === 0o111 && !(await hasWindowsShebang(realFile))) return
+    }
+    throw err
   }
 }
 
@@ -500,18 +610,6 @@ async function hasWindowsShebang (file: string): Promise<boolean> {
   } finally {
     await fh.close().catch(() => {})
   }
-}
-
-function getExeExtension (): string {
-  let cmdExtension
-
-  if (process.env.PATHEXT) {
-    cmdExtension = process.env.PATHEXT
-      .split(path.delimiter)
-      .find(ext => ext.toUpperCase() === '.EXE')
-  }
-
-  return cmdExtension ?? '.exe'
 }
 
 async function safeReadPkgJson (pkgDir: string): Promise<DependencyManifest | null> {

@@ -3,9 +3,10 @@ import util, { promisify } from 'node:util'
 
 import gfs from 'graceful-fs'
 
-const RENAME_RETRY_BUDGET_MS = 60_000
-const RENAME_RETRY_BACKOFF_CAP_MS = 100
-const renameRetrySleepBuffer = new Int32Array(new SharedArrayBuffer(4))
+const FILE_LOCK_RETRY_BUDGET_MS = 60_000
+const PERMISSION_DENIED_RETRY_BUDGET_MS = 1_000
+const FILE_LOCK_RETRY_BACKOFF_CAP_MS = 100
+const fileLockRetrySleepBuffer = new Int32Array(new SharedArrayBuffer(4))
 
 export default { // eslint-disable-line
   chmod: promisify(gfs.chmod),
@@ -53,30 +54,63 @@ function withEagainRetry<T extends unknown[], R> (
 }
 
 /**
- * Renames `src` over `dest`, waiting out a Windows sharing violation — an
- * EPERM, EACCES or EBUSY from whoever else holds the file open — for up to a
- * minute before rethrowing it. Every other error is thrown right away.
+ * Renames `src` over `dest`, retrying Windows EBUSY errors for up to a minute.
+ * EPERM and EACCES have a one-second budget because they can also indicate
+ * permanent permission or destination conflicts. Other errors are thrown
+ * right away.
  *
  * `dest` is never removed to make room for the rename: a concurrent install may
  * still be reading that dirent, and a reader has to see either the whole file
  * that was there or the whole file replacing it.
  */
 export function renameFileWithRetry (src: string, dest: string): void {
+  withFileLockRetry(() => {
+    fs.renameSync(src, dest)
+  })
+}
+
+/**
+ * Reads `target`'s stats without following it, with the retry policy of
+ * {@link renameFileWithRetry}.
+ *
+ * A Windows path another process has just unlinked stays delete-pending until
+ * the last handle on it closes, and inspecting it fails with EPERM for as long
+ * as that lasts. Retrying lets the unlink land, so a caller that reads ENOENT
+ * as an absent entry sees the same absence POSIX shows it at once.
+ */
+export function lstatWithRetry (target: string): fs.Stats {
+  return withFileLockRetry(() => fs.lstatSync(target))
+}
+
+/**
+ * Removes a file, with the retry policy of {@link renameFileWithRetry}.
+ */
+export function unlinkWithRetry (target: string): void {
+  withFileLockRetry(() => {
+    fs.unlinkSync(target)
+  })
+}
+
+function withFileLockRetry<T> (operation: () => T): T {
   const startedAt = Date.now()
   let backoffMs = 0
+  let budgetMs = FILE_LOCK_RETRY_BUDGET_MS
   for (;;) {
     try {
-      fs.renameSync(src, dest)
-      return
+      return operation()
     } catch (err) {
-      if (!isTransientRenameError(err) || Date.now() - startedAt >= RENAME_RETRY_BUDGET_MS) throw err
-      if (backoffMs > 0) Atomics.wait(renameRetrySleepBuffer, 0, 0, backoffMs)
-      backoffMs = Math.min(backoffMs + 10, RENAME_RETRY_BACKOFF_CAP_MS)
+      if (!isTransientFileLockError(err)) throw err
+      if (err.code === 'EPERM' || err.code === 'EACCES') budgetMs = Math.min(budgetMs, PERMISSION_DENIED_RETRY_BUDGET_MS)
+      const remainingMs = budgetMs - (Date.now() - startedAt)
+      if (remainingMs <= 0) throw err
+      if (backoffMs > 0) Atomics.wait(fileLockRetrySleepBuffer, 0, 0, Math.min(backoffMs, remainingMs))
+      if (Date.now() - startedAt >= budgetMs) throw err
+      backoffMs = Math.min(backoffMs + 10, FILE_LOCK_RETRY_BACKOFF_CAP_MS)
     }
   }
 }
 
-function isTransientRenameError (err: unknown): boolean {
+function isTransientFileLockError (err: unknown): err is NodeJS.ErrnoException {
   return process.platform === 'win32' &&
     util.types.isNativeError(err) &&
     'code' in err &&

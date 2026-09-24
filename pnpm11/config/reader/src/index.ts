@@ -25,6 +25,7 @@ import { omit } from 'ramda'
 import { realpathMissing } from 'realpath-missing'
 import semver from 'semver'
 
+import { binDirOf } from './binDir.js'
 import { checkGlobalBinDir } from './checkGlobalBinDir.js'
 import { getDefaultWorkspaceConcurrency, getWorkspaceConcurrency } from './concurrency.js'
 import type {
@@ -50,12 +51,14 @@ import {
   type CliOptions as SupportedArchitecturesCliOptions,
   overrideSupportedArchitecturesWithCLI,
 } from './overrideSupportedArchitecturesWithCLI.js'
+import { createProjectModulesDirResolver, getModulesDirsByProjectName } from './projectConfig.js'
 import { quoteAndJoin } from './quoteAndJoin.js'
 import { transformGlobalDirKeys, transformPathKeys } from './transformPath.js'
 import { types } from './types.js'
 import { isKnownSettingKey, quoteAndAnnotateUnknown } from './unknownSettings.js'
 export { types }
 
+export { binDirOf } from './binDir.js'
 export { getDefaultWorkspaceConcurrency, getWorkspaceConcurrency } from './concurrency.js'
 export { getGlobalConfigPath } from './dirs.js'
 export { getDefaultCreds, getNetworkConfigs, type NetworkConfigs } from './getNetworkConfigs.js'
@@ -65,7 +68,9 @@ export {
   getPackageManagerRegistries,
   type PackageManagerBootstrapConfig,
 } from './packageManagerRegistries.js'
+export { parseCAFileContents } from './parseCAFileContents.js'
 export type { Creds } from './parseCreds.js'
+export { createProjectModulesDirResolver, type ProjectModulesDirOptions } from './projectConfig.js'
 export {
   createProjectConfigRecord,
   type CreateProjectConfigRecordOptions,
@@ -176,6 +181,7 @@ export async function getConfig (opts: {
     'fetch-timeout': 60000,
     'fetch-warn-timeout-ms': 10_000, // 10 sec
     'fetch-min-speed-ki-bps': 50, // 50 KiB/s
+    'force-ignores-platform': true,
     'force-legacy-deploy': false,
     'git-shallow-hosts': [
       // Follow https://github.com/npm/git/blob/1e1dbd26bd5b87ca055defecc3679777cb480e2a/lib/clone.js#L13-L19
@@ -399,6 +405,9 @@ export async function getConfig (opts: {
     // reached only through a stored credential is reached the same way when
     // pnpm downloads itself as when it installs.
     ...npmrcResult.jsonAuth.fallbackRegistries,
+    // A `registry=` in a trusted `.npmrc` declares the default registry as
+    // plainly as a yaml does, so it holds the file fallback back here too.
+    ...npmrcResult.trustedDeclaredRegistries,
     ...trustedNetworkConfigs.registries,
     // `_auth` routes apply here too so bootstrap (self-download / version
     // switching) resolves the same way as regular installs.
@@ -499,8 +508,6 @@ export async function getConfig (opts: {
     if (pnpmConfig.enableGlobalVirtualStore == null) {
       pnpmConfig.enableGlobalVirtualStore = true
     }
-  } else if (!pnpmConfig.bin) {
-    pnpmConfig.bin = path.join(pnpmConfig.dir, 'node_modules', '.bin')
   }
   pnpmConfig.packageManager = packageManager
 
@@ -516,14 +523,25 @@ export async function getConfig (opts: {
       if (ignoredPnpmFieldKeys.length > 0) {
         warnings.push(`The "pnpm" field in package.json is no longer read by pnpm. The following keys were ignored: ${quoteAndJoin(ignoredPnpmFieldKeys.map(k => `pnpm.${k}`))}. See https://pnpm.io/settings for the new home of each setting.`)
       }
-      const wantedPmResult = getWantedPackageManager(pnpmConfig.rootProjectManifest)
+    }
+
+    if (opts.cliOptions['shared-workspace-lockfile'] != null && !pnpmConfig.workspaceDir && !cliOptions['global']) {
+      warnings.push('The "shared-workspace-lockfile" option was ignored because no "pnpm-workspace.yaml" was found.')
+    }
+
+    // `lockfileDir` moves `rootProjectManifestDir` off the workspace root,
+    // and the engine pins stay with the workspace the contributor works in.
+    // Re-read only when the two directories differ.
+    const enginePinManifestDir = pnpmConfig.workspaceDir ?? pnpmConfig.dir
+    pnpmConfig.enginePinManifest = enginePinManifestDir === pnpmConfig.rootProjectManifestDir
+      ? pnpmConfig.rootProjectManifest
+      : await safeReadProjectManifestOnly(enginePinManifestDir) ?? undefined
+    if (pnpmConfig.enginePinManifest != null) {
+      const wantedPmResult = getWantedPackageManager(pnpmConfig.enginePinManifest)
       if (wantedPmResult.pm) {
         pnpmConfig.wantedPackageManager = wantedPmResult.pm
       }
       warnings.push(...wantedPmResult.warnings)
-      if (pnpmConfig.nodeVersion == null) {
-        pnpmConfig.nodeVersion = getNodeVersionFromEnginesRuntime(pnpmConfig.rootProjectManifest)
-      }
     }
 
     if (pnpmConfig.workspaceDir != null) {
@@ -587,7 +605,7 @@ export async function getConfig (opts: {
     }
   }
 
-  // Precedence: builtin < .npmrc < `_auth` file < yaml < `_auth` env < CLI. CLI
+  // Precedence: builtin < `_auth` file < .npmrc < yaml < `_auth` env < CLI. CLI
   // `--@scope:registry` / `--registry` already entered `registriesFromNpmrc`
   // via `authConfig`, so they're re-applied last here to avoid being buried
   // by yaml. `cliScopedRegistries` iterates raw `cliOptions` because
@@ -605,8 +623,11 @@ export async function getConfig (opts: {
     ...registriesFromNpmrc,
     // The global config file's `_auth` only fills in what nothing declares:
     // it is where a `pnpm login` stores a credential, and holding one is not
-    // a statement about where packages come from.
+    // a statement about where packages come from. `registriesFromNpmrc`
+    // carries the builtin default as well as what the `.npmrc` files
+    // declared, so only the latter are restated above the fallback.
     ...npmrcResult.jsonAuth.fallbackRegistries,
+    ...npmrcResult.declaredRegistries,
     ...globalYamlRegistries,
     ...workspaceManifestRegistries,
     ...declaredDefault,
@@ -806,11 +827,26 @@ export async function getConfig (opts: {
     pnpmConfig.lockfileDir = pnpmConfig.workspaceDir
   }
 
+  // Derived once `modulesDir` is known, which the workspace manifest supplies
+  // after the global branch above. Gated on the same `cliOptions['global']`
+  // that branch is, not on the merged `global` setting: only `--global` sets
+  // `bin` to the global directory, so a `global` that arrived from the
+  // environment still needs the local one.
+  if (!cliOptions['global'] && !pnpmConfig.bin) {
+    pnpmConfig.bin = binDirOf(pnpmConfig.dir, pnpmConfig.modulesDir)
+  }
   if (pnpmConfig.workspaceDir) {
-    pnpmConfig.extraBinPaths = [path.join(pnpmConfig.workspaceDir, 'node_modules', '.bin')]
+    // The workspace root is a project like any other, so its own
+    // `packageConfigs` entry moves the executables every member reaches
+    // through these paths. Its manifest was read above.
+    pnpmConfig.extraBinPaths = [binDirOf(
+      pnpmConfig.workspaceDir,
+      createProjectModulesDirResolver(pnpmConfig)(pnpmConfig.rootProjectManifest?.name)
+    )]
   } else {
     pnpmConfig.extraBinPaths = []
   }
+  pnpmConfig.modulesDirsByProjectName = getModulesDirsByProjectName(pnpmConfig)
 
   pnpmConfig.extraEnv = {
     pnpm_config_verify_deps_before_run: 'false',
@@ -951,8 +987,17 @@ export async function getConfig (opts: {
     }
   }
 
-  if (pnpmConfig.runtimeOnFail && pnpmConfig.rootProjectManifest) {
-    applyRuntimeOnFailOverride(pnpmConfig.rootProjectManifest, pnpmConfig.runtimeOnFail)
+  if (pnpmConfig.runtimeOnFail) {
+    if (pnpmConfig.rootProjectManifest) {
+      applyRuntimeOnFailOverride(pnpmConfig.rootProjectManifest, pnpmConfig.runtimeOnFail)
+    }
+    if (pnpmConfig.enginePinManifest && pnpmConfig.enginePinManifest !== pnpmConfig.rootProjectManifest) {
+      applyRuntimeOnFailOverride(pnpmConfig.enginePinManifest, pnpmConfig.runtimeOnFail)
+    }
+  }
+
+  if (pnpmConfig.nodeVersion == null && pnpmConfig.enginePinManifest != null) {
+    pnpmConfig.nodeVersion = getNodeVersionFromEnginesRuntime(pnpmConfig.enginePinManifest)
   }
 
   applyRemoteSideEffectsCacheEnv(pnpmConfig, env)
@@ -960,7 +1005,7 @@ export async function getConfig (opts: {
   const {
     hooks, finders,
     allProjects, selectedProjectsGraph, allProjectsGraph, prodAllProjectsGraph, prodOnlySelectedProjectDirs,
-    rootProjectManifest, rootProjectManifestDir,
+    rootProjectManifest, rootProjectManifestDir, enginePinManifest,
     cliOptions: ctxCliOptions,
     explicitlySetKeys: ctxExplicitlySetKeys,
     packageManager: ctxPackageManager, wantedPackageManager,
@@ -969,7 +1014,7 @@ export async function getConfig (opts: {
   const context: ConfigContext = {
     hooks, finders,
     allProjects, selectedProjectsGraph, allProjectsGraph, prodAllProjectsGraph, prodOnlySelectedProjectDirs,
-    rootProjectManifest, rootProjectManifestDir,
+    rootProjectManifest, rootProjectManifestDir, enginePinManifest,
     cliOptions: ctxCliOptions,
     explicitlySetKeys: ctxExplicitlySetKeys,
     packageManager: ctxPackageManager, wantedPackageManager,
@@ -1250,9 +1295,13 @@ function getNodeVersionFromEnginesRuntime (manifest: ProjectManifest): string | 
     if (enginesRuntime == null) continue
     const runtimes: EngineDependency[] = Array.isArray(enginesRuntime) ? enginesRuntime : [enginesRuntime]
     const nodeRuntime = runtimes.find((r) => r.name === 'node')
-    if (nodeRuntime?.version == null) continue
-    if (!semver.validRange(nodeRuntime.version)) continue
-    const minVersion = semver.minVersion(nodeRuntime.version)
+    if (typeof nodeRuntime?.version !== 'string') continue
+    const version = nodeRuntime.version.trim()
+    if (!semver.validRange(version)) continue
+    if (nodeRuntime.onFail !== 'download') {
+      return semver.valid(version) ?? undefined
+    }
+    const minVersion = semver.minVersion(version)
     if (minVersion != null) {
       return minVersion.version
     }
@@ -1556,6 +1605,7 @@ const CONFIG_CONTEXT_KEYS = [
   'prodOnlySelectedProjectDirs',
   'rootProjectManifest',
   'rootProjectManifestDir',
+  'enginePinManifest',
   'cliOptions',
   'explicitlySetKeys',
   'packageManager',

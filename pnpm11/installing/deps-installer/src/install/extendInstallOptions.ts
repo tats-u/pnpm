@@ -13,7 +13,7 @@ import type { IncludedDependencies } from '@pnpm/installing.modules-yaml'
 import type { LockfileObject } from '@pnpm/lockfile.fs'
 import type { PreferredVersions, ResolutionPolicyViolation, ResolutionVerifier, WorkspacePackages } from '@pnpm/resolving.resolver-base'
 import type { StoreController } from '@pnpm/store.controller-types'
-import type { AllowedDeprecatedVersions, PackageExtension, PackageVulnerabilityAudit, PeerDependencyRules, ProjectRootDir, ReadPackageHook, RegistryConfig, RegistryContext, RemoteSideEffectsCacheSettings, SupportedArchitectures, TrustPolicy } from '@pnpm/types'
+import type { AllowedDeprecatedVersions, PackageExtension, PackageVulnerabilityAudit, PeerDependencyIssues, PeerDependencyRules, ProjectManifest, ProjectRootDir, ReadPackageHook, RegistryConfig, RegistryContext, RemoteSideEffectsCacheSettings, SupportedArchitectures, TrustPolicy } from '@pnpm/types'
 
 import { pnpmPkgJson } from '../pnpmPkgJson.js'
 import type { ReporterFunction } from '../types.js'
@@ -25,6 +25,7 @@ export interface StrictInstallOptions extends RegistryContext {
   catalogs: Catalogs
   catalogMode: 'strict' | 'prefer' | 'manual'
   catalogPrune: boolean
+  deploy?: boolean
   minimumReleaseAgeExcludePrune: boolean
   frozenLockfile: boolean
   frozenLockfileIfExists: boolean
@@ -74,8 +75,11 @@ export interface StrictInstallOptions extends RegistryContext {
   storeDir: string
   reporter: ReporterFunction
   force: boolean
+  /** See `installabilityUnderForce` in `@pnpm/config.package-is-installable`. */
+  forceIgnoresPlatform: boolean
   depth: number
   lockfileDir: string
+  workspaceDir?: string
   modulesDir: string
   configByUri: Record<string, RegistryConfig>
   verifyStoreIntegrity: boolean
@@ -101,7 +105,7 @@ export interface StrictInstallOptions extends RegistryContext {
     customResolvers?: CustomResolver[]
     customFetchers?: CustomFetcher[]
     calculatePnpmfileChecksum?: () => Promise<string | undefined>
-    hasUntrackedReadPackageHook?: boolean
+    untrackedPnpmfileReadPackageHook?: boolean
   }
   sideEffectsCacheRead: boolean
   sideEffectsCacheWrite: boolean
@@ -258,7 +262,7 @@ export interface StrictInstallOptions extends RegistryContext {
    */
   runPacquet?: {
     supportsResolution: boolean
-    run: (opts?: { filterResolvedProgress?: boolean, resolve?: boolean }) => Promise<void>
+    run: (opts?: { filterResolvedProgress?: boolean, resolve?: boolean, rootProjectPreinstallRan?: boolean }) => Promise<void>
   }
   /**
    * If true, `mutateModules` does not emit the per-install `summary` log
@@ -268,11 +272,37 @@ export interface StrictInstallOptions extends RegistryContext {
    */
   omitSummaryLog: boolean
   /**
+   * A materialization pass runs straight after this one and links into the
+   * same `node_modules`. It owns the reporter's `importing_done`, because the
+   * default reporter completes a prefix's progress stream on the first one and
+   * the real fetch and import counts would render to a closed stream. It also
+   * lets this pass move aside a `node_modules` entry another package manager
+   * installed, clearing the path the next pass links into.
+   *
+   * False for a standalone `--lockfile-only` or `--dry-run` run: no pass
+   * follows, so it emits its own completion, imports no package, and relocates
+   * no such entry.
+   */
+  materializeAfterResolution: boolean
+  /**
    * URL of a pnpr server that resolves dependencies server-side and serves
    * only the files missing from the client's store.
    */
   pnprServer?: string
   remoteSideEffectsCache?: RemoteSideEffectsCacheSettings
+  beforeLifecycleScripts?: (result: BeforeLifecycleScriptsResult) => Promise<void>
+}
+
+export interface BeforeLifecycleScriptsResult {
+  updatedProjects: Array<{
+    originalManifest?: ProjectManifest
+    manifest: ProjectManifest
+    peerDependencyIssues?: PeerDependencyIssues
+    rootDir: ProjectRootDir
+  }>
+  updatedCatalogs?: Catalogs
+  newLockfile?: LockfileObject
+  resolutionPolicyViolations?: ResolutionPolicyViolation[]
 }
 
 export type InstallOptions =
@@ -295,10 +325,12 @@ const defaults = (opts: InstallOptions): StrictInstallOptions => {
     confirmModulesPurge: !(opts.autoConfirmAllPrompts || opts.force),
     depth: 0,
     dedupeInjectedDeps: true,
+    deploy: opts.deploy ?? false,
     enableGlobalVirtualStore: false,
     enablePnp: false,
     engineStrict: false,
     force: false,
+    forceIgnoresPlatform: true,
     forceFullResolution: false,
     frozenLockfile: false,
     frozenStore: false,
@@ -318,6 +350,7 @@ const defaults = (opts: InstallOptions): StrictInstallOptions => {
       optionalDependencies: true,
     },
     lockfileDir: opts.lockfileDir ?? opts.dir ?? process.cwd(),
+    workspaceDir: opts.workspaceDir,
     lockfileOnly: false,
     updateChecksums: false,
     nodeVersion: opts.nodeVersion,
@@ -381,6 +414,7 @@ const defaults = (opts: InstallOptions): StrictInstallOptions => {
     peersSuffixMaxLength: 1000,
     blockExoticSubdeps: false,
     omitSummaryLog: false,
+    materializeAfterResolution: false,
     resolutionVerifiers: [] as ResolutionVerifier[],
   } as StrictInstallOptions
 }

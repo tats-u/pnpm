@@ -5,6 +5,7 @@ import type { Config, ConfigContext } from '@pnpm/config.reader'
 import { WANTED_LOCKFILE } from '@pnpm/constants'
 import { findDependencyLicenses } from '@pnpm/deps.compliance.license-scanner'
 import { PnpmError } from '@pnpm/error'
+import { readModulesManifest } from '@pnpm/installing.modules-yaml'
 import { getLockfileImporterId, readWantedLockfile } from '@pnpm/lockfile.fs'
 import { getStorePath } from '@pnpm/store.path'
 
@@ -25,9 +26,11 @@ export type LicensesCommandOptions = {
 | 'registriesByPrefix'
 | 'optional'
 | 'production'
+| 'resolvePeersFromWorkspaceRoot'
 | 'storeDir'
 | 'virtualStoreDir'
 | 'modulesDir'
+| 'nodeLinker'
 | 'pnpmHomeDir'
 | 'supportedArchitectures'
 | 'virtualStoreDirMaxLength'
@@ -57,16 +60,21 @@ export async function licensesList (opts: LicensesCommandOptions): Promise<Licen
 
   const manifest = await readProjectManifestOnly(opts.dir)
 
+  const lockfileDir = opts.lockfileDir ?? opts.dir
   const includedImporterIds = opts.selectedProjectsGraph
     ? Object.keys(opts.selectedProjectsGraph)
-      .map((path) => getLockfileImporterId(opts.lockfileDir ?? opts.dir, path))
-    : undefined
+      .map((path) => getLockfileImporterId(lockfileDir, path))
+    : [getLockfileImporterId(lockfileDir, opts.dir)]
 
   const storeDir = await getStorePath({
     pkgRoot: opts.dir,
     storePath: opts.storeDir,
     pnpmHomeDir: opts.pnpmHomeDir,
   })
+
+  const modules = opts.nodeLinker === 'hoisted'
+    ? await readModulesManifest(path.resolve(lockfileDir, opts.modulesDir ?? 'node_modules'))
+    : null
 
   const licensePackages = await findDependencyLicenses({
     include,
@@ -75,11 +83,13 @@ export async function licensesList (opts: LicensesCommandOptions): Promise<Licen
     virtualStoreDir: opts.virtualStoreDir ?? path.join(opts.modulesDir ?? 'node_modules', '.pnpm'),
     virtualStoreDirMaxLength: opts.virtualStoreDirMaxLength,
     modulesDir: opts.modulesDir,
+    hoistedLocations: modules?.hoistedLocations,
     registriesByScope: opts.registriesByScope,
     registriesByPrefix: opts.registriesByPrefix,
     wantedLockfile: lockfile,
     manifest,
     includedImporterIds,
+    resolvePeersFromWorkspaceRoot: opts.resolvePeersFromWorkspaceRoot,
     supportedArchitectures: opts.supportedArchitectures,
   })
 

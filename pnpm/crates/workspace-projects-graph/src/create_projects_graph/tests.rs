@@ -22,12 +22,6 @@ impl BaseProject for TestProject {
     fn manifest_name(&self) -> Option<&str> {
         self.name.as_deref()
     }
-}
-
-impl GraphProject for TestProject {
-    fn manifest_version(&self) -> Option<&str> {
-        self.version.as_deref()
-    }
     fn merged_dependencies(&self, ignore_dev_deps: bool) -> Vec<(String, String)> {
         let mut map: IndexMap<String, String> = IndexMap::new();
         for (name, spec) in &self.peer {
@@ -48,6 +42,12 @@ impl GraphProject for TestProject {
     }
 }
 
+impl GraphProject for TestProject {
+    fn manifest_version(&self) -> Option<&str> {
+        self.version.as_deref()
+    }
+}
+
 fn project(root: &str, name: &str, version: &str, prod: &[(&str, &str)]) -> TestProject {
     TestProject {
         root_dir: PathBuf::from(root),
@@ -56,13 +56,15 @@ fn project(root: &str, name: &str, version: &str, prod: &[(&str, &str)]) -> Test
         peer: Vec::new(),
         dev: Vec::new(),
         optional: Vec::new(),
-        prod: prod.iter().map(|(name, spec)| (name.to_string(), spec.to_string())).collect(),
+        prod: prod
+            .iter()
+            .map(|(name, spec)| (name.to_string(), spec.to_string()))
+            .collect(),
     }
 }
 
 fn edges(graph: &crate::ProjectGraph<TestProject>, key: &str) -> Vec<String> {
-    graph[Path::new(key)]
-        .dependencies
+    graph[Path::new(key)].dependencies
         .iter()
         .map(|path| path.to_string_lossy().into_owned())
         .collect()

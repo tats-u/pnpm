@@ -38,8 +38,13 @@ use std::fs;
 ///   + project-2 × is-positive@2.0.0).
 #[test]
 fn inject_workspace_packages_writes_file_resolutions_and_lockfile_setting() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     // Flip the workspace yaml: `injectWorkspacePackages: true`,
@@ -106,7 +111,10 @@ fn inject_workspace_packages_writes_file_resolutions_and_lockfile_setting() {
     )
     .expect("write project-3/package.json");
 
-    pacquet.with_arg("install").assert().success();
+    pacquet
+        .with_arg("install")
+        .assert()
+        .success();
 
     let lockfile_path = workspace.join("pnpm-lock.yaml");
     let lockfile = fs::read_to_string(&lockfile_path).expect("read pnpm-lock.yaml");
@@ -141,9 +149,11 @@ fn inject_workspace_packages_writes_file_resolutions_and_lockfile_setting() {
         let dep_name_parsed = dep_name
             .parse::<pnpm_lockfile::PkgName>()
             .unwrap_or_else(|err| panic!("parse PkgName {dep_name:?}: {err}"));
-        let importer = parsed.importers.get(importer_id).unwrap_or_else(|| {
-            panic!("pnpm-lock.yaml missing `importers[{importer_id:?}]` block:\n{lockfile}")
-        });
+        let importer = parsed.importers
+            .get(importer_id)
+            .unwrap_or_else(|| {
+                panic!("pnpm-lock.yaml missing `importers[{importer_id:?}]` block:\n{lockfile}")
+            });
         let deps = importer.dependencies.as_ref().unwrap_or_else(|| {
             panic!(
                 "pnpm-lock.yaml `importers[{importer_id:?}]` has no `dependencies` block:\n{lockfile}",
@@ -189,7 +199,12 @@ fn inject_workspace_packages_writes_file_resolutions_and_lockfile_setting() {
     let entries: Vec<String> = fs::read_dir(&dot_pnpm)
         .expect("read node_modules/.pnpm")
         .filter_map(Result::ok)
-        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .map(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
         .collect();
     assert_eq!(
         entries.len(),
@@ -204,15 +219,28 @@ fn inject_workspace_packages_writes_file_resolutions_and_lockfile_setting() {
     // `ERROR_INVALID_NAME (123)`. Pin this here so a regression on
     // the escape rule fails on every platform, not just NTFS.
     assert!(
-        entries.iter().any(|name| name == "project-1@file+project-1_is-positive@1.0.0"),
+        entries
+            .iter()
+            .any(|name| name == "project-1@file+project-1_is-positive@1.0.0"),
         "missing FS-safe virtual-store slot for project-1 × is-positive@1.0.0; \
          entries: {entries:?}",
     );
     assert!(
-        entries.iter().all(|name| !name.contains("file:")),
+        entries
+            .iter()
+            .all(|name| !name.contains("file:")),
         "no virtual-store slot may contain an unescaped `:` — Windows refuses it; \
          entries: {entries:?}",
     );
+
+    // (5) The peer-suffixed `file:` snapshots must pass the lockfile
+    // freshness check.
+    std::process::Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(&workspace)
+        .with_args(["install", "--frozen-lockfile"])
+        .assert()
+        .success();
 
     drop((root, mock_instance));
 }
@@ -230,8 +258,13 @@ fn inject_workspace_packages_writes_file_resolutions_and_lockfile_setting() {
 /// with the workspace-level `injectWorkspacePackages` unset.
 #[test]
 fn dependencies_meta_injected_per_dep_overrides_global_off() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -286,19 +319,20 @@ fn dependencies_meta_injected_per_dep_overrides_global_off() {
     )
     .expect("write project-2/package.json");
 
-    pacquet.with_arg("install").assert().success();
+    pacquet
+        .with_arg("install")
+        .assert()
+        .success();
 
     let lockfile =
         fs::read_to_string(workspace.join("pnpm-lock.yaml")).expect("read pnpm-lock.yaml");
     let parsed: pnpm_lockfile::Lockfile = serde_saphyr::from_str(&lockfile)
         .unwrap_or_else(|err| panic!("re-parse pnpm-lock.yaml: {err}\n{lockfile}"));
 
-    let importer = parsed
-        .importers
+    let importer = parsed.importers
         .get("project-2")
         .unwrap_or_else(|| panic!("missing `importers[project-2]`:\n{lockfile}"));
-    let deps = importer
-        .dependencies
+    let deps = importer.dependencies
         .as_ref()
         .unwrap_or_else(|| panic!("missing project-2 dependencies:\n{lockfile}"));
     let project_1_name: pnpm_lockfile::PkgName = "project-1".parse().unwrap();
@@ -322,6 +356,88 @@ fn dependencies_meta_injected_per_dep_overrides_global_off() {
         !lockfile.contains("injectWorkspacePackages: true"),
         "global `injectWorkspacePackages` must remain off in the lockfile settings; \
          lockfile:\n{lockfile}",
+    );
+
+    drop((root, mock_instance));
+}
+
+#[test]
+fn injected_workspace_dependency_updated_re_resolves() {
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
+    let AddMockedRegistry { mock_instance, .. } = npmrc_info;
+
+    let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
+    fs::write(&workspace_yaml_path, "packages:\n  - 'project-*'\nsharedWorkspaceLockfile: false\n")
+        .expect("write pnpm-workspace.yaml");
+
+    fs::write(
+        workspace.join("package.json"),
+        serde_json::json!({ "name": "ws-root", "version": "0.0.0", "private": true }).to_string(),
+    )
+    .expect("write root package.json");
+
+    fs::create_dir_all(workspace.join("project-1")).expect("mkdir project-1");
+    fs::write(
+        workspace.join("project-1/package.json"),
+        serde_json::json!({
+            "name": "project-1",
+            "version": "1.0.0",
+            "dependencies": { "is-positive": "1.0.0" },
+        })
+        .to_string(),
+    )
+    .expect("write project-1/package.json");
+
+    fs::create_dir_all(workspace.join("project-2")).expect("mkdir project-2");
+    fs::write(
+        workspace.join("project-2/package.json"),
+        serde_json::json!({
+            "name": "project-2",
+            "version": "1.0.0",
+            "dependencies": { "project-1": "workspace:*" },
+            "dependenciesMeta": { "project-1": { "injected": true } },
+        })
+        .to_string(),
+    )
+    .expect("write project-2/package.json");
+
+    pacquet
+        .with_arg("install")
+        .assert()
+        .success();
+
+    fs::write(
+        workspace.join("project-1/package.json"),
+        serde_json::json!({
+            "name": "project-1",
+            "version": "1.0.0",
+            "dependencies": {
+                "is-positive": "1.0.0",
+                "is-negative": "1.0.0",
+            },
+        })
+        .to_string(),
+    )
+    .expect("write project-1/package.json");
+
+    std::process::Command::cargo_bin("pnpm")
+        .expect("find the pnpm binary")
+        .with_current_dir(&workspace)
+        .with_arg("install")
+        .assert()
+        .success();
+
+    let lockfile = fs::read_to_string(workspace.join("project-2/pnpm-lock.yaml"))
+        .expect("read project-2/pnpm-lock.yaml");
+    assert!(
+        lockfile.contains("is-negative"),
+        "project-2 lockfile must contain is-negative after project-1 added it:\n{lockfile}",
     );
 
     drop((root, mock_instance));

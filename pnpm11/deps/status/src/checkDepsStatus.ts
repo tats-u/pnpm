@@ -5,7 +5,7 @@ import util from 'node:util'
 import { resolveFromCatalog } from '@pnpm/catalogs.resolver'
 import type { Catalogs } from '@pnpm/catalogs.types'
 import { parseOverrides } from '@pnpm/config.parse-overrides'
-import type { Config, ConfigContext } from '@pnpm/config.reader'
+import { type Config, type ConfigContext, createProjectModulesDirResolver } from '@pnpm/config.reader'
 import { MANIFEST_BASE_NAMES } from '@pnpm/constants'
 import { hashObjectNullableWithPrefix } from '@pnpm/crypto.object-hasher'
 import { PnpmError } from '@pnpm/error'
@@ -15,8 +15,10 @@ import {
   getLockfileImporterId,
   getWantedLockfileName,
   type LockfileObject,
+  type ProjectSnapshot,
   readCurrentLockfile,
   readWantedLockfile,
+  type ResolvedDependencies,
   wantedLockfileHasMergeConflictsSync,
 } from '@pnpm/lockfile.fs'
 import {
@@ -52,12 +54,16 @@ import { statManifestFile } from './statManifestFile.js'
 export type CheckDepsStatusOptions = Pick<Config,
 | 'autoInstallPeers'
 | 'catalogs'
+| 'dedupeDirectDeps'
 | 'excludeLinksFromLockfile'
 | 'injectWorkspacePackages'
 | 'linkWorkspacePackages'
 | 'lockfileDir'
 | 'mergeGitBranchLockfiles'
+| 'modulesDir'
+| 'modulesDirsByProjectName'
 | 'nodeLinker'
+| 'packageConfigs'
 | 'patchedDependencies'
 | 'peersSuffixMaxLength'
 | 'sharedWorkspaceLockfile'
@@ -306,11 +312,12 @@ async function _checkDepsStatus (opts: CheckDepsStatusOptions, workspaceState: W
 
     let statModulesDir: (project: Project) => Promise<fs.Stats | undefined>
     if (nodeLinker === 'hoisted') {
-      const statsPromise = safeStat(path.join(rootProjectManifestDir, 'node_modules'))
+      const statsPromise = safeStat(path.resolve(rootProjectManifestDir, opts.modulesDir ?? 'node_modules'))
       statModulesDir = () => statsPromise
     } else {
       const _nodeLinkerTypeGuard: 'isolated' | undefined = nodeLinker // static type assertion
-      statModulesDir = project => safeStat(path.join(project.rootDir, 'node_modules'))
+      const modulesDirOf = createProjectModulesDirResolver(opts)
+      statModulesDir = project => safeStat(path.resolve(project.rootDir, modulesDirOf(project.manifest.name) ?? 'node_modules'))
     }
 
     const allManifestStats = await Promise.all(allProjects.map(async project => {
@@ -328,12 +335,32 @@ async function _checkDepsStatus (opts: CheckDepsStatusOptions, workspaceState: W
     }))
 
     if (!workspaceState.filteredInstall) {
-      for (const { modulesDirStats, project } of allManifestStats) {
-        if (modulesDirStats) continue
-        if (isEmpty({
+      const withoutModulesDir = allManifestStats.filter(({ modulesDirStats, project }) =>
+        modulesDirStats?.isDirectory() !== true && !isEmpty({
           ...project.manifest.dependencies,
           ...project.manifest.devDependencies,
-        })) continue
+        }))
+      // Under dedupeDirectDeps a project whose direct dependencies resolve to
+      // the root's targets gets nothing linked, so the linker never creates
+      // its modules directory; it is installed all the same.
+      const rootModulesDirExists = allManifestStats.some(({ modulesDirStats, project }) =>
+        modulesDirStats?.isDirectory() === true && project.rootDir === rootProjectManifestDir)
+      const dedupeLockfileDir = opts.lockfileDir ?? workspaceDir ?? rootProjectManifestDir
+      const mayBeDeduped = (project: Project): boolean =>
+        opts.dedupeDirectDeps === true && rootModulesDirExists && project.rootDir !== rootProjectManifestDir
+      const wantedLockfileForDedupe = withoutModulesDir.some(({ project }) => mayBeDeduped(project))
+        ? await readWantedLockfile(dedupeLockfileDir, {
+          ignoreIncompatible: false,
+          useGitBranchLockfile: opts.useGitBranchLockfile,
+          mergeGitBranchLockfiles: opts.mergeGitBranchLockfiles,
+        })
+        : null
+      for (const { project } of withoutModulesDir) {
+        if (
+          wantedLockfileForDedupe != null &&
+          mayBeDeduped(project) &&
+          dedupeLinksNothing(wantedLockfileForDedupe, dedupeLockfileDir, rootProjectManifestDir, project.rootDir, opts.include)
+        ) continue
         const id = project.manifest.name ?? project.rootDir
         return {
           upToDate: false,
@@ -504,6 +531,8 @@ async function _checkDepsStatus (opts: CheckDepsStatusOptions, workspaceState: W
     if (workspaceManifest ?? workspaceDir) {
       const allProjects = await findWorkspaceProjectsNoCheck(rootProjectManifestDir, {
         patterns: workspaceManifest == null ? undefined : workspaceManifest.packages ?? ['.'],
+        modulesDir: opts.modulesDir,
+        modulesDirsByProjectName: opts.modulesDirsByProjectName,
       })
       return checkDepsStatus({
         ...opts,
@@ -714,6 +743,7 @@ async function assertWantedLockfileUpToDate (
   if (!await linkedPackagesAreUpToDate({
     linkWorkspacePackages: !!linkWorkspacePackages,
     lockfileDir: wantedLockfileDir,
+    workspaceDir: config.workspaceDir,
     manifestsByDir: getManifestsByDir(),
     workspacePackages: getWorkspacePackages(),
     lockfilePackages: wantedLockfile.packages,
@@ -809,7 +839,7 @@ function findLocalFileOverride (overrides: Record<string, string> | undefined, c
 }
 
 const LOCAL_PATH_PREFIX = /^(?:[./\\]|~[/\\]|[a-z]:)/i
-const LOCAL_TARBALL_EXTENSION = /\.(?:tgz|tar\.gz|tar)$/i
+const LOCAL_TARBALL_EXTENSION = /\.(?:tgz|tar\.gz|tar|tar\.bz2|tbz2|tbz)$/i
 
 /**
  * Whether the specifier resolves to a local directory or tarball whose
@@ -979,4 +1009,55 @@ function modifiedAtOrAfter (stats: fs.Stats, referenceMs: number): boolean {
   const wholeSecond = stats.mtimeMs % 1000 === 0
   const mtimeMs = stats.mtime.valueOf()
   return wholeSecond ? mtimeMs + 1000 > referenceMs : mtimeMs > referenceMs
+}
+
+/**
+ * Whether `dedupeDirectDeps` links nothing into the project at `projectDir`:
+ * for every alias the project declares in a materialized group, the wanted
+ * lockfile records one target on each side, and the two are the same, which
+ * is what the linker compares. An alias declared with differing targets in
+ * several groups has one effective target the linker picks by group order;
+ * that choice is not reproduced here, so such an alias proves nothing.
+ * Neither does a lockfile that lacks either importer.
+ */
+function dedupeLinksNothing (
+  lockfile: LockfileObject,
+  lockfileDir: string,
+  rootDir: string,
+  projectDir: string,
+  include?: IncludedDependencies
+): boolean {
+  const root = lockfile.importers[getLockfileImporterId(lockfileDir, rootDir)]
+  const project = lockfile.importers[getLockfileImporterId(lockfileDir, projectDir)]
+  if (root == null || project == null) return false
+  const materializedGroups = (importer: ProjectSnapshot): Array<ResolvedDependencies | undefined> => [
+    include?.dependencies === false ? undefined : importer.dependencies,
+    include?.devDependencies === false ? undefined : importer.devDependencies,
+    include?.optionalDependencies === false ? undefined : importer.optionalDependencies,
+  ]
+  const soleTarget = (importer: ProjectSnapshot, alias: string): string | undefined => {
+    const versions = materializedGroups(importer)
+      .map((deps) => deps?.[alias])
+      .filter((version): version is string => version != null)
+    return versions.length > 0 && versions.every((version) => version === versions[0]) ? versions[0] : undefined
+  }
+  const aliases = new Set(materializedGroups(project).flatMap((deps) => Object.keys(deps ?? {})))
+  return [...aliases].every((alias) => {
+    const version = soleTarget(project, alias)
+    const rootVersion = soleTarget(root, alias)
+    return version != null && rootVersion != null && resolvesToSameTarget(rootDir, rootVersion, projectDir, version)
+  })
+}
+
+/**
+ * Whether two importer dependency versions resolve to one target: the same
+ * snapshot, or `link:` paths that name the same directory once resolved
+ * against their own importer directories.
+ */
+function resolvesToSameTarget (rootDir: string, rootVersion: string, projectDir: string, version: string): boolean {
+  const rootLink = rootVersion.startsWith('link:')
+  const projectLink = version.startsWith('link:')
+  if (rootLink !== projectLink) return false
+  if (!rootLink) return rootVersion === version
+  return path.resolve(rootDir, rootVersion.slice('link:'.length)) === path.resolve(projectDir, version.slice('link:'.length))
 }

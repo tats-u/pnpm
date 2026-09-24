@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 
 import { describe, expect, jest, test } from '@jest/globals'
@@ -5,19 +6,22 @@ import { createPeerDepGraphHash } from '@pnpm/deps.path'
 import type { MutatedProject, MutateModulesOptions, ProjectOptions } from '@pnpm/installing.deps-installer'
 import type { CatalogSnapshots } from '@pnpm/lockfile.types'
 import { prepareEmpty } from '@pnpm/prepare'
+import { fixtures } from '@pnpm/test-fixtures'
 import { addDistTag } from '@pnpm/testing.registry-mock'
 import type { ProjectId, ProjectManifest, ProjectRootDir } from '@pnpm/types'
 import { loadJsonFileSync } from 'load-json-file'
 
 import { testDefaults } from './utils/index.js'
 
+const f = fixtures(import.meta.dirname)
+
 const originalModule = await import('@pnpm/logger')
 jest.unstable_mockModule('@pnpm/logger', () => {
   originalModule.logger.warn = jest.fn()
-  return originalModule
+  return { ...originalModule, globalWarn: jest.fn() }
 })
 
-const { logger } = await import('@pnpm/logger')
+const { globalWarn, logger } = await import('@pnpm/logger')
 const { mutateModules, addDependenciesToPackage } = await import('@pnpm/installing.deps-installer')
 
 function preparePackagesAndReturnObjects (manifests: Array<ProjectManifest & Required<Pick<ProjectManifest, 'name'>>>) {
@@ -1176,6 +1180,56 @@ describe('dedupe', () => {
     expect(Object.keys(dedupedLockfile.packages)).toEqual(['@pnpm.e2e/foo@100.0.0', '@pnpm.e2e/foo@100.1.0'])
     expect(dedupedLockfile.catalogs.default['@pnpm.e2e/foo'].version).toBe('100.0.0')
   })
+
+  test('pnpm dedupe moves transitive dependencies to the version a catalog entry pins', async () => {
+    const { options, projects, readLockfile } = preparePackagesAndReturnObjects([
+      {
+        name: 'pinned',
+        dependencies: {
+          '@pnpm.e2e/dep-of-pkg-with-1-dep': 'catalog:',
+          '@pnpm.e2e/pkg-with-1-dep': '100.0.0',
+        },
+      },
+      {
+        name: 'loose',
+        dependencies: {
+          '@pnpm.e2e/dep-of-pkg-with-1-dep': '100.1.0',
+          '@pnpm.e2e/pkg-with-1-dep': '100.1.0',
+        },
+      },
+    ])
+    const catalogs = {
+      default: { '@pnpm.e2e/dep-of-pkg-with-1-dep': '100.0.0' },
+    }
+
+    await mutateModules(installProjects(projects), {
+      ...options,
+      lockfileOnly: true,
+      catalogs,
+    })
+
+    // Without its direct dependency, loose keeps 100.1.0 only through the
+    // lockfile pin of @pnpm.e2e/pkg-with-1-dep@100.1.0.
+    projects['loose' as ProjectId].dependencies = {
+      '@pnpm.e2e/pkg-with-1-dep': '100.1.0',
+    }
+    await mutateModules(installProjects(projects), {
+      ...options,
+      lockfileOnly: true,
+      catalogs,
+    })
+    expect(readLockfile().packages).toHaveProperty(['@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0'])
+
+    await mutateModules(installProjects(projects), {
+      ...options,
+      dedupe: true,
+      lockfileOnly: true,
+      catalogs,
+    })
+    const lockfile = readLockfile()
+    expect(lockfile.packages).toHaveProperty(['@pnpm.e2e/dep-of-pkg-with-1-dep@100.0.0'])
+    expect(lockfile.packages).not.toHaveProperty(['@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0'])
+  })
 })
 
 describe('add', () => {
@@ -1480,6 +1534,80 @@ describe('add', () => {
       importers: { project1: { dependencies: { 'is-positive': { specifier: 'catalog:', version: '1.0.0' } } } },
       packages: { 'is-positive@1.0.0': expect.any(Object) },
     })
+  })
+
+  test('adding a local directory with catalogMode: prefer keeps it out of the catalog', async () => {
+    const { options, projects, readLockfile } = preparePackagesAndReturnObjects([{
+      name: 'project1',
+      dependencies: {},
+    }])
+    const projectDir = path.join(options.lockfileDir, 'project1')
+    for (const name of ['bare-pkg', 'file-pkg']) {
+      fs.mkdirSync(path.join(projectDir, name), { recursive: true })
+      fs.writeFileSync(
+        path.join(projectDir, name, 'package.json'),
+        JSON.stringify({ name, version: '1.0.0' })
+      )
+    }
+
+    // The bare path and the explicit `file:` protocol take different branches
+    // of the shape test, so both are pinned here.
+    const { updatedManifest } = await addDependenciesToPackage(
+      projects['project1' as ProjectId],
+      ['./bare-pkg', 'file:./file-pkg'],
+      {
+        ...options,
+        dir: projectDir,
+        lockfileOnly: true,
+        allowNew: true,
+        catalogs: {
+          default: {},
+        },
+        catalogMode: 'prefer',
+      })
+
+    // A catalog entry is read by every project referencing it, so it cannot
+    // hold a path that resolves against the project declaring it — the catalog
+    // resolver refuses a `link:` / `file:` entry outright.
+    expect(updatedManifest).toEqual({
+      name: 'project1',
+      dependencies: {
+        'bare-pkg': 'link:bare-pkg',
+        'file-pkg': 'file:file-pkg',
+      },
+    })
+    expect(readLockfile().catalogs).toBeUndefined()
+  })
+
+  test('adding a local tarball with catalogMode: prefer keeps it out of the catalog', async () => {
+    const { options, projects, readLockfile } = preparePackagesAndReturnObjects([{
+      name: 'project1',
+      dependencies: {},
+    }])
+    const projectDir = path.join(options.lockfileDir, 'project1')
+    f.copy('pkg-with-bundled-dependencies-1.0.0.tgz', path.join(projectDir, 'local-pkg-1.0.0.tgz'))
+
+    const { updatedManifest } = await addDependenciesToPackage(
+      projects['project1' as ProjectId],
+      ['./local-pkg-1.0.0.tgz'],
+      {
+        ...options,
+        dir: projectDir,
+        lockfileOnly: true,
+        allowNew: true,
+        catalogs: {
+          default: {},
+        },
+        catalogMode: 'prefer',
+      })
+
+    expect(updatedManifest).toEqual({
+      name: 'project1',
+      dependencies: {
+        '@pnpm.e2e/pkg-with-bundled-dependencies': 'file:local-pkg-1.0.0.tgz',
+      },
+    })
+    expect(readLockfile().catalogs).toBeUndefined()
   })
 
   test('adding mismatched version with catalogMode: strict will error', async () => {
@@ -1942,6 +2070,7 @@ describe('update', () => {
       '@pnpm.e2e/foo': { specifier: '^1.0.0', version: '1.0.0' },
     })
 
+    jest.mocked(globalWarn).mockClear()
     const { updatedCatalogs, updatedProjects } = await mutateModules(
       Object.entries(projects).map(([id, manifest]) => ({
         ...manifest,
@@ -1960,6 +2089,7 @@ describe('update', () => {
     expect(updatedCatalogs).toEqual({
       default: { '@pnpm.e2e/foo': '^1.1.0' },
     })
+    expect(globalWarn).not.toHaveBeenCalledWith(expect.stringContaining('Skip adding'))
 
     const lockfile = readLockfile()
     expect(lockfile.catalogs).toEqual({

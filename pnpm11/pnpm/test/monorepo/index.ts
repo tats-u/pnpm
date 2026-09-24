@@ -2094,3 +2094,223 @@ test('rebuild in a directory created with "pnpm deploy" should run lifecycle scr
     expect(fs.existsSync('node_modules/@pnpm.e2e/install-script-example/generated-by-install.js')).toBeTruthy()
   }
 })
+
+// covers https://github.com/pnpm/pnpm/issues/3561
+test('a project that the workspace does not include is installed on its own', async () => {
+  preparePackages([
+    {
+      location: 'packages/package-1',
+      package: {
+        name: 'package-1',
+        version: '1.0.0',
+        dependencies: {
+          'is-positive': '1.0.0',
+        },
+      },
+    },
+    {
+      location: 'examples/example-1',
+      package: {
+        name: 'example-1',
+        version: '1.0.0',
+        dependencies: {
+          'is-negative': '1.0.0',
+        },
+      },
+    },
+    {
+      location: 'docs',
+      package: {
+        name: 'docs',
+        version: '1.0.0',
+        dependencies: {
+          'is-negative': '1.0.0',
+        },
+      },
+    },
+  ])
+
+  writeYamlFileSync('pnpm-workspace.yaml', { packages: ['packages/**', '!examples/**'] })
+
+  for (const dir of ['examples/example-1', 'docs']) {
+    execPnpmSync(['install'], { cwd: dir, expectSuccess: true })
+
+    expect(fs.existsSync(path.join(dir, 'node_modules/is-negative'))).toBe(true)
+    expect(fs.existsSync(path.join(dir, WANTED_LOCKFILE))).toBe(true)
+  }
+
+  expect(fs.existsSync(WANTED_LOCKFILE)).toBe(false)
+  expect(fs.existsSync('packages/package-1/node_modules')).toBe(false)
+})
+
+// covers https://github.com/pnpm/pnpm/issues/3561
+test('a directory without a manifest of its own still installs the whole workspace', async () => {
+  preparePackages([
+    {
+      location: 'packages/package-1',
+      package: {
+        name: 'package-1',
+        version: '1.0.0',
+        dependencies: {
+          'is-positive': '1.0.0',
+        },
+      },
+    },
+  ])
+
+  writeYamlFileSync('pnpm-workspace.yaml', { packages: ['packages/**'] })
+  fs.mkdirSync('packages/package-1/src', { recursive: true })
+
+  execPnpmSync(['install'], { cwd: 'packages/package-1/src', expectSuccess: true })
+
+  expect(fs.existsSync(WANTED_LOCKFILE)).toBe(true)
+  expect(fs.existsSync(path.join('packages/package-1/src', WANTED_LOCKFILE))).toBe(false)
+  expect(fs.existsSync('packages/package-1/node_modules/is-positive')).toBe(true)
+})
+
+test('a dedicated lockfile links a workspace package that matches a semver range', async () => {
+  preparePackages([
+    {
+      location: 'packages/pkg-a',
+      package: {
+        name: 'pkg-a',
+        version: '1.0.0',
+        dependencies: {
+          'custom-pkg-b': '~1.0.0',
+        },
+      },
+    },
+    {
+      location: 'packages/pkg-b',
+      package: {
+        name: 'custom-pkg-b',
+        version: '1.0.0',
+      },
+    },
+  ])
+
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    packages: ['packages/*'],
+    linkWorkspacePackages: true,
+    sharedWorkspaceLockfile: false,
+  })
+
+  await execPnpm(['install'])
+
+  expect(fs.existsSync(WANTED_LOCKFILE)).toBe(false)
+  expect(fs.existsSync('packages/pkg-a/pnpm-lock.yaml')).toBe(true)
+  expect(fs.existsSync('packages/pkg-a/node_modules/custom-pkg-b')).toBe(true)
+  expect(fs.lstatSync('packages/pkg-a/node_modules/custom-pkg-b').isSymbolicLink()).toBe(true)
+})
+
+test('package.json is updated when adding a dependency with --filter even if postinstall fails', async () => {
+  preparePackages([
+    {
+      location: '.',
+      package: {
+        name: 'root',
+        scripts: {
+          postinstall: 'exit 1',
+        },
+      },
+    },
+    {
+      location: 'packages/pkg-a',
+      package: {
+        name: 'pkg-a',
+        version: '1.0.0',
+      },
+    },
+  ])
+
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    packages: ['packages/*'],
+  })
+
+  await expect(execPnpm(['--filter', 'pkg-a', 'add', 'is-positive@1.0.0'])).rejects.toThrow()
+
+  const pkgAManifest = await readPackageJsonFromDir('packages/pkg-a')
+  expect(pkgAManifest.dependencies?.['is-positive']).toBe('1.0.0')
+})
+
+test('package.json is updated when adding a dependency in member dir even if root postinstall fails', async () => {
+  preparePackages([
+    {
+      location: '.',
+      package: {
+        name: 'root',
+        scripts: {
+          postinstall: 'exit 1',
+        },
+      },
+    },
+    {
+      location: 'packages/pkg-a',
+      package: {
+        name: 'pkg-a',
+        version: '1.0.0',
+      },
+    },
+  ])
+
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    packages: ['packages/*'],
+  })
+
+  const monorepoRoot = process.cwd()
+  try {
+    process.chdir('packages/pkg-a')
+    await expect(execPnpm(['add', 'is-positive@1.0.0'])).rejects.toThrow()
+  } finally {
+    process.chdir(monorepoRoot)
+  }
+
+  const pkgAManifest = await readPackageJsonFromDir('packages/pkg-a')
+  expect(pkgAManifest.dependencies?.['is-positive']).toBe('1.0.0')
+})
+
+test('issue 7209: updates injected dependency when sharedWorkspaceLockfile is false', async () => {
+  const projects = preparePackages([
+    {
+      name: 'shared',
+      version: '1.0.0',
+      dependencies: {
+        'is-positive': '1.0.0',
+      },
+    },
+    {
+      name: 'app',
+      version: '1.0.0',
+      dependencies: {
+        shared: 'workspace:*',
+      },
+      dependenciesMeta: {
+        shared: {
+          injected: true,
+        },
+      },
+    },
+  ])
+
+  writeYamlFileSync('pnpm-workspace.yaml', {
+    packages: ['**', '!store/**'],
+    sharedWorkspaceLockfile: false,
+  })
+
+  execPnpmSync(['install'])
+  projects['app'].has('shared')
+
+  projects['shared'].writePackageJson({
+    name: 'shared',
+    version: '1.0.0',
+    dependencies: {
+      'is-positive': '1.0.0',
+      'is-negative': '1.0.0',
+    },
+  })
+
+  execPnpmSync(['install'])
+  projects['app'].has('shared')
+  const appLockfile = projects['app'].readLockfile()
+  expect(appLockfile.packages).toHaveProperty(['is-negative@1.0.0'])
+})

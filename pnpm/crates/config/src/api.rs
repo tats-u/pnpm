@@ -15,18 +15,18 @@
 //! [Dependency injection for tests](../../../CODE_STYLE_GUIDE.md#dependency-injection-for-tests)
 //! section of the style guide for the full convention.
 
-use std::{
-    ffi::OsString,
-    io,
-    path::{Path, PathBuf},
-};
-
 /// Capability: read a process environment variable as a UTF-8 string.
 ///
 /// Defined in the `pnpm-env-replace` crate and re-exported here so
 /// this crate's callers keep importing it from `pnpm_config` alongside
 /// the other capability traits. [`Host`] implements it for production code.
 pub use pnpm_env_replace::EnvVar;
+
+use std::{
+    ffi::OsString,
+    io,
+    path::{Path, PathBuf},
+};
 
 /// Capability: read a process environment variable as a raw
 /// [`OsString`]. Used for env vars whose value is a filesystem path
@@ -95,6 +95,11 @@ pub trait LinkProbe {
     fn can_link_between_dirs(from_dir: &Path, to_dir: &Path) -> bool;
 }
 
+/// Capability: read a whole file as bytes.
+pub(crate) trait FsReadFile {
+    fn read_file(path: &Path) -> io::Result<Vec<u8>>;
+}
+
 /// Production provider for the capability traits in this crate.
 /// Production code threads `Host` through generic call sites with an
 /// explicit turbofish:
@@ -142,5 +147,11 @@ impl GetCurrentDir for Host {
 impl LinkProbe for Host {
     fn can_link_between_dirs(from_dir: &Path, to_dir: &Path) -> bool {
         crate::store_path::host_can_link_between_dirs(from_dir, to_dir)
+    }
+}
+
+impl FsReadFile for Host {
+    fn read_file(path: &Path) -> io::Result<Vec<u8>> {
+        std::fs::read(path)
     }
 }
