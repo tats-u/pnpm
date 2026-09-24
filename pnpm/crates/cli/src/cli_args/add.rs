@@ -8,6 +8,7 @@ use crate::{
     State,
     cargo_manifest::CargoDependencyKind,
     cli_args::{
+        comma_separated::split_comma_separated_selectors,
         install::{included_dependency_groups, resolve_bool_override},
         lockfile_dir::LockfileDirArg,
         pipelines::InstallFamilySelection,
@@ -213,6 +214,12 @@ pub struct AddArgs {
 }
 
 impl AddArgs {
+    pub(crate) fn with_split_allow_build(mut self, base_dir: &Path) -> Self {
+        self.install.allow_build =
+            split_comma_separated_selectors(&self.install.allow_build, base_dir);
+        self
+    }
+
     pub(crate) fn check_workspace_root(&self, config: &Config, dir: &Path) -> miette::Result<()> {
         if config.recursive
             || config.workspace_root

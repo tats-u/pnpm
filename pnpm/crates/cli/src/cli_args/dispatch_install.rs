@@ -49,6 +49,7 @@ use pnpm_reporter::{NdjsonReporter, SilentReporter};
 use std::path::{Path, PathBuf};
 
 pub(super) fn add<'a>(ctx: &RunCtx<'a>, mut args: AddArgs) -> miette::Result<CommandFuture<'a>> {
+    args = args.with_split_allow_build(ctx.locations.dir);
     let ecosystem_packages = route_package_specifiers(&mut args)?;
     if args.target.global {
         return add_global(ctx, args);

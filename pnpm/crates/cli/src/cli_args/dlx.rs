@@ -3,7 +3,8 @@ pub(crate) use clean::clean_expired_dlx_cache;
 use crate::{
     State,
     cli_args::{
-        add::add_package, catalogs::configured_catalogs, exec::set_package_manager_env,
+        add::add_package, catalogs::configured_catalogs,
+        comma_separated::split_comma_separated_selectors, exec::set_package_manager_env,
         supported_architectures::SupportedArchitecturesArgs,
     },
     engine_pm::{channel::PackageManager, provision::provision},
@@ -63,7 +64,7 @@ pub struct DlxArgs {
     pub package: Vec<String>,
 
     /// Package names allowed to run lifecycle (build) scripts during
-    /// the dlx install. May be repeated.
+    /// the dlx install. May be repeated or comma-separated.
     #[clap(long = "allow-build")]
     pub allow_build: Vec<String>,
 
@@ -159,6 +160,11 @@ impl From<BadPathDir> for DlxError {
 }
 
 impl DlxArgs {
+    fn with_split_allow_build(mut self, base_dir: &Path) -> Self {
+        self.allow_build = split_comma_separated_selectors(&self.allow_build, base_dir);
+        self
+    }
+
     /// Execute the subcommand. The package is installed into a cache
     /// directory under `config.cache_dir`, and the resolved bin runs in
     /// the process working directory (`cwd: process.cwd()`). `dir` is only
@@ -168,23 +174,31 @@ impl DlxArgs {
         dir: &Path,
         config: &'static mut Config,
     ) -> miette::Result<()> {
-        let supported_architectures =
-            SupportedArchitecturesArgs { cpu: self.cpu, os: self.os, libc: self.libc };
-        let Some((bin_command, args)) = self.command.split_first() else {
+        let DlxArgs {
+            command,
+            package,
+            allow_build,
+            shell_mode,
+            cpu,
+            os,
+            libc,
+        } = self.with_split_allow_build(dir);
+        let supported_architectures = SupportedArchitecturesArgs { cpu, os, libc };
+        let Some((bin_command, args)) = command.split_first() else {
             return Err(DlxError::MissingCommand.into());
         };
 
         let env = SpawnEnv::from_config(config, dir);
-        let spawn = env.spawn(self.shell_mode);
+        let spawn = env.spawn(shell_mode);
 
-        if let Some(tool) = provisioned_tool(&self.package, bin_command) {
+        if let Some(tool) = provisioned_tool(&package, bin_command) {
             return run_provisioned::<Reporter>(tool, config, bin_command, args, &spawn).await;
         }
 
         // `pkgs = package ?? [command]`. With `--package`, the command
         // names the bin to run; otherwise the command is also the package.
         let pkgs: Vec<String> =
-            if self.package.is_empty() { vec![bin_command.clone()] } else { self.package.clone() };
+            if package.is_empty() { vec![bin_command.clone()] } else { package.clone() };
         // Resolved here rather than in the install below so the catalog's
         // version also feeds the cache key: two callers whose catalogs pin
         // different versions of the same package must not share a cache
@@ -198,13 +212,13 @@ impl DlxArgs {
         let cached_dir = cache::get_or_prepare_cache::<Reporter>(
             config,
             &pkgs,
-            &self.allow_build,
+            &allow_build,
             &supported_architectures,
         )
         .await?;
 
         let bin_name =
-            if self.package.is_empty() { get_bin_name(&cached_dir)? } else { bin_command.clone() };
+            if package.is_empty() { get_bin_name(&cached_dir)? } else { bin_command.clone() };
 
         let status = run_bin(
             DlxProgram::Named(&bin_name),

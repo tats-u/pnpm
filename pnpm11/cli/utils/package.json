@@ -34,6 +34,7 @@
     "@pnpm/config.package-is-installable": "workspace:*",
     "@pnpm/error": "workspace:*",
     "@pnpm/pkg-manifest.utils": "workspace:*",
+    "@pnpm/resolving.parse-wanted-dependency": "workspace:*",
     "@pnpm/types": "workspace:*",
     "@pnpm/workspace.project-manifest-reader": "workspace:*",
     "chalk": "catalog:",

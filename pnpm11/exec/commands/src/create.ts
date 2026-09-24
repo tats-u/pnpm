@@ -46,7 +46,7 @@ export function help (): string {
         title: 'Options',
         list: [
           {
-            description: 'A list of package names that are allowed to run postinstall scripts during installation',
+            description: 'A comma-separated or repeatable list of package names that are allowed to run postinstall scripts during installation',
             name: '--allow-build',
           },
         ],

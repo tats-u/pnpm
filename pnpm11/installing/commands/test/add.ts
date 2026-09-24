@@ -203,6 +203,26 @@ test('add: fail when --no-save option is used', async () => {
   expect(err.message).toBe('The "add" command currently does not support the no-save option')
 })
 
+test('add splits comma-separated allow-build values', async () => {
+  const project = prepare({})
+
+  await add.handler({
+    ...DEFAULT_OPTIONS,
+    allowBuild: ['@pnpm.e2e/pre-and-postinstall-scripts-example,@pnpm.e2e/install-script-example'],
+    dir: process.cwd(),
+    linkWorkspacePackages: false,
+    rootProjectManifestDir: process.cwd(),
+  }, ['@pnpm.e2e/pre-and-postinstall-scripts-example@1.0.0', '@pnpm.e2e/install-script-example@1.0.0'])
+
+  project.has('@pnpm.e2e/pre-and-postinstall-scripts-example/generated-by-preinstall.js')
+  project.has('@pnpm.e2e/pre-and-postinstall-scripts-example/generated-by-postinstall.js')
+  project.has('@pnpm.e2e/install-script-example/generated-by-install.js')
+
+  const workspaceManifest = fs.readFileSync('pnpm-workspace.yaml', 'utf8')
+  expect(workspaceManifest).toContain('@pnpm.e2e/pre-and-postinstall-scripts-example')
+  expect(workspaceManifest).toContain('@pnpm.e2e/install-script-example')
+})
+
 test('pnpm add --save-peer', async () => {
   const project = prepare()
 

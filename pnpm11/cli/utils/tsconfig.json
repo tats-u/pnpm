@@ -25,6 +25,9 @@
       "path": "../../pkg-manifest/utils"
     },
     {
+      "path": "../../resolving/parse-wanted-dependency"
+    },
+    {
       "path": "../../workspace/project-manifest-reader"
     },
     {

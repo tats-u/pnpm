@@ -5,6 +5,7 @@ export * from './promptPageSize.js'
 export * from './readDepNameCompletions.js'
 export * from './readProjectManifest.js'
 export * from './recursiveSummary.js'
+export * from './splitCommaSeparatedSelectors.js'
 export * from './style.js'
 
 export function docsUrl (cmd: string): string {

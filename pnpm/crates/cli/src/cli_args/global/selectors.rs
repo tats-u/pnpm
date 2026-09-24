@@ -1,8 +1,9 @@
 use super::{
-    AddRequest, Context, GlobalError, GlobalPackageInfo, HashMap, IntoDiagnostic, Path, PathBuf,
-    fs, is_plain_version_spec, is_valid_old_npm_package_name, lexical_normalize,
+    AddRequest, Context, GlobalError, GlobalPackageInfo, HashMap, IntoDiagnostic, Path, fs,
+    is_plain_version_spec, is_valid_old_npm_package_name, lexical_normalize,
     parse_wanted_dependency, safe_read_package_json_from_dir, tool_install_selector,
 };
+use crate::cli_args::comma_separated;
 
 /// The packages one global install request asks for: the tokens a
 /// comma-separated request splits into, and whether they may name a tool
@@ -189,43 +190,7 @@ pub(super) fn split_into_groups(params: &[AddRequest], base_dir: &Path) -> Vec<S
 }
 
 pub(super) fn split_comma_separated(param: &str, base_dir: &Path) -> Vec<String> {
-    if !param.contains(',') {
-        return vec![param.to_string()];
-    }
-    if param.contains("://") {
-        return vec![param.to_string()];
-    }
-    if refers_to_existing_local_path(param, base_dir) {
-        return vec![param.to_string()];
-    }
-    param
-        .split(',')
-        .map(str::trim)
-        .filter(|token| !token.is_empty())
-        .map(str::to_string)
-        .collect()
-}
-
-fn refers_to_existing_local_path(param: &str, base_dir: &Path) -> bool {
-    let path_part = if let Some(rest) = param.strip_prefix("file:") {
-        rest
-    } else if let Some(rest) = param.strip_prefix("link:") {
-        rest
-    } else if param.starts_with('.')
-        || param.starts_with('/')
-        || param.starts_with('~')
-        || is_windows_drive_path(param)
-    {
-        param
-    } else {
-        return false;
-    };
-    let resolved = if Path::new(path_part).is_absolute() {
-        PathBuf::from(path_part)
-    } else {
-        base_dir.join(path_part)
-    };
-    resolved.exists()
+    comma_separated::split_comma_separated(param, base_dir)
 }
 
 /// Mirror the TypeScript `resolveLocalParam`: rewrite only *dot-relative*
@@ -285,10 +250,7 @@ pub(super) fn infer_local_package_alias(selector: &str) -> miette::Result<String
     Ok(format!("{name}@{selector}"))
 }
 
+#[cfg(test)]
 pub(super) fn is_windows_drive_path(param: &str) -> bool {
-    let bytes = param.as_bytes();
-    bytes.len() >= 3
-        && bytes[0].is_ascii_alphabetic()
-        && bytes[1] == b':'
-        && (bytes[2] == b'/' || bytes[2] == b'\\')
+    comma_separated::is_windows_drive_path(param)
 }

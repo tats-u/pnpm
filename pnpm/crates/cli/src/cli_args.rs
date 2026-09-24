@@ -13,6 +13,7 @@ pub mod changelog;
 pub mod ci;
 pub mod clean;
 pub(crate) mod cli_command;
+pub(crate) mod comma_separated;
 pub mod completion;
 pub(crate) mod concurrency_group;
 pub mod config;

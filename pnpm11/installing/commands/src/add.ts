@@ -1,7 +1,7 @@
 import { parseAllowBuildSelector } from '@pnpm/building.policy'
 import type { CommandHandlerMap } from '@pnpm/cli.command'
 import { FILTERING, OPTIONS, UNIVERSAL_OPTIONS } from '@pnpm/cli.common-cli-options-help'
-import { docsUrl } from '@pnpm/cli.utils'
+import { docsUrl, splitCommaSeparatedSelectors } from '@pnpm/cli.utils'
 import { types as allTypes } from '@pnpm/config.reader'
 import { writeSettings } from '@pnpm/config.writer'
 import { PnpmError } from '@pnpm/error'
@@ -184,7 +184,7 @@ For options that may be used with `-r`, see "pnpm help recursive"',
           OPTIONS.globalDir,
           ...UNIVERSAL_OPTIONS,
           {
-            description: 'A list of package names that are allowed to run postinstall scripts during installation. Prefix a name with ! to deny its scripts instead',
+            description: 'A comma-separated or repeatable list of package names that are allowed to run postinstall scripts during installation. Prefix a name with ! to deny its scripts instead',
             name: '--allow-build',
           },
         ],
@@ -253,7 +253,7 @@ export async function handler (
       'If you don\'t want to see this warning anymore, you may set the ignore-workspace-root-check setting to true.'
     )
   }
-  const allowBuildSelectors = opts.allowBuild?.map(parseAllowBuildSelector) ?? []
+  const allowBuildSelectors = splitCommaSeparatedSelectors(opts.allowBuild, opts.dir)?.map(parseAllowBuildSelector) ?? []
   if (
     allowBuildSelectors.length &&
     (opts.argv.original.includes('--allow-build') || allowBuildSelectors.some(({ name }) => name === ''))
