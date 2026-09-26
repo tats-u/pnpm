@@ -12,9 +12,7 @@ use std::{
 fn write_executable(path: &std::path::Path, body: &str) {
     use std::os::unix::fs::PermissionsExt;
     fs::write(path, body).expect("write executable");
-    let mut perms = fs::metadata(path)
-        .expect("stat executable")
-        .permissions();
+    let mut perms = fs::metadata(path).expect("stat executable").permissions();
     perms.set_mode(0o755);
     fs::set_permissions(path, perms).expect("chmod executable");
 }
@@ -50,9 +48,7 @@ fn assert_connection_closes(mut connection: std::net::TcpStream) {
     // Windows, which makes the read below return `WouldBlock` at once and
     // the timeout moot — the assertion would race the job object's cleanup
     // rather than wait for it.
-    connection
-        .set_nonblocking(false)
-        .expect("set detached child connection blocking");
+    connection.set_nonblocking(false).expect("set detached child connection blocking");
     connection
         .set_read_timeout(Some(Duration::from_secs(10)))
         .expect("set detached child connection timeout");
@@ -163,9 +159,7 @@ fn wait_for_file(path: &Path) -> bool {
 #[test]
 fn exec_runs_binary_from_node_modules_bin() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
-    let bin_dir = workspace
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = workspace.join("node_modules").join(".bin");
     fs::create_dir_all(&bin_dir).expect("create node_modules/.bin");
     let marker_path = workspace.join("marker.txt");
     write_executable(
@@ -193,9 +187,7 @@ fn exec_runs_in_the_cwd_with_the_projects_binaries() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
     fs::write(workspace.join("package.json"), r#"{ "name": "outer" }"#)
         .expect("write package.json");
-    let bin_dir = workspace
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = workspace.join("node_modules").join(".bin");
     fs::create_dir_all(&bin_dir).expect("create node_modules/.bin");
     let marker_path = workspace.join("cwd.txt");
     write_executable(
@@ -225,9 +217,7 @@ fn exec_runs_in_the_cwd_with_the_projects_binaries() {
 #[test]
 fn exec_passes_arguments_to_the_command() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
-    let bin_dir = workspace
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = workspace.join("node_modules").join(".bin");
     fs::create_dir_all(&bin_dir).expect("create node_modules/.bin");
     let marker_path = workspace.join("args.txt");
     write_executable(
@@ -387,9 +377,7 @@ fn exec_cleans_up_a_detached_process_after_failure() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
     let ready_path = workspace.join("detached-ready.txt");
     let listener = TcpListener::bind(("127.0.0.1", 0)).expect("listen for detached child");
-    listener
-        .set_nonblocking(true)
-        .expect("set listener nonblocking");
+    listener.set_nonblocking(true).expect("set listener nonblocking");
     let port = listener
         .local_addr()
         .expect("read listener address")
@@ -404,9 +392,7 @@ fn exec_cleans_up_a_detached_process_after_failure() {
         .expect("spawn pacquet exec");
 
     let connection = accept_detached_connection(&listener, &mut pacquet_process);
-    let status = pacquet_process
-        .wait()
-        .expect("wait for pacquet exec");
+    let status = pacquet_process.wait().expect("wait for pacquet exec");
     assert_eq!(status.code(), Some(1), "the fixture must reach its intentional failure");
     assert_connection_closes(connection);
 
@@ -426,9 +412,7 @@ fn exec_cleans_up_a_detached_process_after_failure_when_node_launches_pnpm() {
     let exited_path = workspace.join("pnpm-exited.txt");
     let release_path = workspace.join("release-node.txt");
     let listener = TcpListener::bind(("127.0.0.1", 0)).expect("listen for detached child");
-    listener
-        .set_nonblocking(true)
-        .expect("set listener nonblocking");
+    listener.set_nonblocking(true).expect("set listener nonblocking");
     let port = listener
         .local_addr()
         .expect("read listener address")
@@ -453,9 +437,7 @@ fn exec_cleans_up_a_detached_process_after_failure_when_node_launches_pnpm() {
     assert_connection_closes(connection);
 
     fs::write(&release_path, "").expect("release node");
-    let status = node_process
-        .wait()
-        .expect("wait for node launching pacquet exec");
+    let status = node_process.wait().expect("wait for node launching pacquet exec");
     assert_eq!(status.code(), Some(1), "node must forward the fixture's intentional failure");
 
     drop(root);

@@ -247,16 +247,8 @@ fn check_settings_returns_drift_when_patch_hash_changes() {
     let StalenessReason::PatchedDependenciesChanged { lockfile: l, config: c } = err else {
         panic!("expected PatchedDependenciesChanged, got {err:?}");
     };
-    assert_eq!(
-        l.get("graceful-fs@4.2.11")
-            .map(String::as_str),
-        Some("oldhash")
-    );
-    assert_eq!(
-        c.get("graceful-fs@4.2.11")
-            .map(String::as_str),
-        Some("newhash")
-    );
+    assert_eq!(l.get("graceful-fs@4.2.11").map(String::as_str), Some("oldhash"));
+    assert_eq!(c.get("graceful-fs@4.2.11").map(String::as_str), Some("newhash"));
 }
 
 #[test]
@@ -272,11 +264,7 @@ fn check_settings_returns_drift_when_patch_removed_from_config() {
     let StalenessReason::PatchedDependenciesChanged { lockfile: l, config: c } = err else {
         panic!("expected PatchedDependenciesChanged, got {err:?}");
     };
-    assert_eq!(
-        l.get("graceful-fs@4.2.11")
-            .map(String::as_str),
-        Some("abc123")
-    );
+    assert_eq!(l.get("graceful-fs@4.2.11").map(String::as_str), Some("abc123"));
     assert!(c.is_empty());
 }
 

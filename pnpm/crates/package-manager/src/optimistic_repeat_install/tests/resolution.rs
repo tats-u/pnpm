@@ -127,9 +127,7 @@ fn returns_skipped_when_overrides_drift() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -169,9 +167,7 @@ fn returns_skipped_when_dedupe_peers_drift() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -210,9 +206,7 @@ fn returns_skipped_when_peers_suffix_max_length_drift() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -230,9 +224,7 @@ fn returns_skipped_when_peers_suffix_max_length_drift() {
 #[test]
 fn records_minimum_release_age_strict_like_pnpm_resolves_it() {
     let mut config = Config::new();
-    config
-        .explicit_settings
-        .insert("minimumReleaseAge".to_string(), serde_json::Value::from(1440));
+    config.explicit_settings.insert("minimumReleaseAge".to_string(), serde_json::Value::from(1440));
     let settings =
         current_settings(&config, pnpm_config::NodeLinker::Isolated, isolated_included(), None);
     assert_eq!(settings.minimum_release_age_strict, Some(true));

@@ -38,9 +38,7 @@ pub enum LoginCliError {
 
 impl LoginArgs {
     pub async fn run<Reporter: self::Reporter>(self, config: &Config) -> miette::Result<()> {
-        let message = self
-            .execute::<AuthHost, Reporter>(config)
-            .await?;
+        let message = self.execute::<AuthHost, Reporter>(config).await?;
         println!("{message}");
         Ok(())
     }
@@ -80,14 +78,10 @@ impl LoginArgs {
         LoginOptions {
             // `--registry` wins; otherwise the resolved registry, which already
             // folds in `.npmrc` and the npmjs default.
-            registry: self
-                .registry
+            registry: self.registry
                 .as_deref()
                 .or(Some(config.registry.as_str())),
-            scope: self
-                .scope
-                .as_deref()
-                .or(config.scope.as_deref()),
+            scope: self.scope.as_deref().or(config.scope.as_deref()),
             config_dir,
             fetch_retries: config.fetch_retries,
             fetch_retry_factor: config.fetch_retry_factor,

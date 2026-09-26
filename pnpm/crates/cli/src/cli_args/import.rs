@@ -21,8 +21,7 @@ pub struct ImportArgs {
 
 impl ImportArgs {
     pub async fn run<Reporter: self::Reporter + 'static>(self, state: State) -> miette::Result<()> {
-        let dir = state
-            .manifest
+        let dir = state.manifest
             .path()
             .parent()
             .expect("manifest path always has a parent dir");
@@ -67,10 +66,8 @@ impl ImportArgs {
     }
 
     fn warn_ignored_pnpr_server<Reporter: self::Reporter>(&self, config: &pnpm_config::Config) {
-        if let Some(pnpr_server) = self
-            .pnpr_server
-            .as_deref()
-            .or(config.pnpr_server.as_deref())
+        if let Some(pnpr_server) =
+            self.pnpr_server.as_deref().or(config.pnpr_server.as_deref())
         {
             let pnpr_server = redact_url_for_display(pnpr_server);
             pnpm_reporter::emit_global_warning::<Reporter>(&format!(
@@ -89,9 +86,7 @@ fn discard_failed_import(
     if let Err(error) = std::fs::remove_file(lockfile_path)
         && error.kind() != std::io::ErrorKind::NotFound
     {
-        return Err(error)
-            .into_diagnostic()
-            .wrap_err("removing the failed imported lockfile");
+        return Err(error).into_diagnostic().wrap_err("removing the failed imported lockfile");
     }
     let Some(backup_path) = backup_path else { return Ok(()) };
     std::fs::rename(backup_path, lockfile_path)
@@ -116,18 +111,13 @@ async fn import_versions<Reporter: self::Reporter + 'static>(
             pnpm_lockfile::MaybeLazyLockfile::Lazy(&import_lockfile),
             [DependencyGroup::Prod, DependencyGroup::Dev, DependencyGroup::Optional].into_iter(),
         );
-        base_install
-            .lockfile_policy
-            .prefer_frozen = Some(false);
+        base_install.lockfile_policy.prefer_frozen = Some(false);
         base_install.lockfile_policy.trust = false;
         base_install.execution.mutation = ProjectMutation::NoInstall;
         base_install.execution.lockfile_only = true;
-        base_install
-            .resolution
-            .update_seed_policy = pnpm_package_manager::UpdateSeedPolicy::drop_all();
-        base_install
-            .resolution
-            .preferred_versions_override = Some(preferred_versions);
+        base_install.resolution.update_seed_policy =
+            pnpm_package_manager::UpdateSeedPolicy::drop_all();
+        base_install.resolution.preferred_versions_override = Some(preferred_versions);
         base_install.context.lockfile_path = Some(lockfile_path);
         base_install
     }

@@ -399,9 +399,7 @@ fn version_response(name: &str, extra_fields: serde_json::Value) -> String {
             "tarball": "https://example.com/pkg.tgz",
         },
     });
-    let fields = version
-        .as_object_mut()
-        .expect("version response is an object");
+    let fields = version.as_object_mut().expect("version response is an object");
     let serde_json::Value::Object(extra) = extra_fields else {
         panic!("extra fields must be an object");
     };
@@ -424,9 +422,7 @@ async fn run_opens_bugs_url_of_registry_package() {
         .create_async()
         .await;
 
-    run_bugs_against_registry(server.url(), "is-negative")
-        .await
-        .expect("bugs must succeed");
+    run_bugs_against_registry(server.url(), "is-negative").await.expect("bugs must succeed");
 
     mock.assert_async().await;
     assert_eq!(opened_urls(), ["https://github.com/kevva/is-negative/issues"]);
@@ -447,9 +443,7 @@ async fn run_opens_repository_issues_url_of_registry_package() {
         .create_async()
         .await;
 
-    run_bugs_against_registry(server.url(), "test-pkg")
-        .await
-        .expect("bugs must succeed");
+    run_bugs_against_registry(server.url(), "test-pkg").await.expect("bugs must succeed");
 
     mock.assert_async().await;
     assert_eq!(opened_urls(), ["https://github.com/test/pkg/issues"]);
@@ -470,9 +464,7 @@ async fn run_encodes_scoped_package_name_in_registry_request() {
         .create_async()
         .await;
 
-    run_bugs_against_registry(server.url(), "@scope/pkg")
-        .await
-        .expect("bugs must succeed");
+    run_bugs_against_registry(server.url(), "@scope/pkg").await.expect("bugs must succeed");
 
     mock.assert_async().await;
     assert_eq!(opened_urls(), ["https://github.com/scope/pkg/issues"]);

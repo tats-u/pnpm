@@ -122,9 +122,7 @@ env: process.env.TMPDIR, os: require('os').tmpdir() }))",
 #[test]
 fn run_finds_local_bin_on_path() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
-    let bin_dir = workspace
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = workspace.join("node_modules").join(".bin");
     fs::create_dir_all(&bin_dir).expect("create node_modules/.bin");
     let marker = workspace.join("marker.txt");
     write_executable(
@@ -159,9 +157,7 @@ fn run_finds_workspace_root_bin_on_path() {
     let CommandTempCwd { root, workspace, .. } = CommandTempCwd::init();
     fs::write(workspace.join("pnpm-workspace.yaml"), "packages:\n  - project\n")
         .expect("write pnpm-workspace.yaml");
-    let bin_dir = workspace
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = workspace.join("node_modules").join(".bin");
     fs::create_dir_all(&bin_dir).expect("create workspace-root node_modules/.bin");
     write_executable(&bin_dir.join("root-tool"), "#!/bin/sh\ntouch root-tool-ran.txt\n");
     let project = workspace.join("project");
@@ -182,9 +178,7 @@ fn run_finds_workspace_root_bin_on_path() {
         .assert()
         .success();
     assert!(
-        project
-            .join("root-tool-ran.txt")
-            .exists(),
+        project.join("root-tool-ran.txt").exists(),
         "the workspace root's node_modules/.bin should be on the script's PATH",
     );
 
@@ -195,9 +189,7 @@ fn run_finds_workspace_root_bin_on_path() {
 #[test]
 fn top_level_fallback_runs_script_before_local_bin() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
-    let bin_dir = workspace
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = workspace.join("node_modules").join(".bin");
     fs::create_dir_all(&bin_dir).expect("create node_modules/.bin");
     let marker = workspace.join("source.txt");
     write_executable(
@@ -227,9 +219,7 @@ fn top_level_fallback_runs_script_before_local_bin() {
 #[test]
 fn top_level_fallback_runs_local_bin_when_script_is_missing() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
-    let bin_dir = workspace
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = workspace.join("node_modules").join(".bin");
     fs::create_dir_all(&bin_dir).expect("create node_modules/.bin");
     let marker = workspace.join("args.txt");
     write_executable(
@@ -260,9 +250,7 @@ fn top_level_fallback_runs_local_bin_when_script_is_missing() {
 #[test]
 fn top_level_fallback_runs_local_bin_without_package_json() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
-    let bin_dir = workspace
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = workspace.join("node_modules").join(".bin");
     fs::create_dir_all(&bin_dir).expect("create node_modules/.bin");
     let marker = workspace.join("args.txt");
     write_executable(
@@ -283,9 +271,7 @@ fn top_level_fallback_runs_local_bin_without_package_json() {
 #[test]
 fn top_level_fallback_forwards_dotted_config_args_to_local_bin() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
-    let bin_dir = workspace
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = workspace.join("node_modules").join(".bin");
     fs::create_dir_all(&bin_dir).expect("create node_modules/.bin");
     let marker = workspace.join("args.txt");
     write_executable(

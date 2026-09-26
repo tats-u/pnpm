@@ -105,10 +105,7 @@ pub(super) fn outdated<'a>(
     }
     let config = (ctx.loaders.config)()?;
     let dir = ctx.locations.dir;
-    let manifest_path = ctx
-        .locations
-        .manifest_path
-        .to_path_buf();
+    let manifest_path = ctx.locations.manifest_path.to_path_buf();
     let reporter = ctx.reporter;
     Ok(Box::pin(async move {
         apply_update_config(config, dir, reporter).await?;
@@ -116,17 +113,10 @@ pub(super) fn outdated<'a>(
             State::init(manifest_path, config, false).wrap_err("initialize the state")?;
         let outcome = match reporter {
             ReporterType::Default | ReporterType::AppendOnly => {
-                args.run::<DefaultReporter>(command_state)
-                    .await?
+                args.run::<DefaultReporter>(command_state).await?
             }
-            ReporterType::Ndjson => {
-                args.run::<NdjsonReporter>(command_state)
-                    .await?
-            }
-            ReporterType::Silent => {
-                args.run::<SilentReporter>(command_state)
-                    .await?
-            }
+            ReporterType::Ndjson => args.run::<NdjsonReporter>(command_state).await?,
+            ReporterType::Silent => args.run::<SilentReporter>(command_state).await?,
         };
         if outcome == OutdatedOutcome::Outdated {
             #[expect(
@@ -233,17 +223,10 @@ pub(super) fn version<'a>(
     Ok(Box::pin(async move {
         match reporter {
             ReporterType::Default | ReporterType::AppendOnly => {
-                args.run::<DefaultReporter>(cfg, dir, recursive)
-                    .await
+                args.run::<DefaultReporter>(cfg, dir, recursive).await
             }
-            ReporterType::Ndjson => {
-                args.run::<NdjsonReporter>(cfg, dir, recursive)
-                    .await
-            }
-            ReporterType::Silent => {
-                args.run::<SilentReporter>(cfg, dir, recursive)
-                    .await
-            }
+            ReporterType::Ndjson => args.run::<NdjsonReporter>(cfg, dir, recursive).await,
+            ReporterType::Silent => args.run::<SilentReporter>(cfg, dir, recursive).await,
         }
     }))
 }
@@ -265,8 +248,7 @@ pub(super) fn pack<'a>(ctx: &RunCtx<'a>, args: PackArgs) -> miette::Result<Comma
         recursive: bool,
     ) -> miette::Result<String> {
         let hooks = prepare_config::<Reporter>(config, dir).await?;
-        args.run::<Reporter>(dir, config, recursive, hooks)
-            .await
+        args.run::<Reporter>(dir, config, recursive, hooks).await
     }
     Ok(Box::pin(async move {
         let output = if args.json {
@@ -310,8 +292,7 @@ pub(super) fn publish<'a>(
         recursive: bool,
     ) -> miette::Result<()> {
         let hooks = prepare_config::<Reporter>(config, dir).await?;
-        args.run::<Reporter>(dir, config, recursive, hooks)
-            .await
+        args.run::<Reporter>(dir, config, recursive, hooks).await
     }
     if args.flags.output.json {
         return Ok(Box::pin(run::<SilentReporter>(args, dir, config, recursive)));
@@ -343,8 +324,7 @@ pub(super) fn stage<'a>(
         config: &mut Config,
         recursive: bool,
     ) -> miette::Result<()> {
-        let hooks = if args
-            .params
+        let hooks = if args.params
             .first()
             .is_some_and(|subcommand| subcommand == "publish")
         {
@@ -352,10 +332,7 @@ pub(super) fn stage<'a>(
         } else {
             Vec::new()
         };
-        if let Some(output) = args
-            .run::<Reporter>(dir, config, recursive, hooks)
-            .await?
-        {
+        if let Some(output) = args.run::<Reporter>(dir, config, recursive, hooks).await? {
             let output = super::sanitize::sanitize(&output);
             if !output.is_empty() {
                 println!("{output}");

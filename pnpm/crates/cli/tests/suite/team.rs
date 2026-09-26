@@ -8,9 +8,7 @@ use std::{
 };
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm")
-        .expect("find the pnpm binary")
-        .with_current_dir(workspace)
+    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
 }
 
 fn empty_auth_file(root: &Path) -> PathBuf {
@@ -36,9 +34,7 @@ fn run_team(
         command = command.with_arg(arg);
     }
 
-    command
-        .output()
-        .expect("spawn pacquet team")
+    command.output().expect("spawn pacquet team")
 }
 
 #[test]

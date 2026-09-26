@@ -64,9 +64,7 @@ impl JobGuard {
 
         // Stop assigning children first so no spawn can reach the handle
         // once it is closed.
-        *CHILD_JOB
-            .lock()
-            .expect("child job lock is not poisoned") = None;
+        *CHILD_JOB.lock().expect("child job lock is not poisoned") = None;
 
         // SAFETY: `self.job` is the valid handle created by
         // [`arm_process_tree_cleanup`]. The information pointer refers to a
@@ -129,9 +127,7 @@ pub fn arm_process_tree_cleanup() -> Option<JobGuard> {
             return None;
         }
         if enclosing_job_releases_children() {
-            *CHILD_JOB
-                .lock()
-                .expect("child job lock is not poisoned") = Some(JobHandle(job));
+            *CHILD_JOB.lock().expect("child job lock is not poisoned") = Some(JobHandle(job));
         } else if AssignProcessToJobObject(job, GetCurrentProcess()) == 0 {
             // Fails when pacquet is already inside a job that forbids
             // nesting; fall back to no tree cleanup rather than aborting the
@@ -195,9 +191,7 @@ pub(crate) fn assign_child(child: &Child) {
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::System::JobObjects::AssignProcessToJobObject;
 
-    let child_job = CHILD_JOB
-        .lock()
-        .expect("child job lock is not poisoned");
+    let child_job = CHILD_JOB.lock().expect("child job lock is not poisoned");
     let Some(job) = child_job.as_ref() else { return };
     // SAFETY: `job.0` is the open handle created by
     // [`arm_process_tree_cleanup`], kept alive by the lock held across the

@@ -238,12 +238,7 @@ fn a_parallel_run_relays_the_interrupt_to_every_project() {
         "dev",
     ]));
     for project in PROJECTS {
-        wait_for_file(
-            &workspace
-                .join(project)
-                .join("started.txt"),
-            &mut process,
-        );
+        wait_for_file(&workspace.join(project).join("started.txt"), &mut process);
     }
     interrupt(&process);
     wait_for_shutdown(&mut process);

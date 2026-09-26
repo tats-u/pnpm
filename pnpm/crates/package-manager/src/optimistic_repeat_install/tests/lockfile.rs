@@ -82,9 +82,7 @@ fn returns_skipped_when_exclude_links_from_lockfile_drifts() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -185,9 +183,7 @@ fn run_status_reports_wanted_lockfile_merge_conflicts() {
         "<<<<<<< ours\nlockfileVersion: '9.0'\n=======\nlockfileVersion: '10.0'\n>>>>>>> theirs\n",
     )
     .expect("write conflicted lockfile");
-    let state = load_workspace_state(dir.path())
-        .expect("load workspace state")
-        .unwrap();
+    let state = load_workspace_state(dir.path()).expect("load workspace state").unwrap();
 
     let status = check_deps_status_before_run(
         &OptimisticRepeatInstallCheck {
@@ -344,12 +340,7 @@ fn large_lockfile(tail: Option<&str>) -> String {
 #[test]
 fn returns_skipped_when_current_lockfile_missing_for_non_empty_wanted_lockfile() {
     let (dir, config) = setup_content_check_project();
-    fs::remove_file(
-        config
-            .virtual_store_dir
-            .join(Lockfile::CURRENT_FILE_NAME),
-    )
-    .unwrap();
+    fs::remove_file(config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME)).unwrap();
     let manifest = PackageManifest::from_path(dir.path().join("package.json")).unwrap();
 
     let decision =
@@ -369,19 +360,12 @@ fn returns_skipped_when_current_lockfile_missing_for_wanted_lockfile_with_import
         current_settings(config, pnpm_config::NodeLinker::Isolated, isolated_included(), None);
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), settings, projects);
 
-    fs::remove_file(
-        config
-            .virtual_store_dir
-            .join(Lockfile::CURRENT_FILE_NAME),
-    )
-    .unwrap();
+    fs::remove_file(config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME)).unwrap();
     let manifest = PackageManifest::from_path(workspace_root.join("package.json")).unwrap();
 
     let decision =
@@ -394,13 +378,7 @@ fn returns_skipped_when_current_lockfile_missing_for_wanted_lockfile_with_import
 #[test]
 fn returns_skipped_when_current_lockfile_is_empty_for_non_empty_wanted_lockfile() {
     let (dir, config) = setup_content_check_project();
-    fs::write(
-        config
-            .virtual_store_dir
-            .join(Lockfile::CURRENT_FILE_NAME),
-        "",
-    )
-    .unwrap();
+    fs::write(config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME), "").unwrap();
     let manifest = PackageManifest::from_path(dir.path().join("package.json")).unwrap();
 
     let decision =
@@ -531,9 +509,8 @@ fn regenerates_missing_wanted_lockfile_from_current_when_manifests_unchanged() {
     let regenerated = Lockfile::load_wanted_from_dir(dir.path())
         .expect("parse regenerated pnpm-lock.yaml")
         .expect("pnpm-lock.yaml must be regenerated from the current lockfile");
-    let current = Lockfile::load_current_from_virtual_store_dir(&config.virtual_store_dir)
-        .unwrap()
-        .unwrap();
+    let current =
+        Lockfile::load_current_from_virtual_store_dir(&config.virtual_store_dir).unwrap().unwrap();
     assert_eq!(regenerated, current);
 }
 /// Same as above with a touched (content-identical) manifest — the
@@ -691,16 +668,12 @@ fn setup_edit_during_install() -> (tempfile::TempDir, &'static Config, PackageMa
     let manifest = PackageManifest::from_path(dir.path().join("package.json")).unwrap();
     set_mtime_ms(&dir.path().join(Lockfile::FILE_NAME), COMMITTING_LOCKFILE_MS);
     set_mtime_ms(
-        &config
-            .virtual_store_dir
-            .join(Lockfile::CURRENT_FILE_NAME),
+        &config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME),
         COMMITTING_LOCKFILE_MS,
     );
     set_mtime_ms(&dir.path().join("package.json"), COMMITTING_LOCKFILE_MS + 250);
 
-    let mut state = load_workspace_state(dir.path())
-        .unwrap()
-        .unwrap();
+    let mut state = load_workspace_state(dir.path()).unwrap().unwrap();
     state.last_validated_timestamp = COMMITTING_LOCKFILE_MS + 500;
     update_workspace_state(dir.path(), &state).unwrap();
 
@@ -724,9 +697,7 @@ fn install_detects_a_manifest_edit_that_landed_while_the_install_was_committing(
 #[test]
 fn run_gate_detects_a_manifest_edit_that_landed_while_the_install_was_committing() {
     let (dir, config, manifest) = setup_edit_during_install();
-    let state = load_workspace_state(dir.path())
-        .unwrap()
-        .unwrap();
+    let state = load_workspace_state(dir.path()).unwrap().unwrap();
 
     let status = check_deps_status_before_run(
         &OptimisticRepeatInstallCheck {
@@ -761,15 +732,11 @@ fn keeps_the_fast_path_for_a_manifest_older_than_the_lockfile() {
     set_mtime_ms(&dir.path().join("package.json"), COMMITTING_LOCKFILE_MS);
     set_mtime_ms(&dir.path().join(Lockfile::FILE_NAME), COMMITTING_LOCKFILE_MS + 250);
     set_mtime_ms(
-        &config
-            .virtual_store_dir
-            .join(Lockfile::CURRENT_FILE_NAME),
+        &config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME),
         COMMITTING_LOCKFILE_MS + 250,
     );
 
-    let mut state = load_workspace_state(dir.path())
-        .unwrap()
-        .unwrap();
+    let mut state = load_workspace_state(dir.path()).unwrap().unwrap();
     state.last_validated_timestamp = COMMITTING_LOCKFILE_MS + 500;
     update_workspace_state(dir.path(), &state).unwrap();
 

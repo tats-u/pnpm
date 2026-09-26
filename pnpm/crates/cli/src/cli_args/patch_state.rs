@@ -135,9 +135,7 @@ fn read_state_file_text(path: &Path) -> Result<Option<String>, StateFileError> {
 }
 
 fn state_file_path(modules_dir: &Path) -> PathBuf {
-    modules_dir
-        .join(STATE_DIR)
-        .join(STATE_FILE)
+    modules_dir.join(STATE_DIR).join(STATE_FILE)
 }
 
 fn checked_state_file_path_for_read(modules_dir: &Path) -> Result<PathBuf, StateFileError> {
@@ -148,9 +146,7 @@ fn checked_state_file_path_for_read(modules_dir: &Path) -> Result<PathBuf, State
 
 fn checked_state_file_path_for_write(modules_dir: &Path) -> Result<PathBuf, StateFileError> {
     let path = state_file_path(modules_dir);
-    let state_dir = path
-        .parent()
-        .expect("state file has parent");
+    let state_dir = path.parent().expect("state file has parent");
     reject_state_symlink_if_exists(state_dir)?;
     fs::create_dir_all(state_dir)
         .map_err(|source| StateFileError::Write { path: state_dir.to_path_buf(), source })?;
@@ -159,9 +155,7 @@ fn checked_state_file_path_for_write(modules_dir: &Path) -> Result<PathBuf, Stat
 }
 
 fn validate_existing_state_path(modules_dir: &Path, path: &Path) -> Result<(), StateFileError> {
-    let state_dir = path
-        .parent()
-        .expect("state file has parent");
+    let state_dir = path.parent().expect("state file has parent");
     reject_state_symlink_if_exists(state_dir)?;
     reject_state_symlink_if_exists(path)?;
     if let (Ok(real_modules_dir), Ok(real_state_dir)) =
@@ -189,14 +183,11 @@ fn reject_state_symlink_if_exists(path: &Path) -> Result<(), StateFileError> {
 }
 
 fn write_state_file_atomically(target: &Path, content: &[u8]) -> io::Result<()> {
-    let parent = target
-        .parent()
-        .unwrap_or_else(|| Path::new("."));
+    let parent = target.parent().unwrap_or_else(|| Path::new("."));
     let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
     tmp.write_all(content)?;
     tmp.as_file().sync_all()?;
-    tmp.persist(target)
-        .map_err(|error| error.error)?;
+    tmp.persist(target).map_err(|error| error.error)?;
     Ok(())
 }
 

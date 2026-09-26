@@ -13,8 +13,13 @@ use crate::_utils;
 
 #[test]
 fn bundled_dependencies_are_kept_out_of_the_lockfile() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .with_args(["add", "@pnpm.e2e/pkg-with-bundled-dependencies@1.0.0"])
@@ -40,8 +45,13 @@ fn bundled_dependencies_are_kept_out_of_the_lockfile() {
 
 #[test]
 fn bundle_dependencies_spelling_is_kept_out_of_the_lockfile() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .with_args(["add", "@pnpm.e2e/pkg-with-bundle-dependencies@1.0.0"])
@@ -65,8 +75,13 @@ fn bundle_dependencies_spelling_is_kept_out_of_the_lockfile() {
 
 #[test]
 fn bundle_dependencies_true_is_recorded_as_true() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .with_args(["add", "@pnpm.e2e/pkg-with-bundle-dependencies-true@1.0.0"])
@@ -101,8 +116,13 @@ fn bundle_dependencies_true_is_recorded_as_true() {
 
 #[test]
 fn bundled_bins_are_linked_under_the_hoisted_linker() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
 
     append_workspace_yaml_key(&workspace, "nodeLinker", "hoisted");
 
@@ -121,9 +141,7 @@ fn bundled_bins_are_linked_under_the_hoisted_linker() {
     for bundling_pkg in
         ["@pnpm.e2e/pkg-with-bundled-dependencies", "@pnpm.e2e/pkg-with-bundle-dependencies-true"]
     {
-        let pkg_dir = workspace
-            .join("node_modules")
-            .join(bundling_pkg);
+        let pkg_dir = workspace.join("node_modules").join(bundling_pkg);
         // The hoisted linker materializes a real directory where the isolated
         // one leaves a symlink into the virtual store, so this is what proves
         // the `nodeLinker` key took effect and the other linker is not what
@@ -140,8 +158,13 @@ fn bundled_bins_are_linked_under_the_hoisted_linker() {
 
 #[test]
 fn bundle_dependencies_false_is_not_recorded() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .with_args(["add", "@pnpm.e2e/pkg-with-bundle-dependencies-false"])
@@ -164,8 +187,13 @@ fn bundle_dependencies_false_is_not_recorded() {
 
 #[test]
 fn bundled_dependencies_survive_a_lockfile_rewrite() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .with_args(["add", "@pnpm.e2e/pkg-with-bundled-dependencies@1.0.0"])
@@ -196,8 +224,7 @@ fn read_wanted_lockfile(workspace: &Path) -> Lockfile {
 }
 
 fn package<'a>(lockfile: &'a Lockfile, key: &str) -> &'a PackageMetadata {
-    lockfile
-        .packages
+    lockfile.packages
         .as_ref()
         .expect("lockfile has packages")
         .iter()
@@ -206,8 +233,7 @@ fn package<'a>(lockfile: &'a Lockfile, key: &str) -> &'a PackageMetadata {
 }
 
 fn has_package(lockfile: &Lockfile, key: &str) -> bool {
-    lockfile
-        .packages
+    lockfile.packages
         .as_ref()
         .is_some_and(|packages| {
             packages

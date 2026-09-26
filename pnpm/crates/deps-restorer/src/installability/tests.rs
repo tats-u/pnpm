@@ -46,9 +46,7 @@ macro_rules! recording_reporter {
 }
 
 fn snapshot_key(name_at_version: &str) -> PackageKey {
-    name_at_version
-        .parse::<PkgNameVerPeer>()
-        .expect("valid package key")
+    name_at_version.parse::<PkgNameVerPeer>().expect("valid package key")
 }
 
 fn synthetic_metadata(

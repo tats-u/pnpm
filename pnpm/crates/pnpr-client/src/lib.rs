@@ -425,10 +425,7 @@ impl PnprClient {
     async fn handshake_fix_lockfile(&self) -> Result<(), PnprClientError> {
         let capability = self.fetch_handshake(None).await?;
         Self::require_resolver_protocol(&capability)?;
-        if !capability
-            .fix_lockfile
-            .contains(&PROTOCOL_VERSION)
-        {
+        if !capability.fix_lockfile.contains(&PROTOCOL_VERSION) {
             return Err(PnprClientError::Server(format!(
                 "pnpr server does not advertise lockfile repair support for resolver protocol v{PROTOCOL_VERSION}",
             )));
@@ -437,10 +434,7 @@ impl PnprClient {
     }
 
     fn require_resolver_protocol(capability: &HandshakeCapability) -> Result<(), PnprClientError> {
-        if !capability
-            .versions
-            .contains(&PROTOCOL_VERSION)
-        {
+        if !capability.versions.contains(&PROTOCOL_VERSION) {
             return Err(PnprClientError::Server(format!(
                 "pnpr server speaks protocol versions {:?}, but this client requires v{PROTOCOL_VERSION}",
                 capability.versions,
@@ -453,9 +447,7 @@ impl PnprClient {
         &self,
         timeout: Option<Duration>,
     ) -> Result<HandshakeCapability, PnprClientError> {
-        let mut get = self
-            .http
-            .get(format!("{}-/pnpr", self.base_url));
+        let mut get = self.http.get(format!("{}-/pnpr", self.base_url));
         if let Some(timeout) = timeout {
             get = get.timeout(timeout);
         }
@@ -513,8 +505,7 @@ impl PnprClient {
     pub async fn supports_ecosystem(&self, ecosystem: &str) -> Result<bool, PnprClientError> {
         let capability = self.fetch_handshake(None).await?;
         Self::require_resolver_protocol(&capability)?;
-        Ok(capability
-            .ecosystems
+        Ok(capability.ecosystems
             .iter()
             .any(|supported| supported == ecosystem))
     }

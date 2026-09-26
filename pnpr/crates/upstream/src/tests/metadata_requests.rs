@@ -44,10 +44,7 @@ async fn fetch_tarball_response_forwards_configured_headers() {
 
     let upstream = upstream(server.url(), auth_and_custom_headers());
     let name = CanonicalPackageName::parse("foo", pnpr_package_name::Ecosystem::Npm).unwrap();
-    let outcome = upstream
-        .fetch_tarball_response(&name, "foo-1.0.0.tgz")
-        .await
-        .unwrap();
+    let outcome = upstream.fetch_tarball_response(&name, "foo-1.0.0.tgz").await.unwrap();
 
     assert!(matches!(outcome, FetchOutcome::Ok(_)));
     mock.assert_async().await;
@@ -73,9 +70,7 @@ async fn fetch_revision_tarball_rejects_redirects_and_forwards_headers() {
         .await;
 
     let upstream = upstream(server.url(), auth_and_custom_headers());
-    let result = upstream
-        .fetch_revision_tarball_response("digest")
-        .await;
+    let result = upstream.fetch_revision_tarball_response("digest").await;
 
     assert!(matches!(
         result,
@@ -127,11 +122,7 @@ fn configured_headers_require_a_secure_same_origin_destination() {
                 .is_empty(),
             base == "http://registry.example",
         );
-        assert!(
-            upstream
-                .request_headers("https://other.example/metadata")
-                .is_empty()
-        );
+        assert!(upstream.request_headers("https://other.example/metadata").is_empty());
     }
 }
 
@@ -201,10 +192,7 @@ async fn fetch_packument_replays_validators_and_handles_304() {
         etag: Some(r#""abc123""#.to_string()),
         last_modified: Some("Wed, 21 Oct 2015 07:28:00 GMT".to_string()),
     };
-    let outcome = upstream
-        .fetch_packument(&name, &validators)
-        .await
-        .unwrap();
+    let outcome = upstream.fetch_packument(&name, &validators).await.unwrap();
 
     assert!(matches!(outcome, PackumentFetch::NotModified));
     mock.assert_async().await;
@@ -228,9 +216,7 @@ async fn fetch_packument_304_without_validators_is_an_error() {
 
     let upstream = upstream(server.url(), HeaderMap::new());
     let name = CanonicalPackageName::parse("foo", pnpr_package_name::Ecosystem::Npm).unwrap();
-    let result = upstream
-        .fetch_packument(&name, &CacheValidators::default())
-        .await;
+    let result = upstream.fetch_packument(&name, &CacheValidators::default()).await;
 
     assert!(result.is_err(), "an unconditional 304 must not be treated as NotModified");
     mock.assert_async().await;
@@ -284,10 +270,7 @@ async fn fetch_document_forwards_headers_and_accept_and_reports_the_final_url() 
         .with_status(404)
         .create_async()
         .await;
-    let outcome = upstream
-        .fetch_document("nope/", None, 1024)
-        .await
-        .unwrap();
+    let outcome = upstream.fetch_document("nope/", None, 1024).await.unwrap();
     assert!(matches!(outcome, FetchOutcome::NotFound));
     missing.assert_async().await;
 }
@@ -303,10 +286,7 @@ async fn fetch_document_rejects_a_body_over_the_limit() {
         .await;
     let upstream = breaking_upstream(server.url(), 1);
     for _ in 0..2 {
-        let err = upstream
-            .fetch_document("se/rd/serde", None, 16)
-            .await
-            .unwrap_err();
+        let err = upstream.fetch_document("se/rd/serde", None, 16).await.unwrap_err();
         assert!(matches!(err, RegistryError::UpstreamResponse { .. }), "{err:?}");
     }
     mock.assert_async().await;
@@ -333,10 +313,7 @@ async fn configured_headers_are_removed_on_metadata_redirects() {
         .await;
     let upstream = upstream(source.url(), auth_and_custom_headers());
     assert!(matches!(
-        upstream
-            .fetch_document("metadata", None, 1024)
-            .await
-            .unwrap(),
+        upstream.fetch_document("metadata", None, 1024).await.unwrap(),
         FetchOutcome::Ok(_)
     ));
     target_mock.assert_async().await;

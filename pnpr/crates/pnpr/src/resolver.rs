@@ -203,14 +203,8 @@ impl Resolver {
     }
 
     fn build(config: &RegistryConfig, osv_index: Option<Arc<OsvIndex>>) -> Resolver {
-        let store_dir = config
-            .storage
-            .cache_dir
-            .join("pnpr-store");
-        let cache_dir = config
-            .storage
-            .cache_dir
-            .join("pnpr-cache");
+        let store_dir = config.storage.cache_dir.join("pnpr-store");
+        let cache_dir = config.storage.cache_dir.join("pnpr-cache");
         // Best-effort: a real failure here (e.g. a permission problem)
         // resurfaces with a precise error on the first store/cache write
         // during resolution, so there's nothing actionable to report yet.
@@ -262,8 +256,7 @@ impl Resolver {
     /// name never share an entry; the caller's route scope adds the last
     /// namespace segment at fetch time.
     fn cargo_index_cache_dir(&self, registry: &str) -> PathBuf {
-        self.cache
-            .dir
+        self.cache.dir
             .join("cargo-index")
             .join(pnpm_crypto_hash::create_hex_hash(registry))
     }
@@ -272,8 +265,7 @@ impl Resolver {
     /// origin is hashed into the path so two indexes serving the same
     /// project never share an entry.
     fn python_index_cache_dir(&self, index: &str) -> PathBuf {
-        self.cache
-            .dir
+        self.cache.dir
             .join("python-index")
             .join(pnpm_crypto_hash::create_hex_hash(index))
     }
@@ -549,8 +541,7 @@ struct StoreCandidate<'a> {
 /// Offer a finished resolution to the cache, logging what a private one was
 /// judged on.
 fn store_resolution_candidate(candidate: StoreCandidate<'_>) {
-    let footprint = candidate
-        .footprint
+    let footprint = candidate.footprint
         .lock()
         .expect("footprint poisoned")
         .clone();

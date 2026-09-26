@@ -98,10 +98,7 @@ pub fn build_resolution_verifiers(
         release_age: pnpm_resolving_npm_resolver::VerificationReleaseAgeOptions {
             minimum_minutes: config.resolved_minimum_release_age(),
             exclude: min_age_exclude,
-            exclude_patterns: config
-                .minimum_release_age_exclude
-                .clone()
-                .unwrap_or_default(),
+            exclude_patterns: config.minimum_release_age_exclude.clone().unwrap_or_default(),
         },
         trust: pnpm_resolving_npm_resolver::VerificationTrustOptions {
             policy: match config.trust_policy {
@@ -109,10 +106,7 @@ pub fn build_resolution_verifiers(
                 TrustPolicy::NoDowngrade => Some(TrustPolicy::NoDowngrade),
             },
             exclude: trust_exclude,
-            exclude_patterns: config
-                .trust_policy_exclude
-                .clone()
-                .unwrap_or_default(),
+            exclude_patterns: config.trust_policy_exclude.clone().unwrap_or_default(),
             ignore_after: config.trust_policy_ignore_after,
         },
         metadata: pnpm_resolving_npm_resolver::VerificationMetadataClient {
@@ -146,9 +140,7 @@ type VerifierPolicies = (
 // Validate and merge registry routing before either frozen verification or fresh resolution.
 fn verifier_policies(config: &Config) -> Result<VerifierPolicies, BuildVerifiersError> {
     let min_age_exclude = build_policy(
-        config
-            .minimum_release_age_exclude
-            .as_deref(),
+        config.minimum_release_age_exclude.as_deref(),
         BuildVerifiersError::invalid_minimum_release_age_exclude,
     )?;
     let trust_exclude = build_policy(
@@ -166,8 +158,7 @@ fn verifier_policies(config: &Config) -> Result<VerifierPolicies, BuildVerifiers
     // before the resolver chain that also validates, and on the frozen path
     // that chain never runs.
     let registries_by_prefix = merge_named_registries(
-        &config
-            .registries_by_prefix
+        &config.registries_by_prefix
             .iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect(),
@@ -185,9 +176,7 @@ fn build_policy(
     if patterns.is_empty() {
         return Ok(None);
     }
-    create_package_version_policy(patterns)
-        .map(Some)
-        .map_err(wrap_error)
+    create_package_version_policy(patterns).map(Some).map_err(wrap_error)
 }
 
 impl BuildVerifiersError {

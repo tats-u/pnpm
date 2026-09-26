@@ -55,8 +55,7 @@ impl IniSettings {
     /// least one entry was removed.
     pub fn remove(&mut self, key: &str) -> bool {
         let before = self.entries.len();
-        self.entries
-            .retain(|(entry_key, _)| entry_key != key);
+        self.entries.retain(|(entry_key, _)| entry_key != key);
         self.entries.len() != before
     }
 
@@ -68,8 +67,9 @@ impl IniSettings {
         self.entries
             .iter()
             .fold(String::new(), |mut out, (key, value)| {
-                writeln!(out, "{}={}", encode_value(key), encode_value(value))
-                    .expect("writing to a String never fails");
+                writeln!(out, "{}={}", encode_value(key), encode_value(value)).expect(
+                    "writing to a String never fails",
+                );
                 out
             })
     }
@@ -99,9 +99,7 @@ fn encode_value(value: &str) -> Cow<'_, str> {
         || value != value.trim()
         || (value.len() > 1 && value.starts_with('"') && value.ends_with('"'));
     if needs_quoting {
-        serde_json::to_string(value)
-            .expect("serializing a string never fails")
-            .into()
+        serde_json::to_string(value).expect("serializing a string never fails").into()
     } else {
         Cow::Borrowed(value)
     }

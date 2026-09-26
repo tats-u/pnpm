@@ -64,12 +64,7 @@ pub(super) async fn build_pkg_id_with_patch_hash(
             .flatten();
     let (name, version) = match (result.package.name_ver.as_ref(), manifest_name) {
         (Some(name_ver), _) => (name_ver.name.to_string(), name_ver.suffix.to_string()),
-        (None, Some(name)) => (
-            name.to_string(),
-            manifest_version
-                .unwrap_or_default()
-                .to_string(),
-        ),
+        (None, Some(name)) => (name.to_string(), manifest_version.unwrap_or_default().to_string()),
         (None, None) => return Ok(raw_id.to_string()),
     };
     let prefixed = if raw_id.starts_with(&format!("{name}@")) {
@@ -96,9 +91,7 @@ pub(super) async fn build_pkg_id_with_patch_hash(
 /// A `link:` id re-anchored on the lockfile directory, so the same external
 /// target renders the same way from every importer.
 fn link_pkg_id(ctx: &TreeCtx, target: &str) -> String {
-    let relative_target = ctx
-        .importer
-        .link_anchor
+    let relative_target = ctx.importer.link_anchor
         .target_relative_to_lockfile_root(target)
         .unwrap_or_else(|| lockfile_relative_target(ctx, target));
     let relative_target = if relative_target.is_empty() { "." } else { &relative_target };
@@ -112,13 +105,7 @@ fn lockfile_relative_target(ctx: &TreeCtx, target: &str) -> String {
     let absolute_target = if target.is_absolute() {
         pnpm_fs::lexical_normalize(target)
     } else {
-        pnpm_fs::lexical_normalize(
-            &ctx.options
-                .base
-                .project
-                .project_dir
-                .join(target),
-        )
+        pnpm_fs::lexical_normalize(&ctx.options.base.project.project_dir.join(target))
     };
     pathdiff::diff_paths(&absolute_target, &ctx.importer.lockfile_dir)
         .unwrap_or(absolute_target)
@@ -220,10 +207,7 @@ fn collect_deps(
     bundled: &HashSet<&str>,
     out: &mut Vec<ChildSpec>,
 ) -> Result<(), ResolveDependencyTreeError> {
-    let Some(map) = manifest
-        .get(key)
-        .and_then(Value::as_object)
-    else {
+    let Some(map) = manifest.get(key).and_then(Value::as_object) else {
         return Ok(());
     };
     for (name, range) in map {
@@ -291,24 +275,15 @@ pub(super) fn extract_peer_dependencies(
         .filter(|name| !peer_shadowed.contains(name))
         .chain(dep_names("optionalDependencies"))
         .collect();
-    if let Some(name) = manifest
-        .get("name")
-        .and_then(Value::as_str)
-    {
+    if let Some(name) = manifest.get("name").and_then(Value::as_str) {
         own_deps.insert(name.to_string());
     }
 
-    if let Some(map) = manifest
-        .get("peerDependencies")
-        .and_then(Value::as_object)
-    {
+    if let Some(map) = manifest.get("peerDependencies").and_then(Value::as_object) {
         insert_declared_peers(&mut peers, map, &own_deps, catalogs)?;
     }
 
-    if let Some(meta) = manifest
-        .get("peerDependenciesMeta")
-        .and_then(Value::as_object)
-    {
+    if let Some(meta) = manifest.get("peerDependenciesMeta").and_then(Value::as_object) {
         insert_optional_meta_peers(&mut peers, meta, &own_deps);
     }
 
@@ -353,12 +328,7 @@ fn insert_optional_meta_peers(
     own_deps: &HashSet<String>,
 ) {
     for (name, info) in meta {
-        if own_deps.contains(name)
-            || info
-                .get("optional")
-                .and_then(Value::as_bool)
-                != Some(true)
-        {
+        if own_deps.contains(name) || info.get("optional").and_then(Value::as_bool) != Some(true) {
             continue;
         }
         peers
@@ -384,9 +354,7 @@ pub(super) fn pkg_is_leaf(result: &pnpm_resolving_resolver_base::ResolveResult) 
 }
 
 fn is_empty_or_absent(value: Option<&Value>) -> bool {
-    value
-        .and_then(Value::as_object)
-        .is_none_or(serde_json::Map::is_empty)
+    value.and_then(Value::as_object).is_none_or(serde_json::Map::is_empty)
 }
 
 /// Emits a [`Deprecation`] when a newly-resolved package's manifest is marked
@@ -406,36 +374,20 @@ pub(super) fn emit_deprecation_if_needed(
     if is_deprecation_allowed(
         &pkg_name,
         &pkg_version,
-        &ctx.workspace
-            .policy
-            .allowed_deprecated_versions,
+        &ctx.workspace.policy.allowed_deprecated_versions,
     ) {
         return;
     }
-    let Some(log) = ctx
-        .workspace
-        .hooks
-        .deprecation_log
-        .as_ref()
-    else {
+    let Some(log) = ctx.workspace.hooks.deprecation_log.as_ref() else {
         return;
     };
     log(Deprecation {
         pkg_name,
         pkg_version,
         pkg_id: id.to_string(),
-        prefix: ctx
-            .options
-            .base
-            .project
-            .project_dir
-            .display()
-            .to_string(),
+        prefix: ctx.options.base.project.project_dir.display().to_string(),
         depth,
-        non_deprecated_alternative: result
-            .package
-            .non_deprecated_alternative
-            .clone(),
+        non_deprecated_alternative: result.package.non_deprecated_alternative.clone(),
     });
 }
 

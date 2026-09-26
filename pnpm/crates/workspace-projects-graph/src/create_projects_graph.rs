@@ -74,12 +74,10 @@ where
     let (all_edges, unmatched) = resolve_all_edges(&fields.dependency_lists, &lookups);
 
     let mut graph: ProjectGraph<Pkg> = IndexMap::with_capacity(count);
-    for (package, (key, dependencies)) in projects.into_iter().zip(
-        fields
-            .node_keys
-            .into_iter()
-            .zip(all_edges),
-    ) {
+    for (package, (key, dependencies)) in projects
+        .into_iter()
+        .zip(fields.node_keys.into_iter().zip(all_edges))
+    {
         graph.insert(key, ProjectGraphNode { package, dependencies });
     }
 
@@ -107,19 +105,11 @@ where
             .collect(),
         names: projects
             .iter()
-            .map(|project| {
-                project
-                    .manifest_name()
-                    .map(str::to_string)
-            })
+            .map(|project| project.manifest_name().map(str::to_string))
             .collect(),
         versions: projects
             .iter()
-            .map(|project| {
-                project
-                    .manifest_version()
-                    .map(str::to_string)
-            })
+            .map(|project| project.manifest_version().map(str::to_string))
             .collect(),
         dependency_lists: projects
             .iter()
@@ -223,11 +213,7 @@ fn resolve_edge(
     let is_workspace_spec = raw_spec.starts_with("workspace:");
     let (effective_name, effective_spec) = if is_workspace_spec {
         let spec = WorkspaceSpec::parse(raw_spec)?;
-        (
-            spec.alias
-                .unwrap_or_else(|| dep_name.to_string()),
-            spec.version,
-        )
+        (spec.alias.unwrap_or_else(|| dep_name.to_string()), spec.version)
     } else {
         (dep_name.to_string(), raw_spec.to_string())
     };
@@ -253,8 +239,7 @@ fn resolve_edge(
 /// by-directory index.
 fn resolve_directory(importer: usize, path: &str, lookups: &Lookups) -> Option<PathBuf> {
     let resolved = lexical_normalize(&lookups.node_keys[importer].join(path));
-    lookups
-        .by_dir
+    lookups.by_dir
         .get(&resolved)
         .map(|&index| lookups.node_keys[index].clone())
 }
@@ -298,8 +283,10 @@ fn resolve_by_name_version(
         .collect();
     match resolve_workspace_range(raw_spec, &owned_versions) {
         None => {
-            unmatched
-                .push(Unmatched { pkg_name: dep_name.to_string(), range: raw_spec.to_string() });
+            unmatched.push(Unmatched {
+                pkg_name: dep_name.to_string(),
+                range: raw_spec.to_string(),
+            });
             None
         }
         Some(matched) => {

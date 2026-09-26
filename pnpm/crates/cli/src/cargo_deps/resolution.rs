@@ -21,13 +21,8 @@ pub(super) fn has_source_overrides(root: &Path) -> Result<bool> {
         .into_diagnostic()
         .wrap_err_with(|| format!("parse {}", root.join("Cargo.toml").display()))?;
     let mut has_overrides = false;
-    let patches = document
-        .get("patch")
-        .and_then(toml::Value::as_table);
-    for overrides in patches
-        .into_iter()
-        .flat_map(|patches| patches.values())
-    {
+    let patches = document.get("patch").and_then(toml::Value::as_table);
+    for overrides in patches.into_iter().flat_map(|patches| patches.values()) {
         has_overrides |= has_override_sources(overrides)?;
     }
     if let Some(overrides) = document.get("replace") {
@@ -39,10 +34,7 @@ pub(super) fn has_source_overrides(root: &Path) -> Result<bool> {
 fn has_override_sources(overrides: &toml::Value) -> Result<bool> {
     let Some(overrides) = overrides.as_table() else { return Ok(false) };
     for dependency in overrides.values() {
-        let Some(url) = dependency
-            .get("git")
-            .and_then(toml::Value::as_str)
-        else {
+        let Some(url) = dependency.get("git").and_then(toml::Value::as_str) else {
             continue;
         };
         let source = format!("git+{url}")
@@ -150,9 +142,7 @@ fn resolution_settings(
                 continue;
             };
             validate_setting(name, value)?;
-            settings
-                .entry(name)
-                .or_insert_with(|| value.clone());
+            settings.entry(name).or_insert_with(|| value.clone());
         }
         // The nearest declaration of a setting is the one that counts, so
         // once every setting has one the files farther up cannot change the
@@ -194,20 +184,21 @@ pub(super) fn configs_in_scope<'a>(
     root: &'a Path,
     checkout: Option<&'a Path>,
 ) -> impl Iterator<Item = Result<String>> + 'a {
-    root.ancestors().filter_map(move |dir| {
-        let name = match config_name(dir) {
-            Ok(Some(name)) => name,
-            Ok(None) => return None,
-            Err(error) => return Some(Err(error)),
-        };
-        let repository_controlled =
-            dir == root || checkout.is_none_or(|checkout| dir.starts_with(checkout));
-        Some(if repository_controlled {
-            read_config_in_the_checkout(dir, name)
-        } else {
-            read_config_above_the_checkout(dir, name)
+    root.ancestors()
+        .filter_map(move |dir| {
+            let name = match config_name(dir) {
+                Ok(Some(name)) => name,
+                Ok(None) => return None,
+                Err(error) => return Some(Err(error)),
+            };
+            let repository_controlled =
+                dir == root || checkout.is_none_or(|checkout| dir.starts_with(checkout));
+            Some(if repository_controlled {
+                read_config_in_the_checkout(dir, name)
+            } else {
+                read_config_above_the_checkout(dir, name)
+            })
         })
-    })
 }
 
 fn read_config_in_the_checkout(dir: &Path, name: &str) -> Result<String> {

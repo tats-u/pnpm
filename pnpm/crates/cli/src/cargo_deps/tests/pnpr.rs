@@ -77,11 +77,7 @@ async fn configured_cargo_registry_is_sent_to_the_pnpr_server() {
     let mut config = config_for_pnpr(&server.url());
     config.indexes_by_ecosystem.insert(
         pnpm_config::Ecosystem::Cargo,
-        vec![
-            "https://registry.example.test/index/"
-                .to_string()
-                .into(),
-        ],
+        vec!["https://registry.example.test/index/".to_string().into()],
     );
 
     let lockfile = resolve_via_pnpr(&config, r#"{"packages":[],"workspace_members":[]}"#)
@@ -107,9 +103,7 @@ async fn a_server_without_cargo_support_leaves_resolution_local() {
         .create_async()
         .await;
 
-    let lockfile = resolve_via_pnpr(&config_for_pnpr(&server.url()), "{}")
-        .await
-        .unwrap();
+    let lockfile = resolve_via_pnpr(&config_for_pnpr(&server.url()), "{}").await.unwrap();
 
     assert_eq!(lockfile, None);
     handshake.assert_async().await;
@@ -137,9 +131,9 @@ async fn an_unterminated_pnpr_response_does_not_grow_without_bound() {
         .unwrap_err();
 
     assert!(
-        error.chain().any(|cause| cause
-            .to_string()
-            .contains("exceeds the")),
+        error
+            .chain()
+            .any(|cause| cause.to_string().contains("exceeds the")),
         "the oversized body is refused by its size, not by parsing: {error:?}",
     );
     handshake.assert_async().await;
@@ -170,9 +164,9 @@ async fn a_second_terminal_frame_fails_the_resolve() {
         .unwrap_err();
 
     assert!(
-        error.chain().any(|cause| cause
-            .to_string()
-            .contains("more than one terminal frame")),
+        error
+            .chain()
+            .any(|cause| cause.to_string().contains("more than one terminal frame")),
         "a response that also reports a failure is not a lockfile to write: {error:?}",
     );
     handshake.assert_async().await;
@@ -200,9 +194,7 @@ async fn concurrent_roots_share_one_handshake() {
 
     let roots = (0..4).map(|_| resolve_via_pnpr(&config, METADATA));
     for resolved in futures_util::future::join_all(roots).await {
-        resolved
-            .unwrap()
-            .expect("the server resolves Cargo");
+        resolved.unwrap().expect("the server resolves Cargo");
     }
 
     handshake.assert_async().await;
@@ -225,9 +217,7 @@ async fn concurrent_roots_share_one_failed_handshake() {
     for resolved in futures_util::future::join_all(roots).await {
         let error = resolved.unwrap_err();
         assert!(
-            error
-                .to_string()
-                .contains("whether it resolves cargo"),
+            error.to_string().contains("whether it resolves cargo"),
             "every root reports the same refusal: {error:?}",
         );
     }
@@ -255,10 +245,7 @@ async fn the_handshake_is_asked_once_per_server() {
     let config = config_for_pnpr(&server.url());
 
     for _ in 0..2 {
-        resolve_via_pnpr(&config, METADATA)
-            .await
-            .unwrap()
-            .expect("the server resolves Cargo");
+        resolve_via_pnpr(&config, METADATA).await.unwrap().expect("the server resolves Cargo");
     }
 
     handshake.assert_async().await;
@@ -276,9 +263,7 @@ async fn an_offline_install_does_not_reach_the_pnpr_server() {
     let mut config = config_for_pnpr(&server.url());
     config.offline = true;
 
-    let lockfile = resolve_via_pnpr(&config, "{}")
-        .await
-        .unwrap();
+    let lockfile = resolve_via_pnpr(&config, "{}").await.unwrap();
 
     assert_eq!(lockfile, None);
     handshake.assert_async().await;

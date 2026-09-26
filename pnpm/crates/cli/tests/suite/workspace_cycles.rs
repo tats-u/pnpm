@@ -50,9 +50,7 @@ fn a_recursive_install_warns_about_cyclic_workspace_dependencies() {
         CommandTempCwd::init().add_mocked_registry();
     write_cyclic_workspace(&workspace, "");
 
-    let output = recursive_install(&workspace)
-        .assert()
-        .success();
+    let output = recursive_install(&workspace).assert().success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     assert!(stdout.contains(&format!("[WARN] {CYCLE_MESSAGE}")), "{stdout}");
     assert!(stdout.contains("project-1"), "{stdout}");
@@ -65,9 +63,7 @@ fn ignore_workspace_cycles_silences_the_warning() {
         CommandTempCwd::init().add_mocked_registry();
     write_cyclic_workspace(&workspace, "ignoreWorkspaceCycles: true\n");
 
-    let output = recursive_install(&workspace)
-        .assert()
-        .success();
+    let output = recursive_install(&workspace).assert().success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     assert!(!stdout.contains(CYCLE_MESSAGE), "{stdout}");
 }
@@ -78,9 +74,7 @@ fn disallow_workspace_cycles_makes_the_cycle_an_error() {
         CommandTempCwd::init().add_mocked_registry();
     write_cyclic_workspace(&workspace, "disallowWorkspaceCycles: true\n");
 
-    let output = recursive_install(&workspace)
-        .assert()
-        .failure();
+    let output = recursive_install(&workspace).assert().failure();
     let stderr = String::from_utf8_lossy(&output.get_output().stderr);
     assert!(stderr.contains("ERR_PNPM_DISALLOW_WORKSPACE_CYCLES"), "{stderr}");
     assert!(stderr.contains(CYCLE_MESSAGE), "{stderr}");
@@ -97,9 +91,7 @@ fn ignore_workspace_cycles_wins_over_disallow_workspace_cycles() {
         "ignoreWorkspaceCycles: true\ndisallowWorkspaceCycles: true\n",
     );
 
-    let output = recursive_install(&workspace)
-        .assert()
-        .success();
+    let output = recursive_install(&workspace).assert().success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     assert!(!stdout.contains(CYCLE_MESSAGE), "{stdout}");
 }
@@ -122,9 +114,7 @@ fn an_acyclic_workspace_is_not_reported() {
         .expect("write package.json");
     }
 
-    let output = recursive_install(&workspace)
-        .assert()
-        .success();
+    let output = recursive_install(&workspace).assert().success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     assert!(!stdout.contains(CYCLE_MESSAGE), "{stdout}");
 }
@@ -137,9 +127,7 @@ fn a_plain_workspace_install_warns_about_cyclic_workspace_dependencies() {
         CommandTempCwd::init().add_mocked_registry();
     write_cyclic_workspace(&workspace, "");
 
-    let output = install_command(&workspace, false)
-        .assert()
-        .success();
+    let output = install_command(&workspace, false).assert().success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     assert!(stdout.contains(&format!("[WARN] {CYCLE_MESSAGE}")), "{stdout}");
 }
@@ -150,9 +138,7 @@ fn a_plain_workspace_install_fails_under_disallow_workspace_cycles() {
         CommandTempCwd::init().add_mocked_registry();
     write_cyclic_workspace(&workspace, "disallowWorkspaceCycles: true\n");
 
-    let output = install_command(&workspace, false)
-        .assert()
-        .failure();
+    let output = install_command(&workspace, false).assert().failure();
     let stderr = String::from_utf8_lossy(&output.get_output().stderr);
     assert!(stderr.contains("ERR_PNPM_DISALLOW_WORKSPACE_CYCLES"), "{stderr}");
 }
@@ -186,17 +172,13 @@ fn an_already_up_to_date_install_reports_no_cycles() {
         CommandTempCwd::init().add_mocked_registry();
     write_cyclic_workspace(&workspace, "");
 
-    let first = install_command(&workspace, false)
-        .assert()
-        .success();
+    let first = install_command(&workspace, false).assert().success();
     assert!(
         String::from_utf8_lossy(&first.get_output().stdout).contains(CYCLE_MESSAGE),
         "the install that did the work reports the cycle",
     );
 
-    let output = install_command(&workspace, false)
-        .assert()
-        .success();
+    let output = install_command(&workspace, false).assert().success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     assert!(stdout.contains("Already up to date"), "{stdout}");
     assert!(!stdout.contains(CYCLE_MESSAGE), "{stdout}");
@@ -206,9 +188,7 @@ fn an_already_up_to_date_install_reports_no_cycles() {
     yaml.push_str("disallowWorkspaceCycles: true\n");
     fs::write(&workspace_yaml, yaml).expect("write pnpm-workspace.yaml");
 
-    let output = install_command(&workspace, false)
-        .assert()
-        .success();
+    let output = install_command(&workspace, false).assert().success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     assert!(stdout.contains("Already up to date"), "{stdout}");
 }

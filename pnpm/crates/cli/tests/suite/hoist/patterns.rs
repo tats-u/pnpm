@@ -11,8 +11,14 @@ use assert_cmd::assert::OutputAssertExt;
 /// [`should_hoist_dependencies_repeat_install_preserves_map`].
 #[test]
 fn private_hoist_default_pattern_hoists_transitives() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -40,9 +46,7 @@ fn private_hoist_default_pattern_hoists_transitives() {
     // Public-hoist patterns default to `[]` (matching pnpm v11), so
     // no transitive can match — it should NOT be at the root.
     assert!(
-        !workspace
-            .join("node_modules/@pnpm.e2e/hello-world-js-bin")
-            .exists(),
+        !workspace.join("node_modules/@pnpm.e2e/hello-world-js-bin").exists(),
         "transitive should not be publicly hoisted under default patterns",
     );
 
@@ -55,8 +59,14 @@ fn private_hoist_default_pattern_hoists_transitives() {
 /// entries.
 #[test]
 fn both_patterns_empty_produces_no_hoist_symlinks() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -76,15 +86,11 @@ fn both_patterns_empty_produces_no_hoist_symlinks() {
             .unwrap(),
     );
     assert!(
-        !workspace
-            .join("node_modules/.pnpm/node_modules/@pnpm.e2e/hello-world-js-bin")
-            .exists(),
+        !workspace.join("node_modules/.pnpm/node_modules/@pnpm.e2e/hello-world-js-bin").exists(),
         "no private hoist with empty patterns",
     );
     assert!(
-        !workspace
-            .join("node_modules/@pnpm.e2e/hello-world-js-bin")
-            .exists(),
+        !workspace.join("node_modules/@pnpm.e2e/hello-world-js-bin").exists(),
         "no public hoist with empty patterns",
     );
 
@@ -96,8 +102,14 @@ fn both_patterns_empty_produces_no_hoist_symlinks() {
 /// the final merged config.
 #[test]
 fn shamefully_hoist_legacy_publicly_hoists_everything() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -123,8 +135,14 @@ fn shamefully_hoist_legacy_publicly_hoists_everything() {
 
 #[test]
 fn shamefully_hoist_cli_option_publicly_hoists_everything() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -154,8 +172,14 @@ fn shamefully_hoist_cli_option_publicly_hoists_everything() {
 /// `ERR_PNPM_PUBLIC_HOIST_PATTERN_DIFF`.
 #[test]
 fn modules_yaml_public_hoist_pattern_matches_pnpm_default() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -184,8 +208,14 @@ fn modules_yaml_public_hoist_pattern_matches_pnpm_default() {
 /// set; the registry mock doesn't carry the `express` family.)
 #[test]
 fn private_hoist_pattern_filters_aliases() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -217,8 +247,14 @@ fn private_hoist_pattern_filters_aliases() {
 /// `crates/config/src/matcher.rs`.
 #[test]
 fn negation_pattern_excludes_alias_from_hoist() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -252,8 +288,13 @@ fn negation_pattern_excludes_alias_from_hoist() {
 /// modules dir whose persisted hoist pattern disagrees.
 #[test]
 fn hoist_pattern_mismatch_throws_against_existing_modules_yaml() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace_yaml(&workspace, "hoistPattern: []\n");
@@ -281,8 +322,13 @@ fn hoist_pattern_mismatch_throws_against_existing_modules_yaml() {
 /// mirror of the test above.
 #[test]
 fn hoist_pattern_undefined_throws_against_hoisted_modules_yaml() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -310,8 +356,13 @@ fn hoist_pattern_undefined_throws_against_hoisted_modules_yaml() {
 /// matches land in root `node_modules`, everything else goes private.
 #[test]
 fn combined_public_and_private_hoist_patterns_split_targets() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace_yaml(
@@ -331,9 +382,7 @@ fn combined_public_and_private_hoist_patterns_split_targets() {
         .success();
 
     assert!(
-        workspace
-            .join("node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep")
-            .exists(),
+        workspace.join("node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep").exists(),
         "the public pattern's match must land in root node_modules",
     );
     for name in ["foo", "bar"] {
@@ -361,8 +410,13 @@ fn combined_public_and_private_hoist_patterns_split_targets() {
 /// records the alias.
 #[test]
 fn hoist_by_alias() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -370,20 +424,12 @@ fn hoist_by_alias() {
         .assert()
         .success();
 
+    assert!(workspace.join("node_modules/@pnpm.e2e/pkg-with-1-aliased-dep").exists());
+    assert!(workspace.join("node_modules/.pnpm/node_modules/dep").exists());
     assert!(
-        workspace
-            .join("node_modules/@pnpm.e2e/pkg-with-1-aliased-dep")
-            .exists()
-    );
-    assert!(
-        workspace
-            .join("node_modules/.pnpm/node_modules/dep")
-            .exists()
-    );
-    assert!(
-        fs::symlink_metadata(
-            workspace.join("node_modules/.pnpm/node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep"),
-        )
+        fs::symlink_metadata(workspace.join(
+            "node_modules/.pnpm/node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep"
+        ),)
         .is_err(),
         "the aliased dep must be hoisted under its alias only",
     );
@@ -398,8 +444,13 @@ fn hoist_by_alias() {
 /// TS: `should remove aliased hoisted dependencies` (`hoist.ts:249`).
 #[test]
 fn should_remove_aliased_hoisted_dependencies() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -411,11 +462,7 @@ fn should_remove_aliased_hoisted_dependencies() {
         .assert()
         .success();
 
-    assert!(
-        !workspace
-            .join("node_modules/@pnpm.e2e/pkg-with-1-aliased-dep")
-            .exists()
-    );
+    assert!(!workspace.join("node_modules/@pnpm.e2e/pkg-with-1-aliased-dep").exists());
     assert!(
         fs::symlink_metadata(workspace.join("node_modules/.pnpm/node_modules/dep")).is_err(),
         "the aliased hoist link must be removed with its owner",

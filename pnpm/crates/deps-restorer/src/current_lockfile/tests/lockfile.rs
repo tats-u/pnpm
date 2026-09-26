@@ -49,11 +49,7 @@ fn nested_importer_links_stay_shallow_and_snapshot_links_use_lockfile_base() {
     );
 
     assert_eq!(closure.importer_ids, HashSet::from([nested_id, snapshot_target_id]));
-    assert!(
-        !closure
-            .importer_ids
-            .contains(&importer_target_id)
-    );
+    assert!(!closure.importer_ids.contains(&importer_target_id));
 }
 #[test]
 fn merge_filtered_wanted_lockfile_refreshes_all_importers_when_global_inputs_change() {
@@ -94,8 +90,7 @@ fn merge_filtered_wanted_lockfile_refreshes_all_importers_when_global_inputs_cha
         (key("removed", "1.0.0"), SnapshotEntry::default()),
     ]));
     previous.packages = Some(
-        previous
-            .snapshots
+        previous.snapshots
             .as_ref()
             .unwrap()
             .keys()
@@ -133,8 +128,7 @@ fn merge_filtered_wanted_lockfile_refreshes_all_importers_when_global_inputs_cha
         (key("new-pkg", "1.0.0"), SnapshotEntry::default()),
     ]));
     fresh.packages = Some(
-        fresh
-            .snapshots
+        fresh.snapshots
             .as_ref()
             .unwrap()
             .keys()
@@ -147,16 +141,13 @@ fn merge_filtered_wanted_lockfile_refreshes_all_importers_when_global_inputs_cha
     let expected_settings = fresh.settings.clone();
     let expected_catalogs = fresh.catalogs.clone();
     let expected_overrides = fresh.overrides.clone();
-    let expected_package_extensions_checksum = fresh
-        .package_extensions_checksum
-        .clone();
+    let expected_package_extensions_checksum = fresh.package_extensions_checksum.clone();
     let expected_pnpmfile_checksum = fresh.pnpmfile_checksum.clone();
     let expected_ignored_optional_dependencies = fresh
         .ignored_optional_dependencies
         .clone();
     let expected_patched_dependencies = fresh.patched_dependencies.clone();
-    let expected_shared_metadata = fresh
-        .packages
+    let expected_shared_metadata = fresh.packages
         .as_ref()
         .unwrap()
         .get(&key("shared", "1.0.0"))
@@ -174,11 +165,7 @@ fn merge_filtered_wanted_lockfile_refreshes_all_importers_when_global_inputs_cha
     assert_eq!(merged.importers.get(&selected_id), Some(&fresh_selected));
     assert_eq!(merged.importers.get(&retained_id), Some(&fresh_retained));
     assert_eq!(merged.importers.get(&new_id), Some(&fresh_new));
-    assert!(
-        !merged
-            .importers
-            .contains_key(&removed_id)
-    );
+    assert!(!merged.importers.contains_key(&removed_id));
     let snapshots = merged.snapshots.as_ref().unwrap();
     assert!(!snapshots.contains_key(&key("retained", "1.0.0")));
     assert!(!snapshots.contains_key(&key("retained-child", "1.0.0")));
@@ -188,8 +175,7 @@ fn merge_filtered_wanted_lockfile_refreshes_all_importers_when_global_inputs_cha
     assert!(snapshots.contains_key(&key("fresh-child", "2.0.0")));
     assert!(!snapshots.contains_key(&key("old-child", "1.0.0")));
     assert_eq!(
-        merged
-            .packages
+        merged.packages
             .as_ref()
             .unwrap()
             .get(&key("shared", "1.0.0")),
@@ -259,10 +245,7 @@ fn merge_filtered_wanted_lockfile_preserves_unselected_importers_when_global_inp
 
     assert_eq!(merged.importers.get(&selected_id), Some(&fresh_selected));
     assert_eq!(merged.importers.get(&retained_id), Some(&prior_retained));
-    let snapshots = merged
-        .snapshots
-        .as_ref()
-        .expect("merged snapshots");
+    let snapshots = merged.snapshots.as_ref().expect("merged snapshots");
     assert!(snapshots.contains_key(&key("selected-new", "2.0.0")));
     assert!(snapshots.contains_key(&key("retained-old", "1.0.0")));
     assert!(!snapshots.contains_key(&key("selected-old", "1.0.0")));
@@ -513,23 +496,14 @@ fn merge_filtered_current_lockfile_uses_one_fresh_shared_snapshot() {
         Path::new("/workspace"),
     );
 
-    assert!(
-        merged
-            .importers
-            .contains_key(&retained_id)
-    );
-    assert!(
-        merged
-            .importers
-            .contains_key(&selected_id)
-    );
+    assert!(merged.importers.contains_key(&retained_id));
+    assert!(merged.importers.contains_key(&selected_id));
     let snapshots = merged.snapshots.as_ref().unwrap();
     assert_eq!(snapshots.get(&key("shared", "1.0.0")), Some(&fresh_shared));
     assert!(snapshots.contains_key(&key("fresh-child", "2.0.0")));
     assert!(!snapshots.contains_key(&key("old-child", "1.0.0")));
     assert_eq!(
-        merged
-            .packages
+        merged.packages
             .as_ref()
             .unwrap()
             .get(&key("shared", "1.0.0")),
@@ -579,15 +553,13 @@ fn merge_filtered_current_lockfile_preserves_shallow_link_target_importers() {
 
     assert_eq!(merged.importers.get(&linked_id), Some(&previous_linked));
     assert!(
-        merged
-            .snapshots
+        merged.snapshots
             .as_ref()
             .unwrap()
             .contains_key(&key("linked-old", "1.0.0")),
     );
     assert!(
-        !merged
-            .snapshots
+        !merged.snapshots
             .as_ref()
             .unwrap()
             .contains_key(&key("linked-new", "2.0.0")),

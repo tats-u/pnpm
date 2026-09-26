@@ -102,24 +102,18 @@ impl CreateVirtualDirBySnapshot<'_> {
     /// Execute the subroutine.
     pub fn run<Reporter: self::Reporter>(self) -> Result<(), CreateVirtualDirError> {
         #[cfg(test)]
-        let _link_concurrency_guard = self
-            .link_concurrency_probe
-            .map(tests::LinkConcurrencyProbe::enter);
+        let _link_concurrency_guard =
+            self.link_concurrency_probe.map(tests::LinkConcurrencyProbe::enter);
 
         let slot = SlotPaths::create(self.layout, self.dependencies.package_key)?;
-        let interrupted_build = slot
-            .save_path
-            .join(NEEDS_BUILD_MARKER)
-            .is_file();
+        let interrupted_build = slot.save_path.join(NEEDS_BUILD_MARKER).is_file();
         let marked_cas_paths = cas_paths_with_build_marker(
             self.cas_paths,
             &slot.save_path,
             self.source.build_marker,
             (interrupted_build, self.source.force),
         );
-        let cas_paths = marked_cas_paths
-            .as_ref()
-            .unwrap_or(self.cas_paths);
+        let cas_paths = marked_cas_paths.as_ref().unwrap_or(self.cas_paths);
 
         let import_package =
             || self.import_slot::<Reporter>(&slot.save_path, cas_paths, interrupted_build);
@@ -166,10 +160,7 @@ impl CreateVirtualDirBySnapshot<'_> {
             message: ProgressMessage::Imported {
                 method: optimistic_wire_method(self.import.method),
                 requester: self.import.requester.to_owned(),
-                to: slot
-                    .save_path
-                    .to_string_lossy()
-                    .into_owned(),
+                to: slot.save_path.to_string_lossy().into_owned(),
             },
         }));
 
@@ -218,14 +209,8 @@ impl CreateVirtualDirBySnapshot<'_> {
 
     fn link_children(&self, node_modules: &Path) -> Result<(), CreateVirtualDirError> {
         create_symlink_layout(
-            self.dependencies
-                .snapshot
-                .dependencies
-                .as_ref(),
-            self.dependencies
-                .snapshot
-                .optional_dependencies
-                .as_ref(),
+            self.dependencies.snapshot.dependencies.as_ref(),
+            self.dependencies.snapshot.optional_dependencies.as_ref(),
             self.dependencies.include_optional,
             &self.dependencies.package_key.name,
             self.dependencies.skipped,
@@ -239,9 +224,7 @@ impl CreateVirtualDirBySnapshot<'_> {
         remove_obsolete_children(
             node_modules,
             &self.dependencies.package_key.name,
-            self.dependencies
-                .snapshot
-                .optional_dependencies
+            self.dependencies.snapshot.optional_dependencies
                 .iter()
                 .flatten()
                 .map(|(alias, _)| alias),
@@ -252,15 +235,11 @@ impl CreateVirtualDirBySnapshot<'_> {
         remove_obsolete_children(
             node_modules,
             &self.dependencies.package_key.name,
-            self.dependencies
-                .snapshot
-                .dependencies
+            self.dependencies.snapshot.dependencies
                 .iter()
                 .flat_map(|dependencies| dependencies.keys())
                 .chain(
-                    self.dependencies
-                        .snapshot
-                        .optional_dependencies
+                    self.dependencies.snapshot.optional_dependencies
                         .iter()
                         .flat_map(|deps| deps.keys()),
                 ),
@@ -309,10 +288,11 @@ fn create_slot_dirs(
         Ok(()) => {}
         Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
-            fs::create_dir_all(slot_dir).map_err(|error| CreateVirtualDirError::CreateSlotDir {
-                dir: slot_dir.to_path_buf(),
-                error,
-            })?;
+            fs::create_dir_all(slot_dir)
+                .map_err(|error| CreateVirtualDirError::CreateSlotDir {
+                    dir: slot_dir.to_path_buf(),
+                    error,
+                })?;
         }
         Err(error) => {
             return Err(CreateVirtualDirError::CreateSlotDir {

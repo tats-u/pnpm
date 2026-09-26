@@ -137,8 +137,7 @@ impl ListArgs {
     }
 
     async fn run_global(&self, config: &Config) -> miette::Result<String> {
-        let global_pkg_dir = config
-            .global_pkg_dir
+        let global_pkg_dir = config.global_pkg_dir
             .clone()
             .ok_or_else(|| {
                 miette::miette!(
@@ -149,9 +148,7 @@ impl ListArgs {
 
         if (matches!(self.graph.depth, RecursionLimit::Levels(n) if n > 0)
             || self.graph.depth == RecursionLimit::Unlimited)
-            && let Some(output) = self
-                .render_global_tree(config, &global_pkg_dir)
-                .await?
+            && let Some(output) = self.render_global_tree(config, &global_pkg_dir).await?
         {
             return Ok(output);
         }
@@ -246,9 +243,8 @@ impl ListArgs {
         lockfile_dir: &Path,
         always_print_root_package: bool,
     ) -> miette::Result<String> {
-        let projects = self
-            .load_project_hierarchies(config, project_dirs, params, lockfile_dir)
-            .await?;
+        let projects =
+            self.load_project_hierarchies(config, project_dirs, params, lockfile_dir).await?;
         self.render_project_hierarchies(&projects, always_print_root_package)
     }
 
@@ -297,9 +293,7 @@ impl ListArgs {
                     name: manifest.name,
                     version: manifest.version,
                     private: manifest.private,
-                    path: project_dir
-                        .to_string_lossy()
-                        .into_owned(),
+                    path: project_dir.to_string_lossy().into_owned(),
                     hierarchy,
                 }
             })
@@ -352,9 +346,7 @@ impl ListArgs {
                 only_projects: self.graph.only_projects,
             },
         );
-        let searcher = self
-            .build_searcher(config, env, &graph, lockfile_dir, params)
-            .await?;
+        let searcher = self.build_searcher(config, env, &graph, lockfile_dir, params).await?;
         build_dependencies_tree(
             state,
             env,
@@ -414,9 +406,7 @@ fn global_report_as(report_as: ReportAs) -> ListReportAs {
 
 /// The directory the lockfile is read from for a non-recursive `list`.
 pub(crate) fn local_lockfile_dir(config: &Config, dir: &Path) -> PathBuf {
-    config
-        .lockfile_dir_for(dir)
-        .to_path_buf()
+    config.lockfile_dir_for(dir).to_path_buf()
 }
 
 /// Print command output the way the TypeScript CLI does: nothing for an

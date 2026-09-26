@@ -99,8 +99,7 @@ pub(super) async fn handle_resolve(
         Ok(request) => request,
         Err(err) => return json_error(StatusCode::BAD_REQUEST, &err.to_string()),
     };
-    let registry = request
-        .registry
+    let registry = request.registry
         .as_deref()
         .unwrap_or(pnpm_cargo_resolver::CRATES_IO_SPARSE_INDEX)
         .trim_end_matches('/')
@@ -112,10 +111,7 @@ pub(super) async fn handle_resolve(
              configure an upstream credential alias instead",
         );
     }
-    if !runtime
-        .route_context
-        .allows_registry(&registry)
-    {
+    if !runtime.route_context.allows_registry(&registry) {
         return forbidden_off_allowlist(&registry);
     }
 
@@ -250,10 +246,7 @@ impl IndexFetcher {
         // that decides which callers can read each other's entry, so two
         // callers on different private scopes fetch in parallel rather than
         // queueing for a result neither could reuse.
-        let _fetching = self
-            .locks
-            .lock(&cache_path.to_string_lossy())
-            .await;
+        let _fetching = self.locks.lock(&cache_path.to_string_lossy()).await;
         if let Some(cached) = self.cached(&cache_path).await {
             return self.hold(name, cached);
         }
@@ -271,9 +264,7 @@ impl IndexFetcher {
                  registry as a public route or an upstream",
             ));
         }
-        let contents = self
-            .fetch_index_contents(name, &url, &auth)
-            .await?;
+        let contents = self.fetch_index_contents(name, &url, &auth).await?;
         // Charged before it is cached, so an entry that spends the last of
         // the budget is not left behind for the next resolve to read.
         let contents = self.hold(name, contents)?;
@@ -287,8 +278,7 @@ impl IndexFetcher {
         url: &str,
         auth: &AuthHeaders,
     ) -> Result<String, String> {
-        let response = self
-            .client
+        let response = self.client
             .get_limited_bytes_with_secure_auth_and_retry(
                 url,
                 auth,
@@ -318,10 +308,7 @@ impl IndexFetcher {
     /// bounds what one request can make the server hold in memory and write
     /// to its cache.
     fn hold(&self, name: &str, contents: String) -> Result<String, String> {
-        let held = self
-            .bytes_held
-            .fetch_add(contents.len(), Ordering::Relaxed)
-            + contents.len();
+        let held = self.bytes_held.fetch_add(contents.len(), Ordering::Relaxed) + contents.len();
         match over_index_budget(held, name) {
             Some(err) => Err(err),
             None => Ok(contents),
@@ -332,10 +319,11 @@ impl IndexFetcher {
     /// route policy for the caller, with the crate bound in so the
     /// package-blind fetch helpers still classify by it.
     fn auth_for(&self, canonical_name: &str) -> AuthHeaders {
-        AuthHeaders::default().with_route_hook(Arc::new(PackageRoute::new(
-            Arc::clone(&self.hook),
-            canonical_name.to_string(),
-        )))
+        AuthHeaders::default()
+            .with_route_hook(Arc::new(PackageRoute::new(
+                Arc::clone(&self.hook),
+                canonical_name.to_string(),
+            )))
     }
 
     /// Where `url`'s index file is cached. The route scope keys the
@@ -346,9 +334,7 @@ impl IndexFetcher {
             MetadataCacheScope::Public => "public".to_string(),
             MetadataCacheScope::Private { descriptor_id } => descriptor_id,
         };
-        self.cache_dir
-            .join(scope)
-            .join(relative_path)
+        self.cache_dir.join(scope).join(relative_path)
     }
 
     /// The cached index file when it is younger than the TTL. Every failure
@@ -362,9 +348,7 @@ impl IndexFetcher {
         if age >= self.ttl {
             return None;
         }
-        tokio::fs::read_to_string(path)
-            .await
-            .ok()
+        tokio::fs::read_to_string(path).await.ok()
     }
 
     /// Cache an index file, best effort: a cache that cannot be written

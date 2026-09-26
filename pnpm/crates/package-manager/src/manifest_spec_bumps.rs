@@ -85,10 +85,7 @@ impl<'a> OverriddenDeclarations<'a> {
     fn matcher_for(&self, importer_id: &str) -> Option<OverriddenDependencyMatcher<'a>> {
         self.importer_manifests
             .get(importer_id)
-            .map(|manifest| {
-                self.overrider
-                    .dependency_matcher(manifest.value())
-            })
+            .map(|manifest| self.overrider.dependency_matcher(manifest.value()))
     }
 }
 
@@ -110,10 +107,7 @@ pub(crate) fn apply_manifest_spec_bumps(
     apply_importer_bumps(lockfile, &manifests);
     apply_catalog_bumps(lockfile, &catalogs);
 
-    let mut applied = bumps
-        .applied
-        .lock()
-        .expect("the spec-bump sink is never poisoned");
+    let mut applied = bumps.applied.lock().expect("the spec-bump sink is never poisoned");
     applied.manifests =
         render_aliases(manifests, |(group, specifier)| (IMPORTER_GROUPS[group], specifier));
     applied.catalogs = render_aliases(catalogs, |specifier| specifier);
@@ -206,10 +200,9 @@ fn spec_bump(target: &SpecBumpTarget<'_>) -> SpecBump {
     // that repeats the declaration verbatim rewrites nothing, which
     // is why the text comparison below cannot stand in for this
     // (pnpm/pnpm#14224).
-    if target
-        .override_matcher
-        .is_some_and(|matcher| matcher.matches(target.alias, target.manifest_specifier))
-    {
+    if target.override_matcher.is_some_and(|matcher| {
+        matcher.matches(target.alias, target.manifest_specifier)
+    }) {
         return SpecBump::Skip;
     }
     let Ok(alias) = PkgName::parse(target.alias) else { return SpecBump::Skip };
@@ -240,18 +233,14 @@ fn collect_catalog_bumps(
     let mut catalogs: BTreeMap<String, HashMap<PkgName, String>> = BTreeMap::new();
     for (catalog_name, alias) in cataloged {
         let alias_key = alias.to_string();
-        let Some(entry) = lockfile
-            .catalogs
+        let Some(entry) = lockfile.catalogs
             .as_ref()
             .and_then(|catalogs| catalogs.get(catalog_name))
             .and_then(|catalog| catalog.get(&alias_key))
         else {
             continue;
         };
-        let Ok(version) = entry
-            .version
-            .parse::<ImporterDepVersion>()
-        else {
+        let Ok(version) = entry.version.parse::<ImporterDepVersion>() else {
             continue;
         };
         let Some(bumped) = bumped_range(&alias_key, &entry.specifier, &version, range_spec_style)
@@ -286,8 +275,7 @@ fn apply_catalog_bumps(
     catalogs: &BTreeMap<String, HashMap<PkgName, String>>,
 ) {
     for (catalog_name, bumped) in catalogs {
-        let Some(catalog) = lockfile
-            .catalogs
+        let Some(catalog) = lockfile.catalogs
             .as_mut()
             .and_then(|catalogs| catalogs.get_mut(catalog_name))
         else {

@@ -12,12 +12,7 @@ use pnpr_config::{Config, PublicRoute, UpstreamConfig};
 use pnpr_policy::{AccessList, Identity};
 
 fn base_config() -> Config {
-    Config::proxy(
-        "127.0.0.1:7677"
-            .parse::<SocketAddr>()
-            .unwrap(),
-        PathBuf::from("/tmp/pnpr-route"),
-    )
+    Config::proxy("127.0.0.1:7677".parse::<SocketAddr>().unwrap(), PathBuf::from("/tmp/pnpr-route"))
 }
 
 fn anon() -> Identity {
@@ -149,14 +144,10 @@ fn allows_registry_is_a_default_deny_allowlist() {
         "corp".to_string(),
         upstream_with_access("https://npm.corp.example/", "$authenticated"),
     );
-    config
-        .routing
-        .route_policy
-        .public
-        .push(PublicRoute {
-            registry: Some("https://public.mirror.example/".to_string()),
-            package: None,
-        });
+    config.routing.route_policy.public.push(PublicRoute {
+        registry: Some("https://public.mirror.example/".to_string()),
+        package: None,
+    });
     let context = RouteContext::from_config(&config);
 
     // Allowed: the built-in npm host, a declared public route, an upstream
@@ -242,14 +233,10 @@ fn the_builtin_routes_admit_https_only() {
 fn an_operator_declared_http_route_is_allowlisted() {
     let mut config = base_config();
     config.routing.upstreams.clear();
-    config
-        .routing
-        .route_policy
-        .public
-        .push(PublicRoute {
-            registry: Some("http://npm.internal.example/".to_string()),
-            package: None,
-        });
+    config.routing.route_policy.public.push(PublicRoute {
+        registry: Some("http://npm.internal.example/".to_string()),
+        package: None,
+    });
     let context = RouteContext::from_config(&config);
 
     assert!(context.allows_registry("http://npm.internal.example/lodash"));
@@ -261,14 +248,10 @@ fn custom_registry_is_off_allowlist_until_declared_public() {
     let context = RouteContext::from_config(&config);
     assert!(!context.allows_registry("https://custom.registry.example/lodash"));
 
-    config
-        .routing
-        .route_policy
-        .public
-        .push(PublicRoute {
-            registry: Some("https://custom.registry.example/".to_string()),
-            package: None,
-        });
+    config.routing.route_policy.public.push(PublicRoute {
+        registry: Some("https://custom.registry.example/".to_string()),
+        package: None,
+    });
     let context = RouteContext::from_config(&config);
     assert!(context.allows_registry("https://custom.registry.example/lodash"));
     assert_eq!(
@@ -280,14 +263,10 @@ fn custom_registry_is_off_allowlist_until_declared_public() {
 #[test]
 fn operator_declared_public_route_matches_scope() {
     let mut config = base_config();
-    config
-        .routing
-        .route_policy
-        .public
-        .push(PublicRoute {
-            registry: Some("https://registry.npmjs.org/".to_string()),
-            package: Some("@babel/*".to_string()),
-        });
+    config.routing.route_policy.public.push(PublicRoute {
+        registry: Some("https://registry.npmjs.org/".to_string()),
+        package: Some("@babel/*".to_string()),
+    });
     let context = RouteContext::from_config(&config);
     assert_eq!(
         context.classify(&anon(), "https://registry.npmjs.org/@babel%2fcore", Some("@babel/core")),
@@ -301,14 +280,10 @@ fn public_route_with_an_invalid_field_fails_closed_instead_of_matching_all() {
     // that would classify a private registry's packages as Public.
     let mut config = base_config();
     config.routing.upstreams.clear();
-    config
-        .routing
-        .route_policy
-        .public
-        .push(PublicRoute {
-            registry: Some("not a url".to_string()),
-            package: Some("@public/*".to_string()),
-        });
+    config.routing.route_policy.public.push(PublicRoute {
+        registry: Some("not a url".to_string()),
+        package: Some("@public/*".to_string()),
+    });
     let context = RouteContext::from_config(&config);
     assert_eq!(
         context.classify(&anon(), "https://npm.corp.example/@secret%2fpkg", Some("@secret/pkg")),
@@ -322,14 +297,10 @@ fn public_route_with_an_invalid_field_fails_closed_instead_of_matching_all() {
     // An invalid package glob drops the rule the same way.
     let mut config = base_config();
     config.routing.upstreams.clear();
-    config
-        .routing
-        .route_policy
-        .public
-        .push(PublicRoute {
-            registry: Some("https://npm.corp.example/".to_string()),
-            package: Some("[".to_string()),
-        });
+    config.routing.route_policy.public.push(PublicRoute {
+        registry: Some("https://npm.corp.example/".to_string()),
+        package: Some("[".to_string()),
+    });
     let context = RouteContext::from_config(&config);
     assert!(!context.allows_registry("https://npm.corp.example/@secret/pkg"));
 }
@@ -376,10 +347,7 @@ fn upstream_per_package_rules_gate_alias_selection() {
         }],
         Some(AccessList::from_tokens(["$authenticated"])),
     );
-    config
-        .routing
-        .upstreams
-        .insert("corp".to_string(), upstream);
+    config.routing.upstreams.insert("corp".to_string(), upstream);
     let context = RouteContext::from_config(&config);
 
     let url = "https://npm.corp.example/@corp%2fsecret";
@@ -533,10 +501,7 @@ fn proxied_alias_accepts_team_member_identity() {
         name: "platform".to_string(),
         members: ["alice".to_string()].into(),
     }]));
-    config
-        .routing
-        .upstreams
-        .insert("corp".to_string(), upstream);
+    config.routing.upstreams.insert("corp".to_string(), upstream);
     let context = RouteContext::from_config(&config);
     let url = "https://npm.corp.example/@acme%2fwidget";
 
@@ -626,9 +591,7 @@ fn footprint_digest_is_stable_and_namespaced() {
         package: None,
     });
     assert!(!footprint.is_public());
-    let digest = footprint
-        .digest(b"secret")
-        .expect("private footprint has a digest");
+    let digest = footprint.digest(b"secret").expect("private footprint has a digest");
 
     // Rotating the alias's credential moves to a new namespace.
     let mut rotated = Footprint::default();
@@ -640,12 +603,7 @@ fn footprint_digest_is_stable_and_namespaced() {
     assert_ne!(digest, rotated.digest(b"secret").unwrap());
 
     // A different server secret yields a different (non-correlatable) key.
-    assert_ne!(
-        digest,
-        footprint
-            .digest(b"other-secret")
-            .unwrap()
-    );
+    assert_ne!(digest, footprint.digest(b"other-secret").unwrap());
 
     // The digest is order-independent (BTreeSet union).
     let mut one_order = Footprint::default();

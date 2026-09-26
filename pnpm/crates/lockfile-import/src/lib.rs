@@ -101,9 +101,11 @@ pub fn read_foreign_lockfile_versions(
         {
             return Err(ImportLockfileError::YarnLockfileConflict);
         }
-        collect_yarn_lockfile_versions(&contents, &mut versions).map_err(|source| {
-            ImportLockfileError::YarnParse { path: yarn_lockfile_path, source }
-        })?;
+        collect_yarn_lockfile_versions(&contents, &mut versions)
+            .map_err(|source| ImportLockfileError::YarnParse {
+                path: yarn_lockfile_path,
+                source,
+            })?;
         return Ok(versions);
     }
 

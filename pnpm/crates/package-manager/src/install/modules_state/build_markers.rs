@@ -9,12 +9,8 @@ use super::super::{Config, HashSet, Lockfile, Path};
 pub(in super::super) fn gvs_build_markers_may_require_recovery(config: &Config) -> bool {
     config.enable_global_virtual_store
         && (config.dangerously_allow_all_builds
-            || config
-                .allow_builds
-                .values()
-                .any(|allowed| *allowed)
-            || config
-                .patched_dependencies
+            || config.allow_builds.values().any(|allowed| *allowed)
+            || config.patched_dependencies
                 .as_ref()
                 .is_some_and(|patches| !patches.is_empty()))
 }
@@ -79,8 +75,7 @@ pub(super) fn sibling_store_marker(
 ) -> MarkerProbe {
     let mut visited_version_dirs = HashSet::new();
     for &snapshot_key in eligible_snapshots {
-        let metadata = wanted
-            .packages
+        let metadata = wanted.packages
             .as_ref()
             .and_then(|packages| packages.get(&snapshot_key.without_peer()));
         let Some(version_dir) = crate::global_virtual_store_version_dir(
@@ -136,10 +131,7 @@ pub(super) fn hash_dir_marker(
     ) else {
         return MarkerProbe::Unreadable;
     };
-    if pkg_dir
-        .join(crate::NEEDS_BUILD_MARKER)
-        .is_file()
-    {
+    if pkg_dir.join(crate::NEEDS_BUILD_MARKER).is_file() {
         return MarkerProbe::Found;
     }
     MarkerProbe::None
@@ -168,17 +160,12 @@ pub(super) fn any_slot_build_marker(
 ) -> bool {
     for snapshot_key in eligible_snapshots {
         let Ok(pkg_dir) = crate::safe_join_modules_dir::safe_join_modules_dir(
-            &layout
-                .slot_dir(snapshot_key)
-                .join("node_modules"),
+            &layout.slot_dir(snapshot_key).join("node_modules"),
             &snapshot_key.name.to_string(),
         ) else {
             return true;
         };
-        if pkg_dir
-            .join(crate::NEEDS_BUILD_MARKER)
-            .is_file()
-        {
+        if pkg_dir.join(crate::NEEDS_BUILD_MARKER).is_file() {
             return true;
         }
     }

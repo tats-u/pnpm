@@ -258,11 +258,7 @@ fn test_merge_missing_peers_conflicting() {
     );
     let result = merge_missing_peers(&missing);
     assert_eq!(result.conflicts.len(), 1);
-    assert!(
-        result
-            .conflicts
-            .contains(&"react".to_string())
-    );
+    assert!(result.conflicts.contains(&"react".to_string()));
     assert!(result.intersections.is_empty());
 }
 

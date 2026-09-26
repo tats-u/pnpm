@@ -52,9 +52,7 @@ fn seeds_from_manifest_only_when_no_lockfile_snapshots() {
 
     let foo = preferred.get("foo").expect("foo entry");
     assert_eq!(foo.len(), 1);
-    let foo_entry = foo
-        .get("^1.0.0")
-        .expect("foo spec entry");
+    let foo_entry = foo.get("^1.0.0").expect("foo spec entry");
     assert_eq!(selector_type_of(foo_entry), VersionSelectorType::Range);
     assert_eq!(weight_of(foo_entry), DIRECT_DEP_SELECTOR_WEIGHT);
 
@@ -148,9 +146,7 @@ fn excluded_lockfile_pins_keep_preferences_from_every_manifest() {
         &|key| key.name == PkgName::from_str("foo").unwrap(),
     );
 
-    let foo = preferred
-        .get("foo")
-        .expect("foo manifest preferences");
+    let foo = preferred.get("foo").expect("foo manifest preferences");
     assert_eq!(weight_of(foo.get("^1.0.0").unwrap()), DIRECT_DEP_SELECTOR_WEIGHT);
     assert_eq!(weight_of(foo.get("1.0.0").unwrap()), DIRECT_DEP_SELECTOR_WEIGHT);
     assert_eq!(
@@ -182,9 +178,7 @@ fn withholding_one_version_line_keeps_the_other_lines_pinned() {
         },
     );
 
-    let foo = preferred
-        .get("foo")
-        .expect("foo lockfile preferences");
+    let foo = preferred.get("foo").expect("foo lockfile preferences");
     assert!(foo.get("1.2.0").is_none());
     assert_eq!(weight_of(foo.get("2.0.0").unwrap()), EXISTING_VERSION_SELECTOR_WEIGHT);
 }

@@ -83,8 +83,13 @@ pub(super) async fn load_custom_fetcher_session(
 
 impl ConcurrentVerification<'_> {
     async fn run<Reporter: self::Reporter>(self) -> Result<(), InstallFrozenLockfileError> {
-        let ConcurrentVerification { lockfile, verifiers, precomputed, lockfile_path, cache_dir } =
-            self;
+        let ConcurrentVerification {
+            lockfile,
+            verifiers,
+            precomputed,
+            lockfile_path,
+            cache_dir,
+        } = self;
         if let Some(precomputed) = precomputed {
             return precomputed.await;
         }

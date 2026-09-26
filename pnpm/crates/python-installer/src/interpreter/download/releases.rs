@@ -274,8 +274,7 @@ async fn download_release_tags(
 }
 
 fn release_tags_cache_path(config: &Config, tags_url: &str) -> PathBuf {
-    config
-        .cache_dir
+    config.cache_dir
         .join("python-release-tags-v1")
         .join(format!("{}.json", pnpm_crypto_hash::create_hex_hash(tags_url)))
 }
@@ -284,8 +283,7 @@ pub(super) async fn read_cached_release_tags(
     path: &Path,
     max_age: Duration,
 ) -> Option<Vec<String>> {
-    let age = tokio::fs::metadata(path)
-        .await
+    let age = tokio::fs::metadata(path).await
         .ok()?
         .modified()
         .ok()?
@@ -309,9 +307,7 @@ async fn write_release_tags_cache(path: &Path, tags: &[String]) {
         return;
     };
     if body.len() > MAX_TAGS_CACHE_BYTES
-        || tokio::fs::create_dir_all(parent)
-            .await
-            .is_err()
+        || tokio::fs::create_dir_all(parent).await.is_err()
     {
         return;
     }
@@ -357,8 +353,5 @@ async fn release_tags_page(
 }
 
 fn valid_tag(tag: &str) -> bool {
-    tag.len() == 8
-        && tag
-            .bytes()
-            .all(|byte| byte.is_ascii_digit())
+    tag.len() == 8 && tag.bytes().all(|byte| byte.is_ascii_digit())
 }

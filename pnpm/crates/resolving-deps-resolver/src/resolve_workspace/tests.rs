@@ -60,8 +60,7 @@ struct RecordingResolver {
 
 impl RecordingResolver {
     fn opts_for(&self, alias: &str) -> RecordedOpts {
-        *self
-            .seen
+        *self.seen
             .lock()
             .unwrap()
             .get(alias)
@@ -76,10 +75,7 @@ impl Resolver for RecordingResolver {
         opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         let alias = wanted.alias.clone().unwrap_or_default();
-        let range = wanted
-            .bare_specifier
-            .clone()
-            .unwrap_or_default();
+        let range = wanted.bare_specifier.clone().unwrap_or_default();
         self.seen
             .lock()
             .unwrap()
@@ -116,8 +112,7 @@ impl ProjectRelativeWorkspaceResolver {
     }
 
     fn workspace_resolution_count(&self) -> usize {
-        self.workspace_resolutions
-            .load(Ordering::Relaxed)
+        self.workspace_resolutions.load(Ordering::Relaxed)
     }
 }
 
@@ -128,10 +123,7 @@ impl Resolver for ProjectRelativeWorkspaceResolver {
         opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         let alias = wanted.alias.clone().unwrap_or_default();
-        let range = wanted
-            .bare_specifier
-            .clone()
-            .unwrap_or_default();
+        let range = wanted.bare_specifier.clone().unwrap_or_default();
         let target_dir = self.target_dir.clone();
         let project_dir = opts.project.project_dir.clone();
         let shared_specifier = self.shared_specifier;
@@ -151,8 +143,7 @@ impl Resolver for ProjectRelativeWorkspaceResolver {
             if alias != "shared" || range != shared_specifier {
                 return Ok(None);
             }
-            self.workspace_resolutions
-                .fetch_add(1, Ordering::Relaxed);
+            self.workspace_resolutions.fetch_add(1, Ordering::Relaxed);
             let rel = pathdiff::diff_paths(&target_dir, &project_dir)
                 .expect("target can be relativized")
                 .display()
@@ -405,12 +396,8 @@ impl Resolver for SlowAliasResolver {
         _opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         let alias = wanted.alias.clone().unwrap_or_default();
-        let range = wanted
-            .bare_specifier
-            .clone()
-            .unwrap_or_default();
-        let result = self
-            .table
+        let range = wanted.bare_specifier.clone().unwrap_or_default();
+        let result = self.table
             .get(&(alias.clone(), range.clone()))
             .cloned();
         let slow = self.slow == (alias, range);
@@ -482,14 +469,10 @@ impl Resolver for FailingAliasResolver {
         _opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         let alias = wanted.alias.clone().unwrap_or_default();
-        let range = wanted
-            .bare_specifier
-            .clone()
-            .unwrap_or_default();
+        let range = wanted.bare_specifier.clone().unwrap_or_default();
         let failing = self.failing.contains(&alias);
         let failure = self.failure;
-        let result = self
-            .table
+        let result = self.table
             .get(&(alias.clone(), range.clone()))
             .cloned();
         Box::pin(async move {
@@ -622,27 +605,21 @@ async fn link_root_dep_peer_provider(linked_version: Option<&str>, expected: &st
     };
     let mut opts = workspace_opts(false, false);
     opts.peers.auto_install_peers = true;
-    opts.peers
-        .resolve_peers_from_workspace_root = true;
+    opts.peers.resolve_peers_from_workspace_root = true;
     let root_dir = root_tmp.path().to_path_buf();
     let result =
         resolve_workspace(&resolver, &importers, &[DependencyGroup::Prod], opts, |importer| {
             let project_dir =
                 if importer.id == "." { root_dir.clone() } else { root_dir.join(&importer.id) };
             let mut importer_opts = importer_opts(project_dir, None);
-            importer_opts
-                .peers
-                .resolve_peers_from_workspace_root = true;
+            importer_opts.peers.resolve_peers_from_workspace_root = true;
             importer_opts
         })
         .await
         .expect("resolve workspace with a link: root dep");
 
     assert_eq!(
-        result
-            .peers
-            .direct_dependencies_by_importer["app-b"]["real-peer"]
-            .as_str(),
+        result.peers.direct_dependencies_by_importer["app-b"]["real-peer"].as_str(),
         expected,
     );
 }
@@ -750,8 +727,7 @@ async fn announced_finalized_packages(
     let mut opts = workspace_opts(false, false);
     let sink = Arc::clone(&announced);
     opts.hooks.finalized_package = Some(Arc::new(move |package| {
-        let children = package
-            .children
+        let children = package.children
             .iter()
             .map(|child| child.pkg_id.to_string())
             .collect::<Vec<_>>();
@@ -812,32 +788,22 @@ impl Resolver for WarmupProbeResolver {
         _opts: &'a ResolveOptions,
     ) -> ResolveFuture<'a> {
         let alias = wanted.alias.clone().unwrap_or_default();
-        let range = wanted
-            .bare_specifier
-            .clone()
-            .unwrap_or_default();
+        let range = wanted.bare_specifier.clone().unwrap_or_default();
         self.calls
             .lock()
             .unwrap()
             .push((alias.clone(), range.clone()));
-        let result = self
-            .table
+        let result = self.table
             .get(&(alias.clone(), range))
             .cloned();
-        let (held, release) = self
-            .gate
+        let (held, release) = self.gate
             .as_ref()
             .map_or((false, false), |(held, release)| (*held == alias, *release == alias));
         if release {
-            self.released
-                .store(true, std::sync::atomic::Ordering::Release);
+            self.released.store(true, std::sync::atomic::Ordering::Release);
         }
         Box::pin(async move {
-            while held
-                && !self
-                    .released
-                    .load(std::sync::atomic::Ordering::Acquire)
-            {
+            while held && !self.released.load(std::sync::atomic::Ordering::Acquire) {
                 tokio::time::sleep(std::time::Duration::from_millis(5)).await;
             }
             Ok::<_, ResolveError>(result)

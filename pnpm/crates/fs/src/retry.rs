@@ -143,9 +143,7 @@ where
         if error.kind() == io::ErrorKind::PermissionDenied
             && !matches!(error.raw_os_error(), Some(ERROR_SHARING_VIOLATION | ERROR_LOCK_VIOLATION))
         {
-            timing.budget = timing
-                .budget
-                .min(PERMISSION_DENIED_RETRY_BUDGET);
+            timing.budget = timing.budget.min(PERMISSION_DENIED_RETRY_BUDGET);
         }
         if !is_transient(&error) || !wait_for_retry(&mut timing, backoff) {
             return Err(error);
@@ -169,9 +167,7 @@ where
     if (timing.elapsed)() >= timing.budget {
         return false;
     }
-    let remaining = timing
-        .budget
-        .saturating_sub((timing.elapsed)());
+    let remaining = timing.budget.saturating_sub((timing.elapsed)());
     let delay = backoff.min(remaining);
     if !delay.is_zero() {
         (timing.sleep)(delay);

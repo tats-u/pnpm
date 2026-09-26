@@ -15,10 +15,7 @@ fn ignored_scripts_package_names(output: &std::process::Output) -> Vec<String> {
     let events: Vec<Vec<String>> = ndjson_records(output)
         .into_iter()
         .filter(|record| {
-            record
-                .get("name")
-                .and_then(serde_json::Value::as_str)
-                == Some("pnpm:ignored-scripts")
+            record.get("name").and_then(serde_json::Value::as_str) == Some("pnpm:ignored-scripts")
         })
         .map(|record| {
             record["packageNames"]
@@ -42,8 +39,13 @@ fn ignored_scripts_package_names(output: &std::process::Output) -> Vec<String> {
 
 #[test]
 fn run_pre_and_postinstall_scripts() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -69,33 +71,28 @@ fn run_pre_and_postinstall_scripts() {
 
     eprintln!("Checking generated-by-prepare.js does NOT exist...");
     assert!(
-        !pkg_dir
-            .join("generated-by-prepare.js")
-            .exists(),
+        !pkg_dir.join("generated-by-prepare.js").exists(),
         "prepare should not run for registry packages",
     );
 
     eprintln!("Checking generated-by-preinstall.js exists...");
-    assert!(
-        pkg_dir
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
+    assert!(pkg_dir.join("generated-by-preinstall.js").exists());
 
     eprintln!("Checking generated-by-postinstall.js exists...");
-    assert!(
-        pkg_dir
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
+    assert!(pkg_dir.join("generated-by-postinstall.js").exists());
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn run_install_scripts() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -121,19 +118,20 @@ fn run_install_scripts() {
     );
 
     eprintln!("Checking generated-by-install.js exists...");
-    assert!(
-        pkg_dir
-            .join("generated-by-install.js")
-            .exists()
-    );
+    assert!(pkg_dir.join("generated-by-install.js").exists());
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn lifecycle_scripts_run_in_dependency_order() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -194,8 +192,13 @@ fn lifecycle_scripts_run_in_dependency_order() {
 
 #[test]
 fn lifecycle_scripts_run_before_linking_bins() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -228,8 +231,11 @@ fn lifecycle_scripts_run_before_linking_bins() {
     fs::remove_dir_all(&node_modules).expect("remove node_modules");
 
     eprintln!("Running pacquet install --frozen-lockfile...");
-    let CommandTempCwd { pacquet: frozen_pacquet, root: frozen_root, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet: frozen_pacquet,
+        root: frozen_root,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     frozen_pacquet
         .with_current_dir(&workspace)
         .with_args(["install", "--frozen-lockfile"])
@@ -249,8 +255,13 @@ fn lifecycle_scripts_run_before_linking_bins() {
 
 #[test]
 fn hoisting_tolerates_bins_created_by_a_later_lifecycle_stage() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -286,8 +297,13 @@ fn hoisting_tolerates_bins_created_by_a_later_lifecycle_stage() {
 
 #[test]
 fn bins_linked_even_if_scripts_ignored() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -326,15 +342,9 @@ fn bins_linked_even_if_scripts_ignored() {
     );
 
     eprintln!("Checking package.json exists but generated files do not...");
+    assert!(scripts_pkg_dir.join("package.json").exists());
     assert!(
-        scripts_pkg_dir
-            .join("package.json")
-            .exists()
-    );
-    assert!(
-        !scripts_pkg_dir
-            .join("generated-by-preinstall.js")
-            .exists(),
+        !scripts_pkg_dir.join("generated-by-preinstall.js").exists(),
         "scripts should not have run with ignoreScripts",
     );
 
@@ -355,15 +365,9 @@ fn bins_linked_even_if_scripts_ignored() {
     }
 
     eprintln!("Checking scripts stayed ignored after frozen reinstall...");
+    assert!(scripts_pkg_dir.join("package.json").exists());
     assert!(
-        scripts_pkg_dir
-            .join("package.json")
-            .exists()
-    );
-    assert!(
-        !scripts_pkg_dir
-            .join("generated-by-preinstall.js")
-            .exists(),
+        !scripts_pkg_dir.join("generated-by-preinstall.js").exists(),
         "scripts should not have run on the frozen reinstall either",
     );
 
@@ -372,8 +376,13 @@ fn bins_linked_even_if_scripts_ignored() {
 
 #[test]
 fn selectively_ignore_scripts_by_allow_builds() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json with allowBuilds...");
@@ -401,27 +410,15 @@ fn selectively_ignore_scripts_by_allow_builds() {
              /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     eprintln!("Checking denied package did NOT run scripts...");
-    assert!(
-        !denied_pkg
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
-    assert!(
-        !denied_pkg
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
+    assert!(!denied_pkg.join("generated-by-preinstall.js").exists());
+    assert!(!denied_pkg.join("generated-by-postinstall.js").exists());
 
     let allowed_pkg = virtual_store.join(
         "@pnpm.e2e+install-script-example@1.0.0\
              /node_modules/@pnpm.e2e/install-script-example",
     );
     eprintln!("Checking allowed package DID run scripts...");
-    assert!(
-        allowed_pkg
-            .join("generated-by-install.js")
-            .exists()
-    );
+    assert!(allowed_pkg.join("generated-by-install.js").exists());
 
     eprintln!("Deleting node_modules for frozen reinstall...");
     fs::remove_dir_all(workspace.join("node_modules")).expect("remove node_modules");
@@ -432,30 +429,23 @@ fn selectively_ignore_scripts_by_allow_builds() {
         .success();
 
     eprintln!("Checking denied package still did NOT run scripts after frozen reinstall...");
-    assert!(
-        !denied_pkg
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
-    assert!(
-        !denied_pkg
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
+    assert!(!denied_pkg.join("generated-by-preinstall.js").exists());
+    assert!(!denied_pkg.join("generated-by-postinstall.js").exists());
     eprintln!("Checking allowed package DID run scripts after frozen reinstall...");
-    assert!(
-        allowed_pkg
-            .join("generated-by-install.js")
-            .exists()
-    );
+    assert!(allowed_pkg.join("generated-by-install.js").exists());
 
     drop((root, mock_instance));
 }
 
 #[test]
 fn selectively_allow_scripts_by_allow_builds() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json with allowBuilds...");
@@ -485,27 +475,15 @@ fn selectively_allow_scripts_by_allow_builds() {
              /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     eprintln!("Checking denied package did NOT run scripts...");
-    assert!(
-        !denied_pkg
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
-    assert!(
-        !denied_pkg
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
+    assert!(!denied_pkg.join("generated-by-preinstall.js").exists());
+    assert!(!denied_pkg.join("generated-by-postinstall.js").exists());
 
     let allowed_pkg = virtual_store.join(
         "@pnpm.e2e+install-script-example@1.0.0\
              /node_modules/@pnpm.e2e/install-script-example",
     );
     eprintln!("Checking allowed package DID run scripts...");
-    assert!(
-        allowed_pkg
-            .join("generated-by-install.js")
-            .exists()
-    );
+    assert!(allowed_pkg.join("generated-by-install.js").exists());
 
     eprintln!("Checking pnpm:ignored-scripts lists the unapproved package...");
     assert_eq!(
@@ -529,21 +507,9 @@ fn selectively_allow_scripts_by_allow_builds() {
         .expect("run pacquet install --frozen-lockfile");
     assert_success(&frozen_output);
 
-    assert!(
-        !denied_pkg
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
-    assert!(
-        !denied_pkg
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
-    assert!(
-        allowed_pkg
-            .join("generated-by-install.js")
-            .exists()
-    );
+    assert!(!denied_pkg.join("generated-by-preinstall.js").exists());
+    assert!(!denied_pkg.join("generated-by-postinstall.js").exists());
+    assert!(allowed_pkg.join("generated-by-install.js").exists());
 
     eprintln!("Checking pnpm:ignored-scripts is empty under explicit denial...");
     // Explicit denial moves the package from "ignored" to "silently
@@ -555,8 +521,13 @@ fn selectively_allow_scripts_by_allow_builds() {
 
 #[test]
 fn selectively_allow_scripts_by_allow_builds_exact_versions() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json with exact-version allowBuilds...");
@@ -585,27 +556,15 @@ fn selectively_allow_scripts_by_allow_builds_exact_versions() {
              /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     eprintln!("Checking denied package did NOT run scripts...");
-    assert!(
-        !denied_pkg
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
-    assert!(
-        !denied_pkg
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
+    assert!(!denied_pkg.join("generated-by-preinstall.js").exists());
+    assert!(!denied_pkg.join("generated-by-postinstall.js").exists());
 
     let allowed_pkg = virtual_store.join(
         "@pnpm.e2e+install-script-example@1.0.0\
              /node_modules/@pnpm.e2e/install-script-example",
     );
     eprintln!("Checking allowed package DID run scripts...");
-    assert!(
-        allowed_pkg
-            .join("generated-by-install.js")
-            .exists()
-    );
+    assert!(allowed_pkg.join("generated-by-install.js").exists());
 
     eprintln!("Checking pnpm:ignored-scripts lists the unapproved package...");
     assert_eq!(
@@ -629,21 +588,9 @@ fn selectively_allow_scripts_by_allow_builds_exact_versions() {
         .expect("run pacquet install --frozen-lockfile");
     assert_success(&frozen_output);
 
-    assert!(
-        !denied_pkg
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
-    assert!(
-        !denied_pkg
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
-    assert!(
-        allowed_pkg
-            .join("generated-by-install.js")
-            .exists()
-    );
+    assert!(!denied_pkg.join("generated-by-preinstall.js").exists());
+    assert!(!denied_pkg.join("generated-by-postinstall.js").exists());
+    assert!(allowed_pkg.join("generated-by-install.js").exists());
 
     eprintln!("Checking pnpm:ignored-scripts is empty under explicit denial...");
     assert_eq!(ignored_scripts_package_names(&frozen_output), Vec::<String>::new());
@@ -653,8 +600,13 @@ fn selectively_allow_scripts_by_allow_builds_exact_versions() {
 
 #[test]
 fn lifecycle_scripts_run_after_linking_root_deps() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -679,8 +631,11 @@ fn lifecycle_scripts_run_after_linking_root_deps() {
     fs::remove_dir_all(&node_modules).expect("remove node_modules");
 
     eprintln!("Running pacquet install --frozen-lockfile...");
-    let CommandTempCwd { pacquet: frozen_pacquet, root: frozen_root, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet: frozen_pacquet,
+        root: frozen_root,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     frozen_pacquet
         .with_current_dir(&workspace)
         .with_args(["install", "--frozen-lockfile"])
@@ -692,8 +647,13 @@ fn lifecycle_scripts_run_after_linking_root_deps() {
 
 #[test]
 fn rebuild_after_allow_builds_changes() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json with partial allowBuilds...");
@@ -721,27 +681,15 @@ fn rebuild_after_allow_builds_changes() {
              /node_modules/@pnpm.e2e/install-script-example",
     );
     eprintln!("Checking allowed package ran scripts...");
-    assert!(
-        install_pkg
-            .join("generated-by-install.js")
-            .exists()
-    );
+    assert!(install_pkg.join("generated-by-install.js").exists());
 
     let scripts_pkg = virtual_store.join(
         "@pnpm.e2e+pre-and-postinstall-scripts-example@1.0.0\
              /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     eprintln!("Checking denied package did NOT run scripts...");
-    assert!(
-        !scripts_pkg
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
-    assert!(
-        !scripts_pkg
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
+    assert!(!scripts_pkg.join("generated-by-preinstall.js").exists());
+    assert!(!scripts_pkg.join("generated-by-postinstall.js").exists());
 
     eprintln!("Updating allowBuilds and running frozen reinstall...");
     allow_builds(
@@ -752,8 +700,11 @@ fn rebuild_after_allow_builds_changes() {
         ],
     );
 
-    let CommandTempCwd { pacquet: frozen_pacquet, root: frozen_root, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet: frozen_pacquet,
+        root: frozen_root,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     frozen_pacquet
         .with_current_dir(&workspace)
         .with_args(["install", "--frozen-lockfile"])
@@ -761,29 +712,22 @@ fn rebuild_after_allow_builds_changes() {
         .success();
 
     eprintln!("Checking all scripts ran after allowBuilds change...");
-    assert!(
-        install_pkg
-            .join("generated-by-install.js")
-            .exists()
-    );
-    assert!(
-        scripts_pkg
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
-    assert!(
-        scripts_pkg
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
+    assert!(install_pkg.join("generated-by-install.js").exists());
+    assert!(scripts_pkg.join("generated-by-preinstall.js").exists());
+    assert!(scripts_pkg.join("generated-by-postinstall.js").exists());
 
     drop((root, mock_instance, frozen_root));
 }
 
 #[test]
 fn headless_run_pre_postinstall_scripts() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     eprintln!("Creating package.json...");
@@ -807,17 +751,9 @@ fn headless_run_pre_postinstall_scripts() {
              /node_modules/@pnpm.e2e/pre-and-postinstall-scripts-example",
     );
     eprintln!("Checking generated-by-preinstall.js exists...");
-    assert!(
-        pkg_dir
-            .join("generated-by-preinstall.js")
-            .exists()
-    );
+    assert!(pkg_dir.join("generated-by-preinstall.js").exists());
     eprintln!("Checking generated-by-postinstall.js exists...");
-    assert!(
-        pkg_dir
-            .join("generated-by-postinstall.js")
-            .exists()
-    );
+    assert!(pkg_dir.join("generated-by-postinstall.js").exists());
 
     drop((root, mock_instance));
 }

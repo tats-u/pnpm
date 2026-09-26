@@ -69,8 +69,13 @@ fn write_manifest(workspace: &Path, deps: serde_json::Value) {
 /// the fresh install and on the frozen reinstall.
 #[test]
 fn hoisting_skips_broken_symlink_for_skipped_optional() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace_yaml(
@@ -124,8 +129,14 @@ fn hoisting_skips_broken_symlink_for_skipped_optional() {
 /// project's root `node_modules/`.
 #[test]
 fn public_hoist_star_hoists_to_root_node_modules() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -146,9 +157,7 @@ fn public_hoist_star_hoists_to_root_node_modules() {
         "transitive should be publicly hoisted at {public_hoist:?}",
     );
     assert!(
-        !workspace
-            .join("node_modules/.pnpm/node_modules/@pnpm.e2e/hello-world-js-bin")
-            .exists(),
+        !workspace.join("node_modules/.pnpm/node_modules/@pnpm.e2e/hello-world-js-bin").exists(),
         "transitive should not be privately hoisted when private pattern is empty",
     );
 
@@ -157,8 +166,14 @@ fn public_hoist_star_hoists_to_root_node_modules() {
 
 #[test]
 fn public_hoist_does_not_override_an_existing_root_directory() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -186,8 +201,14 @@ fn public_hoist_does_not_override_an_existing_root_directory() {
 /// runs.
 #[test]
 fn modules_yaml_records_hoisted_dependencies() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -228,8 +249,14 @@ fn modules_yaml_records_hoisted_dependencies() {
 /// `.pnpm/node_modules/.bin/hello-world-js-bin`.
 #[test]
 fn private_hoist_links_bins() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -254,8 +281,14 @@ fn private_hoist_links_bins() {
 /// existing direct-deps bin pass, not by [`link_hoisted_bins`]).
 #[test]
 fn public_hoist_bin_is_linked_via_root_bin_dir() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -297,8 +330,13 @@ fn public_hoist_bin_is_linked_via_root_bin_dir() {
 /// the hoisted linker both land at the top level as real dirs.
 #[test]
 fn fresh_install_hoisted_node_linker_lands_real_directories() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -324,9 +362,7 @@ fn fresh_install_hoisted_node_linker_lands_real_directories() {
         "direct dep should be a real directory under node_modules/, not a symlink",
     );
     assert!(
-        workspace
-            .join("node_modules/@pnpm.e2e/hello-world-js-bin-parent/package.json")
-            .is_file(),
+        workspace.join("node_modules/@pnpm.e2e/hello-world-js-bin-parent/package.json").is_file(),
         "real directory should contain the package's package.json",
     );
     assert!(
@@ -338,27 +374,19 @@ fn fresh_install_hoisted_node_linker_lands_real_directories() {
     // `lock.yaml`, matching pnpm, but no per-package slot is laid
     // down — that's the isolated linker's shape.)
     assert!(
-        !workspace
-            .join("node_modules/.pnpm/@pnpm.e2e+hello-world-js-bin@1.0.0")
-            .exists(),
+        !workspace.join("node_modules/.pnpm/@pnpm.e2e+hello-world-js-bin@1.0.0").exists(),
         "hoisted linker must not materialize a virtual-store slot for the package",
     );
     assert!(
-        !workspace
-            .join("node_modules/.pnpm/node_modules")
-            .exists(),
+        !workspace.join("node_modules/.pnpm/node_modules").exists(),
         "hoisted linker must not create a private-hoist `.pnpm/node_modules` tree",
     );
     assert!(
-        workspace
-            .join("node_modules/.bin/hello-world-js-bin")
-            .exists(),
+        workspace.join("node_modules/.bin/hello-world-js-bin").exists(),
         "hoisted linker should link the transitive's bin into node_modules/.bin",
     );
     assert!(
-        workspace
-            .join("pnpm-lock.yaml")
-            .is_file(),
+        workspace.join("pnpm-lock.yaml").is_file(),
         "fresh install should write a wanted lockfile",
     );
 
@@ -389,8 +417,13 @@ fn version_of(dir: &Path) -> String {
 /// re-resolving repeat install and after a frozen re-materialization.
 #[test]
 fn should_hoist_dependencies_repeat_install_preserves_map() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -417,11 +450,7 @@ fn should_hoist_dependencies_repeat_install_preserves_map() {
         .with_arg("install")
         .assert()
         .success();
-    assert!(
-        workspace
-            .join("node_modules/.pnpm/node_modules/@pnpm.e2e/foo")
-            .exists()
-    );
+    assert!(workspace.join("node_modules/.pnpm/node_modules/@pnpm.e2e/foo").exists());
     assert_eq!(hoisted_dependencies(&workspace), baseline);
 
     fs::remove_dir_all(workspace.join("node_modules")).expect("remove node_modules");
@@ -429,11 +458,7 @@ fn should_hoist_dependencies_repeat_install_preserves_map() {
         .with_args(["install", "--frozen-lockfile"])
         .assert()
         .success();
-    assert!(
-        workspace
-            .join("node_modules/.pnpm/node_modules/@pnpm.e2e/foo")
-            .exists()
-    );
+    assert!(workspace.join("node_modules/.pnpm/node_modules/@pnpm.e2e/foo").exists());
     assert_eq!(hoisted_dependencies(&workspace), baseline);
 
     drop((root, mock_instance));
@@ -444,8 +469,13 @@ fn should_hoist_dependencies_repeat_install_preserves_map() {
 /// their hoist links too.
 #[test]
 fn should_remove_hoisted_dependencies() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -459,11 +489,7 @@ fn should_remove_hoisted_dependencies() {
         .with_args(["remove", "@pnpm.e2e/pkg-with-1-dep"])
         .assert()
         .success();
-    assert!(
-        !workspace
-            .join("node_modules/@pnpm.e2e/pkg-with-1-dep")
-            .exists()
-    );
+    assert!(!workspace.join("node_modules/@pnpm.e2e/pkg-with-1-dep").exists());
     assert!(
         fs::symlink_metadata(&hoisted).is_err(),
         "the transitive's hoist link must be removed with its owner",
@@ -479,8 +505,13 @@ fn should_remove_hoisted_dependencies() {
 /// graph.
 #[test]
 fn should_not_override_root_packages_with_hoisted_deps() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -502,8 +533,13 @@ fn should_not_override_root_packages_with_hoisted_deps() {
 /// hoisted.
 #[test]
 fn should_rehoist_when_uninstalling_a_package() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -521,9 +557,7 @@ fn should_rehoist_when_uninstalling_a_package() {
         .assert()
         .success();
     assert!(
-        !workspace
-            .join("node_modules/@pnpm.e2e/bar")
-            .exists(),
+        !workspace.join("node_modules/@pnpm.e2e/bar").exists(),
         "the removed direct dep's root link must be gone",
     );
     assert_eq!(version_of(&hoisted_bar), "100.0.0");
@@ -540,8 +574,13 @@ fn should_rehoist_when_uninstalling_a_package() {
 /// the transitive, without recreating the untouched direct-dep links.
 #[test]
 fn should_rehoist_after_running_a_general_install() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -580,8 +619,13 @@ fn should_rehoist_after_running_a_general_install() {
 /// root alias wins over a transitive that hoists under the same alias.
 #[test]
 fn should_not_override_aliased_dependencies() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     pacquet
@@ -599,8 +643,13 @@ fn should_not_override_aliased_dependencies() {
 /// `hoistedDependencies`.
 #[test]
 fn modules_yaml_updated_on_prune_when_flattening() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, serde_json::json!({ "@pnpm.e2e/pkg-with-1-aliased-dep": "*" }));
@@ -608,11 +657,7 @@ fn modules_yaml_updated_on_prune_when_flattening() {
         .with_arg("install")
         .assert()
         .success();
-    assert!(
-        workspace
-            .join("node_modules/.pnpm/node_modules/dep")
-            .exists()
-    );
+    assert!(workspace.join("node_modules/.pnpm/node_modules/dep").exists());
 
     write_manifest(&workspace, serde_json::json!({}));
     pacquet_in(&workspace)
@@ -633,8 +678,13 @@ fn modules_yaml_updated_on_prune_when_flattening() {
 /// same step.
 #[test]
 fn should_rehoist_after_pruning() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(
@@ -673,8 +723,14 @@ fn should_rehoist_after_pruning() {
 /// be the target of the private hoist link.
 #[test]
 fn should_hoist_correctly_peer_dependencies() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace_yaml(
@@ -694,8 +750,9 @@ fn should_hoist_correctly_peer_dependencies() {
         is_symlink_or_junction(&hoisted).unwrap(),
         "`ajv-keywords` must be privately hoisted at {hoisted:?}",
     );
-    let variant_dir = workspace
-        .join("node_modules/.pnpm/ajv-keywords@1.5.0_ajv@4.10.4/node_modules/ajv-keywords");
+    let variant_dir = workspace.join(
+        "node_modules/.pnpm/ajv-keywords@1.5.0_ajv@4.10.4/node_modules/ajv-keywords",
+    );
     assert!(variant_dir.is_dir(), "peer-variant slot missing at {variant_dir:?}");
     assert_eq!(
         fs::canonicalize(&hoisted).unwrap(),
@@ -711,8 +768,14 @@ fn should_hoist_correctly_peer_dependencies() {
 /// removes the peer-variant hoist link.
 #[test]
 fn should_uninstall_correctly_peer_dependencies() {
-    let CommandTempCwd { pacquet, pnpm, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        pnpm,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace_yaml(
@@ -756,8 +819,13 @@ fn should_uninstall_correctly_peer_dependencies() {
 /// hoisting, and the recreated tree is hoisted.
 #[test]
 fn should_recreate_node_modules_with_hoisting() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace_yaml(&workspace, "hoistPattern: []\n");
@@ -766,9 +834,9 @@ fn should_recreate_node_modules_with_hoisting() {
         .assert()
         .success();
     assert!(
-        fs::symlink_metadata(
-            workspace.join("node_modules/.pnpm/node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep"),
-        )
+        fs::symlink_metadata(workspace.join(
+            "node_modules/.pnpm/node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep"
+        ),)
         .is_err(),
         "hoisting disabled: no hoist link may exist",
     );
@@ -779,15 +847,9 @@ fn should_recreate_node_modules_with_hoisting() {
         .with_arg("install")
         .assert()
         .success();
+    assert!(workspace.join("node_modules/@pnpm.e2e/pkg-with-1-dep").exists());
     assert!(
-        workspace
-            .join("node_modules/@pnpm.e2e/pkg-with-1-dep")
-            .exists()
-    );
-    assert!(
-        workspace
-            .join("node_modules/.pnpm/node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep")
-            .exists(),
+        workspace.join("node_modules/.pnpm/node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep").exists(),
     );
     assert!(
         hoisted_dependencies(&workspace)
@@ -803,8 +865,13 @@ fn should_recreate_node_modules_with_hoisting() {
 /// direct dependencies` (`install/hoist.ts:567`).
 #[test]
 fn hoisted_packages_dont_override_direct_dep_bins() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_manifest(
         &workspace,
@@ -839,8 +906,13 @@ fn hoisted_packages_dont_override_direct_dep_bins() {
 /// TS: `should add extra node paths to command shims` (`hoist.ts:790`).
 #[test]
 fn should_add_extra_node_paths_to_command_shims() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
 
     pacquet
         .with_args(["add", "@pnpm.e2e/hello-world-js-bin"])
@@ -867,10 +939,7 @@ fn should_add_extra_node_paths_to_command_shims() {
     // the bin linker's slot short-circuit trusts them on this very
     // install, before any save/load round-trip.
     let lockfile = read_lockfile(&workspace.join("pnpm-lock.yaml"));
-    let packages = lockfile
-        .packages
-        .as_ref()
-        .expect("lockfile has packages");
+    let packages = lockfile.packages.as_ref().expect("lockfile has packages");
     let (_, metadata) = packages
         .iter()
         .find(|(key, _)| key.to_string() == "@pnpm.e2e/hello-world-js-bin@1.0.0")
@@ -884,8 +953,13 @@ fn should_add_extra_node_paths_to_command_shims() {
 /// extend-node-path is set to false` (`hoist.ts:799`).
 #[test]
 fn should_not_add_extra_node_paths_when_extend_node_path_false() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     append_workspace_yaml_key(&workspace, "extendNodePath", "false");
 
     pacquet
@@ -907,8 +981,13 @@ fn should_not_add_extra_node_paths_when_extend_node_path_false() {
 /// lockfile; the install after it takes the headless path.
 #[test]
 fn rehoists_when_an_up_to_date_lockfile_removes_a_direct_dependency() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_workspace_yaml(&workspace, "hoistPattern:\n  - '*'\n");
@@ -953,9 +1032,7 @@ fn rehoists_when_an_up_to_date_lockfile_removes_a_direct_dependency() {
 }
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm")
-        .expect("find the pnpm binary")
-        .with_current_dir(workspace)
+    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
 }
 
 mod workspace;

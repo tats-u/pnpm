@@ -6,12 +6,7 @@ use std::borrow::Cow;
 #[test]
 fn parses_regular_version() {
     let parsed: ImporterDepVersion = "4.0.0".parse().unwrap();
-    assert_eq!(
-        parsed
-            .as_regular()
-            .map(ToString::to_string),
-        Some("4.0.0".to_string())
-    );
+    assert_eq!(parsed.as_regular().map(ToString::to_string), Some("4.0.0".to_string()));
     assert!(parsed.as_link_target().is_none());
     let serialized: String = parsed.into();
     assert_eq!(serialized, "4.0.0");
@@ -58,12 +53,8 @@ fn resolved_spec_deserialize_regular() {
 /// pnpm v11 writes for `catalog:` deps that resolve to a scoped alias.
 #[test]
 fn parses_scoped_alias_version() {
-    let parsed: ImporterDepVersion = "@zkochan/js-yaml@0.0.11"
-        .parse()
-        .unwrap();
-    let alias = parsed
-        .as_alias()
-        .expect("alias variant");
+    let parsed: ImporterDepVersion = "@zkochan/js-yaml@0.0.11".parse().unwrap();
+    let alias = parsed.as_alias().expect("alias variant");
     assert_eq!(alias.name.to_string(), "@zkochan/js-yaml");
     assert_eq!(alias.suffix.to_string(), "0.0.11");
     assert!(parsed.as_regular().is_none());
@@ -75,21 +66,15 @@ fn parses_scoped_alias_version() {
 #[test]
 fn parses_unscoped_alias_version() {
     let parsed: ImporterDepVersion = "string-width@4.2.3".parse().unwrap();
-    let alias = parsed
-        .as_alias()
-        .expect("alias variant");
+    let alias = parsed.as_alias().expect("alias variant");
     assert_eq!(alias.name.to_string(), "string-width");
     assert_eq!(alias.suffix.to_string(), "4.2.3");
 }
 
 #[test]
 fn parses_alias_version_with_peer() {
-    let parsed: ImporterDepVersion = "react-dom@17.0.2(react@17.0.2)"
-        .parse()
-        .unwrap();
-    let alias = parsed
-        .as_alias()
-        .expect("alias variant");
+    let parsed: ImporterDepVersion = "react-dom@17.0.2(react@17.0.2)".parse().unwrap();
+    let alias = parsed.as_alias().expect("alias variant");
     assert_eq!(alias.name.to_string(), "react-dom");
     assert_eq!(alias.suffix.to_string(), "17.0.2(react@17.0.2)");
     let serialized: String = parsed.into();
@@ -101,10 +86,7 @@ fn resolved_spec_deserialize_alias() {
     let yaml = "specifier: 'catalog:'\nversion: '@zkochan/js-yaml@0.0.11'\n";
     let spec: ResolvedDependencySpec = serde_saphyr::from_str(yaml).unwrap();
     assert_eq!(spec.specifier, "catalog:");
-    let alias = spec
-        .version
-        .as_alias()
-        .expect("alias variant");
+    let alias = spec.version.as_alias().expect("alias variant");
     assert_eq!(alias.name.to_string(), "@zkochan/js-yaml");
     assert_eq!(alias.suffix.to_string(), "0.0.11");
 }
@@ -114,26 +96,17 @@ fn resolved_key_returns_alias_name_for_alias_variant() {
     let importer_key: PkgName = "js-yaml".parse().unwrap();
 
     let regular: ImporterDepVersion = "4.0.0".parse().unwrap();
-    let regular_key = regular
-        .resolved_key(&importer_key)
-        .expect("regular key");
+    let regular_key = regular.resolved_key(&importer_key).expect("regular key");
     assert_eq!(regular_key.name.to_string(), "js-yaml");
     assert_eq!(regular_key.suffix.to_string(), "4.0.0");
 
-    let alias: ImporterDepVersion = "@zkochan/js-yaml@0.0.11"
-        .parse()
-        .unwrap();
-    let alias_key = alias
-        .resolved_key(&importer_key)
-        .expect("alias key");
+    let alias: ImporterDepVersion = "@zkochan/js-yaml@0.0.11".parse().unwrap();
+    let alias_key = alias.resolved_key(&importer_key).expect("alias key");
     assert_eq!(alias_key.name.to_string(), "@zkochan/js-yaml");
     assert_eq!(alias_key.suffix.to_string(), "0.0.11");
 
     let link: ImporterDepVersion = "link:../shared".parse().unwrap();
-    assert!(
-        link.resolved_key(&importer_key)
-            .is_none()
-    );
+    assert!(link.resolved_key(&importer_key).is_none());
 }
 
 #[test]
@@ -148,17 +121,11 @@ fn as_alias_returns_none_for_non_alias_variants() {
 #[test]
 fn ver_peer_returns_snapshot_version_for_each_variant() {
     let regular: ImporterDepVersion = "17.0.2(react@17.0.2)".parse().unwrap();
-    let regular_ver = regular
-        .ver_peer()
-        .expect("regular ver_peer");
+    let regular_ver = regular.ver_peer().expect("regular ver_peer");
     assert_eq!(regular_ver.to_string(), "17.0.2(react@17.0.2)");
 
-    let alias: ImporterDepVersion = "react-dom@17.0.2(react@17.0.2)"
-        .parse()
-        .unwrap();
-    let alias_ver = alias
-        .ver_peer()
-        .expect("alias ver_peer");
+    let alias: ImporterDepVersion = "react-dom@17.0.2(react@17.0.2)".parse().unwrap();
+    let alias_ver = alias.ver_peer().expect("alias ver_peer");
     assert_eq!(alias_ver.to_string(), "17.0.2(react@17.0.2)");
 
     let link: ImporterDepVersion = "link:../shared".parse().unwrap();
@@ -171,9 +138,7 @@ fn ver_peer_returns_snapshot_version_for_each_variant() {
 fn parses_non_semver_url_version() {
     let url = "https://codeload.github.com/whiskeysockets/libsignal-node/tar.gz/0848bc83347720c322c5087f3bd0d6cd086ffa4b";
     let parsed: ImporterDepVersion = url.parse().unwrap();
-    let regular = parsed
-        .as_regular()
-        .expect("regular variant");
+    let regular = parsed.as_regular().expect("regular variant");
     assert_eq!(regular.to_string(), url);
     let serialized: String = parsed.into();
     assert_eq!(serialized, url);
@@ -181,9 +146,7 @@ fn parses_non_semver_url_version() {
 
 #[test]
 fn parse_errors_on_mismatched_parens() {
-    let err = "1.21.3("
-        .parse::<ImporterDepVersion>()
-        .unwrap_err();
+    let err = "1.21.3(".parse::<ImporterDepVersion>().unwrap_err();
     match err {
         ParseImporterDepVersionError::Parse { value, .. } => {
             assert_eq!(value, "1.21.3(");
@@ -194,9 +157,7 @@ fn parse_errors_on_mismatched_parens() {
 
 #[test]
 fn parse_errors_on_invalid_alias_shape() {
-    let err = "@scope/no-at-sign"
-        .parse::<ImporterDepVersion>()
-        .unwrap_err();
+    let err = "@scope/no-at-sign".parse::<ImporterDepVersion>().unwrap_err();
     match err {
         ParseImporterDepVersionError::ParseAlias { value, .. } => {
             assert_eq!(value, "@scope/no-at-sign");
@@ -219,9 +180,7 @@ fn try_from_cow_parses_all_three_shapes() {
 
 #[test]
 fn serialize_alias_writes_name_at_version_string() {
-    let alias: ImporterDepVersion = "@zkochan/js-yaml@0.0.11"
-        .parse()
-        .unwrap();
+    let alias: ImporterDepVersion = "@zkochan/js-yaml@0.0.11".parse().unwrap();
     let yaml = serde_saphyr::to_string(&alias).unwrap();
     assert!(yaml.contains("@zkochan/js-yaml@0.0.11"), "got: {yaml}");
 }

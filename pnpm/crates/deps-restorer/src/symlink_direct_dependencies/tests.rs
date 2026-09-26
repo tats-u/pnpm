@@ -111,9 +111,7 @@ fn emits_pnpm_root_added_per_direct_dependency() {
     // tracks the originating group across the iteration order.
     let mut prod = ResolvedDependencyMap::new();
     prod.insert(
-        "fastify"
-            .parse()
-            .expect("parse fastify pkg name"),
+        "fastify".parse().expect("parse fastify pkg name"),
         ResolvedDependencySpec {
             specifier: "^4.0.0".to_string(),
             version: "4.0.0"
@@ -124,9 +122,7 @@ fn emits_pnpm_root_added_per_direct_dependency() {
     );
     let mut dev = ResolvedDependencyMap::new();
     dev.insert(
-        "@pnpm.e2e/dev-dep"
-            .parse()
-            .expect("parse dev pkg name"),
+        "@pnpm.e2e/dev-dep".parse().expect("parse dev pkg name"),
         ResolvedDependencySpec {
             specifier: "^1.2.3".to_string(),
             version: "1.2.3"
@@ -188,13 +184,14 @@ fn emits_pnpm_root_added_per_direct_dependency() {
     );
 
     let captured = EVENTS.lock().unwrap();
-    let expected_prefix = project_root
-        .to_string_lossy()
-        .into_owned();
+    let expected_prefix = project_root.to_string_lossy().into_owned();
     let added: Vec<&AddedRoot> = captured
         .iter()
         .filter_map(|event| match event {
-            LogEvent::Root(RootLog { message: RootMessage::Added { added, prefix }, .. }) => {
+            LogEvent::Root(RootLog {
+                message: RootMessage::Added { added, prefix },
+                ..
+            }) => {
                 assert_eq!(prefix, &expected_prefix);
                 Some(added)
             }
@@ -271,9 +268,7 @@ fn duplicate_dep_across_groups_collapses_to_one_entry() {
 
     let mut prod = ResolvedDependencyMap::new();
     prod.insert(
-        "fastify"
-            .parse()
-            .expect("parse fastify pkg name"),
+        "fastify".parse().expect("parse fastify pkg name"),
         ResolvedDependencySpec {
             specifier: "^4.0.0".to_string(),
             version: "4.0.0"
@@ -284,9 +279,7 @@ fn duplicate_dep_across_groups_collapses_to_one_entry() {
     );
     let mut optional = ResolvedDependencyMap::new();
     optional.insert(
-        "fastify"
-            .parse()
-            .expect("parse fastify pkg name"),
+        "fastify".parse().expect("parse fastify pkg name"),
         ResolvedDependencySpec {
             specifier: "^4.0.0".to_string(),
             version: "4.0.0"
@@ -338,9 +331,10 @@ fn duplicate_dep_across_groups_collapses_to_one_entry() {
     let added: Vec<&AddedRoot> = captured
         .iter()
         .filter_map(|event| match event {
-            LogEvent::Root(RootLog { message: RootMessage::Added { added, .. }, .. }) => {
-                Some(added)
-            }
+            LogEvent::Root(RootLog {
+                message: RootMessage::Added { added, .. },
+                ..
+            }) => Some(added),
             _ => None,
         })
         .collect();
@@ -442,9 +436,10 @@ fn cross_importer_link_dep_symlinks_to_sibling_rootdir() {
     let added: Vec<(&str, &AddedRoot)> = captured
         .iter()
         .filter_map(|event| match event {
-            LogEvent::Root(RootLog { message: RootMessage::Added { added, prefix }, .. }) => {
-                Some((prefix.as_str(), added))
-            }
+            LogEvent::Root(RootLog {
+                message: RootMessage::Added { added, prefix },
+                ..
+            }) => Some((prefix.as_str(), added)),
             _ => None,
         })
         .collect();
@@ -550,9 +545,7 @@ fn reused_symlinks_do_not_emit_pnpm_root_added() {
 
     let mut prod = ResolvedDependencyMap::new();
     prod.insert(
-        "fastify"
-            .parse()
-            .expect("parse fastify pkg name"),
+        "fastify".parse().expect("parse fastify pkg name"),
         ResolvedDependencySpec {
             specifier: "^4.0.0".to_string(),
             version: "4.0.0"
@@ -723,9 +716,10 @@ fn per_importer_prefix_in_pnpm_root_events() {
     let added: Vec<(&str, &AddedRoot)> = captured
         .iter()
         .filter_map(|event| match event {
-            LogEvent::Root(RootLog { message: RootMessage::Added { added, prefix }, .. }) => {
-                Some((prefix.as_str(), added))
-            }
+            LogEvent::Root(RootLog {
+                message: RootMessage::Added { added, prefix },
+                ..
+            }) => Some((prefix.as_str(), added)),
             _ => None,
         })
         .collect();
@@ -740,20 +734,8 @@ fn per_importer_prefix_in_pnpm_root_events() {
         .to_string_lossy()
         .into_owned();
     let by_prefix: HashMap<&str, &AddedRoot> = added.iter().copied().collect();
-    assert_eq!(
-        by_prefix
-            .get(alpha_prefix.as_str())
-            .unwrap()
-            .name,
-        "fastify"
-    );
-    assert_eq!(
-        by_prefix
-            .get(beta_prefix.as_str())
-            .unwrap()
-            .name,
-        "react"
-    );
+    assert_eq!(by_prefix.get(alpha_prefix.as_str()).unwrap().name, "fastify");
+    assert_eq!(by_prefix.get(beta_prefix.as_str()).unwrap().name, "react");
 
     drop(dir);
 }
@@ -839,9 +821,7 @@ fn custom_modules_dir_propagates_to_each_importer() {
         "expected per-importer symlink under the configured `modulesDir`: {expected:?}",
     );
     assert!(
-        !workspace_root
-            .join("packages/web/node_modules")
-            .exists(),
+        !workspace_root.join("packages/web/node_modules").exists(),
         "no `node_modules/` should be created when `modulesDir` overrides the suffix",
     );
     drop(dir);

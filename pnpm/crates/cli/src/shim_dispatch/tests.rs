@@ -53,9 +53,7 @@ fn malformed_legacy_shim_argv_fails_instead_of_running_the_cli() {
 fn configured_state_dir_resolves_relative_to_the_machine_state_root() {
     let root = tempfile::tempdir().unwrap();
     let default_state_dir = root.path().join("state/pnpm");
-    let expected_state_dir = dunce::canonicalize(root.path())
-        .unwrap()
-        .join("state/custom-state");
+    let expected_state_dir = dunce::canonicalize(root.path()).unwrap().join("state/custom-state");
     let mut state_dir = default_state_dir.clone();
     apply_state_dir_setting(&mut state_dir, Some("custom-state"), &default_state_dir);
     assert_eq!(state_dir, expected_state_dir);
@@ -80,9 +78,7 @@ fn finds_the_nearest_local_bin_walking_up() {
     let root = tempfile::tempdir().unwrap();
     let project = root.path().join("project");
     let nested = project.join("packages").join("app");
-    let bin_dir = project
-        .join("node_modules")
-        .join(".bin");
+    let bin_dir = project.join("node_modules").join(".bin");
     fs::create_dir_all(&nested).unwrap();
     fs::create_dir_all(&bin_dir).unwrap();
     fs::write(bin_dir.join("tsc"), "#!/bin/sh\n").unwrap();
@@ -132,15 +128,11 @@ fn runtime_pin_prefers_dev_engines_and_supports_arrays() {
     )
     .unwrap();
     assert_eq!(
-        manifest_runtime_pin(root.path(), "node")
-            .map(|pin| pin.0)
-            .as_deref(),
+        manifest_runtime_pin(root.path(), "node").map(|pin| pin.0).as_deref(),
         Some("22.11.0"),
     );
     assert_eq!(
-        manifest_runtime_pin(root.path(), "deno")
-            .map(|pin| pin.0)
-            .as_deref(),
+        manifest_runtime_pin(root.path(), "deno").map(|pin| pin.0).as_deref(),
         Some("2.0.0"),
     );
     assert_eq!(manifest_runtime_pin(root.path(), "bun"), None);
@@ -158,9 +150,7 @@ fn runtime_pin_falls_back_to_engines() {
     )
     .unwrap();
     assert_eq!(
-        manifest_runtime_pin(root.path(), "node")
-            .map(|pin| pin.0)
-            .as_deref(),
+        manifest_runtime_pin(root.path(), "node").map(|pin| pin.0).as_deref(),
         Some("20.1.0"),
     );
 }
@@ -217,9 +207,7 @@ fn managed_runtime_must_resolve_inside_the_global_store() {
     let root = tempfile::tempdir().unwrap();
     let store = root.path().join("store/links");
     let package = store.join("node/22/slot/node_modules/node");
-    let environment_modules = root
-        .path()
-        .join("state/environment/node_modules");
+    let environment_modules = root.path().join("state/environment/node_modules");
     fs::create_dir_all(package.join("bin")).unwrap();
     fs::create_dir_all(&environment_modules).unwrap();
     fs::write(package.join("package.json"), r#"{"name":"node","bin":{"node":"bin/node"}}"#)
@@ -296,9 +284,7 @@ fn trust_decisions_round_trip_last_record_wins() {
 #[test]
 fn trust_registry_tolerates_corrupt_lines() {
     let root = tempfile::tempdir().unwrap();
-    let trust_file = root
-        .path()
-        .join("global-bin-trust.jsonl");
+    let trust_file = root.path().join("global-bin-trust.jsonl");
     fs::write(
         &trust_file,
         "not json\n{\"projectDir\":\"/a\",\"candidateId\":\"candidate-a\",\"allow\":true}\n",
@@ -310,9 +296,7 @@ fn trust_registry_tolerates_corrupt_lines() {
 #[test]
 fn legacy_path_only_trust_records_are_ignored() {
     let root = tempfile::tempdir().unwrap();
-    let trust_file = root
-        .path()
-        .join("global-bin-trust.jsonl");
+    let trust_file = root.path().join("global-bin-trust.jsonl");
     fs::write(&trust_file, r#"{"projectDir":"/a","allow":true}"#).unwrap();
     assert_eq!(read_trust_decision(&trust_file, "/a", "candidate-a"), None);
 }
@@ -337,9 +321,7 @@ fn windows_cmd_shim_candidate_matches_the_global_provider() {
     let local_package = project.join("node_modules/tool");
     let local_target = local_package.join("cli.cmd");
     let local_bin = project.join("node_modules/.bin");
-    let global_package = root
-        .path()
-        .join("global/node_modules/tool");
+    let global_package = root.path().join("global/node_modules/tool");
     let global_target = global_package.join("cli.cmd");
     fs::create_dir_all(&local_package).unwrap();
     fs::create_dir_all(&local_bin).unwrap();
@@ -359,13 +341,7 @@ fn windows_cmd_shim_candidate_matches_the_global_provider() {
     let Candidate::LocalBin { bin, .. } = &candidate else {
         panic!("expected a local bin candidate");
     };
-    assert_eq!(
-        local_bin_identity(bin, "tool")
-            .unwrap()
-            .provider
-            .name,
-        "tool"
-    );
+    assert_eq!(local_bin_identity(bin, "tool").unwrap().provider.name, "tool");
     assert!(validate_candidate(candidate, &global_provider.name, "tool").is_some());
 }
 
@@ -380,13 +356,8 @@ fn local_bin_fingerprint_binds_the_executed_flavor() {
     fs::create_dir_all(modules.join("tool")).unwrap();
     fs::create_dir_all(&bin_dir).unwrap();
     fs::write(modules.join("tool").join("cli.js"), "").unwrap();
-    fs::write(
-        modules
-            .join("tool")
-            .join("package.json"),
-        r#"{"name":"tool","version":"1.0.0"}"#,
-    )
-    .unwrap();
+    fs::write(modules.join("tool").join("package.json"), r#"{"name":"tool","version":"1.0.0"}"#)
+        .unwrap();
     fs::write(
         bin_dir.join("tool"),
         format!(
@@ -401,13 +372,9 @@ fn local_bin_fingerprint_binds_the_executed_flavor() {
     let cmd_flavor = bin_dir.join("tool.cmd");
     fs::write(&cmd_flavor, "@ECHO original\r\n").unwrap();
 
-    let before = local_bin_identity(&cmd_flavor, "tool")
-        .unwrap()
-        .fingerprint;
+    let before = local_bin_identity(&cmd_flavor, "tool").unwrap().fingerprint;
     fs::write(&cmd_flavor, "@ECHO replaced\r\n").unwrap();
-    let after = local_bin_identity(&cmd_flavor, "tool")
-        .unwrap()
-        .fingerprint;
+    let after = local_bin_identity(&cmd_flavor, "tool").unwrap().fingerprint;
     assert_ne!(before, after, "replacing the executed flavor must invalidate the approval");
 }
 
@@ -443,13 +410,8 @@ fn revalidation_rejects_a_bin_swapped_after_approval() {
     fs::create_dir_all(modules.join("tool")).unwrap();
     fs::create_dir_all(&bin_dir).unwrap();
     fs::write(modules.join("tool").join("cli.js"), "").unwrap();
-    fs::write(
-        modules
-            .join("tool")
-            .join("package.json"),
-        r#"{"name":"tool","version":"1.0.0"}"#,
-    )
-    .unwrap();
+    fs::write(modules.join("tool").join("package.json"), r#"{"name":"tool","version":"1.0.0"}"#)
+        .unwrap();
     let bin = bin_dir.join("tool");
     fs::write(
         &bin,
@@ -463,9 +425,7 @@ fn revalidation_rejects_a_bin_swapped_after_approval() {
     )
     .unwrap();
 
-    let approved = local_bin_identity(&bin, "tool")
-        .unwrap()
-        .fingerprint;
+    let approved = local_bin_identity(&bin, "tool").unwrap().fingerprint;
     assert!(local_bin_unchanged(&bin, "tool", &approved));
 
     fs::write(
@@ -514,24 +474,12 @@ fn local_bin_identity_resolves_symlinks_and_trailers() {
     let bin_dir = modules.join(".bin");
     fs::create_dir_all(modules.join("tool")).unwrap();
     fs::create_dir_all(&bin_dir).unwrap();
-    fs::write(
-        modules
-            .join("tool")
-            .join("package.json"),
-        r#"{"name":"tool"}"#,
-    )
-    .unwrap();
+    fs::write(modules.join("tool").join("package.json"), r#"{"name":"tool"}"#).unwrap();
     fs::write(modules.join("tool").join("cli.js"), "").unwrap();
 
     let linked = bin_dir.join("linked");
     std::os::unix::fs::symlink("../tool/cli.js", &linked).unwrap();
-    assert_eq!(
-        local_bin_identity(&linked, "linked")
-            .unwrap()
-            .provider
-            .name,
-        "tool"
-    );
+    assert_eq!(local_bin_identity(&linked, "linked").unwrap().provider.name, "tool");
 
     let scripted = bin_dir.join("scripted");
     fs::write(
@@ -545,13 +493,7 @@ fn local_bin_identity_resolves_symlinks_and_trailers() {
         ),
     )
     .unwrap();
-    assert_eq!(
-        local_bin_identity(&scripted, "scripted")
-            .unwrap()
-            .provider
-            .name,
-        "tool"
-    );
+    assert_eq!(local_bin_identity(&scripted, "scripted").unwrap().provider.name, "tool");
 
     let bare = bin_dir.join("bare");
     fs::write(&bare, "#!/bin/sh\n").unwrap();
@@ -573,17 +515,13 @@ fn local_bin_identity_changes_with_the_project_lockfile() {
     std::os::unix::fs::symlink("../tool/cli.js", &bin).unwrap();
 
     fs::write(root.path().join("pnpm-lock.yaml"), "lockfileVersion: '9.0'\n").unwrap();
-    let before = local_bin_identity(&bin, "tool")
-        .unwrap()
-        .fingerprint;
+    let before = local_bin_identity(&bin, "tool").unwrap().fingerprint;
     fs::write(
         root.path().join("pnpm-lock.yaml"),
         "lockfileVersion: '9.0'\nsettings:\n  autoInstallPeers: true\n",
     )
     .unwrap();
-    let after = local_bin_identity(&bin, "tool")
-        .unwrap()
-        .fingerprint;
+    let after = local_bin_identity(&bin, "tool").unwrap().fingerprint;
 
     assert_ne!(before, after);
 }

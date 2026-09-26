@@ -23,10 +23,7 @@ impl NpmResolutionVerifier {
         resolution: &LockfileResolution,
         lockfile_tarball: Option<&str>,
     ) -> Option<ResolutionVerification> {
-        let artifact = match self
-            .published_artifact(registry, name, version)
-            .await
-        {
+        let artifact = match self.published_artifact(registry, name, version).await {
             Ok(artifact) => artifact,
             Err(violation) => return Some(violation),
         };
@@ -49,9 +46,7 @@ impl NpmResolutionVerifier {
         }
 
         let requested = lockfile_revision(resolution).unwrap_or(0);
-        let integrity = resolution
-            .checkable_integrity()
-            .expect("checked before artifact binding");
+        let integrity = resolution.checkable_integrity().expect("checked before artifact binding");
         let selected = match select_revision(&artifact, requested, current_revision, integrity) {
             Ok(selected) => selected,
             Err(violation) => return Some(violation),
@@ -59,8 +54,7 @@ impl NpmResolutionVerifier {
         // A historical revision, or a current record the lockfile does not
         // name, is only trustworthy when its URL is derived from its own
         // integrity.
-        let integrity_addressed = selected
-            .tarball
+        let integrity_addressed = selected.tarball
             .as_deref()
             .is_some_and(|tarball| {
                 is_integrity_addressed_registry_tarball_url(tarball, integrity, registry)
@@ -90,23 +84,17 @@ impl NpmResolutionVerifier {
         name: &PkgName,
         version: &str,
     ) -> Result<Option<RegistryArtifactHistory>, ResolutionVerification> {
-        let meta = match self
-            .fetch_abbreviated_meta(registry, name)
-            .await
-        {
+        let meta = match self.fetch_abbreviated_meta(registry, name).await {
             Ok(meta) => meta,
             Err(message) => return Err(ResolutionVerification::FetchFailed { message }),
         };
         if let Some(sink) = self.artifacts.observed_stats.as_ref()
-            && let Some(stats) = meta
-                .version_dist_stats
+            && let Some(stats) = meta.version_dist_stats
                 .as_ref()
                 .and_then(|stats| stats.get(version))
         {
             sink.insert((name.to_string(), version.to_string()), *stats);
         }
-        Ok(meta
-            .version_artifacts
-            .and_then(|artifacts| artifacts.get(version).cloned()))
+        Ok(meta.version_artifacts.and_then(|artifacts| artifacts.get(version).cloned()))
     }
 }

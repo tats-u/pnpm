@@ -109,8 +109,7 @@ fn sort_workspace(projects: &[SyntheticProject]) -> (usize, usize) {
     let edges: HashMap<PathBuf, Vec<PathBuf>> = graph
         .iter()
         .map(|(dir, node)| {
-            let dependencies = node
-                .dependencies
+            let dependencies = node.dependencies
                 .iter()
                 .filter(|dependency| included.contains(dependency.as_path()))
                 .cloned()

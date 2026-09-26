@@ -27,9 +27,7 @@ use tempfile::tempdir;
 fn returns_skipped_when_the_previous_install_was_filtered() {
     let (dir, config, manifest) =
         setup_fresh_install(pnpm_config::NodeLinker::Isolated, "root", "1.0.0", "");
-    let mut state = load_workspace_state(dir.path())
-        .expect("read state")
-        .expect("state on disk");
+    let mut state = load_workspace_state(dir.path()).expect("read state").expect("state on disk");
     state.filtered_install = true;
     update_workspace_state(dir.path(), &state).expect("write workspace state");
 
@@ -274,28 +272,20 @@ fn install_and_run_refuse_a_changed_workspace_project_set() {
             install_args: Vec::new(),
         },
     );
-    let state = load_workspace_state(dir.path())
-        .unwrap()
-        .unwrap();
+    let state = load_workspace_state(dir.path()).unwrap().unwrap();
     assert_eq!(state.projects.len(), 2, "a rejected project set must not refresh the state");
 }
 /// Record the only project under a sibling of `workspace_root`, as a tree
 /// copied from there carries it. Returns the recorded dir.
 fn record_projects_elsewhere(workspace_root: &std::path::Path) -> String {
-    let mut state = load_workspace_state(workspace_root)
-        .expect("read state")
-        .expect("state on disk");
-    let (_, entry) = state
-        .projects
-        .pop_first()
-        .expect("the recorded project");
+    let mut state =
+        load_workspace_state(workspace_root).expect("read state").expect("state on disk");
+    let (_, entry) = state.projects.pop_first().expect("the recorded project");
     let elsewhere = workspace_root
         .with_file_name("elsewhere")
         .to_string_lossy()
         .into_owned();
-    state
-        .projects
-        .insert(elsewhere.clone(), entry);
+    state.projects.insert(elsewhere.clone(), entry);
     update_workspace_state(workspace_root, &state).expect("write workspace state");
     elsewhere
 }
@@ -332,9 +322,7 @@ fn a_moved_tree_leaves_a_newer_patch_to_the_move_proof() {
         matches!(&status, RunDepsStatus::Outdated { issue, .. } if issue == "The workspace structure has changed since last install"),
         "unexpected status: {status:?}",
     );
-    let state = load_workspace_state(dir.path())
-        .expect("read state")
-        .expect("state on disk");
+    let state = load_workspace_state(dir.path()).expect("read state").expect("state on disk");
     assert!(state.projects.contains_key(&elsewhere), "the refused move must not re-key the state");
 }
 /// The current lockfile keeps only what the importers reach, so a wanted
@@ -370,20 +358,13 @@ fn write_relocatable_layout(config: &Config) {
         "virtualStoreDir": config.effective_virtual_store_dir().to_string_lossy(),
         "virtualStoreDirMaxLength": config.virtual_store_dir_max_length,
     });
-    fs::write(
-        config
-            .modules_dir
-            .join(pnpm_modules_yaml::MODULES_FILENAME),
-        layout.to_string(),
-    )
-    .unwrap();
+    fs::write(config.modules_dir.join(pnpm_modules_yaml::MODULES_FILENAME), layout.to_string())
+        .unwrap();
 }
 
 #[cfg(unix)]
 fn install_foo_slot(config: &Config) {
-    let slot = config
-        .virtual_store_dir
-        .join("foo@1.0.0/node_modules/foo");
+    let slot = config.virtual_store_dir.join("foo@1.0.0/node_modules/foo");
     fs::create_dir_all(&slot).unwrap();
     std::os::unix::fs::symlink(".pnpm/foo@1.0.0/node_modules/foo", config.modules_dir.join("foo"))
         .unwrap();
@@ -398,12 +379,7 @@ fn a_moved_tree_with_a_missing_dependency_is_not_up_to_date() {
         install_foo_slot(config);
         match missing {
             "link" => fs::remove_file(config.modules_dir.join("foo")).unwrap(),
-            _ => fs::remove_dir_all(
-                config
-                    .virtual_store_dir
-                    .join("foo@1.0.0"),
-            )
-            .unwrap(),
+            _ => fs::remove_dir_all(config.virtual_store_dir.join("foo@1.0.0")).unwrap(),
         }
         record_projects_elsewhere(dir.path());
         let manifest = PackageManifest::from_path(dir.path().join("package.json")).unwrap();
@@ -422,12 +398,7 @@ fn a_moved_tree_with_a_missing_current_lockfile_is_not_up_to_date() {
     write_relocatable_layout(config);
     install_foo_slot(config);
     let elsewhere = record_projects_elsewhere(dir.path());
-    fs::remove_file(
-        config
-            .virtual_store_dir
-            .join(Lockfile::CURRENT_FILE_NAME),
-    )
-    .unwrap();
+    fs::remove_file(config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME)).unwrap();
     let manifest = PackageManifest::from_path(dir.path().join("package.json")).unwrap();
     let projects = [(dir.path().to_path_buf(), &manifest)];
 
@@ -444,16 +415,8 @@ fn a_moved_tree_with_a_missing_current_lockfile_is_not_up_to_date() {
             install_args: Vec::new(),
         },
     );
-    let state = load_workspace_state(dir.path())
-        .unwrap()
-        .unwrap();
-    assert_eq!(
-        state
-            .projects
-            .keys()
-            .collect::<Vec<_>>(),
-        [&elsewhere]
-    );
+    let state = load_workspace_state(dir.path()).unwrap().unwrap();
+    assert_eq!(state.projects.keys().collect::<Vec<_>>(), [&elsewhere]);
 }
 
 #[cfg(unix)]
@@ -466,9 +429,7 @@ fn a_moved_tree_cannot_trust_a_pnpmfile_with_an_older_mtime() {
     let hook = dir.path().join(".pnpmfile.cjs");
     fs::write(&hook, "module.exports = { hooks: { readPackage(pkg) { pkg.dependencies = {}; return pkg; } } };\n")
         .unwrap();
-    let mut state = load_workspace_state(dir.path())
-        .unwrap()
-        .unwrap();
+    let mut state = load_workspace_state(dir.path()).unwrap().unwrap();
     state.pnpmfiles = vec![
         std::path::Path::new(&elsewhere)
             .join(".pnpmfile.cjs")
@@ -495,9 +456,7 @@ fn a_moved_production_install_passes_the_run_gate() {
         dev_dependencies: false,
         optional_dependencies: true,
     };
-    let layout_path = config
-        .modules_dir
-        .join(pnpm_modules_yaml::MODULES_FILENAME);
+    let layout_path = config.modules_dir.join(pnpm_modules_yaml::MODULES_FILENAME);
     let mut layout: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(&layout_path).unwrap()).unwrap();
     layout["included"] = serde_json::to_value(included).unwrap();
@@ -512,35 +471,20 @@ fn a_moved_production_install_passes_the_run_gate() {
         FOO_LOCKFILE.replace("dependencies:", "devDependencies:"),
     )
     .unwrap();
-    let wanted = Lockfile::load_wanted_from_dir(dir.path())
-        .unwrap()
-        .unwrap();
+    let wanted = Lockfile::load_wanted_from_dir(dir.path()).unwrap().unwrap();
     let current =
         crate::filter_lockfile_for_current(&wanted, included, &crate::SkippedSnapshots::new());
     current
-        .save_to_path(
-            &config
-                .virtual_store_dir
-                .join(Lockfile::CURRENT_FILE_NAME),
-        )
+        .save_to_path(&config.virtual_store_dir.join(Lockfile::CURRENT_FILE_NAME))
         .unwrap();
     record_projects_elsewhere(dir.path());
-    let mut state = load_workspace_state(dir.path())
-        .unwrap()
-        .unwrap();
+    let mut state = load_workspace_state(dir.path()).unwrap().unwrap();
     state.settings.dev = Some(false);
     update_workspace_state(dir.path(), &state).unwrap();
     let manifest = PackageManifest::from_path(dir.path().join("package.json")).unwrap();
     let status = workspace_deps_status(&dir, config, &[(dir.path().to_path_buf(), &manifest)]);
     assert_eq!(status, RunDepsStatus::UpToDate);
-    assert_eq!(
-        load_workspace_state(dir.path())
-            .unwrap()
-            .unwrap()
-            .settings
-            .dev,
-        Some(false)
-    );
+    assert_eq!(load_workspace_state(dir.path()).unwrap().unwrap().settings.dev, Some(false));
 }
 
 /// Drift in `injectWorkspacePackages` invalidates the cached state.
@@ -574,9 +518,7 @@ fn returns_skipped_when_inject_workspace_packages_drifts() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -616,9 +558,7 @@ fn returns_skipped_when_prefer_workspace_packages_drift() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -668,9 +608,7 @@ fn returns_skipped_when_sibling_node_modules_missing_for_project_with_deps() {
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     projects.insert(
-        sibling_dir
-            .to_string_lossy()
-            .into_owned(),
+        sibling_dir.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("pkg-a".into()), version: Some("1.0.0".into()) },
     );
     write_state(dir.path(), backdate_validated_files(dir.path()), settings, projects);
@@ -730,13 +668,9 @@ fn workspace_content_check_refuses_a_project_after_the_first() {
     // Rewritten so both manifests are newer than the recorded validation and
     // both reach the content check, the root's first.
     fs::write(dir.path().join("package.json"), FOO_MANIFEST).unwrap();
-    let mut state = load_workspace_state(dir.path())
-        .unwrap()
-        .unwrap();
+    let mut state = load_workspace_state(dir.path()).unwrap().unwrap();
     state.projects.insert(
-        dropped_dir
-            .to_string_lossy()
-            .into_owned(),
+        dropped_dir.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("b".into()), version: Some("1.0.0".into()) },
     );
     update_workspace_state(dir.path(), &state).unwrap();
@@ -1042,9 +976,7 @@ fn deduped_sibling_decision_in(sibling: DedupedSibling<'_>) -> Decision {
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     projects.insert(
-        sibling_dir
-            .to_string_lossy()
-            .into_owned(),
+        sibling_dir.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("pkg-a".into()), version: Some("1.0.0".into()) },
     );
     write_state(dir.path(), backdate_validated_files(dir.path()), settings, projects);

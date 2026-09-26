@@ -23,8 +23,7 @@ pub(super) fn sync(
         edits::append(document, &mut pending, &route, &addition)?;
     }
     edits::apply(document, pending)?;
-    let pending = changes
-        .removals
+    let pending = changes.removals
         .into_iter()
         .map(|route| {
             document
@@ -80,8 +79,7 @@ impl<'a> Changes<'a> {
             }
         }
         if !added.is_empty() {
-            self.additions
-                .push((route, Value::Object(added)));
+            self.additions.push((route, Value::Object(added)));
         }
     }
     fn collect_sequence(&mut self, route: Route<'a>, original: &'a [Value], target: &'a [Value]) {
@@ -89,12 +87,10 @@ impl<'a> Changes<'a> {
             self.collect(route.with_key(index), old, new);
         }
         for index in target.len()..original.len() {
-            self.removals
-                .push(route.with_key(index));
+            self.removals.push(route.with_key(index));
         }
         if target.len() > original.len() {
-            self.additions
-                .push((route, Value::Array(target[original.len()..].to_vec())));
+            self.additions.push((route, Value::Array(target[original.len()..].to_vec())));
         }
     }
 }

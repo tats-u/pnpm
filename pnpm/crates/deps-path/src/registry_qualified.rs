@@ -74,9 +74,7 @@ pub fn parse_registry_qualified_version(version: &str) -> Option<(&str, Version)
     {
         return None;
     }
-    let qualified_version = version[colon + 1..]
-        .parse::<Version>()
-        .ok()?;
+    let qualified_version = version[colon + 1..].parse::<Version>().ok()?;
     Some((registry_name, qualified_version))
 }
 

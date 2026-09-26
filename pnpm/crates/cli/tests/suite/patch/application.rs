@@ -48,17 +48,13 @@ fn install_level_patch_that_adds_install_scripts_asks_for_approval() {
         setup_configured_patch("is-positive@1.0.0", "is-positive@1.0.0.patch");
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
-        workspace
-            .join("patches")
-            .join("is-positive@1.0.0.patch"),
+        workspace.join("patches").join("is-positive@1.0.0.patch"),
         IS_POSITIVE_POSTINSTALL_PATCH,
     )
     .expect("write the postinstall patch");
     let marker = workspace.join("node_modules/is-positive/postinstall-ran.txt");
 
-    let output = pacquet(&workspace, ["install"])
-        .output()
-        .expect("run install");
+    let output = pacquet(&workspace, ["install"]).output().expect("run install");
     let combined = format!(
         "{}{}",
         String::from_utf8_lossy(&output.stdout),
@@ -85,9 +81,7 @@ fn install_level_patch_that_adds_install_scripts_asks_for_approval() {
     fs::write(&yaml_path, yaml.replace("set this to true or false", "true"))
         .expect("write pnpm-workspace.yaml");
     remove_dir_if_exists(&workspace.join("node_modules"));
-    pacquet(&workspace, ["install", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--reporter=silent"]).assert().success();
     assert!(marker.exists(), "the approved postinstall must run");
 
     drop((root, mock_instance));
@@ -106,20 +100,15 @@ fn install_level_patch_that_adds_install_scripts_outlives_a_pre_fix_cache_entry(
     );
     let AddMockedRegistry { mock_instance, store_dir, .. } = npmrc_info;
     fs::write(
-        workspace
-            .join("patches")
-            .join("is-positive@1.0.0.patch"),
+        workspace.join("patches").join("is-positive@1.0.0.patch"),
         IS_POSITIVE_POSTINSTALL_PATCH,
     )
     .expect("write the postinstall patch");
     let marker = workspace.join("node_modules/is-positive/postinstall-ran.txt");
 
-    pacquet(&workspace, ["install", "--ignore-scripts", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--ignore-scripts", "--reporter=silent"]).assert().success();
     assert!(!marker.exists(), "--ignore-scripts must not run the postinstall");
-    let cache_keys: Vec<String> = is_positive_store_row(&store_dir)
-        .side_effects
+    let cache_keys: Vec<String> = is_positive_store_row(&store_dir).side_effects
         .expect("a patched package populates `sideEffects`")
         .into_keys()
         .collect();
@@ -131,9 +120,7 @@ fn install_level_patch_that_adds_install_scripts_outlives_a_pre_fix_cache_entry(
     );
 
     remove_dir_if_exists(&workspace.join("node_modules"));
-    pacquet(&workspace, ["install", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--reporter=silent"]).assert().success();
     assert!(marker.exists(), "the pre-fix cache entry must not suppress the build");
 
     drop((root, mock_instance));
@@ -147,16 +134,12 @@ fn install_level_patch_that_adds_a_binding_gyp_asks_for_approval() {
         setup_configured_patch("is-positive@1.0.0", "is-positive@1.0.0.patch");
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
-        workspace
-            .join("patches")
-            .join("is-positive@1.0.0.patch"),
+        workspace.join("patches").join("is-positive@1.0.0.patch"),
         IS_POSITIVE_BINDING_GYP_PATCH,
     )
     .expect("write the binding.gyp patch");
 
-    let output = pacquet(&workspace, ["install"])
-        .output()
-        .expect("run install");
+    let output = pacquet(&workspace, ["install"]).output().expect("run install");
     let combined = format!(
         "{}{}",
         String::from_utf8_lossy(&output.stdout),
@@ -180,16 +163,12 @@ fn install_level_patch_that_adds_a_hooks_file_does_not_ask_for_approval() {
         setup_configured_patch("is-positive@1.0.0", "is-positive@1.0.0.patch");
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
-        workspace
-            .join("patches")
-            .join("is-positive@1.0.0.patch"),
+        workspace.join("patches").join("is-positive@1.0.0.patch"),
         IS_POSITIVE_HOOKS_FILE_PATCH,
     )
     .expect("write the .hooks file patch");
 
-    let output = pacquet(&workspace, ["install"])
-        .output()
-        .expect("run install");
+    let output = pacquet(&workspace, ["install"]).output().expect("run install");
     let combined = format!(
         "{}{}",
         String::from_utf8_lossy(&output.stdout),
@@ -212,7 +191,9 @@ fn install_level_patch_that_adds_a_hooks_file_does_not_ask_for_approval() {
 fn git_dependency_patch_applies_on_fresh_and_frozen_install() {
     let CommandTempCwd { root, workspace, npmrc_info, .. } =
         CommandTempCwd::init().add_mocked_registry();
-    let AddMockedRegistry { mock_instance, store_dir, cache_dir, .. } = npmrc_info;
+    let AddMockedRegistry {
+        mock_instance, store_dir, cache_dir, ..
+    } = npmrc_info;
     let repo = GitRepoFixture::init(root.path(), "patched-git-dependency");
     repo.write_file(
         "package.json",
@@ -244,9 +225,7 @@ fn git_dependency_patch_applies_on_fresh_and_frozen_install() {
         "\n  is-positive@3.1.0: patches/is-positive@3.1.0.patch",
     );
 
-    pacquet(&workspace, ["install", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--reporter=silent"]).assert().success();
     let marker = workspace.join("node_modules/is-positive/patched-marker.txt");
     assert_eq!(fs::read_to_string(&marker).expect("read fresh marker"), "patched\n");
     let patch_hash = patch_file_hash(&workspace, "is-positive@3.1.0.patch");
@@ -261,9 +240,7 @@ fn git_dependency_patch_applies_on_fresh_and_frozen_install() {
     remove_dir_if_exists(&workspace.join("node_modules"));
     remove_dir_if_exists(&store_dir);
     remove_dir_if_exists(&cache_dir);
-    pacquet(&workspace, ["install", "--frozen-lockfile", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--frozen-lockfile", "--reporter=silent"]).assert().success();
     assert_eq!(fs::read_to_string(&marker).expect("read frozen marker"), "patched\n");
 
     drop((root, mock_instance));
@@ -277,9 +254,7 @@ fn install_level_modified_patch_is_reapplied() {
         setup_configured_patch("is-positive@1.0.0", "is-positive@1.0.0.patch");
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
-    pacquet(&workspace, ["install", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--reporter=silent"]).assert().success();
     let installed = read_installed_index(&workspace);
     assert!(installed.contains("// patched"), "installed: {installed}");
 
@@ -288,9 +263,7 @@ fn install_level_modified_patch_is_reapplied() {
     fs::write(&patch_path, patch.replace("// patched", "// edited patch"))
         .expect("rewrite the patch file");
 
-    pacquet(&workspace, ["install", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--reporter=silent"]).assert().success();
     let updated = read_installed_index(&workspace);
     assert!(updated.contains("// edited patch"), "updated: {updated}");
 
@@ -304,9 +277,7 @@ fn install_reads_patched_dependencies_written_by_pnpm_10() {
         setup_configured_patch("is-positive@1.0.0", "is-positive@1.0.0.patch");
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
-    pacquet(&workspace, ["install", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--reporter=silent"]).assert().success();
 
     let patch_hash = patch_file_hash(&workspace, "is-positive@1.0.0.patch");
     let lockfile_path = workspace.join("pnpm-lock.yaml");
@@ -321,9 +292,7 @@ fn install_reads_patched_dependencies_written_by_pnpm_10() {
     fs::write(&lockfile_path, &pnpm_10_text).expect("write the pnpm 10 lockfile");
 
     remove_dir_if_exists(&workspace.join("node_modules"));
-    pacquet(&workspace, ["install", "--frozen-lockfile", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--frozen-lockfile", "--reporter=silent"]).assert().success();
     let frozen = read_installed_index(&workspace);
     assert!(frozen.contains("// patched"), "frozen: {frozen}");
     assert_eq!(
@@ -337,9 +306,7 @@ fn install_reads_patched_dependencies_written_by_pnpm_10() {
     let patch = fs::read_to_string(&patch_path).expect("read the patch file");
     fs::write(&patch_path, patch.replace("// patched", "// edited patch"))
         .expect("rewrite the patch file");
-    pacquet(&workspace, ["install", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--reporter=silent"]).assert().success();
     let installed = read_installed_index(&workspace);
     assert!(installed.contains("// edited patch"), "installed: {installed}");
 
@@ -379,9 +346,7 @@ fn install_level_patch_applies_to_a_package_reached_multiple_times() {
     )
     .expect("rewrite package.json");
 
-    pacquet(&workspace, ["install", "--reporter=silent"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install", "--reporter=silent"]).assert().success();
 
     let installed = read_installed_index(&workspace);
     assert!(installed.contains("// patched"), "installed: {installed}");
@@ -441,9 +406,7 @@ fn hoisted_patch_reaches_every_nested_copy_of_a_package() {
         if frozen {
             args.push("--frozen-lockfile");
         }
-        pacquet(&workspace, args)
-            .assert()
-            .success();
+        pacquet(&workspace, args).assert().success();
 
         for consumer in &nested_copies {
             let nested = consumer.join("node_modules/debug");
@@ -451,17 +414,13 @@ fn hoisted_patch_reaches_every_nested_copy_of_a_package() {
                 fs::read_to_string(nested.join("package.json"))
                     .ok()
                     .and_then(|manifest| serde_json::from_str::<Value>(&manifest).ok())
-                    .and_then(|manifest| manifest["version"]
-                        .as_str()
-                        .map(ToOwned::to_owned)),
+                    .and_then(|manifest| manifest["version"].as_str().map(ToOwned::to_owned)),
                 Some("2.6.9".to_string()),
                 "expected the conflicting debug@2.6.9 to nest under {}",
                 consumer.display(),
             );
             assert!(
-                nested
-                    .join("patched-marker.txt")
-                    .is_file(),
+                nested.join("patched-marker.txt").is_file(),
                 "unpatched nested copy at {} (frozen: {frozen})",
                 nested.display(),
             );

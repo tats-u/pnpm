@@ -188,13 +188,11 @@ impl State {
     }
 
     pub fn lockfile_dir(&self) -> &Path {
-        self.config
-            .lockfile_dir_for(self.project_dir())
+        self.config.lockfile_dir_for(self.project_dir())
     }
 
     pub fn lockfile_path(&self) -> PathBuf {
-        self.lockfile_dir()
-            .join(self.config.wanted_lockfile_name())
+        self.lockfile_dir().join(self.config.wanted_lockfile_name())
     }
 
     pub fn active_importer_id(&self) -> String {
@@ -217,9 +215,7 @@ fn load_or_create_manifest(
     config: &Config,
 ) -> Result<PackageManifest, InitStateError> {
     if !manifest_path.exists() {
-        let project_dir = manifest_path
-            .parent()
-            .expect("manifest path always has a parent dir");
+        let project_dir = manifest_path.parent().expect("manifest path always has a parent dir");
         if let Some((_, manifest)) = pnpm_workspace::try_read_project_manifest(project_dir)
             .map_err(InitStateError::ManifestRead)?
         {
@@ -256,14 +252,9 @@ pub(crate) fn check_root_project_engine(
     if !config.engine_strict {
         return Ok(());
     }
-    let project_dir = config
-        .workspace_dir
+    let project_dir = config.workspace_dir
         .as_deref()
-        .unwrap_or_else(|| {
-            manifest_path
-                .parent()
-                .expect("manifest path always has a parent dir")
-        });
+        .unwrap_or_else(|| manifest_path.parent().expect("manifest path always has a parent dir"));
     let Some((_, manifest)) = pnpm_workspace::try_read_project_manifest(project_dir)
         .map_err(InitStateError::ManifestRead)?
     else {
@@ -277,11 +268,13 @@ pub(crate) fn check_root_project_engine(
     else {
         return Ok(());
     };
-    let configured_node = config.node_version.clone().or_else(|| {
-        use_manifest_runtime
-            .then(|| node_version_from_engines_runtime(manifest.value()))
-            .flatten()
-    });
+    let configured_node = config.node_version
+        .clone()
+        .or_else(|| {
+            use_manifest_runtime
+                .then(|| node_version_from_engines_runtime(manifest.value()))
+                .flatten()
+        });
     let host = pnpm_deps_restorer::InstallabilityHost::detect_with(true, configured_node);
     let wanted = WantedEngine { node: Some(wanted_node.to_string()), pnpm: None };
     let current = Engine { node: host.node_version, pnpm: None };

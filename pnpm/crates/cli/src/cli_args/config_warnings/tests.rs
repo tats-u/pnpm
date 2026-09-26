@@ -114,9 +114,8 @@ mod workspace_key_issues {
             ..WorkspaceKeyIssues::default()
         };
         report_workspace_key_issues(&issues, false).expect("a warning, not an error");
-        let error = report_workspace_key_issues(&issues, true)
-            .expect_err("strict must fail")
-            .to_string();
+        let error =
+            report_workspace_key_issues(&issues, true).expect_err("strict must fail").to_string();
         assert_eq!(
             error,
             "The following settings in pnpm-workspace.yaml are not recognized by this version of \
@@ -134,9 +133,8 @@ mod workspace_key_issues {
             ..WorkspaceKeyIssues::default()
         };
         report_workspace_key_issues(&issues, false).expect("a warning, not an error");
-        let error = report_workspace_key_issues(&issues, true)
-            .expect_err("strict must fail")
-            .to_string();
+        let error =
+            report_workspace_key_issues(&issues, true).expect_err("strict must fail").to_string();
         assert_eq!(
             error,
             "The following task settings in pnpm-workspace.yaml are not recognized by this \
@@ -155,9 +153,8 @@ mod workspace_key_issues {
             },
             ..WorkspaceKeyIssues::default()
         };
-        let error = report_workspace_key_issues(&issues, true)
-            .expect_err("strict must fail")
-            .to_string();
+        let error =
+            report_workspace_key_issues(&issues, true).expect_err("strict must fail").to_string();
         assert_eq!(
             error,
             "The following task settings in pnpm-workspace.yaml are not recognized by this \
@@ -179,9 +176,8 @@ mod workspace_key_issues {
             },
             ..WorkspaceKeyIssues::default()
         };
-        let error = report_workspace_key_issues(&issues, true)
-            .expect_err("strict must fail")
-            .to_string();
+        let error =
+            report_workspace_key_issues(&issues, true).expect_err("strict must fail").to_string();
         assert!(error.contains("minimumReleaseAg"), "unexpected error: {error}");
     }
 

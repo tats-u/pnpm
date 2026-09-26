@@ -235,9 +235,7 @@ pub trait CustomFetcher: Send + Sync {
         pkg_id: &str,
         resolution: Value,
     ) -> Result<(bool, Value), HookError> {
-        let can_fetch = self
-            .can_fetch(pkg_id, resolution.clone())
-            .await?;
+        let can_fetch = self.can_fetch(pkg_id, resolution.clone()).await?;
         Ok((can_fetch, resolution))
     }
 
@@ -259,8 +257,7 @@ pub trait CustomFetcher: Send + Sync {
         opts: Value,
         _callbacks: FetcherCallbackSender,
     ) -> Result<Value, HookError> {
-        self.fetch(pkg_id, resolution, opts)
-            .await
+        self.fetch(pkg_id, resolution, opts).await
     }
 }
 
@@ -330,9 +327,7 @@ pub async fn current_pnpmfile_checksum(
     {
         return Some(hash);
     }
-    hooks
-        .calculate_pnpmfile_checksum()
-        .await
+    hooks.calculate_pnpmfile_checksum().await
 }
 
 /// A no-op implementation of [`PnpmfileHooks`].
@@ -387,9 +382,7 @@ impl PnpmfileHooks for ChecksumFreeHooks {
         lockfile: Value,
         ctx: HookContext,
     ) -> Result<Value, HookError> {
-        self.0
-            .after_all_resolved(lockfile, ctx)
-            .await
+        self.0.after_all_resolved(lockfile, ctx).await
     }
 
     async fn update_config(&self, config: Value, ctx: HookContext) -> Result<Value, HookError> {
@@ -402,9 +395,7 @@ impl PnpmfileHooks for ChecksumFreeHooks {
         dir: &std::path::Path,
         ctx: HookContext,
     ) -> Result<Value, HookError> {
-        self.0
-            .before_packing(manifest, dir, ctx)
-            .await
+        self.0.before_packing(manifest, dir, ctx).await
     }
 
     async fn pre_resolution(&self, ctx: PreResolutionHookContext, logger: PreResolutionHookLogger) {
@@ -440,9 +431,7 @@ impl PnpmfileHooks for ChecksumFreeHooks {
     }
 
     async fn run_finder(&self, finder_name: &str, ctx: Value) -> Result<Value, HookError> {
-        self.0
-            .run_finder(finder_name, ctx)
-            .await
+        self.0.run_finder(finder_name, ctx).await
     }
 }
 

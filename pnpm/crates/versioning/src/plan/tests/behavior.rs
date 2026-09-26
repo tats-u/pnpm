@@ -40,11 +40,7 @@ fn an_intent_demanding_a_release_of_an_unreleasable_package_fails_the_plan() {
         &AssembleReleasePlanOptions::default(),
     )
     .expect_err("plan must fail");
-    assert!(
-        err.to_string()
-            .contains("cannot release"),
-        "unexpected error: {err}"
-    );
+    assert!(err.to_string().contains("cannot release"), "unexpected error: {err}");
 }
 
 #[test]
@@ -70,11 +66,7 @@ fn an_intent_naming_an_unknown_package_fails_the_plan() {
         &AssembleReleasePlanOptions::default(),
     )
     .expect_err("plan must fail");
-    assert!(
-        err.to_string()
-            .contains("not a package in this workspace"),
-        "unexpected error: {err}"
-    );
+    assert!(err.to_string().contains("not a package in this workspace"), "unexpected error: {err}");
 }
 
 #[test]
@@ -125,11 +117,7 @@ fn a_lane_named_main_is_rejected_as_the_reserved_default_lane() {
         &AssembleReleasePlanOptions::default(),
     )
     .expect_err("plan must fail");
-    assert!(
-        err.to_string()
-            .contains("reserved default lane"),
-        "unexpected error: {err}"
-    );
+    assert!(err.to_string().contains("reserved default lane"), "unexpected error: {err}");
 }
 
 #[test]

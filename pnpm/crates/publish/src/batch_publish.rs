@@ -134,12 +134,8 @@ fn group_packed_pkg(
         .iter_mut()
         .find(|group| group.registry == registry)
     {
-        group
-            .package_names
-            .push(name.to_string());
-        group
-            .summary_indexes
-            .push(summary_index);
+        group.package_names.push(name.to_string());
+        group.summary_indexes.push(summary_index);
         group.documents.push(document);
         return Ok(());
     }
@@ -196,15 +192,13 @@ fn batch_authorization(
     network: &PublishNetwork<'_>,
 ) -> Result<Option<String>, BatchPublishError> {
     let mut package_names = group.package_names.iter();
-    let authorization = package_names.next().and_then(|name| {
-        network
-            .auth_headers
-            .for_url_with_package(group.registry.as_str(), Some(name))
-    });
+    let authorization = package_names
+        .next()
+        .and_then(|name| {
+            network.auth_headers.for_url_with_package(group.registry.as_str(), Some(name))
+        });
     if package_names.any(|name| {
-        network
-            .auth_headers
-            .for_url_with_package(group.registry.as_str(), Some(name))
+        network.auth_headers.for_url_with_package(group.registry.as_str(), Some(name))
             != authorization
     }) {
         return Err(BatchPublishError::ConflictingCredentials {

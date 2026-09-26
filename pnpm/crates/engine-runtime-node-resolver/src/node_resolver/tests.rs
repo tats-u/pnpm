@@ -57,9 +57,8 @@ async fn offline_raises_no_offline_nodejs_resolution() {
         .resolve(&wanted, &ResolveOptions::default())
         .await
         .unwrap_err();
-    let code: &dyn miette::Diagnostic = err
-        .downcast_ref::<super::NodeResolverError>()
-        .expect("error is a NodeResolverError");
+    let code: &dyn miette::Diagnostic =
+        err.downcast_ref::<super::NodeResolverError>().expect("error is a NodeResolverError");
     assert_eq!(
         code.code()
             .map(|code| code.to_string())
@@ -147,9 +146,10 @@ async fn resolve_save_specifier_pins_the_picked_version() {
         .create_async()
         .await;
     let mut resolver = resolver();
-    resolver
-        .node_download_mirrors
-        .insert("release".to_string(), format!("{}/download/release/", server.url()));
+    resolver.node_download_mirrors.insert(
+        "release".to_string(),
+        format!("{}/download/release/", server.url()),
+    );
 
     let cases = [
         ("26", None, "runtime:26.5.0"),
@@ -160,10 +160,7 @@ async fn resolve_save_specifier_pins_the_picked_version() {
     ];
     for (version_spec, prev_specifier, expected) in cases {
         assert_eq!(
-            resolver
-                .resolve_save_specifier(version_spec, prev_specifier)
-                .await
-                .unwrap(),
+            resolver.resolve_save_specifier(version_spec, prev_specifier).await.unwrap(),
             expected,
             "version_spec={version_spec:?}, prev_specifier={prev_specifier:?}",
         );
@@ -181,14 +178,12 @@ async fn resolve_save_specifier_errors_when_no_version_satisfies() {
         .create_async()
         .await;
     let mut resolver = resolver();
-    resolver
-        .node_download_mirrors
-        .insert("release".to_string(), format!("{}/download/release/", server.url()));
+    resolver.node_download_mirrors.insert(
+        "release".to_string(),
+        format!("{}/download/release/", server.url()),
+    );
 
-    let err = resolver
-        .resolve_save_specifier("99", None)
-        .await
-        .unwrap_err();
+    let err = resolver.resolve_save_specifier("99", None).await.unwrap_err();
     let code: &dyn miette::Diagnostic = &err;
     assert_eq!(
         code.code()
@@ -273,17 +268,12 @@ fn exact_release_versions_are_their_own_resolution() {
 #[tokio::test]
 async fn resolve_save_specifier_saves_an_exact_version_without_network() {
     let mut resolver = resolver();
-    resolver
-        .node_download_mirrors
-        .insert("release".to_string(), "http://127.0.0.1:9/download/release/".to_string());
-
-    assert_eq!(
-        resolver
-            .resolve_save_specifier("22.11.0", None)
-            .await
-            .unwrap(),
-        "runtime:22.11.0"
+    resolver.node_download_mirrors.insert(
+        "release".to_string(),
+        "http://127.0.0.1:9/download/release/".to_string(),
     );
+
+    assert_eq!(resolver.resolve_save_specifier("22.11.0", None).await.unwrap(), "runtime:22.11.0");
 }
 
 /// An exact-version resolve skips the release index, so a nonexistent
@@ -306,9 +296,10 @@ async fn exact_resolve_of_a_nonexistent_version_raises_version_not_found() {
         .create_async()
         .await;
     let mut resolver = resolver();
-    resolver
-        .node_download_mirrors
-        .insert("release".to_string(), format!("{}/download/release/", server.url()));
+    resolver.node_download_mirrors.insert(
+        "release".to_string(),
+        format!("{}/download/release/", server.url()),
+    );
     let wanted = WantedDependency {
         alias: Some("node".to_string()),
         bare_specifier: Some("runtime:22.99.0".to_string()),
@@ -319,9 +310,8 @@ async fn exact_resolve_of_a_nonexistent_version_raises_version_not_found() {
         .resolve(&wanted, &ResolveOptions::default())
         .await
         .unwrap_err();
-    let code: &dyn miette::Diagnostic = err
-        .downcast_ref::<NodeResolverError>()
-        .expect("error is a NodeResolverError");
+    let code: &dyn miette::Diagnostic =
+        err.downcast_ref::<NodeResolverError>().expect("error is a NodeResolverError");
     assert_eq!(
         code.code()
             .map(|code| code.to_string())
@@ -348,9 +338,10 @@ async fn exact_resolve_keeps_the_asset_error_when_the_version_exists() {
         .create_async()
         .await;
     let mut resolver = resolver();
-    resolver
-        .node_download_mirrors
-        .insert("release".to_string(), format!("{}/download/release/", server.url()));
+    resolver.node_download_mirrors.insert(
+        "release".to_string(),
+        format!("{}/download/release/", server.url()),
+    );
     let wanted = WantedDependency {
         alias: Some("node".to_string()),
         bare_specifier: Some("runtime:22.11.0".to_string()),
@@ -361,9 +352,7 @@ async fn exact_resolve_keeps_the_asset_error_when_the_version_exists() {
         .resolve(&wanted, &ResolveOptions::default())
         .await
         .unwrap_err();
-    let err = err
-        .downcast_ref::<NodeResolverError>()
-        .expect("error is a NodeResolverError");
+    let err = err.downcast_ref::<NodeResolverError>().expect("error is a NodeResolverError");
     assert!(matches!(err, NodeResolverError::FetchVerifiedNodeShasums(_)));
 }
 
@@ -413,8 +402,7 @@ async fn asset_reader_serves_repeat_reads_from_the_cache() {
 
 #[tokio::test]
 async fn musl_reader_reports_no_assets_for_a_release_without_musl_builds() {
-    let assets = read_musl_assets_from_mock(404, None)
-        .await
+    let assets = read_musl_assets_from_mock(404, None).await
         .expect("a release without musl builds resolves to no musl assets");
 
     assert!(assets.is_empty());
@@ -422,8 +410,7 @@ async fn musl_reader_reports_no_assets_for_a_release_without_musl_builds() {
 
 #[tokio::test]
 async fn musl_reader_propagates_a_blocked_mirror() {
-    let err = read_musl_assets_from_mock(403, None)
-        .await
+    let err = read_musl_assets_from_mock(403, None).await
         .expect_err("a blocked mirror fails the resolve");
 
     assert!(matches!(
@@ -434,8 +421,7 @@ async fn musl_reader_propagates_a_blocked_mirror() {
 
 #[tokio::test]
 async fn musl_reader_propagates_a_mirror_server_error() {
-    let err = read_musl_assets_from_mock(500, None)
-        .await
+    let err = read_musl_assets_from_mock(500, None).await
         .expect_err("an erroring mirror fails the resolve");
 
     assert!(matches!(
@@ -485,9 +471,8 @@ async fn read_musl_assets_from_mock(
     body: Option<&str>,
 ) -> Result<Vec<PlatformAssetResolution>, NodeResolverError> {
     let mut server = mockito::Server::new_async().await;
-    let mut mock = server
-        .mock("GET", "/download/release/v22.11.0/SHASUMS256.txt")
-        .with_status(status);
+    let mut mock =
+        server.mock("GET", "/download/release/v22.11.0/SHASUMS256.txt").with_status(status);
     if let Some(body) = body {
         mock = mock.with_body(body);
     }

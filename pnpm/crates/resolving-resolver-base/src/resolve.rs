@@ -613,9 +613,6 @@ pub async fn resolve_package_version(
         .resolve(wanted, options)
         .await?
         .and_then(|result| {
-            result
-                .package
-                .name_ver
-                .map(|name_ver| name_ver.suffix.to_string())
+            result.package.name_ver.map(|name_ver| name_ver.suffix.to_string())
         }))
 }

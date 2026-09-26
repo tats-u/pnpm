@@ -30,9 +30,7 @@ fn tree_snapshot(root: &Path) -> TreeSnapshot {
         .into_iter()
         .map(|entry| {
             let entry = entry.expect("walk the tree");
-            let metadata = entry
-                .metadata()
-                .expect("lstat the entry");
+            let metadata = entry.metadata().expect("lstat the entry");
             let stamps = (
                 metadata.ino(),
                 metadata.mtime(),
@@ -85,18 +83,8 @@ fn pinned_workspace() -> (CommandTempCwd<AddMockedRegistry>, PathBuf) {
         let path = temp_cwd.workspace.join(config_file);
         let text = fs::read_to_string(&path)
             .expect("read the store config")
-            .replace(
-                "../pacquet-store",
-                &root
-                    .join("pacquet-store")
-                    .to_string_lossy(),
-            )
-            .replace(
-                "../pacquet-cache",
-                &root
-                    .join("pacquet-cache")
-                    .to_string_lossy(),
-            );
+            .replace("../pacquet-store", &root.join("pacquet-store").to_string_lossy())
+            .replace("../pacquet-cache", &root.join("pacquet-cache").to_string_lossy());
         fs::write(&path, text).expect("write the store config");
     }
     let workspace = fs::canonicalize(&temp_cwd.workspace).expect("canonicalize the workspace");
@@ -196,9 +184,7 @@ fn moved_rootless_workspace_reuses_its_sibling_projects() {
                 format!("node_modules/{WORKSPACE_STATE_FILENAME}"),
             ]),
         );
-        let state = load_workspace_state(&moved)
-            .unwrap()
-            .unwrap();
+        let state = load_workspace_state(&moved).unwrap().unwrap();
         let expected = ["a", "b"].map(|project| {
             moved
                 .join("packages")
@@ -207,8 +193,7 @@ fn moved_rootless_workspace_reuses_its_sibling_projects() {
                 .into_owned()
         });
         assert_eq!(
-            state
-                .projects
+            state.projects
                 .keys()
                 .cloned()
                 .collect::<BTreeSet<_>>(),
@@ -333,9 +318,7 @@ fn a_moved_patched_workspace_is_up_to_date_until_its_patch_is_edited() {
 }
 
 fn assert_state_recorded_at(dir: &Path) {
-    let state = load_workspace_state(dir)
-        .expect("read the state")
-        .expect("a workspace state");
+    let state = load_workspace_state(dir).expect("read the state").expect("a workspace state");
     let keys: Vec<&String> = state.projects.keys().collect();
     assert_eq!(keys, [&dir.to_string_lossy().into_owned()]);
 }
@@ -474,9 +457,7 @@ fn check_absolute_shim_repair(state: &str) {
         .success();
 
     let moved = make_shims_absolute_and_move(&workspace, "first-move");
-    let state_path = moved
-        .join("node_modules")
-        .join(WORKSPACE_STATE_FILENAME);
+    let state_path = moved.join("node_modules").join(WORKSPACE_STATE_FILENAME);
     match state {
         "missing" => fs::remove_file(&state_path).expect("remove workspace state"),
         "invalid" => fs::write(&state_path, "{").expect("corrupt workspace state"),

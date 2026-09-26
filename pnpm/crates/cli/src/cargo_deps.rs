@@ -82,12 +82,8 @@ pub(crate) async fn plan<Reporter: self::Reporter + 'static>(
     context: InstallContext,
     inventory: &EcosystemWorkspaceInventory,
 ) -> Result<InstallTask<'static>> {
-    let roots = discover_workspace_roots(
-        inventory
-            .manifests(EcosystemManifest::Cargo)
-            .await?,
-    )
-    .await?;
+    let roots =
+        discover_workspace_roots(inventory.manifests(EcosystemManifest::Cargo).await?).await?;
     let metadata = roots
         .iter()
         .flat_map(|root| metadata_paths(root))
@@ -121,7 +117,12 @@ pub(crate) async fn prepare<Reporter: self::Reporter + 'static>(
     checkout: Option<PathBuf>,
     lockfile_policy: CargoLockfilePolicy,
 ) -> Result<Vec<Prepared>> {
-    let InstallContext { config, http_client, lockfile_only, frozen_lockfile } = context;
+    let InstallContext {
+        config,
+        http_client,
+        lockfile_only,
+        frozen_lockfile,
+    } = context;
     let checkout = checkout.as_deref();
     let mut prepared = stream::iter(roots)
         .map(|root| {

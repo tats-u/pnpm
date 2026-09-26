@@ -144,10 +144,7 @@ fn collect_reachable(
     options: &FilterByImportersOptions,
 ) -> Result<HashSet<PackageKey>, LockfileMissingDependencyError> {
     let empty = HashMap::new();
-    let snapshots = lockfile
-        .snapshots
-        .as_ref()
-        .unwrap_or(&empty);
+    let snapshots = lockfile.snapshots.as_ref().unwrap_or(&empty);
     // Seeded with `skipped`, as pnpm's walker seeds its `walked` set: a
     // skipped key is never entered, so nothing reachable only through it
     // is retained either.
@@ -177,9 +174,7 @@ fn snapshot_keys(
 ) -> impl Iterator<Item = PackageKey> + '_ {
     [
         snapshot.dependencies.as_ref(),
-        include_optional
-            .then_some(snapshot.optional_dependencies.as_ref())
-            .flatten(),
+        include_optional.then_some(snapshot.optional_dependencies.as_ref()).flatten(),
     ]
     .into_iter()
     .flatten()

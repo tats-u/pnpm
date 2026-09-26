@@ -97,10 +97,7 @@ fn is_compatible<Reporter: self::Reporter>(
                     version: subdep.version.clone(),
                 },
                 parents: None,
-                prefix: opts
-                    .root_dir
-                    .to_string_lossy()
-                    .into_owned(),
+                prefix: opts.root_dir.to_string_lossy().into_owned(),
                 reason: match error.skip_reason() {
                     pnpm_package_is_installable::SkipReason::UnsupportedEngine => {
                         SkippedOptionalReason::UnsupportedEngine
@@ -138,10 +135,7 @@ pub(super) fn normalize_from_lockfile(
     opts: &ConfigDepsInstallOptions<'_>,
 ) -> Result<BTreeMap<String, NormalizedConfigDep>, ConfigDepError> {
     let mut deps = BTreeMap::new();
-    let Some(importer) = env_lockfile
-        .importers
-        .get(EnvLockfile::ROOT_IMPORTER_KEY)
-    else {
+    let Some(importer) = env_lockfile.importers.get(EnvLockfile::ROOT_IMPORTER_KEY) else {
         return Ok(deps);
     };
     for (name, spec) in &importer.config_dependencies {
@@ -161,8 +155,7 @@ pub(super) fn normalize_from_lockfile(
             ),
         })?;
 
-        let optional_subdeps = env_lockfile
-            .snapshots
+        let optional_subdeps = env_lockfile.snapshots
             .get(&key)
             .and_then(|snapshot| snapshot.optional_dependencies.as_ref())
             .map(|optionals| read_optional_subdeps(name, optionals, env_lockfile, opts))
@@ -193,8 +186,7 @@ fn required_config_package<'a>(
                 r#"pnpm-lock.yaml has an unparsable config-dependency key "{pkg_key}""#,
             ),
         })?;
-    let pkg = env_lockfile
-        .packages
+    let pkg = env_lockfile.packages
         .get(&key)
         .ok_or_else(|| ConfigDepError::EnvLockfileCorrupted {
             message: format!(
@@ -217,8 +209,7 @@ fn read_optional_subdeps(
         let subdep_name = subdep_name.to_string();
         let subdep_key = format!("{subdep_name}@{version}");
         let key = parse_optional_subdep_key(&subdep_key)?;
-        let pkg = env_lockfile
-            .packages
+        let pkg = env_lockfile.packages
             .get(&key)
             .ok_or_else(|| ConfigDepError::EnvLockfileCorrupted {
                 message: format!(
@@ -246,10 +237,7 @@ fn read_optional_subdeps(
             tarball,
             os: pkg.os.clone(),
             cpu: pkg.cpu.clone(),
-            libc: pkg
-                .libc
-                .as_deref()
-                .map(<[String]>::to_vec),
+            libc: pkg.libc.as_deref().map(<[String]>::to_vec),
         });
     }
     Ok(subdeps)

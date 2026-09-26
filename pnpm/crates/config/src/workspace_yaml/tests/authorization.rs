@@ -7,8 +7,7 @@ use super::{WORKSPACE_MANIFEST_FILENAME, WorkspaceSettings, fs};
 fn rejects_credentials_in_a_registry_declaration() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(
-        dir.path()
-            .join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  https://npm.example.com/: {_authToken: hunter2}\n",
     )
     .unwrap();
@@ -27,8 +26,7 @@ fn rejects_credentials_in_a_registry_declaration() {
 fn rejects_a_registry_key_that_embeds_credentials() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(
-        dir.path()
-            .join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  https://ci-user-6e42:hunter2@npm.example.com/: {serverType: artifactory}\n",
     )
     .unwrap();
@@ -48,8 +46,7 @@ fn rejects_a_registry_key_that_embeds_credentials() {
 fn rejects_a_scheme_less_registry_key_that_embeds_credentials() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(
-        dir.path()
-            .join(WORKSPACE_MANIFEST_FILENAME),
+        dir.path().join(WORKSPACE_MANIFEST_FILENAME),
         "registries:\n  //ci-user-6e42:hunter2@npm.example.com/: {serverType: artifactory}\n",
     )
     .unwrap();

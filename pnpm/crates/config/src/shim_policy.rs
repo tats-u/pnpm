@@ -123,8 +123,7 @@ impl GlobalShims {
             GlobalShimsSetting::Toggle(true) => *self = Self::default(),
             GlobalShimsSetting::Entries(entries) => {
                 for (name, value) in entries {
-                    self.entries
-                        .insert(name.clone(), value.resolve());
+                    self.entries.insert(name.clone(), value.resolve());
                 }
             }
         }

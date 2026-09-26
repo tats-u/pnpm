@@ -46,10 +46,7 @@ impl RouteHook {
 
 impl UpstreamRouteHook for RouteHook {
     fn authorize(&self, url: &str, package: Option<&str>) -> Option<String> {
-        match self
-            .context
-            .classify(&self.identity, url, package)
-        {
+        match self.context.classify(&self.identity, url, package) {
             RouteClass::Public => None,
             RouteClass::Hosted { policy_id } => {
                 self.record(PrivateAccessDescriptor::Hosted { policy_id });
@@ -58,17 +55,13 @@ impl UpstreamRouteHook for RouteHook {
                 None
             }
             RouteClass::Proxied { alias, credential_digest } => {
-                let authorization = self
-                    .context
-                    .aliases
+                let authorization = self.context.aliases
                     .iter()
                     .find(|candidate| candidate.name == alias)
                     .map(|candidate| candidate.authorization.clone());
                 // Package-qualified only when the upstream's rules explicitly
                 // refine this name, so replay re-checks the refinement.
-                let package = self
-                    .context
-                    .alias_package_qualifier(&alias, package);
+                let package = self.context.alias_package_qualifier(&alias, package);
                 self.record(PrivateAccessDescriptor::Alias { alias, credential_digest, package });
                 authorization
             }
@@ -82,22 +75,19 @@ impl UpstreamRouteHook for RouteHook {
     fn metadata_scope(&self, url: &str, package: Option<&str>) -> MetadataCacheScope {
         // Read-only classification — this must not record into the
         // footprint (`authorize` already does, at the real fetch point).
-        match self
-            .context
-            .classify(&self.identity, url, package)
-        {
+        match self.context.classify(&self.identity, url, package) {
             RouteClass::Public => MetadataCacheScope::Public,
             RouteClass::Hosted { policy_id } => MetadataCacheScope::Private {
-                descriptor_id: PrivateAccessDescriptor::Hosted { policy_id }
-                    .digest_id(&self.secret),
+                descriptor_id: PrivateAccessDescriptor::Hosted { policy_id }.digest_id(
+                    &self.secret,
+                ),
             },
             RouteClass::Proxied { alias, credential_digest } => MetadataCacheScope::Private {
                 descriptor_id: {
-                    let package = self
-                        .context
-                        .alias_package_qualifier(&alias, package);
-                    PrivateAccessDescriptor::Alias { alias, credential_digest, package }
-                        .digest_id(&self.secret)
+                    let package = self.context.alias_package_qualifier(&alias, package);
+                    PrivateAccessDescriptor::Alias { alias, credential_digest, package }.digest_id(
+                        &self.secret,
+                    )
                 },
             },
         }
@@ -120,8 +110,7 @@ impl ResolvedAlias {
     /// by registry origin, so no package glob is attached.
     pub(super) fn from_upstream(name: &str, upstream: &UpstreamConfig) -> Option<Self> {
         let access = upstream.access.clone()?;
-        let authorization = upstream
-            .headers
+        let authorization = upstream.headers
             .get(AUTHORIZATION)
             .and_then(|value| value.to_str().ok())?
             .to_string();

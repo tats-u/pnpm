@@ -94,15 +94,13 @@ fn package_scope_auth_from_npmrc_wins_over_registry_auth() {
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(ini, Path::new("")).apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config
-            .auth_headers
+        config.auth_headers
             .for_url_with_package("https://npm.pkg.github.com/pkg", Some("@orgA/pkg"))
             .as_deref(),
         Some("Bearer org-a-token"),
     );
     assert_eq!(
-        config
-            .auth_headers
+        config.auth_headers
             .for_url_with_package("https://npm.pkg.github.com/pkg", Some("@orgB/pkg"))
             .as_deref(),
         Some("Bearer registry-token"),
@@ -118,17 +116,11 @@ fn parses_default_auth_token_and_keys_to_registry() {
     let mut config = Config::new();
     auth.apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config
-            .auth_headers
-            .for_url("https://registry.npmjs.org/foo/-/foo-1.0.0.tgz")
-            .as_deref(),
+        config.auth_headers.for_url("https://registry.npmjs.org/foo/-/foo-1.0.0.tgz").as_deref(),
         Some("Bearer top-secret"),
     );
     assert_eq!(
-        config
-            .auth_tokens_by_uri
-            .get("//registry.npmjs.org/")
-            .map(String::as_str),
+        config.auth_tokens_by_uri.get("//registry.npmjs.org/").map(String::as_str),
         Some("top-secret"),
     );
 }
@@ -223,18 +215,8 @@ key=${KEY}
 
     let mut config = Config::new();
     auth.apply_to::<EnvWithSecret>(&mut config);
-    assert_eq!(
-        config
-            .auth_headers
-            .for_url("https://attacker.example/pkg"),
-        None
-    );
-    assert_eq!(
-        config
-            .tls_by_uri
-            .get("//attacker.example/"),
-        None
-    );
+    assert_eq!(config.auth_headers.for_url("https://attacker.example/pkg"), None);
+    assert_eq!(config.tls_by_uri.get("//attacker.example/"), None);
 }
 
 #[test]
@@ -245,10 +227,7 @@ fn basic_auth_built_from_username_and_password() {
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(&ini, Path::new("")).apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config
-            .auth_headers
-            .for_url("https://reg.com/")
-            .as_deref(),
+        config.auth_headers.for_url("https://reg.com/").as_deref(),
         Some(format!("Basic {}", base64_encode("alice:p@ss")).as_str()),
     );
 }
@@ -260,10 +239,7 @@ fn auth_pair_base64_keys_to_basic_header() {
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(&ini, Path::new("")).apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config
-            .auth_headers
-            .for_url("https://reg.com/")
-            .as_deref(),
+        config.auth_headers.for_url("https://reg.com/").as_deref(),
         Some(format!("Basic {pair}").as_str()),
     );
 }
@@ -280,10 +256,7 @@ fn unpadded_auth_pair_base64_is_canonically_re_encoded() {
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(&ini, Path::new("")).apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config
-            .auth_headers
-            .for_url("https://reg.com/")
-            .as_deref(),
+        config.auth_headers.for_url("https://reg.com/").as_deref(),
         Some(format!("Basic {padded}").as_str()),
     );
 }
@@ -326,12 +299,7 @@ fn empty_auth_pair_base64_supplies_no_header() {
     let ini = "//reg.com/:_auth=\n";
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(ini, Path::new("")).apply_to::<NoEnv>(&mut config);
-    assert_eq!(
-        config
-            .auth_headers
-            .for_url("https://reg.com/"),
-        None
-    );
+    assert_eq!(config.auth_headers.for_url("https://reg.com/"), None);
 }
 
 #[test]
@@ -364,10 +332,7 @@ fn top_level_auth_pair_keys_to_default_registry_basic_header() {
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(&ini, Path::new("")).apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config
-            .auth_headers
-            .for_url("https://registry.npmjs.org/")
-            .as_deref(),
+        config.auth_headers.for_url("https://registry.npmjs.org/").as_deref(),
         Some(format!("Basic {pair}").as_str()),
     );
 }
@@ -380,10 +345,7 @@ fn per_registry_username_password_apply_through_build_auth_headers() {
     let mut config = Config::new();
     NpmrcAuth::from_ini::<NoEnv>(&ini, Path::new("")).apply_to::<NoEnv>(&mut config);
     assert_eq!(
-        config
-            .auth_headers
-            .for_url("https://reg.example/foo")
-            .as_deref(),
+        config.auth_headers.for_url("https://reg.example/foo").as_deref(),
         Some(format!("Basic {}", base64_encode("alice:hunter2")).as_str()),
     );
 }
@@ -500,8 +462,7 @@ fn applies_strict_ssl_to_config_and_rescopes_cert_key() {
     assert_eq!(config.tls.strict_ssl, Some(false));
     assert_eq!(config.tls.cert, None, "unscoped cert is rescoped, not kept top-level");
     assert_eq!(config.tls.key, None);
-    let scoped = config
-        .tls_by_uri
+    let scoped = config.tls_by_uri
         .get("//registry.npmjs.org/")
         .expect("cert/key rescoped to the npmjs default registry");
     assert_eq!(scoped.cert.as_deref(), Some("cert-pem"));
@@ -556,11 +517,7 @@ fn parses_scoped_cert_and_key() {
         "//reg.example.com/:cert=cert-pem\n//reg.example.com/:key=key-pem\n",
         Path::new(""),
     );
-    let entry = auth
-        .tls
-        .by_uri
-        .get("//reg.example.com/")
-        .expect("entry present");
+    let entry = auth.tls.by_uri.get("//reg.example.com/").expect("entry present");
     assert_eq!(entry.cert.as_deref(), Some("cert-pem"));
     assert_eq!(entry.key.as_deref(), Some("key-pem"));
 }
@@ -584,11 +541,7 @@ fn parses_scoped_certfile_and_keyfile() {
         tmp_key.path().display(),
     );
     let auth = NpmrcAuth::from_ini::<NoEnv>(&ini, Path::new(""));
-    let entry = auth
-        .tls
-        .by_uri
-        .get("//reg.example.com/")
-        .expect("entry present");
+    let entry = auth.tls.by_uri.get("//reg.example.com/").expect("entry present");
     assert_eq!(entry.cert.as_deref(), Some("CERT-CONTENTS"));
     assert_eq!(entry.key.as_deref(), Some("KEY-CONTENTS"));
 }
@@ -601,20 +554,8 @@ fn applies_tls_by_uri_to_config_drops_empty() {
     );
     let mut config = Config::new();
     auth.apply_to::<NoEnv>(&mut config);
-    assert!(
-        config
-            .tls_by_uri
-            .get("//keep.example.com/")
-            .is_some(),
-        "non-empty entry kept"
-    );
-    assert!(
-        config
-            .tls_by_uri
-            .get("//drop.example.com/")
-            .is_none(),
-        "non-TLS key ignored"
-    );
+    assert!(config.tls_by_uri.get("//keep.example.com/").is_some(), "non-empty entry kept");
+    assert!(config.tls_by_uri.get("//drop.example.com/").is_none(), "non-TLS key ignored");
 }
 
 #[test]
@@ -724,9 +665,7 @@ fn json_env_error_does_not_leak_url_credentials() {
             r#"{"https://user:pw@registry.example?token=secret":{"@":{"authToken":"tok"}}}"#
         )]
     );
-    let error = NpmrcAuth::from_json_sources::<Env>(None)
-        .unwrap_err()
-        .to_string();
+    let error = NpmrcAuth::from_json_sources::<Env>(None).unwrap_err().to_string();
     for leak in ["user:pw", "pw@", "token=secret", "?token"] {
         assert!(!error.contains(leak), "secret fragment {leak:?} leaked into the error: {error}");
     }
@@ -774,8 +713,7 @@ fn from_project_ini_warns_on_auth_env_placeholder() {
         "expected auth warning but got: {:?}",
         auth.warnings,
     );
-    let warning = auth
-        .warnings
+    let warning = auth.warnings
         .iter()
         .find(|w| w.contains("Ignored project-level auth setting"))
         .unwrap();
@@ -797,8 +735,7 @@ fn ignored_auth_warning_redacts_protocol_relative_userinfo() {
         "//user:password@registry.npmjs.org/:_authToken=${MY_TOKEN}\n",
         Path::new(""),
     );
-    let warning = auth
-        .warnings
+    let warning = auth.warnings
         .iter()
         .find(|warning| warning.contains("Ignored project-level auth setting"))
         .expect("ignored auth warning");
@@ -810,8 +747,7 @@ fn ignored_auth_warning_redacts_protocol_relative_userinfo() {
         "//user:pa/ss@registry.npmjs.org/:_authToken=${MY_TOKEN}\n",
         Path::new(""),
     );
-    let warning = malformed
-        .warnings
+    let warning = malformed.warnings
         .iter()
         .find(|warning| warning.contains("Ignored project-level auth setting"))
         .expect("ignored malformed auth warning");
@@ -828,8 +764,7 @@ fn from_ini_expands_auth_env_placeholder_without_warning() {
         NpmrcAuth::from_ini::<Env>("//registry.npmjs.org/:_authToken=${MY_TOKEN}\n", Path::new(""));
 
     assert!(
-        !auth
-            .warnings
+        !auth.warnings
             .iter()
             .any(|w| w.contains("Ignored project-level auth setting")),
         "unexpected auth warning: {:?}",

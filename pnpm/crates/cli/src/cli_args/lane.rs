@@ -211,9 +211,7 @@ fn check_lane_name(lane_name: &str) -> Result<(), LaneError> {
     let valid_name = lane_name
         .chars()
         .all(|character| character.is_ascii_alphanumeric() || character == '-')
-        && !lane_name
-            .chars()
-            .all(|character| character.is_ascii_digit());
+        && !lane_name.chars().all(|character| character.is_ascii_digit());
     if !valid_name {
         return Err(LaneError::InvalidLaneName { name: lane_name.to_owned() });
     }
@@ -239,9 +237,7 @@ fn assign_lane(
             }
             Some(_) => {}
             None => {
-                settings
-                    .lanes
-                    .insert(reference.clone(), lane_name.to_owned());
+                settings.lanes.insert(reference.clone(), lane_name.to_owned());
             }
         }
     }

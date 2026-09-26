@@ -77,10 +77,7 @@ pub(crate) fn env_roots(deps: &BTreeMap<String, SpecifierAndResolution>) -> Vec<
     deps.iter()
         .filter_map(|(name, spec)| {
             let name = name.parse::<PkgName>().ok()?;
-            let version = spec
-                .version
-                .parse::<ImporterDepVersion>()
-                .ok()?;
+            let version = spec.version.parse::<ImporterDepVersion>().ok()?;
             version
                 .resolved_key(&name)
                 .map(|key| Edge { key })
@@ -158,9 +155,8 @@ pub(crate) fn walk_reachable(
     include_optional_edges: bool,
 ) -> HashSet<PackageKey> {
     let mut seen = HashSet::new();
-    let mut stack = selected_root_edges(graph, include)
-        .map(|edge| edge.key.clone())
-        .collect::<Vec<_>>();
+    let mut stack =
+        selected_root_edges(graph, include).map(|edge| edge.key.clone()).collect::<Vec<_>>();
     while let Some(key) = stack.pop() {
         if !seen.insert(key.clone()) {
             continue;
@@ -179,12 +175,10 @@ pub(crate) fn selected_root_edges<'a>(
     graph: &'a AuditGraph<'a>,
     include: Include,
 ) -> impl Iterator<Item = &'a Edge> {
-    graph
-        .importers
+    graph.importers
         .iter()
         .flat_map(move |importer| {
-            importer
-                .roots
+            importer.roots
                 .iter()
                 .filter(move |(kind, _)| root_included(*kind, include))
                 .map(|(_, edge)| edge)
@@ -234,9 +228,8 @@ impl AuditRequestBuilder {
     pub(crate) fn register_graph(&mut self, graph: &AuditGraph<'_>, include: Include) {
         let classes = classify_graph(graph, include);
         let mut seen = HashSet::new();
-        let mut stack = selected_root_edges(graph, include)
-            .map(|edge| edge.key.clone())
-            .collect::<Vec<_>>();
+        let mut stack =
+            selected_root_edges(graph, include).map(|edge| edge.key.clone()).collect::<Vec<_>>();
         while let Some(key) = stack.pop() {
             if !seen.insert(key.clone()) {
                 continue;
@@ -258,10 +251,7 @@ impl AuditRequestBuilder {
     pub(crate) fn register_occurrence(&mut self, key: &PackageKey, class: DepClass) {
         let Some(version) = package_version(key) else { return };
         let name = key.name.to_string();
-        let version_states = self
-            .states_by_name
-            .entry(name.clone())
-            .or_default();
+        let version_states = self.states_by_name.entry(name.clone()).or_default();
         let Some(state) = version_states.get_mut(&version) else {
             version_states.insert(
                 version.clone(),

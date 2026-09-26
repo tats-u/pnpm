@@ -18,9 +18,7 @@ fn no_retry() -> RetryOpts {
 /// across environments, unlike assuming a fixed low port is closed.
 fn refused_local_addr() -> String {
     let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("bind ephemeral port");
-    let addr = listener
-        .local_addr()
-        .expect("read local addr");
+    let addr = listener.local_addr().expect("read local addr");
     drop(listener);
     addr.to_string()
 }
@@ -140,9 +138,7 @@ async fn throws_when_not_logged_in() {
     assert!(matches!(err, LogoutError::NotLoggedIn { .. }));
     assert_eq!(err.to_string(), "Not logged in to https://registry.npmjs.org/, so can't log out");
     assert_eq!(
-        miette::Diagnostic::code(&err)
-            .map(|code| code.to_string())
-            .as_deref(),
+        miette::Diagnostic::code(&err).map(|code| code.to_string()).as_deref(),
         Some("ERR_PNPM_NOT_LOGGED_IN"),
     );
 }
@@ -209,9 +205,7 @@ async fn revokes_token_on_registry_and_removes_from_auth_ini() {
         )],
     );
     let writes = WRITES.lock().unwrap();
-    let (path, text) = writes
-        .first()
-        .expect("auth.ini was written");
+    let (path, text) = writes.first().expect("auth.ini was written");
     assert_eq!(path, Path::new("/custom/config/auth.ini"));
     assert_eq!(text, "other-setting=value\n");
 }
@@ -332,9 +326,7 @@ async fn warns_when_the_token_is_in_no_file_pnpm_owns() {
     assert_eq!(result, "Logged out of https://registry.npmjs.org/");
     assert!(WRITES.lock().unwrap().is_empty(), "no file pnpm owns must be written");
     let warnings = warns(&EVENTS);
-    let warning = warnings
-        .first()
-        .expect("a warning was emitted");
+    let warning = warnings.first().expect("a warning was emitted");
     let expected_path = Path::new("/config").join("config.yaml");
     assert!(warning.contains(&format!("was not found in {}", expected_path.display())));
     assert!(warning.contains("The token was revoked on the registry but must be removed manually"));
@@ -366,9 +358,7 @@ async fn throws_when_registry_call_fails_and_token_not_in_auth_ini() {
 
     assert!(matches!(err, LogoutError::LogoutFailed { .. }));
     assert_eq!(
-        miette::Diagnostic::code(&err)
-            .map(|code| code.to_string())
-            .as_deref(),
+        miette::Diagnostic::code(&err).map(|code| code.to_string()).as_deref(),
         Some("ERR_PNPM_LOGOUT_FAILED"),
     );
     let message = err.to_string();
@@ -804,9 +794,7 @@ async fn a_broken_config_yaml_still_lets_the_legacy_token_go() {
         "the unreadable config must still be reported, got {err:?}",
     );
     let writes = WRITES.lock().unwrap().clone();
-    let (path, text) = writes
-        .first()
-        .expect("auth.ini must still be rewritten");
+    let (path, text) = writes.first().expect("auth.ini must still be rewritten");
     assert_eq!(path, &Path::new("/broken/config").join("auth.ini"));
     assert!(!text.contains("stale-token"), "the legacy token must be gone: {text:?}");
     assert!(text.contains("other=value"), "the rest of auth.ini must survive: {text:?}");

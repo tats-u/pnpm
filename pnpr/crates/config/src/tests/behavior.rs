@@ -61,12 +61,7 @@ fn nested_artifacts_toggle_is_rejected() {
         Config::from_yaml_str("resolver:\n  artifacts: true\n", Path::new("/x"), listen(), None)
             .unwrap_err();
 
-    assert!(
-        error
-            .to_string()
-            .contains("unknown field `artifacts`"),
-        "{error}"
-    );
+    assert!(error.to_string().contains("unknown field `artifacts`"), "{error}");
 }
 
 #[test]
@@ -90,12 +85,7 @@ fn artifact_override_is_independent_from_the_resolver_override() {
         FeatureOverrides { disable_artifacts: true, ..FeatureOverrides::default() },
     )
     .unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("nothing to serve"),
-        "{error}"
-    );
+    assert!(error.to_string().contains("nothing to serve"), "{error}");
 }
 
 #[test]
@@ -106,11 +96,7 @@ fn nothing_to_serve_is_a_config_error() {
     let err = Config::from_yaml_str(yaml, Path::new("/x"), listen(), None)
         .expect_err("a server with no surface enabled must error");
     assert!(matches!(err, RegistryError::InvalidConfig { .. }));
-    assert!(
-        err.to_string()
-            .contains("nothing to serve"),
-        "unexpected error: {err}"
-    );
+    assert!(err.to_string().contains("nothing to serve"), "unexpected error: {err}");
 }
 
 #[test]
@@ -131,41 +117,24 @@ fn resolve_relative_joins_relative_paths_to_base() {
 fn proxy_constructor_serves_fixtures_locally_and_proxies_the_rest() {
     use pnpr_registry::{ConcreteKind, Resolved};
     let config = Config::proxy(listen(), PathBuf::from("/tmp"));
-    assert!(
-        config
-            .routing
-            .upstreams
-            .contains_key("npmjs")
-    );
-    assert_eq!(
-        config
-            .routing
-            .registries
-            .default_registry(),
-        Some("main")
-    );
+    assert!(config.routing.upstreams.contains_key("npmjs"));
+    assert_eq!(config.routing.registries.default_registry(), Some("main"));
     // The flat-root hosted org serves the registry-mock fixture scopes.
     assert_eq!(config.routing.hosted["local"].org, "");
     assert_eq!(
-        config
-            .routing
-            .registries
-            .resolve_default(Ecosystem::Npm, "@pnpm.e2e/dep-of-pkg-with-1-dep"),
+        config.routing.registries.resolve_default(
+            Ecosystem::Npm,
+            "@pnpm.e2e/dep-of-pkg-with-1-dep"
+        ),
         Resolved::Concrete { registry: "local", kind: ConcreteKind::Hosted },
     );
     assert_eq!(
-        config
-            .routing
-            .registries
-            .resolve_default(Ecosystem::Npm, "create-touch-file-one-bin"),
+        config.routing.registries.resolve_default(Ecosystem::Npm, "create-touch-file-one-bin"),
         Resolved::Concrete { registry: "local", kind: ConcreteKind::Hosted },
     );
     // Everything else proxies to the npm upstream.
     assert_eq!(
-        config
-            .routing
-            .registries
-            .resolve_default(Ecosystem::Npm, "is-positive"),
+        config.routing.registries.resolve_default(Ecosystem::Npm, "is-positive"),
         Resolved::Concrete { registry: "npmjs", kind: ConcreteKind::Upstream },
     );
 }
@@ -282,12 +251,7 @@ fn resolve_bundled_when_no_path_supplied() {
     let (config, source) = Config::resolve(None, None, listen(), None).unwrap();
     assert_eq!(source, ConfigSource::Bundled);
     // The bundled config has the `npmjs` upstream + `**` route.
-    assert!(
-        config
-            .routing
-            .upstreams
-            .contains_key("npmjs")
-    );
+    assert!(config.routing.upstreams.contains_key("npmjs"));
 }
 
 #[test]
@@ -358,20 +322,8 @@ fn most_specific_key_wins_regardless_of_declaration_order() {
     for packages in [scope_then_catch_all, catch_all_then_scope] {
         let config = hosted_rules_config(packages);
         let rules = &config.routing.hosted["local"].rules;
-        assert!(
-            !rules
-                .for_package("@secret/x")
-                .access
-                .allows(&Identity::Anonymous),
-            "{packages}"
-        );
-        assert!(
-            rules
-                .for_package("anything")
-                .access
-                .allows(&Identity::Anonymous),
-            "{packages}"
-        );
+        assert!(!rules.for_package("@secret/x").access.allows(&Identity::Anonymous), "{packages}");
+        assert!(rules.for_package("anything").access.allows(&Identity::Anonymous), "{packages}");
     }
 }
 
@@ -381,34 +333,17 @@ fn empty_and_null_map_values_mean_default_rules() {
         let config = hosted_rules_config(&format!("      'lodash': {value}\n"));
         let rules = &config.routing.hosted["local"].rules;
         let effective = rules.for_package("lodash");
-        assert!(
-            effective
-                .access
-                .allows(&Identity::Anonymous),
-            "value {value:?}"
-        );
-        assert!(
-            !effective
-                .publish
-                .allows(&Identity::Anonymous),
-            "value {value:?}"
-        );
+        assert!(effective.access.allows(&Identity::Anonymous), "value {value:?}");
+        assert!(!effective.publish.allows(&Identity::Anonymous), "value {value:?}");
         assert!(effective.publish.allows(&user("alice")), "value {value:?}");
-        assert!(
-            !effective
-                .unpublish
-                .allows(&user("alice")),
-            "value {value:?}"
-        );
+        assert!(!effective.unpublish.allows(&user("alice")), "value {value:?}");
     }
 }
 
 #[test]
 fn rule_missing_unpublish_denies_destructive_writes() {
     let config = hosted_rules_config("      '@team/*':\n        publish: alice\n");
-    let team = config.routing.hosted["local"]
-        .rules
-        .for_package("@team/x");
+    let team = config.routing.hosted["local"].rules.for_package("@team/x");
     assert!(team.publish.allows(&user("alice")));
     assert!(!team.publish.allows(&user("bob")));
     assert!(!team.unpublish.allows(&user("alice")));
@@ -422,16 +357,9 @@ fn rule_empty_unpublish_denies_destructive_writes() {
         "      '@team/*':\n        publish: $authenticated\n        unpublish: []\n";
     for packages in [as_null, as_empty_sequence] {
         let config = hosted_rules_config(packages);
-        let team = config.routing.hosted["local"]
-            .rules
-            .for_package("@team/x");
+        let team = config.routing.hosted["local"].rules.for_package("@team/x");
         assert!(team.publish.allows(&user("alice")), "{packages}");
-        assert!(
-            !team
-                .unpublish
-                .allows(&Identity::Anonymous),
-            "{packages}"
-        );
+        assert!(!team.unpublish.allows(&Identity::Anonymous), "{packages}");
         assert!(!team.unpublish.allows(&user("alice")), "{packages}");
     }
 }
@@ -454,9 +382,7 @@ fn rule_empty_string_value_is_a_config_error() {
 #[test]
 fn rule_anonymous_token_is_wired() {
     let config = hosted_rules_config("      '@anon/*':\n        access: $anonymous\n");
-    let anon = config.routing.hosted["local"]
-        .rules
-        .for_package("@anon/x");
+    let anon = config.routing.hosted["local"].rules.for_package("@anon/x");
     assert!(anon.access.allows(&Identity::Anonymous));
     assert!(!anon.access.allows(&user("alice")));
 }
@@ -595,44 +521,20 @@ fn bundled_default_config_enforces_its_protections() {
     // The exact needs-auth key wins over the '@pnpm.e2e/*' scope key by
     // specificity (both are declared, in either order).
     let needs_auth = rules.for_package("@pnpm.e2e/needs-auth");
-    assert!(
-        !needs_auth
-            .access
-            .allows(&Identity::Anonymous)
-    );
+    assert!(!needs_auth.access.allows(&Identity::Anonymous));
     assert!(needs_auth.access.allows(&user("alice")));
-    assert!(
-        !rules
-            .for_package("@private/foo")
-            .access
-            .allows(&Identity::Anonymous)
-    );
+    assert!(!rules.for_package("@private/foo").access.allows(&Identity::Anonymous));
     let public = rules.for_package("@pnpm.e2e/no-deps");
-    assert!(
-        public
-            .access
-            .allows(&Identity::Anonymous)
-    );
-    assert!(
-        !public
-            .publish
-            .allows(&Identity::Anonymous)
-    );
+    assert!(public.access.allows(&Identity::Anonymous));
+    assert!(!public.publish.allows(&Identity::Anonymous));
     // The registry-mock contract: any authenticated user may unpublish.
     assert!(public.unpublish.allows(&user("alice")));
-    assert!(
-        !public
-            .unpublish
-            .allows(&Identity::Anonymous)
-    );
+    assert!(!public.unpublish.allows(&Identity::Anonymous));
     // `lodash` is not local: it is unclaimed by the hosted registry and
     // resolves to the npmjs catch-all through the router.
     use pnpr_registry::{ConcreteKind, Resolved};
     assert_eq!(
-        config
-            .routing
-            .registries
-            .resolve_default(Ecosystem::Npm, "lodash"),
+        config.routing.registries.resolve_default(Ecosystem::Npm, "lodash"),
         Resolved::Concrete { registry: "npmjs", kind: ConcreteKind::Upstream },
     );
 }
@@ -640,13 +542,7 @@ fn bundled_default_config_enforces_its_protections() {
 #[test]
 fn route_policy_defaults_when_absent() {
     let config = Config::from_yaml_str("{}", Path::new("/x"), listen(), None).unwrap();
-    assert!(
-        config
-            .routing
-            .route_policy
-            .public
-            .is_empty()
-    );
+    assert!(config.routing.route_policy.public.is_empty());
 }
 
 /// `AmazonS3Builder::from_env` imports `AWS_ENDPOINT_URL_S3` into the
@@ -658,9 +554,7 @@ fn route_policy_defaults_when_absent() {
 fn a_configured_endpoint_lands_on_the_key_that_wins() {
     let builder = crate::s3::s3_builder(&s3_settings_for(Some("https://minio.corp.example"), None));
     assert_eq!(
-        builder
-            .get_config_value(&AmazonS3ConfigKey::S3Endpoint)
-            .as_deref(),
+        builder.get_config_value(&AmazonS3ConfigKey::S3Endpoint).as_deref(),
         Some("https://minio.corp.example"),
     );
 }
@@ -720,11 +614,7 @@ fn rejects_package_keys_that_normalize_to_the_same_name() {
             "registries:\n  hosted:\n    type: hosted\n    ecosystem: {ecosystem}\n    packages:\n      {first}: {{ access: '$authenticated' }}\n      {second}: {{ access: '$all' }}\n",
         );
         let err = Config::from_yaml_str(&yaml, Path::new("/x"), listen(), None).unwrap_err();
-        assert!(
-            err.to_string()
-                .contains("duplicates normalized key"),
-            "{err}"
-        );
+        assert!(err.to_string().contains("duplicates normalized key"), "{err}");
     }
 }
 

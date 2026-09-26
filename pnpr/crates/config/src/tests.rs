@@ -68,8 +68,7 @@ fn upstream_config_file(
 }
 
 fn auth_header(upstream: &super::UpstreamConfig) -> Option<&str> {
-    upstream
-        .headers
+    upstream.headers
         .get(AUTHORIZATION)
         .map(|value| value.to_str().unwrap())
 }

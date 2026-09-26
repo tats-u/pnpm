@@ -14,9 +14,7 @@ impl GitCommandRunner for EditingGitRunner {
     ) -> Pin<Box<dyn Future<Output = Result<String, GitRunError>> + Send + 'a>> {
         Box::pin(async move {
             fs::write(&self.workflow, &self.source).expect("concurrent edit");
-            FakeGitRunner
-                .ls_remote(repo, ref_)
-                .await
+            FakeGitRunner.ls_remote(repo, ref_).await
         })
     }
 }
@@ -24,9 +22,7 @@ impl GitCommandRunner for EditingGitRunner {
 #[tokio::test]
 async fn preserves_concurrent_workflow_edits_when_action_ranges_are_stale() {
     let original = "jobs:\n  test:\n    steps:\n      - uses: actions/checkout@v4\n";
-    let start = original
-        .find("actions/checkout")
-        .expect("action");
+    let start = original.find("actions/checkout").expect("action");
     for changed in [
         original.replace("checkout@v4", "checkout@v5"),
         "name: truncated\n".to_string(),
@@ -46,9 +42,7 @@ async fn preserves_concurrent_workflow_edits_when_action_ranges_are_stale() {
             &runner,
         )
         .await;
-        let error = result
-            .err()
-            .expect("stale edits must fail");
+        let error = result.err().expect("stale edits must fail");
         assert_eq!(
             error
                 .code()

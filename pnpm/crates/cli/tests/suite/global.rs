@@ -48,16 +48,10 @@ fn global_command(workspace: &Path, pnpm_home: &Path) -> Command {
     let pnpm_home = match fs::canonicalize(pnpm_home) {
         Ok(pnpm_home) => pnpm_home,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            let parent = pnpm_home
-                .parent()
-                .expect("pnpm test home parent");
+            let parent = pnpm_home.parent().expect("pnpm test home parent");
             fs::canonicalize(parent)
                 .expect("canonicalize the pnpm test home parent")
-                .join(
-                    pnpm_home
-                        .file_name()
-                        .expect("pnpm test home name"),
-                )
+                .join(pnpm_home.file_name().expect("pnpm test home name"))
         }
         Err(error) => panic!("canonicalize the pnpm test home: {error}"),
     };
@@ -89,11 +83,7 @@ fn symlink_entries(dir: &Path) -> Vec<PathBuf> {
     let Ok(entries) = fs::read_dir(dir) else { return Vec::new() };
     entries
         .flatten()
-        .filter(|entry| {
-            entry
-                .file_type()
-                .is_ok_and(|ft| ft.is_symlink())
-        })
+        .filter(|entry| entry.file_type().is_ok_and(|ft| ft.is_symlink()))
         .map(|entry| entry.path())
         .collect()
 }
@@ -170,20 +160,14 @@ fn seed_global_group(
     .expect("write seeded global group manifest");
     for (alias, manifest) in packages {
         let manifest_path = dependency_manifest_path(&install_dir, alias);
-        fs::create_dir_all(
-            manifest_path
-                .parent()
-                .expect("dependency manifest parent"),
-        )
-        .expect("create seeded global dependency directory");
+        fs::create_dir_all(manifest_path.parent().expect("dependency manifest parent"))
+            .expect("create seeded global dependency directory");
         if let Some(manifest) = manifest {
             fs::write(manifest_path, manifest).expect("write seeded global dependency manifest");
         }
     }
     std::os::unix::fs::symlink(
-        install_dir
-            .file_name()
-            .expect("seeded install directory name"),
+        install_dir.file_name().expect("seeded install directory name"),
         global_pkg_dir.join(hash),
     )
     .expect("link seeded global group");
@@ -228,9 +212,7 @@ fn global_add_list_remove_round_trip() {
         .success();
 
     assert!(
-        global_bin
-            .join("touch-file-one-bin")
-            .exists(),
+        global_bin.join("touch-file-one-bin").exists(),
         "the package's bin should be linked into the global bin directory",
     );
     let links = symlink_entries(&global_pkg_dir);
@@ -256,9 +238,7 @@ fn global_add_list_remove_round_trip() {
         .success();
 
     assert!(
-        !global_bin
-            .join("touch-file-one-bin")
-            .exists(),
+        !global_bin.join("touch-file-one-bin").exists(),
         "remove -g should unlink the package's bin",
     );
     assert!(
@@ -309,9 +289,7 @@ fn global_add_creates_a_missing_global_bin_dir() {
         .success();
 
     assert!(
-        global_bin
-            .join("touch-file-one-bin")
-            .exists(),
+        global_bin.join("touch-file-one-bin").exists(),
         "the global bin dir should have been created and the bin linked into it",
     );
 
@@ -348,9 +326,7 @@ fn global_add_installs_the_npm_package_a_purl_names() {
         .expect("read the global group manifest");
     assert!(manifest.contains(r#""node": "22.0.0""#), "{manifest}");
     assert!(
-        install_dir
-            .join("node_modules/.pnpm/node@22.0.0")
-            .exists(),
+        install_dir.join("node_modules/.pnpm/node@22.0.0").exists(),
         "the npm package the purl names must be the one installed",
     );
 
@@ -384,13 +360,9 @@ fn global_add_materializes_transitive_optional_dependencies() {
     assert_eq!(links.len(), 1, "exactly one cache-keyed hash symlink should exist: {links:?}");
     // The hash symlink's target is relative to the global packages dir.
     let install_dir = global_pkg_dir.join(fs::read_link(&links[0]).expect("read the hash symlink"));
-    let virtual_store = install_dir
-        .join("node_modules")
-        .join(".pnpm");
+    let virtual_store = install_dir.join("node_modules").join(".pnpm");
     assert!(
-        virtual_store
-            .join("is-positive@1.0.0")
-            .exists(),
+        virtual_store.join("is-positive@1.0.0").exists(),
         "the transitive optional dependency must be materialized",
     );
     assert!(
@@ -423,9 +395,7 @@ fn global_add_installs_standalone_package_files_without_scripts() {
         r#"{ "name": "@pnpm/exe", "version": "12.0.0", "files": ["dist/"], "scripts": { "install": "exit 1" } }"#,
     )
     .expect("write local package manifest");
-    let bundled_node_gyp = package_dir
-        .path()
-        .join("dist/node_modules/node-gyp/bin/node-gyp.js");
+    let bundled_node_gyp = package_dir.path().join("dist/node_modules/node-gyp/bin/node-gyp.js");
     fs::create_dir_all(bundled_node_gyp.parent().unwrap()).expect("create bundled node-gyp dir");
     fs::write(&bundled_node_gyp, "").expect("write bundled node-gyp");
     fs::create_dir_all(pnpm_home.join("bin")).expect("create global bin dir");
@@ -505,13 +475,8 @@ fn global_add_persists_build_approvals_to_the_global_packages_dir() {
     );
 
     // No per-group install dir should carry the decision.
-    for entry in fs::read_dir(&global_pkg_dir)
-        .expect("read global packages dir")
-        .flatten()
-    {
-        if entry
-            .file_type()
-            .is_ok_and(|file_type| file_type.is_dir())
+    for entry in fs::read_dir(&global_pkg_dir).expect("read global packages dir").flatten() {
+        if entry.file_type().is_ok_and(|file_type| file_type.is_dir())
             && let Ok(text) = fs::read_to_string(entry.path().join("pnpm-workspace.yaml"))
         {
             assert!(
@@ -608,9 +573,7 @@ fn global_add_ignores_ambient_global_workspace_yaml() {
         .success();
 
     assert!(
-        global_bin
-            .join("touch-file-one-bin")
-            .exists(),
+        global_bin.join("touch-file-one-bin").exists(),
         "the package's bin should be linked even with a global-settings workspace yaml present",
     );
 
@@ -650,9 +613,7 @@ fn global_add_ignores_caller_project_overrides() {
         .success();
 
     assert!(
-        global_bin
-            .join("touch-file-one-bin")
-            .exists(),
+        global_bin.join("touch-file-one-bin").exists(),
         "the global install should ignore the caller project's overrides / catalog mode",
     );
 
@@ -689,9 +650,7 @@ fn global_add_ignores_caller_project_npmrc_registry() {
         .success();
 
     assert!(
-        global_bin
-            .join("touch-file-one-bin")
-            .exists(),
+        global_bin.join("touch-file-one-bin").exists(),
         "the global install must ignore the caller project's .npmrc registry",
     );
 
@@ -722,16 +681,8 @@ fn recursive_global_outdated_reads_each_global_install_lockfile() {
     let links = symlink_entries(&global_pkg_dir);
     assert_eq!(links.len(), 1, "global add should create one install-group link");
     let install_dir = fs::canonicalize(&links[0]).expect("resolve global install-group link");
-    assert!(
-        install_dir
-            .join("package.json")
-            .is_file()
-    );
-    assert!(
-        install_dir
-            .join("pnpm-lock.yaml")
-            .is_file()
-    );
+    assert!(install_dir.join("package.json").is_file());
+    assert!(install_dir.join("pnpm-lock.yaml").is_file());
 
     fs::write(workspace.join(".npmrc"), "registry=http://127.0.0.1:1/\n")
         .expect("poison caller registry");
@@ -849,9 +800,7 @@ fn global_commands_read_group_lockfiles_when_the_lockfile_setting_is_off() {
     let links = symlink_entries(&global_pkg_dir);
     let install_dir = fs::canonicalize(&links[0]).expect("resolve global install-group link");
     assert!(
-        install_dir
-            .join("pnpm-lock.yaml")
-            .is_file(),
+        install_dir.join("pnpm-lock.yaml").is_file(),
         "a global install writes its group lockfile even with lockfile=false",
     );
 
@@ -1022,9 +971,9 @@ fn unchanged_global_update_still_approves_a_pending_build() {
         pnpm_global::find_global_package(&global_dir, "@pnpm.e2e/install-script-example")
             .expect("scan global packages")
             .expect("find install-script group");
-    let build_artifact = install_before
-        .install_dir
-        .join("node_modules/@pnpm.e2e/install-script-example/generated-by-install.js");
+    let build_artifact = install_before.install_dir.join(
+        "node_modules/@pnpm.e2e/install-script-example/generated-by-install.js",
+    );
     assert!(!build_artifact.exists());
 
     let output = global_command(&workspace, &pnpm_home)
@@ -1065,12 +1014,8 @@ fn global_update_restores_group_with_deleted_node_modules() {
     let install_before = pnpm_global::find_global_package(&global_dir, "@foo/touch-file-one-bin")
         .expect("scan global packages")
         .expect("find the touch-file group");
-    fs::remove_dir_all(
-        install_before
-            .install_dir
-            .join("node_modules"),
-    )
-    .expect("remove the group's node_modules");
+    fs::remove_dir_all(install_before.install_dir.join("node_modules"))
+        .expect("remove the group's node_modules");
 
     let output = global_command(&workspace, &pnpm_home)
         .with_args(["update", "-g"])
@@ -1087,9 +1032,8 @@ fn global_update_restores_group_with_deleted_node_modules() {
     // The bin shim reaches its target through the hash link, not through the
     // install dir it currently resolves to, so that is the path the restored
     // package has to be reachable by.
-    let shim_target_package = global_dir
-        .join(&install_after.hash)
-        .join("node_modules/@foo/touch-file-one-bin");
+    let shim_target_package =
+        global_dir.join(&install_after.hash).join("node_modules/@foo/touch-file-one-bin");
     assert!(shim_target_package.is_dir(), "the shim's target package is missing");
 
     drop((root, npmrc_info));

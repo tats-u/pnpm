@@ -81,10 +81,7 @@ fn github_chain_fetch(
 ) -> Result<OidcResponse, OidcFetchError> {
     let body = if request.url.contains("audience=") {
         format!(r#"{{"value":"{id_token_value}"}}"#)
-    } else if request
-        .url
-        .contains("/oidc/token/exchange/")
-    {
+    } else if request.url.contains("/oidc/token/exchange/") {
         r#"{"token":"registry-token"}"#.to_owned()
     } else if request.url.contains("/visibility") {
         r#"{"public":true}"#.to_owned()
@@ -211,10 +208,7 @@ async fn oidc_skips_when_auth_exchange_fails() {
                 status: 200,
                 body: format!(r#"{{"value":"{}"}}"#, public_repo_id_token()),
             })
-        } else if request
-            .url
-            .contains("/oidc/token/exchange/")
-        {
+        } else if request.url.contains("/oidc/token/exchange/") {
             Ok(OidcResponse { ok: false, status: 422, body: String::new() })
         } else {
             unreachable!("visibility is not probed once the exchange fails")

@@ -19,21 +19,14 @@ pub fn explicit_settings_report_the_spelling_that_won() {
         let tmp = tempdir().unwrap();
         fs::write(tmp.path().join("pnpm-workspace.yaml"), yaml)
             .expect("write to pnpm-workspace.yaml");
-        let config = Config::new()
-            .current::<HostNoHome>(tmp.path())
-            .expect("yaml is valid");
+        let config = Config::new().current::<HostNoHome>(tmp.path()).expect("yaml is valid");
         assert_eq!(
-            config
-                .explicit_settings
-                .get("enableGlobalVirtualStore"),
+            config.explicit_settings.get("enableGlobalVirtualStore"),
             Some(&serde_json::Value::Bool(expected)),
             "yaml: {yaml}",
         );
         assert_eq!(
-            config
-                .explicit_settings
-                .get("virtualStoreType")
-                .and_then(serde_json::Value::as_str),
+            config.explicit_settings.get("virtualStoreType").and_then(serde_json::Value::as_str),
             Some(if expected { "global" } else { "project" }),
             "yaml: {yaml}",
         );
@@ -51,14 +44,9 @@ pub fn explicit_settings_mirror_audit_level_from_the_audit_section() {
         let tmp = tempdir().unwrap();
         fs::write(tmp.path().join("pnpm-workspace.yaml"), yaml)
             .expect("write to pnpm-workspace.yaml");
-        let config = Config::new()
-            .current::<HostNoHome>(tmp.path())
-            .expect("yaml is valid");
+        let config = Config::new().current::<HostNoHome>(tmp.path()).expect("yaml is valid");
         assert_eq!(
-            config
-                .explicit_settings
-                .get("auditLevel")
-                .and_then(serde_json::Value::as_str),
+            config.explicit_settings.get("auditLevel").and_then(serde_json::Value::as_str),
             Some("high"),
             "yaml: {yaml}",
         );
@@ -105,9 +93,8 @@ pub fn proxy_env_fallback_applies_through_current() {
         env::remove_var("npm_config_workspace_dir");
         env::set_var("HTTPS_PROXY", "http://env.example:8080");
     }
-    let config = Config::new()
-        .current::<HostNoHome>(tmp.path())
-        .expect("workspace yaml absent => no error");
+    let config =
+        Config::new().current::<HostNoHome>(tmp.path()).expect("workspace yaml absent => no error");
     assert_eq!(config.proxy.https_proxy.as_deref(), Some("http://env.example:8080"));
     assert_eq!(
         config.proxy.http_proxy.as_deref(),
@@ -165,9 +152,7 @@ pub fn global_config_yaml_enables_gvs() {
     host_current_dir!(HostWithXdgConfigHome);
 
     let tmp = tempdir().unwrap();
-    let config = Config::new()
-        .current::<HostWithXdgConfigHome>(tmp.path())
-        .expect("config loads");
+    let config = Config::new().current::<HostWithXdgConfigHome>(tmp.path()).expect("config loads");
     assert!(
         config.enable_global_virtual_store,
         "enableGlobalVirtualStore from global config.yaml must apply",
@@ -199,9 +184,7 @@ pub fn pnpm_config_env_var_enables_gvs() {
     host_current_dir!(HostWithPnpmConfigEnv);
 
     let tmp = tempdir().unwrap();
-    let config = Config::new()
-        .current::<HostWithPnpmConfigEnv>(tmp.path())
-        .expect("loads");
+    let config = Config::new().current::<HostWithPnpmConfigEnv>(tmp.path()).expect("loads");
     assert!(config.enable_global_virtual_store);
 }
 
@@ -230,9 +213,7 @@ pub fn pnpm_config_env_var_lowercase_works() {
     host_current_dir!(HostWithLowercaseEnv);
 
     let tmp = tempdir().unwrap();
-    let config = Config::new()
-        .current::<HostWithLowercaseEnv>(tmp.path())
-        .expect("loads");
+    let config = Config::new().current::<HostWithLowercaseEnv>(tmp.path()).expect("loads");
     assert!(config.enable_global_virtual_store);
 }
 
@@ -301,9 +282,7 @@ pub fn patches_dir_reads_from_env_overlay() {
     host_current_dir!(HostWithPatchesDirEnv);
 
     let tmp = tempdir().unwrap();
-    let config = Config::new()
-        .current::<HostWithPatchesDirEnv>(tmp.path())
-        .expect("loads");
+    let config = Config::new().current::<HostWithPatchesDirEnv>(tmp.path()).expect("loads");
     assert_eq!(config.patches_dir.as_deref(), Some("custom-patches"));
 }
 
@@ -348,9 +327,7 @@ pub fn virtual_store_dir_max_length_env_var_overrides_yaml() {
     inert_link_probe!(HostWithEnvOverride);
     host_current_dir!(HostWithEnvOverride);
 
-    let config = Config::new()
-        .current::<HostWithEnvOverride>(tmp.path())
-        .expect("loads");
+    let config = Config::new().current::<HostWithEnvOverride>(tmp.path()).expect("loads");
     assert_eq!(
         config.virtual_store_dir_max_length, 50,
         "env var must win over pnpm-workspace.yaml",
@@ -391,9 +368,7 @@ pub fn lockfile_dir_env_var_overrides_yaml() {
     inert_link_probe!(HostWithLockfileDirEnv);
     host_current_dir!(HostWithLockfileDirEnv);
 
-    let config = Config::new()
-        .current::<HostWithLockfileDirEnv>(tmp.path())
-        .expect("loads");
+    let config = Config::new().current::<HostWithLockfileDirEnv>(tmp.path()).expect("loads");
     assert_eq!(config.lockfile_dir.as_deref(), Some(tmp.path().join("from-env").as_path()));
     assert_eq!(
         config.modules_dir,
@@ -429,9 +404,7 @@ pub fn package_map_settings_load_from_env() {
     host_current_dir!(HostWithPackageMapEnv);
 
     let tmp = tempdir().unwrap();
-    let config = Config::new()
-        .current::<HostWithPackageMapEnv>(tmp.path())
-        .expect("loads");
+    let config = Config::new().current::<HostWithPackageMapEnv>(tmp.path()).expect("loads");
     assert!(config.node_experimental_package_map);
     assert_eq!(config.node_package_map_type, NodePackageMapType::Loose);
 }
@@ -464,9 +437,7 @@ pub fn peers_suffix_max_length_env_var_overrides_yaml() {
     inert_link_probe!(HostWithEnvOverride);
     host_current_dir!(HostWithEnvOverride);
 
-    let config = Config::new()
-        .current::<HostWithEnvOverride>(tmp.path())
-        .expect("loads");
+    let config = Config::new().current::<HostWithEnvOverride>(tmp.path()).expect("loads");
     assert_eq!(config.peers_suffix_max_length, 25, "env var must win over pnpm-workspace.yaml");
 }
 
@@ -505,9 +476,7 @@ fn a_release_age_env_var_turns_on_strict_mode() {
     host_current_dir!(HostWithReleaseAgeEnv);
 
     let tmp = tempdir().unwrap();
-    let config = Config::new()
-        .current::<HostWithReleaseAgeEnv>(tmp.path())
-        .expect("config loads");
+    let config = Config::new().current::<HostWithReleaseAgeEnv>(tmp.path()).expect("config loads");
 
     assert!(config.resolved_minimum_release_age_strict());
 }
@@ -529,15 +498,11 @@ pub fn package_manager_bootstrap_ignores_project_npmrc_registry() {
         "project registry drives normal installs",
     );
     assert_eq!(
-        config
-            .package_manager_bootstrap
-            .registry,
-        "https://trusted.example.com/",
+        config.package_manager_bootstrap.registry, "https://trusted.example.com/",
         "package-manager bootstrap ignores the repository-controlled project .npmrc registry",
     );
     assert_eq!(
-        config
-            .package_manager_bootstrap
+        config.package_manager_bootstrap
             .resolved_registries()
             .get("default")
             .map(String::as_str),
@@ -559,10 +524,7 @@ pub fn package_manager_bootstrap_honors_env_registry() {
 
     assert_eq!(config.registry, "https://env.example.com/", "env registry drives normal installs");
     assert_eq!(
-        config
-            .package_manager_bootstrap
-            .registry,
-        "https://env.example.com/",
+        config.package_manager_bootstrap.registry, "https://env.example.com/",
         "env registry overrides the package-manager bootstrap default",
     );
 }
@@ -583,18 +545,11 @@ pub fn env_registry_override_appends_missing_trailing_slash() {
 
     assert_eq!(config.registry, "https://env.example.com/");
     assert_eq!(
-        config
-            .registries_by_scope
-            .get("default")
-            .map(String::as_str),
+        config.registries_by_scope.get("default").map(String::as_str),
         Some("https://env.example.com/"),
     );
     assert_eq!(
-        config
-            .package_manager_bootstrap
-            .registries
-            .get("default")
-            .map(String::as_str),
+        config.package_manager_bootstrap.registries.get("default").map(String::as_str),
         Some("https://env.example.com/"),
     );
 }
@@ -793,8 +748,7 @@ pub fn an_explicit_merge_setting_wins_over_the_branch_pattern() {
         .expect("set once");
     host_in_repo!(HostExplicitlyNotMerging);
 
-    let config = Config::new()
-        .current::<HostExplicitlyNotMerging>(repo.path())
-        .expect("yaml is valid");
+    let config =
+        Config::new().current::<HostExplicitlyNotMerging>(repo.path()).expect("yaml is valid");
     assert!(!config.merge_git_branch_lockfiles);
 }

@@ -67,9 +67,7 @@ where
                 let best = better_convergence(override_entry, ranges, resolved)?;
                 Some(StaleConvergenceOverride {
                     name: override_entry.target_pkg.name.clone(),
-                    current_value: override_entry
-                        .new_bare_specifier
-                        .clone(),
+                    current_value: override_entry.new_bare_specifier.clone(),
                     best,
                 })
             })
@@ -138,10 +136,7 @@ pub(crate) async fn resolve_best_admitted_version(
     if result.policy_violation.is_some() {
         return None;
     }
-    result
-        .package
-        .name_ver
-        .map(|name_ver| name_ver.suffix)
+    result.package.name_ver.map(|name_ver| name_ver.suffix)
 }
 
 /// Emit the `pnpm:global` warning for each stale convergence override

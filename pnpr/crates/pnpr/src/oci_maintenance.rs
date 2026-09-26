@@ -21,19 +21,12 @@ pub async fn collect_oci_blobs(
     min_age: Duration,
     dry_run: bool,
 ) -> Result<(usize, u64)> {
-    if config
-        .routing
-        .registries
-        .ecosystem(registry)
-        != Some(Ecosystem::Oci)
-    {
+    if config.routing.registries.ecosystem(registry) != Some(Ecosystem::Oci) {
         return Err(RegistryError::BadRequest {
             reason: format!("{registry:?} is not a concrete OCI registry"),
         });
     }
-    let hosted = config
-        .routing
-        .hosted
+    let hosted = config.routing.hosted
         .get(registry)
         .ok_or_else(|| RegistryError::BadRequest {
             reason: format!("{registry:?} is not a hosted registry"),
@@ -45,9 +38,7 @@ pub async fn collect_oci_blobs(
     )?
     .for_hosted(&hosted.org);
     let excluded: HashSet<&str> = if hosted.org.is_empty() {
-        config
-            .routing
-            .hosted
+        config.routing.hosted
             .values()
             .map(|hosted| hosted.org.as_str())
             .filter(|org| !org.is_empty())
@@ -107,19 +98,17 @@ async fn inventory_hosted_blobs(
         if filename == "package.json" {
             continue;
         }
-        let size = i64::try_from(file.size).map_err(|_| RegistryError::BadRequest {
-            reason: format!("blob {} is too large to inventory", file.path),
-        })?;
+        let size = i64::try_from(file.size)
+            .map_err(|_| RegistryError::BadRequest {
+                reason: format!("blob {} is too large to inventory", file.path),
+            })?;
         inventory.execute(
             "INSERT INTO blobs (repository, filename, size, old) VALUES (?, ?, ?, ?)",
             params![
                 repository,
                 filename,
                 size,
-                file.modified
-                    .elapsed()
-                    .unwrap_or_default()
-                    >= min_age
+                file.modified.elapsed().unwrap_or_default() >= min_age
             ],
         )?;
     }
@@ -188,11 +177,7 @@ async fn remove_unreferenced_blobs(
         cursor = row;
         let size = u64::try_from(size).expect("inventory only records nonnegative blob sizes");
         let name = CanonicalPackageName::parse(&repository, Ecosystem::Oci)?;
-        if dry_run
-            || storage
-                .remove_hosted_blob(&name, &filename)
-                .await?
-        {
+        if dry_run || storage.remove_hosted_blob(&name, &filename).await? {
             tracing::info!(
                 repository = name.as_str(),
                 blob = filename,
@@ -219,10 +204,7 @@ async fn finish_pending_deletions(
     while let Some(repository) = next_repository(inventory, &previous)? {
         let name = CanonicalPackageName::parse(&repository, Ecosystem::Oci)?;
         previous = repository;
-        let Some(body) = storage
-            .read_hosted_document(&name)
-            .await?
-        else {
+        let Some(body) = storage.read_hosted_document(&name).await? else {
             continue;
         };
         let mut document = ImageDocument::parse(&body)?;
@@ -232,18 +214,16 @@ async fn finish_pending_deletions(
             .await?
             .and_then(|(_, size)| size)
             .unwrap_or_default();
-        if storage
-            .remove_hosted_blob(&name, &digest.blob_filename())
-            .await?
-        {
+        if storage.remove_hosted_blob(&name, &digest.blob_filename()).await? {
             removed += 1;
             bytes += size;
         }
-        storage
-            .update_hosted_document_with_retry(&name, pnpr_storage::DOCUMENT_WRITE_RETRIES, |_| {
-                Ok(Some(document.to_bytes()))
-            })
-            .await?;
+        storage.update_hosted_document_with_retry(
+            &name,
+            pnpr_storage::DOCUMENT_WRITE_RETRIES,
+            |_| Ok(Some(document.to_bytes())),
+        )
+        .await?;
     }
     Ok((removed, bytes))
 }
@@ -290,10 +270,7 @@ impl Inventory {
         params: impl rusqlite::Params,
         row: impl FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<Row>,
     ) -> Result<Option<Row>> {
-        Ok(self
-            .connection
-            .query_row(sql, params, row)
-            .optional()?)
+        Ok(self.connection.query_row(sql, params, row).optional()?)
     }
 }
 
@@ -306,10 +283,7 @@ async fn referenced_blobs(
     name: &CanonicalPackageName,
     manifest_limit: usize,
 ) -> Result<HashSet<String>> {
-    let Some(bytes) = storage
-        .read_hosted_document(name)
-        .await?
-    else {
+    let Some(bytes) = storage.read_hosted_document(name).await? else {
         return Ok(HashSet::new());
     };
     let document = ImageDocument::parse(&bytes)?;
@@ -346,8 +320,7 @@ pub(crate) async fn referenced_document_blobs(
             }
         }
     }
-    if document
-        .deleting_blob
+    if document.deleting_blob
         .as_ref()
         .is_some_and(|digest| reachable.contains(&digest.blob_filename()))
     {
@@ -362,13 +335,10 @@ fn resolve_reference_media_type(
     reference: &Descriptor,
     document: &ImageDocument,
 ) -> Option<String> {
-    reference
-        .media_type
+    reference.media_type
         .clone()
         .or_else(|| {
-            document
-                .manifest(&reference.digest)
-                .map(|entry| entry.media_type.clone())
+            document.manifest(&reference.digest).map(|entry| entry.media_type.clone())
         })
 }
 
@@ -389,8 +359,7 @@ async fn read_manifest_blob(
         .open_hosted_blob(name, &filename)
         .await?
         .ok_or_else(|| invalid("retained manifest is missing".into()))?;
-    let bytes = axum::body::to_bytes(body, manifest_limit)
-        .await
+    let bytes = axum::body::to_bytes(body, manifest_limit).await
         .map_err(|error| invalid(error.to_string()))?;
     if Digest::of(&bytes) != *digest {
         return Err(invalid("manifest digest mismatch".into()));

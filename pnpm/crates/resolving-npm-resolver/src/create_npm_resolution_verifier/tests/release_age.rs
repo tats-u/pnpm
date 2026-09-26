@@ -13,17 +13,11 @@ async fn min_age_zero_keeps_age_check_inactive() {
     let mut opts = default_opts("http://nonexistent.example.invalid/");
     opts.release_age.minimum_minutes = Some(0);
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier
-        .verify(
-            &registry_resolution(),
-            ctx(
-                &"acme"
-                    .parse::<PkgName>()
-                    .expect("parse"),
-                "1.0.0",
-            ),
-        )
-        .await;
+    let result = verifier.verify(
+        &registry_resolution(),
+        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0"),
+    )
+    .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -39,9 +33,7 @@ async fn verify_skips_age_check_when_package_excluded() {
     let verifier = create_npm_resolution_verifier(opts);
     let resolution = registry_resolution();
     let name: PkgName = "acme".parse().expect("parse");
-    let result = verifier
-        .verify(&resolution, ctx(&name, "1.0.0"))
-        .await;
+    let result = verifier.verify(&resolution, ctx(&name, "1.0.0")).await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -55,9 +47,7 @@ async fn verify_skips_age_check_when_package_matches_exclude_pattern() {
     let verifier = create_npm_resolution_verifier(opts);
     let name: PkgName = "acme-widget".parse().expect("parse");
 
-    let result = verifier
-        .verify(&registry_resolution(), ctx(&name, "1.0.0"))
-        .await;
+    let result = verifier.verify(&registry_resolution(), ctx(&name, "1.0.0")).await;
 
     assert_eq!(result, ResolutionVerification::Ok);
 }
@@ -72,9 +62,7 @@ async fn verify_skips_age_check_for_an_exact_version_in_a_union() {
     let verifier = create_npm_resolution_verifier(opts);
     let name: PkgName = "acme".parse().expect("parse");
 
-    let result = verifier
-        .verify(&registry_resolution(), ctx(&name, "1.1.0"))
-        .await;
+    let result = verifier.verify(&registry_resolution(), ctx(&name, "1.1.0")).await;
 
     assert_eq!(result, ResolutionVerification::Ok);
 }
@@ -103,17 +91,11 @@ async fn min_age_pass_when_published_before_cutoff() {
     opts.release_age.minimum_minutes = Some(60 * 24); // 1 day
     opts.now = Some(now_at("2025-12-01T00:00:00Z"));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier
-        .verify(
-            &registry_resolution(),
-            ctx(
-                &"acme"
-                    .parse::<PkgName>()
-                    .expect("parse"),
-                "1.0.0",
-            ),
-        )
-        .await;
+    let result = verifier.verify(
+        &registry_resolution(),
+        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0"),
+    )
+    .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -138,17 +120,11 @@ async fn min_age_fail_when_published_within_cutoff() {
     opts.release_age.minimum_minutes = Some(60 * 24); // 1 day
     opts.now = Some(now_at("2025-12-01T00:00:00Z"));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier
-        .verify(
-            &registry_resolution(),
-            ctx(
-                &"acme"
-                    .parse::<PkgName>()
-                    .expect("parse"),
-                "1.0.0",
-            ),
-        )
-        .await;
+    let result = verifier.verify(
+        &registry_resolution(),
+        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0"),
+    )
+    .await;
     let ResolutionVerification::Err { code, reason } = result else {
         panic!("expected Err, got {result:?}");
     };
@@ -192,17 +168,11 @@ async fn min_age_missing_time_fails_closed_by_default() {
     opts.release_age.minimum_minutes = Some(60 * 24);
     opts.now = Some(now_at("2025-12-01T00:00:00Z"));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier
-        .verify(
-            &registry_resolution(),
-            ctx(
-                &"acme"
-                    .parse::<PkgName>()
-                    .expect("parse"),
-                "1.0.0",
-            ),
-        )
-        .await;
+    let result = verifier.verify(
+        &registry_resolution(),
+        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0"),
+    )
+    .await;
     let ResolutionVerification::Err { code, reason } = result else {
         panic!("expected Err, got {result:?}");
     };
@@ -250,17 +220,11 @@ async fn min_age_missing_time_passes_when_ignored() {
     opts.metadata.ignore_missing_time_field = true;
     opts.now = Some(now_at("2025-12-01T00:00:00Z"));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier
-        .verify(
-            &registry_resolution(),
-            ctx(
-                &"acme"
-                    .parse::<PkgName>()
-                    .expect("parse"),
-                "1.0.0",
-            ),
-        )
-        .await;
+    let result = verifier.verify(
+        &registry_resolution(),
+        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0"),
+    )
+    .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -287,17 +251,11 @@ async fn min_age_unlisted_version_fails_when_missing_time_is_ignored() {
     opts.metadata.ignore_missing_time_field = true;
     opts.now = Some(now_at("2025-12-01T00:00:00Z"));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier
-        .verify(
-            &registry_resolution(),
-            ctx(
-                &"acme"
-                    .parse::<PkgName>()
-                    .expect("parse"),
-                "1.0.1",
-            ),
-        )
-        .await;
+    let result = verifier.verify(
+        &registry_resolution(),
+        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.1"),
+    )
+    .await;
     let ResolutionVerification::Err { code, reason } = result else {
         panic!("expected Err, got {result:?}");
     };
@@ -371,17 +329,11 @@ async fn min_age_pass_via_abbreviated_modified_shortcut() {
     opts.release_age.minimum_minutes = Some(60 * 24); // 1 day
     opts.now = Some(now_at("2025-12-01T00:00:00Z"));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier
-        .verify(
-            &registry_resolution(),
-            ctx(
-                &"acme"
-                    .parse::<PkgName>()
-                    .expect("parse"),
-                "1.0.0",
-            ),
-        )
-        .await;
+    let result = verifier.verify(
+        &registry_resolution(),
+        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0"),
+    )
+    .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -430,17 +382,11 @@ async fn min_age_shortcut_falls_through_when_modified_within_cutoff() {
     opts.release_age.minimum_minutes = Some(60 * 24); // 1 day
     opts.now = Some(now_at("2025-12-01T00:00:00Z"));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier
-        .verify(
-            &registry_resolution(),
-            ctx(
-                &"acme"
-                    .parse::<PkgName>()
-                    .expect("parse"),
-                "1.0.0",
-            ),
-        )
-        .await;
+    let result = verifier.verify(
+        &registry_resolution(),
+        ctx(&"acme".parse::<PkgName>().expect("parse"), "1.0.0"),
+    )
+    .await;
     assert_eq!(result, ResolutionVerification::Ok);
 }
 
@@ -490,17 +436,11 @@ async fn min_age_shortcut_falls_through_when_version_not_listed() {
     opts.release_age.minimum_minutes = Some(60 * 24);
     opts.now = Some(now_at("2025-12-01T00:00:00Z"));
     let verifier = create_npm_resolution_verifier(opts);
-    let result = verifier
-        .verify(
-            &registry_resolution(),
-            ctx(
-                &"acme"
-                    .parse::<PkgName>()
-                    .expect("parse"),
-                "2.0.0",
-            ),
-        )
-        .await;
+    let result = verifier.verify(
+        &registry_resolution(),
+        ctx(&"acme".parse::<PkgName>().expect("parse"), "2.0.0"),
+    )
+    .await;
     let ResolutionVerification::Err { code, .. } = result else {
         panic!("expected Err, got {result:?}");
     };

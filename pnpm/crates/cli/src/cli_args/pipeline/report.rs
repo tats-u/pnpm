@@ -90,8 +90,7 @@ impl RunReport {
         duration_ms: f64,
     ) {
         if cache == CacheDisposition::Hit {
-            self.cache_hits
-                .fetch_add(1, Ordering::Relaxed);
+            self.cache_hits.fetch_add(1, Ordering::Relaxed);
         }
         self.push(json!({
             "event": "taskFinished",
@@ -126,10 +125,7 @@ impl RunReport {
             .iter()
             .map(|(task, key)| (format_task(task, workspace_root), key))
             .collect();
-        *self
-            .summary
-            .lock()
-            .expect("summary lock is not poisoned") = json!({
+        *self.summary.lock().expect("summary lock is not poisoned") = json!({
             "runId": self.run_id,
             "pipeline": self.pipeline,
             "base": self.base,
@@ -145,10 +141,7 @@ impl RunReport {
     pub fn write(&self, data_dir: &Path) -> miette::Result<PathBuf> {
         let run_dir = data_dir.join("runs").join(&self.run_id);
         fs::create_dir_all(&run_dir).into_diagnostic()?;
-        let events = self
-            .events
-            .lock()
-            .expect("event lock is not poisoned");
+        let events = self.events.lock().expect("event lock is not poisoned");
         let mut ndjson = String::new();
         for event in events.iter() {
             ndjson.push_str(&event.to_string());
@@ -169,8 +162,7 @@ impl RunReport {
             workspace,
             run_id: self.run_id.clone(),
             summary: self.summary_value(),
-            events: self
-                .events
+            events: self.events
                 .lock()
                 .expect("event lock is not poisoned")
                 .clone(),
@@ -180,10 +172,7 @@ impl RunReport {
     /// The summary document: what [`Self::finish`] assembled, or the
     /// header alone for a run that settled before any task existed.
     fn summary_value(&self) -> Value {
-        let summary = self
-            .summary
-            .lock()
-            .expect("summary lock is not poisoned");
+        let summary = self.summary.lock().expect("summary lock is not poisoned");
         if summary.is_null() {
             json!({
                 "runId": self.run_id,
@@ -207,9 +196,7 @@ impl RunReport {
 }
 
 fn now_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |elapsed| elapsed.as_millis())
+    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |elapsed| elapsed.as_millis())
 }
 
 #[cfg(test)]

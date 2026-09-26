@@ -126,10 +126,7 @@ impl ValidatedEntry {
             ValidatedEntry::Npm(doc, org) => stage_publish(state, *doc, now, Some(&org)).await,
             ValidatedEntry::Cargo(publication) => publication.stage(state).await,
             ValidatedEntry::Pypi(publication) => publication.stage(state).await,
-            ValidatedEntry::Oci(publication) => publication
-                .stage(state)
-                .await
-                .map_err(Into::into),
+            ValidatedEntry::Oci(publication) => publication.stage(state).await.map_err(Into::into),
         }
     }
 }
@@ -167,12 +164,7 @@ async fn publish_batch(
         .iter()
         .map(|entry| entry.key().as_str())
         .collect();
-    let _guards = state
-        .inner
-        .locks
-        .packages
-        .lock_many(&names)
-        .await;
+    let _guards = state.inner.locks.packages.lock_many(&names).await;
 
     let now = now_iso();
     let mut staged: Vec<StagedPublish> = Vec::with_capacity(validated.len());
@@ -253,12 +245,7 @@ async fn validate_entry(
                 entry.reference,
                 bytes.into(),
                 entry.content_type.as_deref(),
-                state
-                    .inner
-                    .config
-                    .http
-                    .oci
-                    .max_manifest_bytes,
+                state.inner.config.http.oci.max_manifest_bytes,
             )
             .map(ValidatedEntry::Oci)
             .map_err(RegistryError::from)
@@ -271,9 +258,10 @@ async fn validate_entry(
 fn entry_ecosystem(package: &Value) -> Result<Ecosystem, RegistryError> {
     match package.get("ecosystem") {
         None | Some(Value::Null) => Ok(Ecosystem::Npm),
-        Some(value) => serde_json::from_value(value.clone()).map_err(|_| {
-            RegistryError::BadRequest { reason: format!("unknown ecosystem {value} in `packages`") }
-        }),
+        Some(value) => serde_json::from_value(value.clone())
+            .map_err(|_| RegistryError::BadRequest {
+                reason: format!("unknown ecosystem {value} in `packages`"),
+            }),
     }
 }
 

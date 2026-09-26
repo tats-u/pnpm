@@ -88,8 +88,7 @@ impl AliasChanges {
         for (alias, new_value) in new {
             match old.get(alias) {
                 None => {
-                    self.0
-                        .insert(alias.clone(), AliasChange::Added(new_value.clone()));
+                    self.0.insert(alias.clone(), AliasChange::Added(new_value.clone()));
                 }
                 Some(old_value) if old_value != new_value => {
                     let change =
@@ -101,8 +100,7 @@ impl AliasChanges {
         }
         for (alias, old_value) in old {
             if !new.contains_key(alias) {
-                self.0
-                    .insert(alias.clone(), AliasChange::Removed(old_value.clone()));
+                self.0.insert(alias.clone(), AliasChange::Removed(old_value.clone()));
             }
         }
     }
@@ -146,8 +144,7 @@ pub fn diff_lockfiles(
 
     let mut diff = LockfileDiff::default();
 
-    let mut importer_ids: BTreeSet<&str> = new
-        .importers
+    let mut importer_ids: BTreeSet<&str> = new.importers
         .keys()
         .map(String::as_str)
         .collect();
@@ -181,9 +178,7 @@ fn diff_snapshots(old: Option<&Lockfile>, new: Option<&Lockfile>, diff: &mut Loc
 
     for (key, new_entry) in new_snapshots.into_iter().flatten() {
         match old_snapshots.and_then(|snapshots| snapshots.get(key)) {
-            None => diff
-                .added_packages
-                .push(key.to_string()),
+            None => diff.added_packages.push(key.to_string()),
             // The equality check keeps the common case — a snapshot both
             // lockfiles wire identically — off the per-alias path, which
             // allocates a map per dependency group on both sides.
@@ -202,15 +197,13 @@ fn diff_snapshots(old: Option<&Lockfile>, new: Option<&Lockfile>, diff: &mut Loc
         .map(|(key, _)| key)
     {
         if new_snapshots.is_none_or(|snapshots| !snapshots.contains_key(key)) {
-            diff.removed_packages
-                .push(key.to_string());
+            diff.removed_packages.push(key.to_string());
         }
     }
 
     diff.added_packages.sort();
     diff.removed_packages.sort();
-    diff.updated_packages
-        .sort_by(|left, right| left.id.cmp(&right.id));
+    diff.updated_packages.sort_by(|left, right| left.id.cmp(&right.id));
 }
 
 /// Whether a real install would rewrite this snapshot's dependency wiring.

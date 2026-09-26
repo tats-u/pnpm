@@ -250,8 +250,7 @@ impl<'graph, Node: Eq + Hash + Clone> Interner<'graph, Node> {
     }
 
     fn intern(&mut self, node: &'graph Node) -> usize {
-        *self
-            .index_of
+        *self.index_of
             .entry(node)
             .or_insert_with(|| {
                 self.nodes.push(node);

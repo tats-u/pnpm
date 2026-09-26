@@ -42,8 +42,7 @@ impl<'a> Asked<'a> {
         self.by_root
             .iter()
             .find_map(|(root, requirement)| {
-                other
-                    .by_root
+                other.by_root
                     .iter()
                     .find(|(second, _)| *second != root)
                     .map(|(second, theirs)| [(*root, *requirement), (*second, *theirs)])
@@ -64,10 +63,7 @@ fn find(resolution: &Resolution, members: &[Member]) -> Option<String> {
             else {
                 continue;
             };
-            if !requirement
-                .marker
-                .evaluate(environment, &[])
-            {
+            if !requirement.marker.evaluate(environment, &[]) {
                 continue;
             }
             by_name
@@ -83,9 +79,7 @@ fn find(resolution: &Resolution, members: &[Member]) -> Option<String> {
     by_name
         .into_iter()
         .find_map(|(name, asked)| {
-            let offered = resolution
-                .packages
-                .candidates
+            let offered = resolution.packages.candidates
                 .get(name)
                 .filter(|offered| !offered.is_empty())?;
             let asked = asked.into_values().collect::<Vec<_>>();
@@ -108,9 +102,12 @@ fn conflicting_pair(
                 .iter()
                 .filter_map(|second| Some((second, first.distinct_roots(second)?)))
                 .find(|(second, _)| {
-                    !offered.iter().any(|version| {
-                        first.specifiers.contains(version) && second.specifiers.contains(version)
-                    })
+                    !offered
+                        .iter()
+                        .any(|version| {
+                            first.specifiers.contains(version)
+                                && second.specifiers.contains(version)
+                        })
                 })
                 .map(|(_, [(root, requirement), (other, theirs)])| {
                     format!(

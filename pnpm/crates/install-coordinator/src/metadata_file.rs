@@ -58,8 +58,7 @@ impl MetadataFile {
         if current == self.state {
             return Ok(());
         }
-        let parent = self
-            .parent
+        let parent = self.parent
             .open_descendant(&self.remaining_parent)
             .into_diagnostic()
             .wrap_err_with(|| format!("open parent of {} for restoration", self.path.display()))?;
@@ -88,9 +87,7 @@ fn absolute_path(path: PathBuf) -> Result<PathBuf> {
     let path = if path.is_absolute() {
         path
     } else {
-        std::env::current_dir()
-            .into_diagnostic()?
-            .join(path)
+        std::env::current_dir().into_diagnostic()?.join(path)
     };
     let path_display = path.display().to_string();
     let mut normalized = PathBuf::new();

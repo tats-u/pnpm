@@ -61,9 +61,7 @@ fn patched_path_workspace() -> (TempDir, TempDir, GitRepoFixture) {
     .unwrap();
     let manifest = root.path().join("Cargo.toml");
     let contents = fs::read_to_string(&manifest).unwrap();
-    let (package, _) = contents
-        .split_once("[patch.crates-io]")
-        .unwrap();
+    let (package, _) = contents.split_once("[patch.crates-io]").unwrap();
     fs::write(manifest, format!("{package}[patch.crates-io]\ndemo = {{ path = \"dep\" }}\n"))
         .unwrap();
     (root, parent, repository)
@@ -142,8 +140,7 @@ fn missing_lockfile_is_resolved_with_git_dependencies_and_source_overrides() {
         let names =
             if root.path().join("dep").exists() { vec!["demo"] } else { vec!["demo", "sibling"] };
         for name in names {
-            let package = lock
-                .packages
+            let package = lock.packages
                 .iter()
                 .find(|package| package.name.as_str() == name)
                 .unwrap();
@@ -153,8 +150,7 @@ fn missing_lockfile_is_resolved_with_git_dependencies_and_source_overrides() {
                 continue;
             }
             assert_eq!(
-                package
-                    .source
+                package.source
                     .as_ref()
                     .unwrap()
                     .precise(),
@@ -196,9 +192,7 @@ fn lockfile_generation_can_change_a_git_revision_with_managed_sources_present() 
         let manifest = root.path().join("Cargo.toml");
         fs::write(
             &manifest,
-            fs::read_to_string(&manifest)
-                .unwrap()
-                .replace(&old_commit, &new_commit),
+            fs::read_to_string(&manifest).unwrap().replace(&old_commit, &new_commit),
         )
         .unwrap();
         fs::remove_file(root.path().join("Cargo.lock")).unwrap();
@@ -253,14 +247,12 @@ fn adding_a_registry_crate_preserves_git_dependencies_and_source_overrides() {
             .unwrap()
             .parse()
             .unwrap();
-        let extra = lock
-            .packages
+        let extra = lock.packages
             .iter()
             .find(|package| package.name.as_str() == "extra")
             .unwrap();
         assert_eq!(
-            extra
-                .checksum
+            extra.checksum
                 .as_ref()
                 .unwrap()
                 .to_string(),
@@ -342,9 +334,7 @@ fn lockfile_resolution_does_not_execute_checkout_configured_helpers() {
 
         install_in(&root, &["install", "--lockfile-only", "--no-frozen-lockfile"]);
 
-        let marker = root
-            .path()
-            .join("checkout-rustc.executed");
+        let marker = root.path().join("checkout-rustc.executed");
         eprintln!("Checkout helpers must not execute during resolution: {}", marker.display());
         assert!(!marker.exists());
         let config_after = fs::read_to_string(root.path().join(".cargo/config.toml")).unwrap();
@@ -402,28 +392,19 @@ fn lockfile_generation_preserves_legacy_path_replacements() {
         .unwrap()
         .parse()
         .unwrap();
-    let original = lock
-        .packages
+    let original = lock.packages
         .iter()
         .find(|package| package.name.as_str() == "demo" && package.source.is_some())
         .unwrap();
     assert_eq!(
-        original
-            .replace
+        original.replace
             .as_ref()
             .unwrap()
             .name
             .as_str(),
         "demo",
     );
-    assert_eq!(
-        original
-            .replace
-            .as_ref()
-            .unwrap()
-            .source,
-        None
-    );
+    assert_eq!(original.replace.as_ref().unwrap().source, None);
     eprintln!("Cargo must retain the replacement's distinct identity: {lock:?}");
     assert!(
         lock.packages
@@ -451,9 +432,7 @@ fn path_patched_dependencies_cannot_execute_git_transport_helpers() {
     let path_override = format!("path = {:?}", patched_path.to_string_lossy());
     fs::write(
         &workspace_manifest,
-        fs::read_to_string(&workspace_manifest)
-            .unwrap()
-            .replace(r#"path = "dep""#, &path_override),
+        fs::read_to_string(&workspace_manifest).unwrap().replace(r#"path = "dep""#, &path_override),
     )
     .unwrap();
     let manifest = patched.path().join("dep/Cargo.toml");
@@ -466,9 +445,7 @@ fn path_patched_dependencies_cannot_execute_git_transport_helpers() {
     )
     .unwrap();
     let helpers = TempDir::new().unwrap();
-    let helper = helpers
-        .path()
-        .join("git-remote-pnpm-test");
+    let helper = helpers.path().join("git-remote-pnpm-test");
     fs::write(&helper, "#!/bin/sh\n: > \"$HELPER_MARKER\"\nexit 1\n").unwrap();
     fs::set_permissions(&helper, fs::Permissions::from_mode(0o755)).unwrap();
     let marker = helpers.path().join("executed");
@@ -605,9 +582,7 @@ fn recursive_submodules_are_pinned_checksummed_and_reused_offline() {
         .args(["install", "--no-frozen-lockfile"])
         .assert()
         .success();
-    let slot = root
-        .path()
-        .join(".pnpm/crates/git/demo-0.0.0");
+    let slot = root.path().join(".pnpm/crates/git/demo-0.0.0");
     let checksum: serde_json::Value =
         serde_json::from_slice(&fs::read(slot.join(".cargo-checksum.json")).unwrap()).unwrap();
     assert_eq!(
@@ -657,13 +632,7 @@ fn submodule_fetching_preserves_the_callers_transport_allowlist() {
     let commit = repository.commit("add HTTP submodule");
     for name in ["Cargo.toml", "Cargo.lock"] {
         let path = root.path().join(name);
-        fs::write(
-            &path,
-            fs::read_to_string(&path)
-                .unwrap()
-                .replace(&old_commit, &commit),
-        )
-        .unwrap();
+        fs::write(&path, fs::read_to_string(&path).unwrap().replace(&old_commit, &commit)).unwrap();
     }
 
     let output = pnpm(&root)

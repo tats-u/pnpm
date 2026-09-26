@@ -75,10 +75,7 @@ fn aliased_catalog_dependency_records_catalog_snapshot() {
         },
     });
 
-    let snapshots = lockfile
-        .catalogs
-        .as_ref()
-        .expect("catalogs snapshot present");
+    let snapshots = lockfile.catalogs.as_ref().expect("catalogs snapshot present");
     let entry = snapshots
         .get("default")
         .and_then(|catalog| catalog.get("js-yaml"))

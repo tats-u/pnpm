@@ -85,9 +85,7 @@ fn links_absolute_relative_and_self_reference_specs() {
 fn links_workspace_package_selected_by_plain_range() {
     let dir = tempdir().unwrap();
     let project_dir = dir.path().join("packages/app");
-    let workspace_dep_dir = dir
-        .path()
-        .join("packages/workspace-dep");
+    let workspace_dep_dir = dir.path().join("packages/workspace-dep");
     fs::create_dir_all(&project_dir).unwrap();
     fs::create_dir_all(&workspace_dep_dir).unwrap();
 
@@ -126,15 +124,9 @@ fn links_workspace_package_selected_by_plain_range() {
 
     assert_eq!(
         fs::canonicalize(project_dir.join("node_modules/workspace-dep")).unwrap(),
-        workspace_dep_dir
-            .canonicalize()
-            .unwrap(),
+        workspace_dep_dir.canonicalize().unwrap(),
     );
-    assert!(
-        !project_dir
-            .join("node_modules/revisioned")
-            .exists()
-    );
+    assert!(!project_dir.join("node_modules/revisioned").exists());
 }
 
 /// Re-running the pass replaces a stale symlink (v11 re-link
@@ -226,9 +218,7 @@ fn lockfile_tracked_alias_is_skipped() {
     )
     .expect("pass succeeds");
     assert!(
-        !project_dir
-            .join("node_modules/shared")
-            .exists(),
+        !project_dir.join("node_modules/shared").exists(),
         "a lockfile-tracked link alias must be left to the lockfile passes",
     );
 
@@ -270,11 +260,7 @@ fn traversal_alias_is_rejected_without_writes() {
         );
     }
     // Nothing was written anywhere.
-    assert!(
-        !project_dir
-            .join("node_modules")
-            .exists()
-    );
+    assert!(!project_dir.join("node_modules").exists());
     assert!(
         victim.exists()
             && fs::read_dir(&victim)
@@ -319,12 +305,7 @@ fn custom_modules_dir_name_is_honored() {
         fs::canonicalize(project_dir.join("custom_modules/dep")).unwrap(),
         external.canonicalize().unwrap(),
     );
-    assert!(
-        !project_dir
-            .join("node_modules")
-            .exists(),
-        "no stray node_modules"
-    );
+    assert!(!project_dir.join("node_modules").exists(), "no stray node_modules");
 
     drop(dir);
 }
@@ -371,11 +352,7 @@ fn non_normal_modules_dir_name_is_rejected_without_writes() {
     // or any would-be modules dir.
     assert!(!project_dir.join("dep").exists());
     assert!(!dir.path().join("dep").exists());
-    assert!(
-        !project_dir
-            .join("node_modules")
-            .exists()
-    );
+    assert!(!project_dir.join("node_modules").exists());
 
     drop(dir);
 }
@@ -428,11 +405,7 @@ fn bins_of_manifest_linked_deps_are_linked() {
         "the linked dep's declared bin must land in .bin",
     );
     // The manifest-less link is placed but contributes no bins.
-    assert!(
-        project_dir
-            .join("node_modules/bare")
-            .exists()
-    );
+    assert!(project_dir.join("node_modules/bare").exists());
 
     drop(dir);
 }

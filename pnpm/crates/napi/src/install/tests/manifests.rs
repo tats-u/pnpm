@@ -40,9 +40,7 @@ fn ignore_package_manifest_populates_the_virtual_store_without_linking() {
     std::fs::create_dir_all(&project_dir).expect("create project dir");
     std::fs::write(project_dir.join("package.json"), "{}\n").expect("write package.json");
 
-    let project_dir_string = project_dir
-        .to_string_lossy()
-        .into_owned();
+    let project_dir_string = project_dir.to_string_lossy().into_owned();
     let mut options = install_options();
     options.dir = project_dir_string.clone();
     options.projects = vec![NodeApiProject {
@@ -66,12 +64,7 @@ fn ignore_package_manifest_populates_the_virtual_store_without_linking() {
     // alone.
     options.lockfile_only = Some(true);
     run_install_inner(&options, None, EngineMode::Install(None)).expect("seed the lockfile");
-    assert!(
-        project_dir
-            .join("pnpm-lock.yaml")
-            .exists(),
-        "the seed run must write a lockfile"
-    );
+    assert!(project_dir.join("pnpm-lock.yaml").exists(), "the seed run must write a lockfile");
     options.lockfile_only = None;
 
     // An empty manifest proves the run reads the lockfile, not the manifest.
@@ -96,9 +89,7 @@ fn ignore_package_manifest_populates_the_virtual_store_without_linking() {
     assert_eq!(fetched.len(), 1, "the recorded dependency must be imported into the virtual store");
 
     assert!(
-        !modules_dir
-            .join("@pnpm.e2e/hello-world-js-bin")
-            .exists(),
+        !modules_dir.join("@pnpm.e2e/hello-world-js-bin").exists(),
         "a fetch-shaped install links no importer symlinks",
     );
     assert!(!modules_dir.join(".bin").exists(), "a fetch-shaped install links no top-level bins");
@@ -115,9 +106,7 @@ fn ignore_package_manifest_survives_an_ambient_lockfile_false() {
     std::fs::create_dir_all(&project_dir).expect("create project dir");
     std::fs::write(project_dir.join("package.json"), "{}\n").expect("write package.json");
 
-    let project_dir_string = project_dir
-        .to_string_lossy()
-        .into_owned();
+    let project_dir_string = project_dir.to_string_lossy().into_owned();
     let mut options = install_options();
     options.dir = project_dir_string.clone();
     options.projects = vec![NodeApiProject {
@@ -179,9 +168,7 @@ fn ignore_package_manifest_fetches_importers_the_caller_did_not_pass() {
         .expect("write workspace yaml");
 
     let root_dir_string = root_dir.to_string_lossy().into_owned();
-    let member_dir_string = member_dir
-        .to_string_lossy()
-        .into_owned();
+    let member_dir_string = member_dir.to_string_lossy().into_owned();
     let mut options = install_options();
     options.dir = root_dir_string.clone();
     options.projects = vec![
@@ -232,9 +219,7 @@ fn ignore_package_manifest_fetches_importers_the_caller_did_not_pass() {
     dbg!(&fetched);
     assert_eq!(fetched.len(), 1, "the unnamed importer's dependency must still be fetched");
     assert!(
-        !member_dir
-            .join("node_modules/@pnpm.e2e/hello-world-js-bin")
-            .exists(),
+        !member_dir.join("node_modules/@pnpm.e2e/hello-world-js-bin").exists(),
         "a fetch-shaped install links no importer symlinks",
     );
 }
@@ -247,9 +232,7 @@ fn repeat_install_uses_changed_in_memory_manifest() {
     std::fs::create_dir(&project_dir).expect("create project dir");
     std::fs::write(project_dir.join("package.json"), "{}\n").expect("write package.json");
 
-    let project_dir_string = project_dir
-        .to_string_lossy()
-        .into_owned();
+    let project_dir_string = project_dir.to_string_lossy().into_owned();
     let mut options = install_options();
     options.dir = project_dir_string.clone();
     options.projects = vec![NodeApiProject {
@@ -271,11 +254,7 @@ fn repeat_install_uses_changed_in_memory_manifest() {
     options.registries = Some(HashMap::from([("default".to_string(), registry.url().to_string())]));
 
     run_install_inner(&options, None, EngineMode::Install(None)).expect("first install");
-    assert!(
-        project_dir
-            .join("node_modules/@pnpm.e2e/foo")
-            .exists()
-    );
+    assert!(project_dir.join("node_modules/@pnpm.e2e/foo").exists());
 
     options.projects[0].manifest = serde_json::json!({
         "dependencies": {
@@ -285,11 +264,7 @@ fn repeat_install_uses_changed_in_memory_manifest() {
     });
 
     run_install_inner(&options, None, EngineMode::Install(None)).expect("second install");
-    assert!(
-        project_dir
-            .join("node_modules/@pnpm.e2e/bar")
-            .exists()
-    );
+    assert!(project_dir.join("node_modules/@pnpm.e2e/bar").exists());
     assert_eq!(
         std::fs::read_to_string(project_dir.join("package.json")).expect("read package.json"),
         "{}\n",
@@ -308,9 +283,7 @@ fn repeat_install_with_unchanged_in_memory_manifest_needs_no_registry() {
     std::fs::create_dir(&project_dir).expect("create project dir");
     std::fs::write(project_dir.join("package.json"), "{}\n").expect("write package.json");
 
-    let project_dir_string = project_dir
-        .to_string_lossy()
-        .into_owned();
+    let project_dir_string = project_dir.to_string_lossy().into_owned();
     let mut options = install_options();
     options.dir = project_dir_string.clone();
     options.projects = vec![NodeApiProject {
@@ -333,11 +306,7 @@ fn repeat_install_with_unchanged_in_memory_manifest_needs_no_registry() {
     options.registries = Some(HashMap::from([("default".to_string(), registry.url().to_string())]));
 
     run_install_inner(&options, None, EngineMode::Install(None)).expect("first install");
-    assert!(
-        project_dir
-            .join("node_modules/@pnpm.e2e/foo")
-            .exists()
-    );
+    assert!(project_dir.join("node_modules/@pnpm.e2e/foo").exists());
 
     std::fs::remove_dir_all(&cache_dir).expect("wipe the metadata cache");
     options.registries =
@@ -345,9 +314,5 @@ fn repeat_install_with_unchanged_in_memory_manifest_needs_no_registry() {
 
     run_install_inner(&options, None, EngineMode::Install(None))
         .expect("a repeat install with an unchanged in-memory manifest needs no registry");
-    assert!(
-        project_dir
-            .join("node_modules/@pnpm.e2e/foo")
-            .exists()
-    );
+    assert!(project_dir.join("node_modules/@pnpm.e2e/foo").exists());
 }

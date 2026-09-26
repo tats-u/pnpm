@@ -69,8 +69,7 @@ async fn errors_when_config_dir_is_unavailable() {
         .await
         .expect_err("missing config dir should error");
     assert!(
-        err.to_string()
-            .contains("Could not determine the pnpm config directory"),
+        err.to_string().contains("Could not determine the pnpm config directory"),
         "unexpected error: {err}",
     );
 }
@@ -161,9 +160,7 @@ async fn web_login_server(server: &mut mockito::Server) -> String {
 /// The `config.yaml` the login left behind, parsed back into JSON. A login
 /// writes one field at a time, so the last write is the finished document.
 fn last_config_yaml(writes: &[(PathBuf, String)]) -> (&Path, serde_json::Value) {
-    let (path, text) = writes
-        .last()
-        .expect("login must write config.yaml");
+    let (path, text) = writes.last().expect("login must write config.yaml");
     (path.as_path(), serde_saphyr::from_str(text).expect("login writes valid YAML"))
 }
 
@@ -187,9 +184,7 @@ async fn a_config_scope_persists_the_scoped_token_and_registry_mapping() {
     };
     let args = LoginArgs { registry: Some(registry.clone()), scope: None };
 
-    args.execute::<FakeHost, RecordingReporter>(&config)
-        .await
-        .expect("web login succeeds");
+    args.execute::<FakeHost, RecordingReporter>(&config).await.expect("web login succeeds");
 
     let writes = config_writes();
     let (path, document) = last_config_yaml(&writes);
@@ -219,9 +214,7 @@ async fn the_scope_flag_beats_a_config_scope_in_the_persisted_config_yaml() {
     };
     let args = LoginArgs { registry: Some(registry.clone()), scope: Some("@from-flag".to_owned()) };
 
-    args.execute::<FakeHost, RecordingReporter>(&config)
-        .await
-        .expect("web login succeeds");
+    args.execute::<FakeHost, RecordingReporter>(&config).await.expect("web login succeeds");
 
     let writes = config_writes();
     let (_, document) = last_config_yaml(&writes);
@@ -258,10 +251,8 @@ async fn execute_performs_web_login_and_returns_the_success_message() {
     let config = Config { config_dir: Some(PathBuf::from("/mock/config")), ..Default::default() };
     let args = LoginArgs { registry: Some(registry.clone()), scope: None };
 
-    let message = args
-        .execute::<FakeHost, RecordingReporter>(&config)
-        .await
-        .expect("web login succeeds");
+    let message =
+        args.execute::<FakeHost, RecordingReporter>(&config).await.expect("web login succeeds");
 
     assert_eq!(message, format!("Logged in on {registry}/"));
 }
@@ -291,15 +282,11 @@ async fn execute_propagates_the_non_interactive_error_from_login() {
     let config = Config { config_dir: Some(PathBuf::from("/mock/config")), ..Default::default() };
     let args = LoginArgs { registry: Some(registry), scope: None };
 
-    let err = args
-        .execute::<FakeHost, RecordingReporter>(&config)
-        .await
-        .unwrap_err();
+    let err = args.execute::<FakeHost, RecordingReporter>(&config).await.unwrap_err();
 
     web_login_probe.assert_async().await;
     assert!(
-        err.to_string()
-            .contains("requires an interactive terminal"),
+        err.to_string().contains("requires an interactive terminal"),
         "unexpected error: {err}",
     );
 }

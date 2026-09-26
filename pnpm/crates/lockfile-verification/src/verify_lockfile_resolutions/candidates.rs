@@ -37,10 +37,8 @@ pub(super) fn collect_candidates(
         // contributes its bare semver as the candidate version and the
         // alias separately, so the verifier can route by registry while
         // still checking the version against that registry's metadata.
-        let registry_name = key
-            .suffix
-            .registry_qualified()
-            .map(|(registry_name, _)| registry_name.to_string());
+        let registry_name =
+            key.suffix.registry_qualified().map(|(registry_name, _)| registry_name.to_string());
         let version = match key.suffix.registry_qualified() {
             Some((_, version)) => version.to_string(),
             None => key.suffix.version().to_string(),
@@ -71,9 +69,7 @@ pub(super) fn collect_candidates(
             .expect("LockfileResolution must serialize for candidate dedupe");
         let key = format!(
             "{name}@{version}@{}@{resolution_json}",
-            registry_name
-                .as_deref()
-                .unwrap_or_default(),
+            registry_name.as_deref().unwrap_or_default(),
         );
         deduped
             .entry(key)
@@ -110,9 +106,7 @@ pub(super) async fn run_fan_out(
     verifiers: &[Arc<dyn ResolutionVerifier>],
     concurrency: Option<usize>,
 ) -> Result<Vec<ResolutionPolicyViolation>, String> {
-    let limit = concurrency
-        .unwrap_or(DEFAULT_CONCURRENCY)
-        .max(1);
+    let limit = concurrency.unwrap_or(DEFAULT_CONCURRENCY).max(1);
     let semaphore = Arc::new(Semaphore::new(limit));
     let mut futures = FuturesUnordered::new();
     for candidate in candidates {
@@ -127,10 +121,7 @@ pub(super) async fn run_fan_out(
             // the effective in-flight count bounded by the semaphore.
             // Releasing per-verifier would let N candidates × M
             // verifiers race past the cap.
-            let _permit = semaphore
-                .acquire()
-                .await
-                .expect("semaphore not closed during fan-out");
+            let _permit = semaphore.acquire().await.expect("semaphore not closed during fan-out");
             evaluate_candidate(candidate, &verifiers).await
         });
     }
@@ -172,9 +163,7 @@ fn candidate_verifiers(
                 version: &candidate.version,
                 registry_name: candidate.registry_name.as_deref(),
             };
-            verifier
-                .might_verify(&candidate.resolution, ctx)
-                .then(|| Arc::clone(verifier))
+            verifier.might_verify(&candidate.resolution, ctx).then(|| Arc::clone(verifier))
         })
         .collect()
 }
@@ -193,10 +182,7 @@ async fn evaluate_candidate(
             version: &candidate.version,
             registry_name: candidate.registry_name.as_deref(),
         };
-        match verifier
-            .verify(&candidate.resolution, ctx)
-            .await
-        {
+        match verifier.verify(&candidate.resolution, ctx).await {
             ResolutionVerification::Ok => continue,
             ResolutionVerification::Err { code, reason } => {
                 return Ok(Some(ResolutionPolicyViolation {

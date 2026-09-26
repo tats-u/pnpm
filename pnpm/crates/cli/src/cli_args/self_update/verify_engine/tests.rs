@@ -117,14 +117,10 @@ fn signature_validates_rejects_unknown_keyid_and_empty_signatures() {
 
 #[test]
 fn plain_version_reads_only_plain_references() {
-    let plain: SnapshotDepRef = "1.2.3"
-        .parse()
-        .expect("parse plain ref");
+    let plain: SnapshotDepRef = "1.2.3".parse().expect("parse plain ref");
     assert_eq!(plain_version(&plain), Some("1.2.3".to_string()));
 
-    let alias: SnapshotDepRef = "foo@1.2.3"
-        .parse()
-        .expect("parse alias ref");
+    let alias: SnapshotDepRef = "foo@1.2.3".parse().expect("parse alias ref");
     assert_eq!(plain_version(&alias), None);
 
     let link = SnapshotDepRef::Link("packages/x".to_string());
@@ -148,8 +144,10 @@ fn env_lockfile_owned_by(owner: &str, platform_optional_deps: &[(&str, &str)]) -
     let mut optional_dependencies = serde_json::Map::new();
     for (name, version) in platform_optional_deps {
         package_entries.insert(format!("{name}@{version}"), packages(name));
-        optional_dependencies
-            .insert((*name).to_string(), serde_json::Value::String((*version).to_string()));
+        optional_dependencies.insert(
+            (*name).to_string(),
+            serde_json::Value::String((*version).to_string()),
+        );
     }
     let mut snapshots = serde_json::Map::new();
     for name in ["pnpm", "@pnpm/exe"] {
@@ -414,9 +412,8 @@ async fn a_fallback_signature_still_fails_over_a_tampered_integrity() {
     )
     .await;
 
-    let failure = find_failure_with_fallback(&component, &fallback.url())
-        .await
-        .expect("failure expected");
+    let failure =
+        find_failure_with_fallback(&component, &fallback.url()).await.expect("failure expected");
     assert!(matches!(failure.category, FailureCategory::Invalid));
 }
 
@@ -479,9 +476,8 @@ async fn reports_absent_when_a_reachable_fallback_has_no_signed_release() {
         .create_async()
         .await;
 
-    let failure = find_failure_with_fallback(&component, &fallback.url())
-        .await
-        .expect("failure expected");
+    let failure =
+        find_failure_with_fallback(&component, &fallback.url()).await.expect("failure expected");
     assert!(matches!(failure.category, FailureCategory::Absent));
 }
 

@@ -53,10 +53,11 @@ pub(super) fn sort_outdated(outdated: &mut [OutdatedPackage], sort_by: Option<So
 
 pub(super) fn sort_workspace_outdated(outdated: &mut [OutdatedInWorkspace]) {
     outdated.sort_by(|left, right| {
-        compare_outdated(&left.package, &right.package, None).then_with(|| {
-            dependency_group_priority(left.package.belongs_to)
-                .cmp(&dependency_group_priority(right.package.belongs_to))
-        })
+        compare_outdated(&left.package, &right.package, None)
+            .then_with(|| {
+                dependency_group_priority(left.package.belongs_to)
+                    .cmp(&dependency_group_priority(right.package.belongs_to))
+            })
     });
 }
 
@@ -75,17 +76,12 @@ fn compare_outdated(
     sort_by: Option<SortBy>,
 ) -> std::cmp::Ordering {
     if sort_by == Some(SortBy::Name) {
-        return left
-            .package_name
-            .cmp(&right.package_name);
+        return left.package_name.cmp(&right.package_name);
     }
     let by_change = change_priority(classify(&left.current, &left.target))
         .cmp(&change_priority(classify(&right.current, &right.target)));
     by_change
-        .then_with(|| {
-            left.package_name
-                .cmp(&right.package_name)
-        })
+        .then_with(|| left.package_name.cmp(&right.package_name))
         .then_with(|| {
             left.current
                 .to_string()
@@ -277,8 +273,7 @@ pub(super) fn render_recursive_json(outdated: &[OutdatedInWorkspace], long: bool
 }
 
 pub(super) fn render_dependents(entry: &OutdatedInWorkspace) -> String {
-    let mut names: Vec<String> = entry
-        .dependents
+    let mut names: Vec<String> = entry.dependents
         .iter()
         .map(|dependent| sanitize_inline(&dependent.name).into_owned())
         .collect();
@@ -372,13 +367,11 @@ fn render_details(pkg: &OutdatedPackage) -> String {
 // captured output), matching chalk's auto-disable so machine-readable
 // output stays free of escape codes.
 pub(super) fn bright_blue(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.bright_blue())
-        .to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.bright_blue()).to_string()
 }
 
 pub(super) fn red(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.red())
-        .to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.red()).to_string()
 }
 
 fn red_bold(text: &str) -> String {
@@ -388,31 +381,25 @@ fn red_bold(text: &str) -> String {
 }
 
 pub(super) fn green(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.green())
-        .to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.green()).to_string()
 }
 
 fn yellow(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.yellow())
-        .to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.yellow()).to_string()
 }
 
 fn grey(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.bright_black())
-        .to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.bright_black()).to_string()
 }
 
 fn bold(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.bold())
-        .to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.bold()).to_string()
 }
 
 pub(super) fn dimmed(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.dimmed())
-        .to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.dimmed()).to_string()
 }
 
 fn underline(text: &str) -> String {
-    text.if_supports_color(Stream::Stdout, |t| t.underline())
-        .to_string()
+    text.if_supports_color(Stream::Stdout, |t| t.underline()).to_string()
 }

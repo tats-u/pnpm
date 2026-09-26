@@ -163,8 +163,7 @@ pub(crate) fn project_names(
     projects
         .iter()
         .filter_map(|project| {
-            let name = project
-                .manifest
+            let name = project.manifest
                 .value()
                 .get("name")?
                 .as_str()?;
@@ -207,9 +206,7 @@ impl DedicatedProjectRuns<'_> {
                 let result = match init_dedicated_project_state(
                     config,
                     &project_dir,
-                    names
-                        .get(&project_dir)
-                        .map(String::as_str),
+                    names.get(&project_dir).map(String::as_str),
                     require_lockfile,
                     http_client,
                 ) {
@@ -223,9 +220,7 @@ impl DedicatedProjectRuns<'_> {
         schedule_graph_async(
             &self.projects.dependencies,
             &ScheduleGraphAsyncOptions::new(
-                usize::try_from(self.config.workspace_concurrency)
-                    .unwrap_or(usize::MAX)
-                    .max(1),
+                usize::try_from(self.config.workspace_concurrency).unwrap_or(usize::MAX).max(1),
                 self.config.bail,
                 &run_node,
                 &on_node_skipped,
@@ -283,8 +278,7 @@ fn project_dependencies(
             &selection.prod_only_selected,
         );
     }
-    let mut dirs = selection
-        .selected
+    let mut dirs = selection.selected
         .keys()
         .cloned()
         .collect::<Vec<_>>();
@@ -357,8 +351,9 @@ fn precomputed_workspace_cycles(
     cfg: &Config,
     precompute_workspace_cycles: bool,
 ) -> Option<Vec<Vec<PathBuf>>> {
-    (precompute_workspace_cycles && selection.all.is_none() && !cfg.ignore_workspace_cycles)
-        .then(|| pnpm_package_manager::workspace_cycles(&selection.selected).unwrap_or_default())
+    (precompute_workspace_cycles && selection.all.is_none() && !cfg.ignore_workspace_cycles).then(
+        || pnpm_package_manager::workspace_cycles(&selection.selected).unwrap_or_default(),
+    )
 }
 
 mod install;

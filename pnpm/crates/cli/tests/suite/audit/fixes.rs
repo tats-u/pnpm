@@ -7,7 +7,9 @@ use assert_cmd::assert::OutputAssertExt;
 
 #[test]
 fn audit_fix_override_writes_overrides_to_workspace_manifest() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -37,7 +39,9 @@ fn audit_fix_override_writes_overrides_to_workspace_manifest() {
 
 #[test]
 fn audit_fix_override_writes_overrides_in_the_configured_save_style() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -64,7 +68,9 @@ fn audit_fix_override_writes_overrides_in_the_configured_save_style() {
 
 #[test]
 fn audit_fix_override_writes_minimum_release_age_excludes_when_configured() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -96,7 +102,9 @@ fn audit_fix_override_writes_minimum_release_age_excludes_when_configured() {
 
 #[test]
 fn audit_fix_override_skips_age_exclude_when_patched_version_is_old() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -145,7 +153,9 @@ fn audit_fix_override_skips_age_exclude_when_patched_version_is_old() {
 
 #[test]
 fn audit_fix_override_makes_no_changes_when_patched_version_is_unpublished() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -187,7 +197,9 @@ fn audit_fix_override_makes_no_changes_when_patched_version_is_unpublished() {
 
 #[test]
 fn audit_fix_override_writes_age_exclude_when_patched_version_is_within_the_window() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     // Two advisories on one package: the packument is fetched once and shared
     // between validation and the age-gate check.
@@ -256,7 +268,9 @@ fn audit_fix_override_writes_age_exclude_when_patched_version_is_within_the_wind
 
 #[test]
 fn audit_fix_override_with_no_fixable_vulnerabilities_makes_no_changes() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     // `>=0.0.0` has no inferable patched range, so no override is possible.
     let mock = audit_mock(
@@ -279,7 +293,9 @@ fn audit_fix_override_with_no_fixable_vulnerabilities_makes_no_changes() {
 
 #[test]
 fn audit_fix_ignore_prune_removes_unused_ignored_ghsas() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     // GHSA-test-1111-2222 exists in the report; GHSA-test-9999-9999 doesn't.
     let mock = audit_mock(
@@ -316,7 +332,9 @@ fn audit_fix_ignore_prune_removes_unused_ignored_ghsas() {
 
 #[test]
 fn audit_fix_ignore_prune_disabled_by_default_keeps_all_ignored_ghsas() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -348,7 +366,9 @@ fn audit_fix_ignore_prune_disabled_by_default_keeps_all_ignored_ghsas() {
 
 #[test]
 fn audit_fix_ignore_prune_normalizes_ghsa_casing() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -377,7 +397,9 @@ fn audit_fix_ignore_prune_normalizes_ghsa_casing() {
 
 #[test]
 fn audit_fix_ignore_prune_persists_canonical_form_even_when_nothing_is_removed() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -407,7 +429,9 @@ fn audit_fix_ignore_prune_persists_canonical_form_even_when_nothing_is_removed()
 
 #[test]
 fn audit_fix_ignore_prune_removes_a_comment_attached_to_the_removed_entry() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -440,7 +464,9 @@ fn audit_fix_ignore_prune_removes_a_comment_attached_to_the_removed_entry() {
 
 #[test]
 fn audit_fix_ignore_prune_removes_all_when_none_are_relevant() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -471,7 +497,9 @@ fn audit_fix_ignore_prune_removes_all_when_none_are_relevant() {
 
 #[test]
 fn audit_fix_ignore_prune_edits_an_inline_audit_config_in_place() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -501,7 +529,9 @@ fn audit_fix_ignore_prune_edits_an_inline_audit_config_in_place() {
 
 #[test]
 fn audit_fix_ignore_prune_updates_the_canonical_audit_ignore_list() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -536,7 +566,9 @@ fn audit_fix_ignore_prune_updates_the_canonical_audit_ignore_list() {
 
 #[test]
 fn audit_fix_ignore_prune_sanitizes_the_removed_ids_in_output() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -569,11 +601,11 @@ fn audit_fix_ignore_prune_sanitizes_the_removed_ids_in_output() {
 
 #[test]
 fn audit_fix_rejects_invalid_method() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
-    let mock = audit_mock(&mut registry, "{}")
-        .expect(0)
-        .create();
+    let mock = audit_mock(&mut registry, "{}").expect(0).create();
     write_audit_workspace(&workspace, &registry.url(), "");
 
     let output = pacquet
@@ -590,7 +622,9 @@ fn audit_fix_rejects_invalid_method() {
 
 #[test]
 fn audit_ignore_writes_ghsa_to_audit_config() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let mock = audit_mock(
         &mut registry,
@@ -619,7 +653,9 @@ fn audit_ignore_writes_ghsa_to_audit_config() {
 
 #[test]
 fn audit_ignore_unfixable_ignores_advisories_without_a_fix() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     // `>=0.0.0` is unfixable (no inferable patched range).
     let mock = audit_mock(
@@ -670,9 +706,7 @@ fn audit_fix_update_moves_to_a_non_vulnerable_version() {
 
     // Install against the pnpr fixture registry (the default registry the
     // harness wrote). The highest in-range version, 2.0.1, is installed.
-    pacquet_cmd(&workspace, ["install"])
-        .assert()
-        .success();
+    pacquet_cmd(&workspace, ["install"]).assert().success();
     assert!(
         workspace
             .join("node_modules/.pnpm")
@@ -754,9 +788,7 @@ fn audit_fix_update_keeps_going_when_no_version_in_range_is_safe() {
         ),
     )
     .expect("write package.json");
-    pacquet_cmd(&workspace, ["install"])
-        .assert()
-        .success();
+    pacquet_cmd(&workspace, ["install"]).assert().success();
     assert!(
         workspace
             .join("node_modules/.pnpm")
@@ -839,9 +871,7 @@ fn audit_fix_update_skips_age_exclude_when_patched_version_is_unpublished() {
         ),
     )
     .expect("write package.json");
-    pacquet_cmd(&workspace, ["install"])
-        .assert()
-        .success();
+    pacquet_cmd(&workspace, ["install"]).assert().success();
     set_minimum_release_age(&workspace, 1440);
 
     let mut audit_registry = mockito::Server::new();

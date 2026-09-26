@@ -27,9 +27,7 @@ pub fn with_retry_observer<Output>(
 ) -> Output {
     let path = path.to_path_buf();
     {
-        let mut observers = OBSERVERS
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
+        let mut observers = OBSERVERS.lock().unwrap_or_else(PoisonError::into_inner);
         match observers.entry(path.clone()) {
             Entry::Vacant(entry) => {
                 entry.insert(Arc::new(Mutex::new(Box::new(observer))));
@@ -63,8 +61,6 @@ pub(crate) fn notify_attempt(path: &Path, result: &io::Result<()>) {
         .get(path)
         .map(Arc::clone);
     if let Some(observer) = observer {
-        observer
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)(result);
+        observer.lock().unwrap_or_else(PoisonError::into_inner)(result);
     }
 }

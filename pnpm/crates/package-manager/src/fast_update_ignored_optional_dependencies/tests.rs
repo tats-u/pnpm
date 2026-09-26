@@ -73,72 +73,21 @@ snapshots:
     )
     .expect("additions should update");
 
+    assert!(updated.importers["."].optional_dependencies.is_none());
+    let parent_key = "parent@1.0.0".parse().expect("parent key");
     assert!(
-        updated.importers["."]
-            .optional_dependencies
-            .is_none()
-    );
-    let parent_key = "parent@1.0.0"
-        .parse()
-        .expect("parent key");
-    assert!(
-        updated
-            .snapshots
-            .as_ref()
-            .expect("snapshots")[&parent_key]
+        updated.snapshots.as_ref().expect("snapshots")[&parent_key]
             .optional_dependencies
             .is_none(),
     );
-    let snapshots = updated
-        .snapshots
-        .as_ref()
-        .expect("snapshots");
-    assert!(
-        snapshots.contains_key(
-            &"shared@1.0.0"
-                .parse()
-                .expect("shared key")
-        )
-    );
-    assert!(
-        !snapshots.contains_key(
-            &"root-only@1.0.0"
-                .parse()
-                .expect("root key")
-        )
-    );
-    assert!(
-        !snapshots.contains_key(
-            &"unique@1.0.0"
-                .parse()
-                .expect("unique key")
-        )
-    );
-    let packages = updated
-        .packages
-        .as_ref()
-        .expect("packages");
-    assert!(
-        packages.contains_key(
-            &"shared@1.0.0"
-                .parse()
-                .expect("shared key")
-        )
-    );
-    assert!(
-        !packages.contains_key(
-            &"root-only@1.0.0"
-                .parse()
-                .expect("root key")
-        )
-    );
-    assert!(
-        !packages.contains_key(
-            &"unique@1.0.0"
-                .parse()
-                .expect("unique key")
-        )
-    );
+    let snapshots = updated.snapshots.as_ref().expect("snapshots");
+    assert!(snapshots.contains_key(&"shared@1.0.0".parse().expect("shared key")));
+    assert!(!snapshots.contains_key(&"root-only@1.0.0".parse().expect("root key")));
+    assert!(!snapshots.contains_key(&"unique@1.0.0".parse().expect("unique key")));
+    let packages = updated.packages.as_ref().expect("packages");
+    assert!(packages.contains_key(&"shared@1.0.0".parse().expect("shared key")));
+    assert!(!packages.contains_key(&"root-only@1.0.0".parse().expect("root key")));
+    assert!(!packages.contains_key(&"unique@1.0.0".parse().expect("unique key")));
 }
 
 #[test]
@@ -209,9 +158,7 @@ importers: {}
     let updated = try_fast_update_ignored_optional_dependencies(&lockfile, &["unused".to_string()])
         .expect("setting-only addition should update");
     assert_eq!(
-        updated
-            .ignored_optional_dependencies
-            .as_deref(),
+        updated.ignored_optional_dependencies.as_deref(),
         Some(["unused".to_string()].as_slice()),
     );
 }

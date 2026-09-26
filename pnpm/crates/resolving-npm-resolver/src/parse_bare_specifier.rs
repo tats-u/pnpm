@@ -129,10 +129,7 @@ pub fn parse_jsr_specifier_to_registry_package_spec(
         return Ok(None);
     };
 
-    let selector_input = spec
-        .version_selector
-        .as_deref()
-        .unwrap_or(default_tag);
+    let selector_input = spec.version_selector.as_deref().unwrap_or(default_tag);
     let Some(selector) = get_version_selector_type(selector_input) else {
         return Ok(None);
     };
@@ -228,9 +225,7 @@ pub fn parse_named_registry_specifier_to_registry_package_spec(
         });
     }
 
-    let selector_input = version_selector
-        .as_deref()
-        .unwrap_or(default_tag);
+    let selector_input = version_selector.as_deref().unwrap_or(default_tag);
     let Some(selector) = get_version_selector_type(selector_input) else {
         return Ok(None);
     };
@@ -260,9 +255,7 @@ fn split_named_registry_body(
     }
     // `<alias>:@<owner>/<name>[@<version_selector>]` — scoped package.
     if body.starts_with('@') {
-        let last_at = body
-            .rfind('@')
-            .expect("body starts with '@'");
+        let last_at = body.rfind('@').expect("body starts with '@'");
         if last_at == 0 {
             return Some((body.to_string(), None));
         }
@@ -332,9 +325,7 @@ fn parse_revision_selector(
     let digits = build.strip_prefix('r')?;
     if digits.is_empty()
         || digits.contains('.')
-        || !digits
-            .bytes()
-            .all(|byte| byte.is_ascii_digit())
+        || !digits.bytes().all(|byte| byte.is_ascii_digit())
     {
         return None;
     }
@@ -355,13 +346,15 @@ fn parse_revision_selector(
 /// `/`, `:`, spaces) bumps the candidate out of the tag bucket so
 /// protocol-prefixed specifiers fall through to the next resolver.
 fn is_valid_dist_tag(selector: &str) -> bool {
-    selector.bytes().all(|byte| {
-        matches!(byte,
+    selector
+        .bytes()
+        .all(|byte| {
+            matches!(byte,
             b'A'..=b'Z'
             | b'a'..=b'z'
             | b'0'..=b'9'
             | b'-' | b'_' | b'.' | b'!' | b'~' | b'*' | b'\'' | b'(' | b')')
-    })
+        })
 }
 
 struct NpmTarballUrl {

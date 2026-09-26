@@ -6,7 +6,9 @@ const SIGNATURE_KEYID: &str = "SHA256:test";
 
 #[test]
 fn audit_signatures_reports_verified_packages() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let key = signing_key();
     let integrity = "sha512-abc";
@@ -36,7 +38,9 @@ fn audit_signatures_reports_verified_packages() {
 
 #[test]
 fn audit_signatures_json_reports_counts() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let key = signing_key();
     let integrity = "sha512-abc";
@@ -83,7 +87,9 @@ fn audit_signatures_json_reports_counts() {
 
 #[test]
 fn audit_signatures_flags_missing_signature() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let key = signing_key();
     let keys_mock = keys_mock(&mut registry, &public_key_b64(&key)).create();
@@ -111,7 +117,9 @@ fn audit_signatures_flags_missing_signature() {
 
 #[test]
 fn audit_signatures_flags_invalid_signature() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let key = signing_key();
     // Sign a different integrity than the packument advertises: the signature
@@ -147,7 +155,9 @@ fn audit_signatures_flags_invalid_signature() {
 
 #[test]
 fn audit_signatures_skips_registry_without_signing_keys() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let keys_mock = registry
         .mock("GET", "/-/npm/v1/keys")
@@ -174,7 +184,9 @@ fn audit_signatures_skips_registry_without_signing_keys() {
 
 #[test]
 fn audit_signatures_fails_when_keys_endpoint_errors() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     let mut registry = mockito::Server::new();
     let keys_mock = registry
         .mock("GET", "/-/npm/v1/keys")
@@ -202,7 +214,9 @@ fn audit_signatures_fails_when_keys_endpoint_errors() {
 
 #[test]
 fn audit_signatures_redacts_registry_credentials_on_network_error() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     // A registry with embedded credentials pointed at a closed port: the keys
     // fetch fails at the transport layer, and the resulting error must not leak
     // the `user:pass@` userinfo into stderr.
@@ -223,7 +237,9 @@ fn audit_signatures_redacts_registry_credentials_on_network_error() {
 
 #[test]
 fn audit_signatures_errors_when_no_packages() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     fs::write(workspace.join(".npmrc"), "registry=https://registry.npmjs.org/\n")
         .expect("write .npmrc");
     fs::write(workspace.join("pnpm-workspace.yaml"), "fetchRetries: 0\n")
@@ -253,7 +269,9 @@ importers:
 
 #[test]
 fn audit_signatures_rejects_extra_subcommand_argument() {
-    let CommandTempCwd { mut pacquet, workspace, root: _root, .. } = CommandTempCwd::init();
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
     write_minimal_manifest(&workspace);
 
     let output = pacquet

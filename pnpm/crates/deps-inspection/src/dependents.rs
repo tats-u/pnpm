@@ -238,8 +238,7 @@ pub fn build_dependents_tree(opts: &BuildDependentsOptions<'_>) -> Vec<Dependent
         let TreeNodeId::Package(dep_path) = node_id else {
             continue;
         };
-        if !lockfile
-            .snapshots
+        if !lockfile.snapshots
             .as_ref()
             .is_some_and(|snapshots| snapshots.contains_key(dep_path))
         {
@@ -258,12 +257,7 @@ pub fn build_dependents_tree(opts: &BuildDependentsOptions<'_>) -> Vec<Dependent
             name,
             display_name: None,
             version,
-            path: Some(
-                resolved
-                    .path
-                    .to_string_lossy()
-                    .into_owned(),
-            ),
+            path: Some(resolved.path.to_string_lossy().into_owned()),
             peers_suffix_hash: peers_suffix_hash(dep_path),
             dependents: walk_dependents_of(opts, &reverse_map, &resolved_nodes, node_id),
             search_message: matched.message().map(str::to_string),
@@ -305,11 +299,7 @@ fn sort_trees(trees: &mut [DependentsTree]) {
                 a.peers_suffix_hash
                     .as_deref()
                     .unwrap_or("")
-                    .cmp(
-                        b.peers_suffix_hash
-                            .as_deref()
-                            .unwrap_or(""),
-                    )
+                    .cmp(b.peers_suffix_hash.as_deref().unwrap_or(""))
             })
     });
 }
@@ -375,10 +365,7 @@ fn circular_node(ctx: &WalkCtx<'_>, edge: &ReverseEdge) -> Option<DependentNode>
         TreeNodeId::Importer(importer_id) => {
             let info = ctx.importer_info.get(importer_id)?;
             let mut node = DependentNode::leaf(info.name.clone(), info.version.clone());
-            if let Some(importer) = ctx
-                .lockfile
-                .importers
-                .get(importer_id.as_str())
+            if let Some(importer) = ctx.lockfile.importers.get(importer_id.as_str())
                 && let Some((_, specifier)) = importer_dependency_info(&edge.alias, importer)
             {
                 node.requires = Some(specifier);
@@ -392,13 +379,10 @@ fn circular_node(ctx: &WalkCtx<'_>, edge: &ReverseEdge) -> Option<DependentNode>
             }
             let (name, version) = name_ver_from_dep_path(ctx.lockfile, dep_path);
             let mut node = DependentNode::leaf(name, version);
-            node.requires = ctx
-                .manifest_reader
-                .dependency_specifier(&edge.parent, &edge.alias, edge.is_peer);
+            node.requires =
+                ctx.manifest_reader.dependency_specifier(&edge.parent, &edge.alias, edge.is_peer);
             node.circular = true;
-            node.manifest = ctx
-                .manifest_reader
-                .project(&edge.parent);
+            node.manifest = ctx.manifest_reader.project(&edge.parent);
             Some(node)
         }
     }
@@ -416,13 +400,10 @@ fn expand_parent(ctx: &mut WalkCtx<'_>, edge: &ReverseEdge, depth: usize) -> Opt
     }
     let (name, version) = name_ver_from_dep_path(ctx.lockfile, dep_path);
     let mut node = DependentNode::leaf(name, version);
-    node.requires = ctx
-        .manifest_reader
-        .dependency_specifier(&edge.parent, &edge.alias, edge.is_peer);
+    node.requires =
+        ctx.manifest_reader.dependency_specifier(&edge.parent, &edge.alias, edge.is_peer);
     node.peers_suffix_hash = peers_suffix_hash(dep_path);
-    node.manifest = ctx
-        .manifest_reader
-        .project(&edge.parent);
+    node.manifest = ctx.manifest_reader.project(&edge.parent);
 
     if ctx.expanded.contains(&edge.parent) {
         // Already expanded elsewhere in the tree — show as a leaf to keep
@@ -458,14 +439,11 @@ fn importer_node(ctx: &WalkCtx<'_>, importer_id: &str, edge: &ReverseEdge) -> De
 
 fn resolve_parent_name(ctx: &WalkCtx<'_>, parent: &TreeNodeId) -> String {
     match parent {
-        TreeNodeId::Importer(importer_id) => ctx
-            .importer_info
+        TreeNodeId::Importer(importer_id) => ctx.importer_info
             .get(importer_id)
             .map_or_else(|| importer_id.clone(), |info| info.name.clone()),
         TreeNodeId::Package(dep_path) => {
-            if ctx
-                .lockfile
-                .snapshots
+            if ctx.lockfile.snapshots
                 .as_ref()
                 .is_some_and(|snapshots| snapshots.contains_key(dep_path))
             {
@@ -481,7 +459,9 @@ fn importer_dependency_info(alias: &str, importer: &ProjectSnapshot) -> Option<(
     let find = |group: Option<&pnpm_lockfile::ResolvedDependencyMap>| {
         group.and_then(|deps| {
             deps.iter()
-                .find_map(|(key, spec)| (key.to_string() == alias).then(|| spec.specifier.clone()))
+                .find_map(|(key, spec)| {
+                    (key.to_string() == alias).then(|| spec.specifier.clone())
+                })
         })
     };
     if let Some(specifier) = find(importer.dev_dependencies.as_ref()) {

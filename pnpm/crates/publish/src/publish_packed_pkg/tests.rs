@@ -37,9 +37,7 @@ fn body() -> bytes::Bytes {
 }
 
 fn registry() -> crate::registry_config_keys::NormalizedRegistryUrl {
-    parse_supported_registry_url("https://registry.example/")
-        .unwrap()
-        .normalized_url
+    parse_supported_registry_url("https://registry.example/").unwrap().normalized_url
 }
 
 fn hashes() -> DistHashes<'static> {
@@ -78,9 +76,7 @@ fn builds_document_with_dist_and_attachment() {
         version["dist"]["tarball"],
         "http://registry.example/@scope/pkg/-/@scope/pkg-1.0.0.tgz",
     );
-    let attachments = document["_attachments"]
-        .as_object()
-        .unwrap();
+    let attachments = document["_attachments"].as_object().unwrap();
     assert!(attachments.contains_key("@scope/pkg-1.0.0.tgz"));
     assert_eq!(document["access"], Value::Null);
 }
@@ -101,11 +97,7 @@ fn manifest_level_tag_overrides_the_default() {
     let document =
         build_publish_document(&manifest, b"x", &registry(), None, "latest", &hashes()).unwrap();
     assert_eq!(document["dist-tags"]["next"], "1.0.0");
-    assert!(
-        document["dist-tags"]
-            .get("latest")
-            .is_none()
-    );
+    assert!(document["dist-tags"].get("latest").is_none());
 }
 
 #[test]
@@ -136,9 +128,7 @@ fn parse_otp_challenge_extracts_auth_and_done_urls() {
     let challenge = parse_otp_challenge(
         r#"{"authUrl":"https://r/auth/abc","doneUrl":"https://r/auth/abc/done"}"#,
     );
-    let body = challenge
-        .body
-        .expect("web-auth challenge carries a body");
+    let body = challenge.body.expect("web-auth challenge carries a body");
     assert_eq!(body.auth_url.as_deref(), Some("https://r/auth/abc"));
     assert_eq!(body.done_url.as_deref(), Some("https://r/auth/abc/done"));
 }
@@ -148,9 +138,7 @@ fn parse_otp_challenge_yields_no_urls_for_a_plain_otp_body() {
     // A classic (non-web-auth) OTP challenge has no JSON `authUrl`/`doneUrl`,
     // so both fall back to `None` rather than erroring.
     let challenge = parse_otp_challenge("you must provide a one-time pass");
-    let body = challenge
-        .body
-        .expect("body is always present");
+    let body = challenge.body.expect("body is always present");
     assert_eq!(body.auth_url, None);
     assert_eq!(body.done_url, None);
 }
@@ -158,9 +146,7 @@ fn parse_otp_challenge_yields_no_urls_for_a_plain_otp_body() {
 #[test]
 fn parse_otp_challenge_reads_each_url_independently() {
     let challenge = parse_otp_challenge(r#"{"authUrl":"https://r/auth/abc"}"#);
-    let body = challenge
-        .body
-        .expect("body is always present");
+    let body = challenge.body.expect("body is always present");
     assert_eq!(body.auth_url.as_deref(), Some("https://r/auth/abc"));
     assert_eq!(body.done_url, None);
 }
@@ -248,9 +234,7 @@ async fn put_publish_maps_a_one_time_pass_body_to_a_web_auth_challenge() {
     let PublishHttpError::Otp { challenge } = err else {
         panic!("expected an OTP challenge, got {err:?}");
     };
-    let challenge_body = challenge
-        .body
-        .expect("web-auth challenge carries a body");
+    let challenge_body = challenge.body.expect("web-auth challenge carries a body");
     assert_eq!(challenge_body.auth_url.as_deref(), Some("https://r/auth/abc"));
     assert_eq!(challenge_body.done_url.as_deref(), Some("https://r/auth/abc/done"));
 }
@@ -327,8 +311,7 @@ async fn put_publish_omits_auth_and_otp_headers_when_absent() {
     let client = ThrottledClient::default();
     let url = format!("{}/pkg", server.url());
 
-    put_publish(&client, &url, None, "publish", body(), None, false)
-        .await
+    put_publish(&client, &url, None, "publish", body(), None, false).await
         .expect("the PUT completes");
     mock.assert_async().await;
 }
@@ -637,9 +620,7 @@ fn web_auth_fetch_options_maps_the_retry_and_timeout_knobs() {
     };
     let options = web_auth_fetch_options(&http);
     assert_eq!(options.timeout, Some(30_000));
-    let retry = options
-        .retry
-        .expect("the publish flow always sets retry options");
+    let retry = options.retry.expect("the publish flow always sets retry options");
     assert_eq!(retry.retries, Some(5));
     assert_eq!(retry.factor, Some(2.0));
     assert_eq!(retry.max_timeout, Some(60_000));
@@ -775,15 +756,9 @@ impl EnvVar for ProvenanceSys {
 }
 impl OidcFetch for ProvenanceSys {
     async fn fetch(request: OidcRequest<'_>) -> Result<OidcResponse, OidcFetchError> {
-        let body = if request
-            .url
-            .contains("audience=sigstore")
-        {
+        let body = if request.url.contains("audience=sigstore") {
             r#"{"value":"sigstore-token"}"#
-        } else if request
-            .url
-            .contains("/oidc/token/exchange/")
-        {
+        } else if request.url.contains("/oidc/token/exchange/") {
             r#"{"token":"registry-token"}"#
         } else {
             unreachable!("unexpected OIDC request: {}", request.url)

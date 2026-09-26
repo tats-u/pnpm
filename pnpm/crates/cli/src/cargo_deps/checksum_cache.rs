@@ -54,8 +54,7 @@ impl ChecksumCache<'_> {
             }
         };
         let mut verified = check_pkg_files_integrity(self.store_dir, entry, self.verified_files);
-        verified
-            .passed
+        verified.passed
             .then(|| verified.files_map.remove(CHECKSUM_FILE))
             .flatten()
     }

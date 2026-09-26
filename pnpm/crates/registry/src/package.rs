@@ -110,11 +110,13 @@ impl Package {
     /// entry is an empty string counts as absent.
     pub fn drop_incomplete_publish_times(&mut self) {
         let Some(time) = self.time.as_ref() else { return };
-        let complete = self.versions.keys().all(|version| {
-            time.get(version)
-                .and_then(serde_json::Value::as_str)
-                .is_some_and(|at| !at.is_empty())
-        });
+        let complete = self.versions
+            .keys()
+            .all(|version| {
+                time.get(version)
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|at| !at.is_empty())
+            });
         if !complete {
             self.time = None;
         }
@@ -125,9 +127,7 @@ impl Package {
     /// path) and any user-supplied tag (e.g. `next`, `beta`) through
     /// this accessor.
     pub fn dist_tag(&self, tag: &str) -> Option<&str> {
-        self.dist_tags
-            .get(tag)
-            .map(String::as_str)
+        self.dist_tags.get(tag).map(String::as_str)
     }
 
     /// Iterator over all `dist-tags` entries. Used by the picker's
@@ -205,9 +205,7 @@ impl DerivedPackuments {
     /// A poisoned memo is still readable: every entry is a fully-built
     /// packument, and a panic mid-`push` can't leave a half-written one.
     fn lock(&self) -> MutexGuard<'_, DerivedMemo> {
-        self.0
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
+        self.0.lock().unwrap_or_else(PoisonError::into_inner)
     }
 }
 
@@ -231,10 +229,12 @@ impl Package {
         // socket-bound stays effective under concurrent fan-out. See the
         // doc comment on `ThrottledClientGuard`.
         let guard = http_client.acquire_for_url(&url).await;
-        let mut request = guard.get(&url).header(
-            "accept",
-            "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
-        );
+        let mut request = guard
+            .get(&url)
+            .header(
+                "accept",
+                "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
+            );
         if let Some(value) = auth_headers.for_url_with_package(&url, Some(name)) {
             request = request.header("authorization", value);
         }
@@ -257,8 +257,7 @@ impl Package {
         let range: node_semver::Range = version_range.parse().ok()?;
         // Match on the version *strings* so only winning manifests
         // hydrate from their raw fragments.
-        let mut satisfying = self
-            .versions
+        let mut satisfying = self.versions
             .keys()
             .filter_map(|key| {
                 key.parse::<node_semver::Version>()
@@ -277,8 +276,7 @@ impl Package {
     /// data must not be able to panic the process.
     #[must_use]
     pub fn latest(&self) -> Option<Arc<PackageVersion>> {
-        self.versions
-            .get(self.dist_tags.get("latest")?)
+        self.versions.get(self.dist_tags.get("latest")?)
     }
 
     /// The version behind `dist-tags.latest` and why its manifest

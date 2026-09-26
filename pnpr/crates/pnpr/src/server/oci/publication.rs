@@ -82,16 +82,11 @@ impl OciPublication {
     }
 
     pub(super) fn subject(&self) -> Option<Digest> {
-        self.manifest
-            .referrer_metadata()
-            .subject
+        self.manifest.referrer_metadata().subject
     }
 
     pub(in crate::server) async fn stage(self, state: &AppState) -> Result<StagedPublish, Refusal> {
-        let storage = state
-            .inner
-            .storage
-            .for_hosted(&self.org);
+        let storage = state.inner.storage.for_hosted(&self.org);
         let snapshot = storage
             .read_hosted_document(&self.key)
             .await?
@@ -105,8 +100,7 @@ impl OciPublication {
             }
             .into());
         }
-        self.check_referenced_blobs(&storage)
-            .await?;
+        self.check_referenced_blobs(&storage).await?;
         let addition = self.document_addition(snapshot.generation);
         let children: Vec<Digest> = if pnpr_oci::media_type::is_index(self.manifest.media_type()) {
             self.manifest
@@ -166,9 +160,8 @@ impl OciPublication {
                     ),
                 ));
             }
-            let stored = storage
-                .open_hosted_blob(&self.key, &descriptor.digest.blob_filename())
-                .await?;
+            let stored =
+                storage.open_hosted_blob(&self.key, &descriptor.digest.blob_filename()).await?;
             match stored {
                 Some((_, Some(size))) if size != descriptor.size => {
                     return Err(Refusal::new(

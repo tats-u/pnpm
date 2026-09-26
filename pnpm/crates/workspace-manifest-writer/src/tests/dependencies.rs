@@ -108,9 +108,7 @@ fn patched_dependency_missing_decoded_mapping_keeps_text_before_inserting_new_bl
 #[test]
 fn set_patched_dependencies_reports_read_errors() {
     let dir = TempDir::new().expect("temp dir");
-    let path = dir
-        .path()
-        .join(WORKSPACE_MANIFEST_FILENAME);
+    let path = dir.path().join(WORKSPACE_MANIFEST_FILENAME);
     fs::create_dir(&path).expect("create manifest dir");
 
     let err = crate::set_patched_dependencies(

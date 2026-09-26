@@ -155,10 +155,7 @@ fn baseline_family(token: &str) -> Option<LibcFamily> {
 }
 
 fn is_number(value: &str) -> bool {
-    !value.is_empty()
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_digit())
+    !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 /// How one architecture is spelled, since the three worlds a platform is
@@ -324,9 +321,7 @@ impl FromStr for SupportedPlatform {
 }
 
 fn parse_named(entry: &str) -> Result<NamedPlatform, UnknownPlatformError> {
-    let (head, rest) = entry
-        .split_once('-')
-        .ok_or_else(|| unknown(entry))?;
+    let (head, rest) = entry.split_once('-').ok_or_else(|| unknown(entry))?;
     match Os::parse(head) {
         Some(os) => parse_platform_name(entry, os, rest),
         None => parse_target_triple(entry, head, rest),
@@ -370,12 +365,8 @@ fn parse_target_triple(
         _ => (
             Os::Linux,
             Some(
-                Libc::parse(
-                    system
-                        .strip_prefix("unknown-linux-")
-                        .unwrap_or(system),
-                )
-                .ok_or_else(|| unknown(entry))?,
+                Libc::parse(system.strip_prefix("unknown-linux-").unwrap_or(system))
+                    .ok_or_else(|| unknown(entry))?,
             ),
         ),
     };

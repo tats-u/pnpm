@@ -101,9 +101,7 @@ mod macos {
             ("lib/index.js".to_string(), lib_blob.clone()),
         ]);
 
-        let key: PackageKey = "foo@1.0.0"
-            .parse()
-            .expect("valid snapshot key");
+        let key: PackageKey = "foo@1.0.0".parse().expect("valid snapshot key");
         let links_root = dir.path().join("links");
         let snapshots = one_snapshot(&key);
         let engine_slot = std::sync::Arc::new(std::sync::OnceLock::new());
@@ -121,9 +119,7 @@ mod macos {
         );
         let logged = AtomicU8::new(0);
 
-        let first_target = dir
-            .path()
-            .join("first/node_modules/foo");
+        let first_target = dir.path().join("first/node_modules/foo");
         fs::create_dir_all(first_target.parent().unwrap()).expect("create slot node_modules");
         assert!(
             cache.try_import::<NullReporter>(
@@ -157,16 +153,12 @@ mod macos {
         .hashed_slot_dir(&key)
         .expect("hashed slot for the one snapshot");
         assert!(
-            expected_slot
-                .join("node_modules/foo/package.json")
-                .is_file(),
+            expected_slot.join("node_modules/foo/package.json").is_file(),
             "the canonical slot must be the one the delivered engine name selects: {expected_slot:?}",
         );
 
         fs::remove_file(&lib_blob).expect("remove CAS blob");
-        let second_target = dir
-            .path()
-            .join("second/node_modules/foo");
+        let second_target = dir.path().join("second/node_modules/foo");
         fs::create_dir_all(second_target.parent().unwrap()).expect("create slot node_modules");
         assert!(
             cache.try_import::<NullReporter>(
@@ -190,9 +182,7 @@ mod macos {
     #[test]
     fn try_import_declines_an_occupied_target() {
         let dir = tempdir().expect("tempdir");
-        let key: PackageKey = "foo@1.0.0"
-            .parse()
-            .expect("valid snapshot key");
+        let key: PackageKey = "foo@1.0.0".parse().expect("valid snapshot key");
         let snapshots = one_snapshot(&key);
         let cache = cache_for_snapshots(
             &dir.path().join("links"),
@@ -216,12 +206,8 @@ mod macos {
     #[test]
     fn try_import_declines_a_snapshot_without_a_hashed_slot() {
         let dir = tempdir().expect("tempdir");
-        let key: PackageKey = "foo@1.0.0"
-            .parse()
-            .expect("valid snapshot key");
-        let other: PackageKey = "bar@2.0.0"
-            .parse()
-            .expect("valid snapshot key");
+        let key: PackageKey = "foo@1.0.0".parse().expect("valid snapshot key");
+        let other: PackageKey = "bar@2.0.0".parse().expect("valid snapshot key");
         let snapshots = one_snapshot(&key);
         let cache = cache_for_snapshots(
             &dir.path().join("links"),

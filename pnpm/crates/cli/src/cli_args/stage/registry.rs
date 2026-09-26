@@ -49,9 +49,7 @@ pub(super) async fn fetch_stage_tarball(
         .await
         .map_err(|source| request_failed(&action, source))?;
     if !response.status().is_success() {
-        return Err(registry_error_from_response(response, &action)
-            .await
-            .into());
+        return Err(registry_error_from_response(response, &action).await.into());
     }
     let tarball_data = read_limited_body(response, STAGE_TARBALL_BODY_LIMIT)
         .await
@@ -162,8 +160,7 @@ async fn stage_mutation(
     action: &str,
     otp: Option<&str>,
 ) -> Result<(), StageHttpError> {
-    let (_guard, response) = stage_send(context, method, url, otp)
-        .await
+    let (_guard, response) = stage_send(context, method, url, otp).await
         .map_err(|source| {
             StageHttpError::Request(Box::new(request_failed_error(action, source)))
         })?;
@@ -180,8 +177,7 @@ async fn stage_mutation(
         .get(reqwest::header::WWW_AUTHENTICATE)
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned);
-    let body = read_limited_body(response, STAGE_ERROR_BODY_LIMIT)
-        .await
+    let body = read_limited_body(response, STAGE_ERROR_BODY_LIMIT).await
         .map_err(|source| {
             StageHttpError::Request(Box::new(request_failed_error(action, source)))
         })?;
@@ -212,8 +208,7 @@ pub(super) async fn fetch_stage_items(
             .append_pair("page", &page.to_string())
             .append_pair("perPage", &PER_PAGE.to_string());
         if let Some(package) = package_filter {
-            url.query_pairs_mut()
-                .append_pair("package", package);
+            url.query_pairs_mut().append_pair("package", package);
         }
         let response: StageListResponse =
             stage_json_request(context, url.as_str(), "list staged packages").await?;
@@ -240,12 +235,9 @@ pub(super) async fn stage_json_request<Body: serde::de::DeserializeOwned>(
         .await
         .map_err(|source| request_failed(action, source))?;
     if !response.status().is_success() {
-        return Err(registry_error_from_response(response, action)
-            .await
-            .into());
+        return Err(registry_error_from_response(response, action).await.into());
     }
-    let body = read_limited_body(response, STAGE_BODY_LIMIT)
-        .await
+    let body = read_limited_body(response, STAGE_BODY_LIMIT).await
         .map_err(|source| request_failed(action, source))?;
     if body.truncated {
         return Err(StageError::RequestFailed {
@@ -305,11 +297,13 @@ async fn registry_error_from_response(
 fn parse_stage_otp_challenge(www_authenticate: Option<&str>, body: &[u8]) -> Option<OtpChallenge> {
     let parsed: Option<Value> = serde_json::from_slice(body).ok();
     let read = |field: &str| {
-        parsed.as_ref().and_then(|json| {
-            json.get(field)?
-                .as_str()
-                .map(str::to_owned)
-        })
+        parsed
+            .as_ref()
+            .and_then(|json| {
+                json.get(field)?
+                    .as_str()
+                    .map(str::to_owned)
+            })
     };
     let auth_url = read("authUrl");
     let done_url = read("doneUrl");

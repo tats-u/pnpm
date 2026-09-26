@@ -34,11 +34,7 @@ impl WorkspaceSettings {
     pub fn substitute_env_untrusted<Sys: EnvVar>(&mut self) {
         self.substitute_env_scalars::<Sys>();
 
-        if self
-            .registry
-            .as_deref()
-            .is_some_and(has_env_placeholder)
-        {
+        if self.registry.as_deref().is_some_and(has_env_placeholder) {
             self.registry = None;
         }
         if let Some(registries) = self.registries.as_mut() {
@@ -48,18 +44,11 @@ impl WorkspaceSettings {
             named_registries.retain(|_, value| !has_env_placeholder(value));
         }
 
-        if self
-            .pnpr_server
-            .as_deref()
-            .is_some_and(has_env_placeholder)
-        {
+        if self.pnpr_server.as_deref().is_some_and(has_env_placeholder) {
             self.pnpr_server = None;
         }
         for proxy in [&mut self.https_proxy, &mut self.http_proxy, &mut self.proxy] {
-            if proxy
-                .as_deref()
-                .is_some_and(has_env_placeholder)
-            {
+            if proxy.as_deref().is_some_and(has_env_placeholder) {
                 *proxy = None;
             }
         }
@@ -83,10 +72,13 @@ impl WorkspaceSettings {
     /// tilde for an ordinary relative path segment.
     pub(crate) fn expand_global_dir_home_prefixes<Sys: GetHomeDir>(&mut self) {
         for dir in [&mut self.global_dir, &mut self.global_bin_dir] {
-            let Some(relative) = dir.as_deref().and_then(|dir| {
-                dir.strip_prefix("~/")
-                    .or_else(|| dir.strip_prefix(r"~\"))
-            }) else {
+            let Some(relative) = dir
+                .as_deref()
+                .and_then(|dir| {
+                    dir.strip_prefix("~/")
+                        .or_else(|| dir.strip_prefix(r"~\"))
+                })
+            else {
                 continue;
             };
             if let Some(expanded) = Sys::home_dir()
@@ -138,8 +130,6 @@ impl WorkspaceSettings {
         if Path::new(script_shell.as_str()).has_root() || !script_shell.contains(['/', '\\']) {
             return;
         }
-        *script_shell = join_fragment(workspace_dir, script_shell)
-            .to_string_lossy()
-            .into_owned();
+        *script_shell = join_fragment(workspace_dir, script_shell).to_string_lossy().into_owned();
     }
 }

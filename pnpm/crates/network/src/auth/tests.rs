@@ -179,8 +179,7 @@ struct RecordingHook {
 
 impl UpstreamRouteHook for RecordingHook {
     fn authorize(&self, _url: &str, _package: Option<&str>) -> Option<String> {
-        self.calls
-            .fetch_add(1, Ordering::Relaxed);
+        self.calls.fetch_add(1, Ordering::Relaxed);
         self.answer.clone()
     }
 }
@@ -376,16 +375,9 @@ fn base64_round_trip_matches_known_vectors() {
 #[test]
 fn matches_host_only_token() {
     let headers = build(&[("//reg.com/", "Bearer abc123")]);
+    assert_eq!(headers.for_url("https://reg.com/").as_deref(), Some("Bearer abc123"));
     assert_eq!(
-        headers
-            .for_url("https://reg.com/")
-            .as_deref(),
-        Some("Bearer abc123")
-    );
-    assert_eq!(
-        headers
-            .for_url("https://reg.com/foo/-/foo-1.0.0.tgz")
-            .as_deref(),
+        headers.for_url("https://reg.com/foo/-/foo-1.0.0.tgz").as_deref(),
         Some("Bearer abc123"),
     );
     assert_eq!(headers.for_url("https://reg.io/foo/-/foo-1.0.0.tgz"), None);
@@ -395,9 +387,7 @@ fn matches_host_only_token() {
 fn matches_path_scoped_token() {
     let headers = build(&[("//reg.com/", "Bearer abc123"), ("//reg.co/tarballs/", "Bearer xxx")]);
     assert_eq!(
-        headers
-            .for_url("https://reg.co/tarballs/foo/-/foo-1.0.0.tgz")
-            .as_deref(),
+        headers.for_url("https://reg.co/tarballs/foo/-/foo-1.0.0.tgz").as_deref(),
         Some("Bearer xxx"),
     );
 }
@@ -406,9 +396,7 @@ fn matches_path_scoped_token() {
 fn matches_explicit_port_token() {
     let headers = build(&[("//reg.gg:8888/", "Bearer 0000")]);
     assert_eq!(
-        headers
-            .for_url("https://reg.gg:8888/foo/-/foo-1.0.0.tgz")
-            .as_deref(),
+        headers.for_url("https://reg.gg:8888/foo/-/foo-1.0.0.tgz").as_deref(),
         Some("Bearer 0000"),
     );
 }
@@ -416,29 +404,14 @@ fn matches_explicit_port_token() {
 #[test]
 fn default_https_port_strips_for_lookup() {
     let headers = build(&[("//reg.com/", "Bearer abc123")]);
-    assert_eq!(
-        headers
-            .for_url("https://reg.com:443/")
-            .as_deref(),
-        Some("Bearer abc123")
-    );
-    assert_eq!(
-        headers
-            .for_url("http://reg.com:80/")
-            .as_deref(),
-        Some("Bearer abc123")
-    );
+    assert_eq!(headers.for_url("https://reg.com:443/").as_deref(), Some("Bearer abc123"));
+    assert_eq!(headers.for_url("http://reg.com:80/").as_deref(), Some("Bearer abc123"));
 }
 
 #[test]
 fn non_default_port_strips_for_fallback_lookup() {
     let headers = build(&[("//reg.com/", "Bearer abc123")]);
-    assert_eq!(
-        headers
-            .for_url("https://reg.com:8080/")
-            .as_deref(),
-        Some("Bearer abc123")
-    );
+    assert_eq!(headers.for_url("https://reg.com:8080/").as_deref(), Some("Bearer abc123"));
 }
 
 #[test]
@@ -451,9 +424,7 @@ fn nerf_dart_strips_default_ports_when_keying() {
 #[test]
 fn basic_auth_in_url_wins_over_token() {
     let headers = build(&[("//reg.com/", "Bearer abc123")]);
-    let header = headers
-        .for_url("https://user:secret@reg.com/")
-        .unwrap();
+    let header = headers.for_url("https://user:secret@reg.com/").unwrap();
     assert_eq!(header, format!("Basic {}", base64_encode("user:secret")));
 }
 
@@ -479,21 +450,15 @@ fn registry_with_pathname_matches_metadata_and_tarballs() {
     // GitHub Packages scope-registry example.
     let headers = build(&[("//npm.pkg.github.com/pnpm/", "Bearer abc123")]);
     assert_eq!(
-        headers
-            .for_url("https://npm.pkg.github.com/pnpm")
-            .as_deref(),
+        headers.for_url("https://npm.pkg.github.com/pnpm").as_deref(),
         Some("Bearer abc123"),
     );
     assert_eq!(
-        headers
-            .for_url("https://npm.pkg.github.com/pnpm/")
-            .as_deref(),
+        headers.for_url("https://npm.pkg.github.com/pnpm/").as_deref(),
         Some("Bearer abc123"),
     );
     assert_eq!(
-        headers
-            .for_url("https://npm.pkg.github.com/pnpm/foo/-/foo-1.0.0.tgz")
-            .as_deref(),
+        headers.for_url("https://npm.pkg.github.com/pnpm/foo/-/foo-1.0.0.tgz").as_deref(),
         Some("Bearer abc123"),
     );
 }
@@ -639,12 +604,7 @@ fn basic_auth_in_url_wins_over_package_scope_auth() {
 fn unkeyed_creds_are_dropped_rather_than_bound_to_the_default_registry() {
     let headers = build(&[("", "Bearer default-token"), ("//reg.com/", "Bearer scoped-token")]);
     assert_eq!(headers.for_url("https://registry.npmjs.org/"), None);
-    assert_eq!(
-        headers
-            .for_url("https://reg.com/pkg")
-            .as_deref(),
-        Some("Bearer scoped-token")
-    );
+    assert_eq!(headers.for_url("https://reg.com/pkg").as_deref(), Some("Bearer scoped-token"));
 }
 
 /// Keys are canonicalized as they are collected, so a caller's
@@ -653,12 +613,7 @@ fn unkeyed_creds_are_dropped_rather_than_bound_to_the_default_registry() {
 #[test]
 fn a_key_without_its_trailing_slash_lands_on_the_canonical_uri() {
     let headers = build(&[("//reg.com", "Bearer token")]);
-    assert_eq!(
-        headers
-            .for_url("https://reg.com/pkg")
-            .as_deref(),
-        Some("Bearer token")
-    );
+    assert_eq!(headers.for_url("https://reg.com/pkg").as_deref(), Some("Bearer token"));
 }
 
 #[test]
@@ -679,9 +634,7 @@ fn registry_with_pathname_matches_with_explicit_port() {
         Some("Bearer xyz"),
     );
     assert_eq!(
-        headers
-            .for_url("https://custom.domain.com:443/artifactory/api/npm/")
-            .as_deref(),
+        headers.for_url("https://custom.domain.com:443/artifactory/api/npm/").as_deref(),
         None,
     );
 }
@@ -733,12 +686,7 @@ fn classifies_urls_that_are_secure_for_credentials() {
 #[test]
 fn slash_append_branch_lets_path_segment_match() {
     let headers = build(&[("//reg.com/scope/", "Bearer scoped")]);
-    assert_eq!(
-        headers
-            .for_url("https://reg.com/scope")
-            .as_deref(),
-        Some("Bearer scoped")
-    );
+    assert_eq!(headers.for_url("https://reg.com/scope").as_deref(), Some("Bearer scoped"));
 }
 
 /// Hits the `None => return String::new()` branch of [`nerf_dart`]

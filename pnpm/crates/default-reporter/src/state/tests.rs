@@ -5,9 +5,7 @@ use chrono::{DateTime, Utc};
 use pretty_assertions::assert_eq;
 
 fn at(rfc3339: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(rfc3339)
-        .expect("parse timestamp")
-        .with_timezone(&Utc)
+    DateTime::parse_from_rfc3339(rfc3339).expect("parse timestamp").with_timezone(&Utc)
 }
 
 #[test]

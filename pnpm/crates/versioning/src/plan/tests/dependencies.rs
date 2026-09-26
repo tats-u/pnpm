@@ -128,8 +128,7 @@ fn returning_to_the_main_lane_releases_the_accumulated_stable_version_even_witho
     let plan = assemble(&projects, &intents, &consumed, None);
     assert_eq!(plan.releases.len(), 1);
     assert_eq!(plan.releases[0].version.next, "2.1.0");
-    let mut consumed_ids: Vec<&str> = plan.releases[0]
-        .intents
+    let mut consumed_ids: Vec<&str> = plan.releases[0].intents
         .iter()
         .map(|intent| intent.id.as_str())
         .collect();
@@ -157,8 +156,7 @@ fn snapshot_plans_release_the_same_set_under_snapshot_versions() {
         &opts,
     )
     .expect("plan assembles");
-    let versions: Vec<&str> = plan
-        .releases
+    let versions: Vec<&str> = plan.releases
         .iter()
         .map(|release| release.version.next.as_str())
         .collect();
@@ -192,8 +190,7 @@ fn two_same_named_projects_releasing_to_the_same_version_is_a_hard_error() {
     )
     .expect_err("plan must fail");
     assert!(
-        err.to_string()
-            .contains("Two projects both release @scope/util@1.0.1"),
+        err.to_string().contains("Two projects both release @scope/util@1.0.1"),
         "unexpected error: {err}",
     );
 }
@@ -270,11 +267,7 @@ fn a_member_major_bump_that_would_exceed_the_band_ceiling_is_rejected() {
         &AssembleReleasePlanOptions::default(),
     )
     .expect_err("plan must fail");
-    assert!(
-        err.to_string()
-            .contains("band is exhausted"),
-        "unexpected error: {err}"
-    );
+    assert!(err.to_string().contains("band is exhausted"), "unexpected error: {err}");
 }
 
 #[test]
@@ -292,11 +285,7 @@ fn a_member_below_its_epic_band_is_rejected_when_it_releases() {
         &AssembleReleasePlanOptions::default(),
     )
     .expect_err("plan must fail");
-    assert!(
-        err.to_string()
-            .contains("outside the band 1100-1199"),
-        "unexpected error: {err}"
-    );
+    assert!(err.to_string().contains("outside the band 1100-1199"), "unexpected error: {err}");
 }
 
 #[test]
@@ -316,8 +305,7 @@ fn an_epic_whose_lead_is_not_a_releasable_project_fails_the_plan() {
     )
     .expect_err("plan must fail");
     assert!(
-        err.to_string()
-            .contains("is not a releasable workspace project"),
+        err.to_string().contains("is not a releasable workspace project"),
         "unexpected error: {err}",
     );
 }
@@ -330,8 +318,7 @@ fn a_first_release_publishes_the_current_version_verbatim_ignoring_the_intent_bu
     let release = release(&plan, "newpkg");
     assert_eq!(release.version.next, "1100.0.0");
     // The intent is still consumed for the changelog and the ledger.
-    let intent_ids: Vec<&str> = release
-        .intents
+    let intent_ids: Vec<&str> = release.intents
         .iter()
         .map(|intent| intent.id.as_str())
         .collect();
@@ -421,11 +408,7 @@ fn check_versioning_invariants_reports_an_out_of_band_member() {
         check_versioning_invariants(&projects, Path::new("/ws"), Some(&versioning)).unwrap();
     assert_eq!(violations.len(), 1);
     assert_eq!(violations[0].code, VersioningInvariantCode::EpicOutOfBand);
-    assert!(
-        violations[0]
-            .message
-            .contains("outside the band 1100-1199")
-    );
+    assert!(violations[0].message.contains("outside the band 1100-1199"));
 }
 
 #[test]
@@ -440,11 +423,7 @@ fn check_versioning_invariants_reports_a_fixed_group_out_of_lockstep() {
         check_versioning_invariants(&projects, Path::new("/ws"), Some(&versioning)).unwrap();
     assert_eq!(violations.len(), 1);
     assert_eq!(violations[0].code, VersioningInvariantCode::FixedGroupMismatch);
-    assert!(
-        violations[0]
-            .message
-            .contains("not in lockstep")
-    );
+    assert!(violations[0].message.contains("not in lockstep"));
 }
 
 #[test]

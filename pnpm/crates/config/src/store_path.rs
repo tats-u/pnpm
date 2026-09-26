@@ -90,9 +90,7 @@ pub fn resolve_store_dir<Sys: LinkProbe>(
     };
 
     if mountpoint == pkg_root {
-        return pkg_root
-            .join("node_modules")
-            .join(".pnpm-store");
+        return pkg_root.join("node_modules").join(".pnpm-store");
     }
 
     mountpoint.join(".pnpm-store")
@@ -185,9 +183,7 @@ pub(crate) fn host_can_link_between_dirs(from_dir: &Path, to_dir: &Path) -> bool
 /// once and removes it.
 fn path_temp_in(folder: &Path) -> PathBuf {
     let pid = std::process::id();
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.subsec_nanos());
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.subsec_nanos());
     folder.join(format!("_tmp_{pid}_{nanos:08x}"))
 }
 

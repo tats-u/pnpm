@@ -60,15 +60,9 @@ fn mysql_pool_options(
         let row_lock_timeout_sql = row_lock_timeout_sql.clone();
         let metadata_lock_timeout_sql = metadata_lock_timeout_sql.clone();
         Box::pin(async move {
-            sqlx::query(&statement_timeout_sql)
-                .execute(&mut *conn)
-                .await?;
-            sqlx::query(&row_lock_timeout_sql)
-                .execute(&mut *conn)
-                .await?;
-            sqlx::query(&metadata_lock_timeout_sql)
-                .execute(conn)
-                .await?;
+            sqlx::query(&statement_timeout_sql).execute(&mut *conn).await?;
+            sqlx::query(&row_lock_timeout_sql).execute(&mut *conn).await?;
+            sqlx::query(&metadata_lock_timeout_sql).execute(conn).await?;
             Ok(())
         })
     });
@@ -102,8 +96,7 @@ impl AuthSqlBackend for MysqlDatabase {
     }
 
     async fn reconcile_user_counter_overcount(&self) -> Result<bool> {
-        self.reconcile_user_counter_overcount_impl()
-            .await
+        self.reconcile_user_counter_overcount_impl().await
     }
 
     async fn insert_user(
@@ -120,13 +113,9 @@ impl AuthSqlBackend for MysqlDatabase {
             }
             tx.rollback().await?;
             if !std::mem::take(&mut can_retry_after_reconcile)
-                || !self
-                    .reconcile_user_counter_overcount_impl()
-                    .await?
+                || !self.reconcile_user_counter_overcount_impl().await?
             {
-                return self
-                    .existing_or_cap_reached(username)
-                    .await;
+                return self.existing_or_cap_reached(username).await;
             }
         };
         let inserted = sqlx::query("INSERT INTO users (username, bcrypt_hash) VALUES (?, ?)")
@@ -141,8 +130,7 @@ impl AuthSqlBackend for MysqlDatabase {
             }
             Err(err) if is_unique_violation(&err) => {
                 tx.rollback().await?;
-                self.existing_or_cap_reached(username)
-                    .await
+                self.existing_or_cap_reached(username).await
             }
             Err(err) => Err(err.into()),
         }
@@ -185,8 +173,7 @@ impl AuthSqlBackend for MysqlDatabase {
         .bind(token_hash)
         .fetch_optional(&self.pool)
         .await?;
-        row.map(|row| token_record_from_row(&row, token_hash))
-            .transpose()
+        row.map(|row| token_record_from_row(&row, token_hash)).transpose()
     }
 
     async fn list_tokens(&self, username: &str) -> Result<Vec<(String, TokenRecord)>> {
@@ -213,24 +200,17 @@ impl AuthSqlBackend for MysqlDatabase {
 
 impl MysqlDatabase {
     async fn init_schema(&self) -> Result<()> {
-        sqlx::query(super::super::USERS_TABLE_SQL)
-            .execute(&self.pool)
-            .await?;
-        sqlx::query(super::super::token_store::TOKENS_TABLE_SQL)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(super::super::USERS_TABLE_SQL).execute(&self.pool).await?;
+        sqlx::query(super::super::token_store::TOKENS_TABLE_SQL).execute(&self.pool).await?;
         create_token_index(&self.pool).await?;
-        sqlx::query(super::super::AUTH_COUNTERS_TABLE_SQL)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(super::super::AUTH_COUNTERS_TABLE_SQL).execute(&self.pool).await?;
         self.ensure_user_counter().await
     }
 
     async fn ensure_user_counter(&self) -> Result<()> {
         let count = self.actual_user_count().await?;
         if self.user_counter().await?.is_some() {
-            self.set_user_counter_floor(count)
-                .await?;
+            self.set_user_counter_floor(count).await?;
             return Ok(());
         }
         let inserted = sqlx::query("INSERT INTO auth_counters (name, value) VALUES (?, ?)")
@@ -241,8 +221,7 @@ impl MysqlDatabase {
         match inserted {
             Ok(_) => Ok(()),
             Err(err) if is_unique_violation(&err) => {
-                self.set_user_counter_floor(count)
-                    .await?;
+                self.set_user_counter_floor(count).await?;
                 Ok(())
             }
             Err(err) => Err(err.into()),
@@ -250,9 +229,8 @@ impl MysqlDatabase {
     }
 
     async fn actual_user_count(&self) -> Result<i64> {
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
-            .fetch_one(&self.pool)
-            .await?;
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&self.pool).await?;
         Ok(count.max(0))
     }
 
@@ -290,9 +268,8 @@ impl MysqlDatabase {
             tx.commit().await?;
             return Ok(false);
         };
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
-            .fetch_one(&mut *tx)
-            .await?;
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&mut *tx).await?;
         if counter <= count {
             tx.commit().await?;
             return Ok(false);
@@ -315,9 +292,8 @@ impl MysqlDatabase {
 }
 
 async fn create_token_index(pool: &MySqlPool) -> Result<()> {
-    let result = sqlx::query("CREATE INDEX tokens_username ON tokens(username)")
-        .execute(pool)
-        .await;
+    let result =
+        sqlx::query("CREATE INDEX tokens_username ON tokens(username)").execute(pool).await;
     match result {
         Ok(_) => Ok(()),
         Err(err) if is_duplicate_index(&err) => Ok(()),
@@ -341,8 +317,8 @@ fn token_record_from_offset(
     token_hash: &str,
 ) -> Result<TokenRecord> {
     let cidr_json: String = row.try_get(offset + 4)?;
-    let cidr_whitelist: Vec<String> =
-        serde_json::from_str(&cidr_json).map_err(|err| RegistryError::Internal {
+    let cidr_whitelist: Vec<String> = serde_json::from_str(&cidr_json)
+        .map_err(|err| RegistryError::Internal {
             reason: format!("token {token_hash} has an unreadable cidr_whitelist: {err}"),
         })?;
     let readonly: i16 = row.try_get(offset + 3)?;

@@ -24,8 +24,7 @@ impl BaseProject for GraphPkg<'_> {
     }
 
     fn manifest_name(&self) -> Option<&str> {
-        self.project
-            .manifest
+        self.project.manifest
             .value()
             .get("name")
             .and_then(|name| name.as_str())
@@ -34,8 +33,7 @@ impl BaseProject for GraphPkg<'_> {
 
 impl GraphProject for GraphPkg<'_> {
     fn manifest_version(&self) -> Option<&str> {
-        self.project
-            .manifest
+        self.project.manifest
             .value()
             .get("version")
             .and_then(|version| version.as_str())
@@ -47,11 +45,7 @@ impl GraphProject for GraphPkg<'_> {
         // duplicate's specifier while keeping the first-seen position.
         let mut merged: IndexMap<String, String> = IndexMap::new();
         let mut absorb = |group: DependencyGroup| {
-            for (name, spec) in self
-                .project
-                .manifest
-                .dependencies([group])
-            {
+            for (name, spec) in self.project.manifest.dependencies([group]) {
                 merged.insert(name.to_string(), spec.to_string());
             }
         };

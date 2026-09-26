@@ -34,9 +34,7 @@ fn readonly_destination_rename_fails_promptly() {
     let source = root.path().join("source");
     fs::write(&protected, "preserved").unwrap();
     fs::write(&source, "replacement").unwrap();
-    let original = fs::metadata(&protected)
-        .unwrap()
-        .permissions();
+    let original = fs::metadata(&protected).unwrap().permissions();
     let mut readonly = original.clone();
     readonly.set_readonly(true);
     fs::set_permissions(&protected, readonly).unwrap();
@@ -71,12 +69,7 @@ fn restrictive_acls_fail_promptly() {
     icacls(&tree, &[]);
     icacls(&protected, &[]);
     without_thread_privileges(|| {
-        assert_eq!(
-            fs::remove_file(&protected)
-                .unwrap_err()
-                .raw_os_error(),
-            Some(5)
-        );
+        assert_eq!(fs::remove_file(&protected).unwrap_err().raw_os_error(), Some(5));
         assert_fails_promptly(|| remove_file_with_retry(&protected));
         assert_fails_promptly(|| rename_with_retry(&protected, &destination));
         assert_fails_promptly(|| remove_dir_all_with_retry(&tree));
@@ -119,12 +112,7 @@ fn directory_rename_recovers_after_a_child_handle_closes() {
         .share_mode(0x1 | 0x2)
         .open(&child)
         .unwrap();
-    assert_eq!(
-        fs::rename(&source, &destination)
-            .unwrap_err()
-            .raw_os_error(),
-        Some(5)
-    );
+    assert_eq!(fs::rename(&source, &destination).unwrap_err().raw_os_error(), Some(5));
 
     std::thread::scope(|scope| {
         scope.spawn(move || {

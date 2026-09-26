@@ -33,10 +33,8 @@ struct WhoamiResponse {
 /// fail with `ERR_PNPM_WHOAMI_UNAUTHORIZED` when no credentials are
 /// configured — before any request is made.
 pub async fn whoami(config: &Config) -> miette::Result<String> {
-    let auth_header = config
-        .auth_headers
-        .for_url(&config.registry)
-        .ok_or(WhoamiError::Unauthorized)?;
+    let auth_header =
+        config.auth_headers.for_url(&config.registry).ok_or(WhoamiError::Unauthorized)?;
     let http_client = build_registry_client(config)?;
     let retry_opts = RetryOpts {
         retries: config.fetch_retries,
@@ -65,9 +63,7 @@ pub(crate) async fn fetch_whoami(
     // `https://user:password@host/` carries inline credentials (accepted by
     // `AuthHeaders`), which must not reach stderr / CI logs.
     let (client, response) = send_with_retry(http_client, &url, retry_opts, |client| {
-        client
-            .get(&url)
-            .header("authorization", auth_header)
+        client.get(&url).header("authorization", auth_header)
     })
     .await
     .into_diagnostic()

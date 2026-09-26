@@ -221,8 +221,9 @@ pub(super) fn append_pnpr_auth_to_npmrc(dir: &Path, pnpr_server: &str, token: &s
         .append(true)
         .open(&path)
         .expect("open benchmark .npmrc for pnpr auth");
-    writeln!(file, "{}:_authToken={token}", pnpr_auth_config_key(pnpr_server))
-        .expect("append pnpr auth to benchmark .npmrc");
+    writeln!(file, "{}:_authToken={token}", pnpr_auth_config_key(pnpr_server)).expect(
+        "append pnpr auth to benchmark .npmrc",
+    );
 }
 /// Log in as the seeded benchmark user and return a bearer token. The login
 /// runs on a dedicated thread with its own runtime so it doesn't reach into the
@@ -253,10 +254,7 @@ pub(super) fn mint_pnpr_token(port: u16) -> String {
                 "pnpr login returned {} when minting a benchmark token",
                 response.status(),
             );
-            let payload: Value = response
-                .json()
-                .await
-                .expect("parse pnpr login response");
+            let payload: Value = response.json().await.expect("parse pnpr login response");
             payload["token"]
                 .as_str()
                 .expect("token field in pnpr login response")

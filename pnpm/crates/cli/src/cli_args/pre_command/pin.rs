@@ -29,7 +29,9 @@ fn resolve_package_manager_pin(
     root_manifest: &Value,
     pm: &WantedPackageManager,
 ) -> miette::Result<PinOutcome> {
-    let PinResolution { input, config, roots, process_state, .. } = *resolution;
+    let PinResolution {
+        input, config, roots, process_state, ..
+    } = *resolution;
     let on_fail = effective_on_fail(config, pm);
     if on_fail == PmOnFail::Ignore {
         return Ok(PinOutcome::Sync(None));
@@ -191,15 +193,13 @@ pub(super) fn switch_target(
 }
 
 fn effective_on_fail(config: &Config, pm: &WantedPackageManager) -> PmOnFail {
-    config
-        .pm_on_fail
-        .unwrap_or(match pm.on_fail.as_deref() {
-            Some("ignore") => PmOnFail::Ignore,
-            Some("warn") => PmOnFail::Warn,
-            Some("error") => PmOnFail::Error,
-            Some("download") | None => PmOnFail::Download,
-            Some(_) => PmOnFail::Download,
-        })
+    config.pm_on_fail.unwrap_or(match pm.on_fail.as_deref() {
+        Some("ignore") => PmOnFail::Ignore,
+        Some("warn") => PmOnFail::Warn,
+        Some("error") => PmOnFail::Error,
+        Some("download") | None => PmOnFail::Download,
+        Some(_) => PmOnFail::Download,
+    })
 }
 
 pub(super) fn resolve_input_pin(

@@ -16,8 +16,13 @@ use std::{
 
 #[test]
 fn deploy_from_shared_lockfile_installs_selected_project() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_reachability_workspace(&workspace);
 
@@ -46,11 +51,7 @@ fn deploy_from_shared_lockfile_installs_selected_project() {
         !deploy_dir.join("test.js").exists(),
         "deploy should copy the package packlist by default",
     );
-    assert!(
-        deploy_dir
-            .join("pnpm-lock.yaml")
-            .exists()
-    );
+    assert!(deploy_dir.join("pnpm-lock.yaml").exists());
     let lockfile = fs::read_to_string(deploy_dir.join("pnpm-lock.yaml")).unwrap();
     assert!(
         !lockfile.contains("injectWorkspacePackages: true"),
@@ -63,9 +64,7 @@ fn deploy_from_shared_lockfile_installs_selected_project() {
         "prod workspace dependency should be linked into the deploy dir",
     );
     assert!(
-        !deploy_dir
-            .join("node_modules/dev-only")
-            .exists(),
+        !deploy_dir.join("node_modules/dev-only").exists(),
         "dev-only workspace dependency should not be linked with --prod",
     );
 
@@ -116,8 +115,13 @@ fn deploy_from_shared_lockfile_installs_selected_project() {
 
 #[test]
 fn deploy_links_workspace_dependency_bins() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, true);
     write_project(
@@ -163,9 +167,8 @@ fn deploy_links_workspace_dependency_bins() {
             "{deploy_dir} must link the workspace dependency's bin",
         );
         if deploy_dir == "deploy" {
-            let lockfile = Lockfile::load_wanted_from_dir(&workspace.join(deploy_dir))
-                .unwrap()
-                .unwrap();
+            let lockfile =
+                Lockfile::load_wanted_from_dir(&workspace.join(deploy_dir)).unwrap().unwrap();
             assert_eq!(package_has_bin(&lockfile, "lib"), Some(Some(true)));
             assert_eq!(package_has_bin(&lockfile, "binless"), Some(Some(false)));
         }
@@ -175,8 +178,7 @@ fn deploy_links_workspace_dependency_bins() {
 }
 
 fn package_has_bin(lockfile: &Lockfile, name: &str) -> Option<Option<bool>> {
-    lockfile
-        .packages
+    lockfile.packages
         .as_ref()?
         .iter()
         .find(|(key, _)| key.name.to_string() == name)
@@ -190,8 +192,13 @@ fn package_has_bin(lockfile: &Lockfile, name: &str) -> Option<Option<bool>> {
 /// resolve versions the workspace never pinned.
 #[test]
 fn deploy_from_shared_lockfile_follows_a_pinned_lockfile_dir() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_reachability_workspace(&workspace);
     append_workspace_yaml_key(&workspace, "lockfileDir", "..");
@@ -220,9 +227,7 @@ fn deploy_from_shared_lockfile_follows_a_pinned_lockfile_dir() {
 
     let deploy_dir = workspace.join("deploy");
     assert!(
-        deploy_dir
-            .join("pnpm-lock.yaml")
-            .is_file(),
+        deploy_dir.join("pnpm-lock.yaml").is_file(),
         "the deployed project gets its own lockfile, not the pinned one",
     );
     assert!(
@@ -240,8 +245,13 @@ fn deploy_from_shared_lockfile_follows_a_pinned_lockfile_dir() {
 /// legacy installer rather than failing the command.
 #[test]
 fn deploy_falls_back_when_the_pinned_lockfile_dir_does_not_contain_the_workspace() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_reachability_workspace(&workspace);
     fs::create_dir_all(root.path().join("side")).unwrap();
@@ -273,8 +283,13 @@ fn deploy_falls_back_when_the_pinned_lockfile_dir_does_not_contain_the_workspace
 
 #[test]
 fn deploy_from_shared_lockfile_supports_catalog_dependencies() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, true);
     let workspace_yaml_path = workspace.join("pnpm-workspace.yaml");
@@ -297,11 +312,7 @@ fn deploy_from_shared_lockfile_supports_catalog_dependencies() {
         .success();
 
     let deploy_dir = workspace.join("deploy");
-    assert!(
-        deploy_dir
-            .join("node_modules/@pnpm.e2e/foo")
-            .exists()
-    );
+    assert!(deploy_dir.join("node_modules/@pnpm.e2e/foo").exists());
     let lockfile = fs::read_to_string(deploy_dir.join("pnpm-lock.yaml")).unwrap();
     assert!(!lockfile.contains("catalogs:"), "unexpected catalog snapshot:\n{lockfile}");
 
@@ -310,8 +321,13 @@ fn deploy_from_shared_lockfile_supports_catalog_dependencies() {
 
 #[test]
 fn shared_lockfile_deploy_supports_non_injected_workspace() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { npmrc_path, mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, false);
     write_project(
@@ -344,9 +360,7 @@ fn shared_lockfile_deploy_supports_non_injected_workspace() {
     // the two agree: a target reached through a symlink that changes the
     // path's depth resolves those entries somewhere else entirely, which is
     // its own defect and not what this test is about.
-    let deploy_dir = fs::canonicalize(root.path())
-        .unwrap()
-        .join("deploy");
+    let deploy_dir = fs::canonicalize(root.path()).unwrap().join("deploy");
     pacquet_cmd(&workspace)
         .with_args(["--filter", "app", "deploy", "--prod"])
         .with_arg(&deploy_dir)
@@ -359,17 +373,9 @@ fn shared_lockfile_deploy_supports_non_injected_workspace() {
         "the linked workspace dependency should be materialized in the deploy directory",
     );
 
-    let deploy_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir)
-        .unwrap()
-        .unwrap();
-    let importer = deploy_lockfile
-        .importers
-        .get(Lockfile::ROOT_IMPORTER_KEY)
-        .unwrap();
-    let dependencies = importer
-        .dependencies
-        .as_ref()
-        .expect("deploy importer dependencies");
+    let deploy_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir).unwrap().unwrap();
+    let importer = deploy_lockfile.importers.get(Lockfile::ROOT_IMPORTER_KEY).unwrap();
+    let dependencies = importer.dependencies.as_ref().expect("deploy importer dependencies");
     let lib_name: PkgName = "lib".parse().unwrap();
     let lib_version = dependencies
         .get(&lib_name)
@@ -389,14 +395,8 @@ fn shared_lockfile_deploy_supports_non_injected_workspace() {
         lib_real.display(),
     );
 
-    let lib_modules = lib_real
-        .parent()
-        .expect("the deployed lib's node_modules");
-    assert!(
-        lib_modules
-            .join("@pnpm.e2e/foo")
-            .exists()
-    );
+    let lib_modules = lib_real.parent().expect("the deployed lib's node_modules");
+    assert!(lib_modules.join("@pnpm.e2e/foo").exists());
     let nested_real = fs::canonicalize(lib_modules.join("nested")).unwrap();
     assert!(
         nested_real.starts_with(&deploy_dir),
@@ -411,11 +411,7 @@ fn shared_lockfile_deploy_supports_non_injected_workspace() {
         .with_args(["install", "--frozen-lockfile"])
         .assert()
         .success();
-    assert!(
-        deploy_dir
-            .join("node_modules/lib/index.js")
-            .is_file()
-    );
+    assert!(deploy_dir.join("node_modules/lib/index.js").is_file());
     let dangling = dangling_links(&deploy_dir.join("node_modules"));
     assert!(
         dangling.is_empty(),
@@ -493,8 +489,13 @@ fn write_peer_workspace(workspace: &Path) {
 
 #[test]
 fn deploy_from_shared_lockfile_installs_the_workspace_root_without_its_nested_projects() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, true);
     write_root_project_depending_on_lib(&workspace);
@@ -510,19 +511,10 @@ fn deploy_from_shared_lockfile_installs_the_workspace_root_without_its_nested_pr
         .success();
 
     let deploy_dir = workspace.join("deploy");
-    assert!(
-        deploy_dir
-            .join("node_modules/lib")
-            .exists()
-    );
-    let deploy_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir)
-        .unwrap()
-        .unwrap();
+    assert!(deploy_dir.join("node_modules/lib").exists());
+    let deploy_lockfile = Lockfile::load_wanted_from_dir(&deploy_dir).unwrap().unwrap();
     assert_eq!(
-        deploy_lockfile
-            .importers
-            .keys()
-            .collect::<Vec<_>>(),
+        deploy_lockfile.importers.keys().collect::<Vec<_>>(),
         vec![Lockfile::ROOT_IMPORTER_KEY],
     );
     assert_workspace_lockfile_untouched(&workspace, &workspace_lockfile);
@@ -614,9 +606,7 @@ fn assert_workspace_lockfile_untouched(workspace: &Path, before: &str) {
 }
 
 fn pacquet_cmd(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm")
-        .expect("find the pnpm binary")
-        .with_current_dir(workspace)
+    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
 }
 
 /// Every link under `dir`, at any depth, whose target does not exist.
@@ -625,9 +615,7 @@ fn dangling_links(dir: &Path) -> Vec<PathBuf> {
     let mut queue = vec![dir.to_path_buf()];
     while let Some(current) = queue.pop() {
         for entry in fs::read_dir(&current).expect("read a deployed directory") {
-            let path = entry
-                .expect("read a deployed entry")
-                .path();
+            let path = entry.expect("read a deployed entry").path();
             visit_deployed_entry(path, &mut dangling, &mut queue);
         }
     }
@@ -647,17 +635,13 @@ fn visit_deployed_entry(path: PathBuf, dangling: &mut Vec<PathBuf>, queue: &mut 
 }
 
 fn deploy_graph_keys(deploy_dir: &Path) -> Vec<String> {
-    let deploy_lockfile = Lockfile::load_wanted_from_dir(deploy_dir)
-        .unwrap()
-        .unwrap();
-    deploy_lockfile
-        .packages
+    let deploy_lockfile = Lockfile::load_wanted_from_dir(deploy_dir).unwrap().unwrap();
+    deploy_lockfile.packages
         .iter()
         .flatten()
         .map(|(key, _)| key.to_string())
         .chain(
-            deploy_lockfile
-                .snapshots
+            deploy_lockfile.snapshots
                 .iter()
                 .flatten()
                 .map(|(key, _)| key.to_string()),
@@ -668,16 +652,12 @@ fn deploy_graph_keys(deploy_dir: &Path) -> Vec<String> {
 /// Every snapshot of the deployed lockfile that still carries optional edges,
 /// as `(snapshot key, optional dependency names)`.
 fn deploy_optional_edges(deploy_dir: &Path) -> Vec<(String, Vec<String>)> {
-    let deploy_lockfile = Lockfile::load_wanted_from_dir(deploy_dir)
-        .unwrap()
-        .unwrap();
-    deploy_lockfile
-        .snapshots
+    let deploy_lockfile = Lockfile::load_wanted_from_dir(deploy_dir).unwrap().unwrap();
+    deploy_lockfile.snapshots
         .iter()
         .flatten()
         .filter_map(|(key, snapshot)| {
-            let names = snapshot
-                .optional_dependencies
+            let names = snapshot.optional_dependencies
                 .as_ref()?
                 .keys()
                 .map(ToString::to_string)
@@ -704,8 +684,13 @@ fn virtual_store_entries(deploy_dir: &Path) -> Vec<String> {
 /// among it, so the deploy directory ends up holding a pnpmfile of its own.
 #[test]
 fn shared_lockfile_deploy_ignores_the_pnpmfile_copied_into_the_deploy_dir() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, true);
     let project_dir = workspace.join("packages/app");
@@ -724,15 +709,11 @@ fn shared_lockfile_deploy_ignores_the_pnpmfile_copied_into_the_deploy_dir() {
 
     let deploy_dir = workspace.join("deploy");
     assert!(
-        deploy_dir
-            .join(".pnpmfile.mjs")
-            .exists(),
+        deploy_dir.join(".pnpmfile.mjs").exists(),
         "the deployed packlist should have carried the project's pnpmfile over",
     );
     assert!(
-        !deploy_dir
-            .join(PNPMFILE_SENTINEL)
-            .exists(),
+        !deploy_dir.join(PNPMFILE_SENTINEL).exists(),
         "the deploy install must not load the pnpmfile it just copied",
     );
 
@@ -743,8 +724,13 @@ fn shared_lockfile_deploy_ignores_the_pnpmfile_copied_into_the_deploy_dir() {
 /// loaded for the source workspace.
 #[test]
 fn shared_lockfile_deploy_runs_the_source_workspace_pnpmfile() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     write_workspace(&workspace, true);
     write_recording_pnpmfile(&workspace);
@@ -761,9 +747,7 @@ fn shared_lockfile_deploy_runs_the_source_workspace_pnpmfile() {
         .success();
 
     assert!(
-        workspace
-            .join(PNPMFILE_SENTINEL)
-            .exists(),
+        workspace.join(PNPMFILE_SENTINEL).exists(),
         "the deploy install should run the source workspace's pnpmfile",
     );
 

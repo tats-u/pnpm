@@ -14,11 +14,7 @@ impl Workspace {
         root: &Path,
         manifest: &Arc<Manifest>,
     ) -> Arc<Manifest> {
-        Arc::clone(
-            self.inherited
-                .get(root)
-                .map_or(manifest, |(_, manifest)| manifest),
-        )
+        Arc::clone(self.inherited.get(root).map_or(manifest, |(_, manifest)| manifest))
     }
 
     pub(super) fn selected_distributions(
@@ -34,8 +30,9 @@ impl Workspace {
                 .collect());
         };
         let requirements = match extras {
-            None => manifest
-                .requirements(selection.config, crate::manifest::DependencySelection::ALL)?,
+            None => {
+                manifest.requirements(selection.config, crate::manifest::DependencySelection::ALL)?
+            }
             Some(_) => manifest
                 .distribution_requirements()?
                 .iter()
@@ -52,14 +49,9 @@ impl Workspace {
             .unwrap_or_default();
         let mut names = BTreeMap::<PackageName, BTreeSet<ExtraName>>::new();
         for requirement in requirements {
-            if selection
-                .environments
+            if selection.environments
                 .iter()
-                .any(|environment| {
-                    requirement
-                        .marker
-                        .evaluate(environment, &extras)
-                })
+                .any(|environment| requirement.marker.evaluate(environment, &extras))
             {
                 names
                     .entry(requirement.name)
@@ -95,8 +87,7 @@ impl Target {
             );
         }
         let changed = !target.extras.is_subset(&self.extras);
-        self.extras
-            .extend(target.extras.iter().cloned());
+        self.extras.extend(target.extras.iter().cloned());
         Ok(changed)
     }
 }

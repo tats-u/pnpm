@@ -113,8 +113,7 @@ fn stale_importer_ids(
         .iter()
         .map(|(importer_id, _)| importer_id.as_str())
         .collect();
-    lockfile
-        .importers
+    lockfile.importers
         .keys()
         .filter(|importer_id| !manifest_ids.contains(importer_id.as_str()))
         .cloned()
@@ -239,8 +238,7 @@ fn alias_divergence(
         // versions; a specifier they reject (a `workspace:` range
         // above all) can only resolve.
         if Range::parse(specifier).is_err()
-            || dependency
-                .version
+            || dependency.version
                 .ver_peer()
                 .and_then(|ver_peer| ver_peer.version_semver())
                 .is_none()
@@ -289,15 +287,10 @@ fn move_dependency(
     }
     let source_group = importer_group(importer, source);
     let dependency = source_group.as_mut()?.remove(alias)?;
-    if source_group
-        .as_ref()
-        .is_some_and(HashMap::is_empty)
-    {
+    if source_group.as_ref().is_some_and(HashMap::is_empty) {
         *source_group = None;
     }
-    importer_group(importer, target)
-        .get_or_insert_default()
-        .insert(alias.clone(), dependency);
+    importer_group(importer, target).get_or_insert_default().insert(alias.clone(), dependency);
     Some(source)
 }
 
@@ -344,10 +337,7 @@ fn remove_dependencies_absent_from(
         &mut importer.dev_dependencies,
         &mut importer.optional_dependencies,
     ] {
-        if group
-            .as_ref()
-            .is_some_and(HashMap::is_empty)
-        {
+        if group.as_ref().is_some_and(HashMap::is_empty) {
             *group = None;
         }
     }

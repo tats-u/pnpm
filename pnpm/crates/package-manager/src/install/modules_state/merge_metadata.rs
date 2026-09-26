@@ -33,9 +33,12 @@ where
             && rebuild.settles_dependency(entry)
             && policy.check(pnpm_deps_path::remove_suffix(entry)) == Some(true)
     };
-    let retained = previous.iter().filter(|entry| {
-        current.is_some_and(|current| current_contains_dep_path(current, entry)) && !settled(entry)
-    });
+    let retained = previous
+        .iter()
+        .filter(|entry| {
+            current.is_some_and(|current| current_contains_dep_path(current, entry))
+                && !settled(entry)
+        });
     let mut seen = HashSet::new();
     retained
         .cloned()
@@ -66,14 +69,9 @@ pub(super) fn merge_hoisted_dependencies(
         if !retained_only_dep_path(current, selected, dep_path) {
             continue;
         }
-        let retained_aliases = next
-            .hoisted_dependencies
-            .entry(dep_path.clone())
-            .or_default();
+        let retained_aliases = next.hoisted_dependencies.entry(dep_path.clone()).or_default();
         for (alias, kind) in aliases {
-            retained_aliases
-                .entry(alias.clone())
-                .or_insert(*kind);
+            retained_aliases.entry(alias.clone()).or_insert(*kind);
         }
     }
 }
@@ -88,12 +86,8 @@ pub(super) fn merge_hoisted_locations(
         if !retained_only_dep_path(current, selected, dep_path) {
             continue;
         }
-        let retained_locations = next
-            .hoisted_locations
-            .get_or_insert_default();
-        let retained = retained_locations
-            .entry(dep_path.clone())
-            .or_default();
+        let retained_locations = next.hoisted_locations.get_or_insert_default();
+        let retained = retained_locations.entry(dep_path.clone()).or_default();
         for location in locations {
             if !retained.contains(location) {
                 retained.push(location.clone());
@@ -112,8 +106,7 @@ pub(super) fn merge_retained_pending_builds(
         if retained_only_dep_path(current, selected, dep_path)
             && !next.pending_builds.contains(dep_path)
         {
-            next.pending_builds
-                .push(dep_path.clone());
+            next.pending_builds.push(dep_path.clone());
         }
     }
     for dep_path in new_pending_builds {
@@ -132,9 +125,7 @@ pub(super) fn merge_ignored_builds(
     if let Some(previous_ignored) = previous.ignored_builds.as_ref() {
         for dep_path in previous_ignored {
             if retained_only_dep_path(current, selected, dep_path.as_str()) {
-                let retained_ignored = next
-                    .ignored_builds
-                    .get_or_insert_default();
+                let retained_ignored = next.ignored_builds.get_or_insert_default();
                 retained_ignored.insert(dep_path.clone());
             }
         }
@@ -142,9 +133,7 @@ pub(super) fn merge_ignored_builds(
     if let Some(new_ignored_builds) = new_ignored_builds
         && !new_ignored_builds.is_empty()
     {
-        next.ignored_builds
-            .get_or_insert_default()
-            .extend(new_ignored_builds);
+        next.ignored_builds.get_or_insert_default().extend(new_ignored_builds);
     }
 }
 pub(super) fn merge_skipped(
@@ -182,12 +171,8 @@ pub(super) fn merge_injected_deps(
     for (source, targets) in previous_injected {
         if current_injected_sources.contains(source) && !selected_injected_sources.contains(source)
         {
-            let retained_injected = next
-                .injected_deps
-                .get_or_insert_default();
-            retained_injected
-                .entry(source.clone())
-                .or_insert_with(|| targets.clone());
+            let retained_injected = next.injected_deps.get_or_insert_default();
+            retained_injected.entry(source.clone()).or_insert_with(|| targets.clone());
         }
     }
 }
@@ -199,16 +184,10 @@ pub(in super::super) fn retained_only_dep_path(
     current_contains_dep_path(current, dep_path) && !current_contains_dep_path(selected, dep_path)
 }
 pub(in super::super) fn injected_source_paths(lockfile: &Lockfile) -> HashSet<String> {
-    lockfile
-        .snapshots
+    lockfile.snapshots
         .iter()
         .flat_map(|snapshots| snapshots.keys())
-        .chain(
-            lockfile
-                .packages
-                .iter()
-                .flat_map(|packages| packages.keys()),
-        )
+        .chain(lockfile.packages.iter().flat_map(|packages| packages.keys()))
         .filter_map(|key| match key.suffix.version() {
             VersionPart::File(path) => Some(
                 path.strip_prefix("./")
@@ -226,12 +205,10 @@ pub(in super::super) fn current_contains_dep_path(current: &Lockfile, dep_path: 
         return true;
     }
     let Ok(key) = dep_path.parse::<pnpm_lockfile::PackageKey>() else { return false };
-    current
-        .snapshots
+    current.snapshots
         .as_ref()
         .is_some_and(|snapshots| snapshots.contains_key(&key))
-        || current
-            .packages
+        || current.packages
             .as_ref()
             .is_some_and(|packages| packages.contains_key(&key.without_peer()))
 }

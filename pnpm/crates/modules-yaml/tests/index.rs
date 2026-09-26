@@ -182,8 +182,7 @@ fn write_modules_manifest_preserves_hoisted_dependency_order() {
         .expect("manifest exists");
 
     assert_eq!(
-        written
-            .hoisted_dependencies
+        written.hoisted_dependencies
             .keys()
             .map(String::as_str)
             .collect::<Vec<_>>(),
@@ -223,9 +222,7 @@ fn write_and_read_manifest_with_long_dependency_path() {
         .expect("manifest exists");
     assert_eq!(actual.hoisted_dependencies, manifest.hoisted_dependencies);
 
-    read_modules_layout::<Host>(modules_dir)
-        .expect("read layout")
-        .expect("layout exists");
+    read_modules_layout::<Host>(modules_dir).expect("read layout").expect("layout exists");
 }
 
 #[test]
@@ -299,9 +296,8 @@ fn incompatible_layout_versions_read_as_no_layout_version() {
             .expect("read manifest")
             .expect("manifest exists");
         assert_eq!(manifest.layout_version, expected);
-        let layout = read_modules_layout::<Host>(modules_dir)
-            .expect("read layout")
-            .expect("layout exists");
+        let layout =
+            read_modules_layout::<Host>(modules_dir).expect("read layout").expect("layout exists");
         assert_eq!(layout.layout_version, expected);
     }
 }

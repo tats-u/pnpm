@@ -110,10 +110,7 @@ where
     /// Execute the subroutine.
     pub fn run<Reporter: self::Reporter>(self) -> Result<(), SymlinkDirectDependenciesError> {
         // Collect once so the same group order can drive every importer.
-        let dependency_groups: Vec<DependencyGroup> = self
-            .dependency_groups
-            .into_iter()
-            .collect();
+        let dependency_groups: Vec<DependencyGroup> = self.dependency_groups.into_iter().collect();
         ImporterPass {
             context: self.context,
             graph: self.graph,
@@ -156,10 +153,7 @@ impl ImporterPass<'_> {
         // of leaving the symlink stage stuck on `node_modules` while
         // other stages (`.modules.yaml` writing, bin linking) use
         // `config.modules_dir`.
-        let modules_dir_name: &OsStr = self
-            .context
-            .config
-            .modules_dir
+        let modules_dir_name: &OsStr = self.context.config.modules_dir
             .file_name()
             .unwrap_or_else(|| OsStr::new("node_modules"));
 
@@ -168,9 +162,7 @@ impl ImporterPass<'_> {
         // event order is not pinned — the per-importer work runs on
         // rayon, matching pnpm's `Promise.all` over importers — so
         // consumers key events off their `prefix`, never their order.
-        let mut keys: Vec<&str> = self
-            .graph
-            .importers
+        let mut keys: Vec<&str> = self.graph.importers
             .keys()
             .map(String::as_str)
             .collect();
@@ -230,11 +222,9 @@ impl ImporterPass<'_> {
     /// a rejected lockfile writes nothing.
     fn validate_importer_ids(&self, keys: &[&str]) -> Result<(), SymlinkDirectDependenciesError> {
         for importer_id in keys {
-            if !self
-                .policy
-                .trusted_importer_ids
-                .is_some_and(|trusted| trusted.contains(*importer_id))
-            {
+            if !self.policy.trusted_importer_ids.is_some_and(|trusted| {
+                trusted.contains(*importer_id)
+            }) {
                 validate_importer_id(importer_id)?;
             }
         }
@@ -302,13 +292,8 @@ fn root_dedupe_targets(
         skipped,
         link_only,
     );
-    for (alias, target) in public_hoist_targets
-        .into_iter()
-        .flatten()
-    {
-        targets
-            .entry(alias.clone())
-            .or_insert_with(|| target.clone());
+    for (alias, target) in public_hoist_targets.into_iter().flatten() {
+        targets.entry(alias.clone()).or_insert_with(|| target.clone());
     }
     targets
 }
@@ -499,13 +484,12 @@ fn link_resolved_entry<Reporter: self::Reporter>(
     let ResolvedEntry { name_str, target, .. } = entry;
 
     if symlink {
-        let outcome = symlink_package(target, &modules_dir.join(name_str)).map_err(|source| {
-            SymlinkDirectDependenciesError::SymlinkPackage {
+        let outcome = symlink_package(target, &modules_dir.join(name_str))
+            .map_err(|source| SymlinkDirectDependenciesError::SymlinkPackage {
                 importer_id: importer_id.to_string(),
                 name: name_str.clone(),
                 source,
-            }
-        })?;
+            })?;
 
         if outcome.reused {
             return Ok(());
@@ -569,9 +553,7 @@ fn link_one_importer<Reporter: self::Reporter>(
     // so the reporter can scope progress to the right project —
     // `lockfileDir` is reserved for the install-wide stage / summary
     // events.
-    let prefix = project_dir
-        .to_string_lossy()
-        .into_owned();
+    let prefix = project_dir.to_string_lossy().into_owned();
 
     // `try_for_each` short-circuits on the first error and returns it
     // to the caller. The full result collection forces every task to
@@ -614,10 +596,7 @@ fn resolved_entry_bins(entries: &[ResolvedEntry<'_>]) -> Vec<crate::PrefetchedDe
     entries
         .iter()
         .map(|entry| {
-            let snapshot_key = entry
-                .spec
-                .version
-                .resolved_key(entry.name);
+            let snapshot_key = entry.spec.version.resolved_key(entry.name);
             (entry.name_str.clone(), entry.target.clone(), snapshot_key)
         })
         .collect()

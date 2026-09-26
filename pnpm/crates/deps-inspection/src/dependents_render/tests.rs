@@ -351,9 +351,7 @@ fn depth_truncates_dependents_in_json_output() {
     let trees = parsed.as_array().expect("JSON array");
     assert_eq!(trees.len(), 1);
     // Direct dependents (depth 0) should be present.
-    let dependents = trees[0]["dependents"]
-        .as_array()
-        .expect("dependents array");
+    let dependents = trees[0]["dependents"].as_array().expect("dependents array");
     assert_eq!(dependents.len(), 2);
     // mid-a should have its dependents stripped (depth 1 is beyond the limit).
     let mid_a = dependents
@@ -375,16 +373,12 @@ fn depth_truncates_dependents_in_json_output() {
 fn no_depth_option_preserves_full_dependents_in_json_output() {
     let parsed: Value = serde_json::from_str(&render_dependents_json(&deep_tree(), &opts(None)))
         .expect("valid JSON");
-    let dependents = parsed[0]["dependents"]
-        .as_array()
-        .expect("dependents array");
+    let dependents = parsed[0]["dependents"].as_array().expect("dependents array");
     let mid_a = dependents
         .iter()
         .find(|dep| dep["name"] == "mid-a")
         .expect("mid-a present");
-    let mid_a_dependents = mid_a["dependents"]
-        .as_array()
-        .expect("mid-a dependents array");
+    let mid_a_dependents = mid_a["dependents"].as_array().expect("mid-a dependents array");
     assert_eq!(mid_a_dependents.len(), 1);
     assert_eq!(mid_a_dependents[0]["name"], "root-project");
 }
@@ -417,11 +411,7 @@ fn includes_display_name_in_json_output() {
     // Nodes without displayName should not have the field.
     let importer_node = &parsed[0]["dependents"][0]["dependents"][0];
     dbg!(importer_node);
-    assert!(
-        importer_node
-            .get("displayName")
-            .is_none()
-    );
+    assert!(importer_node.get("displayName").is_none());
 }
 
 // Port of upstream's 'renderDependentsJson > does not include searchMessage when undefined' (deps/inspection/list/test/renderDependentsTree.test.ts).
@@ -481,11 +471,9 @@ fn no_depth_option_renders_full_paths_in_parseable_output() {
     eprintln!("output:\n{output}");
     // Without depth limit, mid-a is expanded to root-project.
     assert_eq!(lines.len(), 2);
-    assert!(
-        lines.contains(
-            &"root-project@0.0.0 > mid-a@2.0.0 (by workspace:*) > target@1.0.0 (by ^2.0.0)",
-        ),
-    );
+    assert!(lines.contains(
+        &"root-project@0.0.0 > mid-a@2.0.0 (by workspace:*) > target@1.0.0 (by ^2.0.0)",
+    ),);
     assert!(lines.contains(&"root-project@0.0.0 > target@1.0.0 (by 1.0.0)"));
 }
 

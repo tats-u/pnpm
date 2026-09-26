@@ -43,9 +43,7 @@ fn installed_workspace(members: &[&str]) -> (TempDir, std::path::PathBuf, AddMoc
             .expect("write the member package.json");
     }
 
-    pacquet(&workspace, ["install"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["install"]).assert().success();
     clear_stamps(&workspace, members);
 
     (root, workspace, npmrc_info)
@@ -96,9 +94,7 @@ fn assert_ran(workspace: &Path, expected: &[&str], all: &[&str]) {
 fn targeted_update_in_the_only_member_runs_only_the_workspace_root_scripts() {
     let (root, workspace, anchor) = installed_workspace(&["a"]);
 
-    pacquet(&workspace.join("packages").join("a"), ["update", DEP])
-        .assert()
-        .success();
+    pacquet(&workspace.join("packages").join("a"), ["update", DEP]).assert().success();
 
     assert_ran(&workspace, &["root"], &["root", "a"]);
 
@@ -114,9 +110,7 @@ fn targeted_update_in_the_only_member_runs_only_the_workspace_root_scripts() {
 fn targeted_update_in_a_larger_workspace_runs_the_mutated_projects_scripts() {
     let (root, workspace, anchor) = installed_workspace(&["a", "b"]);
 
-    pacquet(&workspace.join("packages").join("a"), ["update", DEP])
-        .assert()
-        .success();
+    pacquet(&workspace.join("packages").join("a"), ["update", DEP]).assert().success();
 
     assert_ran(&workspace, &["root", "a"], &["root", "a", "b"]);
 
@@ -131,9 +125,7 @@ fn targeted_update_in_a_larger_workspace_runs_the_mutated_projects_scripts() {
 fn bare_update_in_a_member_runs_that_member_and_the_workspace_root() {
     let (root, workspace, anchor) = installed_workspace(&["a", "b"]);
 
-    pacquet(&workspace.join("packages").join("a"), ["update"])
-        .assert()
-        .success();
+    pacquet(&workspace.join("packages").join("a"), ["update"]).assert().success();
 
     assert_ran(&workspace, &["root", "a"], &["root", "a", "b"]);
 
@@ -144,9 +136,7 @@ fn bare_update_in_a_member_runs_that_member_and_the_workspace_root() {
 fn filtered_bare_update_runs_the_selected_member_and_workspace_root() {
     let (root, workspace, anchor) = installed_workspace(&["a", "b"]);
 
-    pacquet(&workspace, ["--filter", "a", "update"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["--filter", "a", "update"]).assert().success();
 
     assert_ran(&workspace, &["root", "a"], &["root", "a", "b"]);
 
@@ -159,9 +149,7 @@ fn filtered_bare_update_runs_the_selected_member_and_workspace_root() {
 fn update_at_the_workspace_root_runs_only_the_root_scripts() {
     let (root, workspace, anchor) = installed_workspace(&["a", "b"]);
 
-    pacquet(&workspace, ["update"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["update"]).assert().success();
 
     assert_ran(&workspace, &["root"], &["root", "a", "b"]);
 
@@ -175,9 +163,7 @@ fn update_at_the_workspace_root_runs_only_the_root_scripts() {
 fn recursive_targeted_update_runs_no_project_scripts() {
     let (root, workspace, anchor) = installed_workspace(&["a", "b"]);
 
-    pacquet(&workspace, ["-r", "update", DEP])
-        .assert()
-        .success();
+    pacquet(&workspace, ["-r", "update", DEP]).assert().success();
 
     assert_ran(&workspace, &[], &["root", "a", "b"]);
 
@@ -190,9 +176,7 @@ fn recursive_targeted_update_runs_no_project_scripts() {
 fn recursive_bare_update_runs_every_project_scripts() {
     let (root, workspace, anchor) = installed_workspace(&["a", "b"]);
 
-    pacquet(&workspace, ["-r", "update"])
-        .assert()
-        .success();
+    pacquet(&workspace, ["-r", "update"]).assert().success();
 
     assert_ran(&workspace, &["root", "a", "b"], &["root", "a", "b"]);
 
@@ -208,9 +192,7 @@ fn recursive_bare_update_runs_every_project_scripts() {
 fn add_in_a_member_runs_that_member_and_the_workspace_root() {
     let (root, workspace, anchor) = installed_workspace(&["a", "b"]);
 
-    pacquet(&workspace.join("packages").join("a"), ["add", "@pnpm.e2e/foo"])
-        .assert()
-        .success();
+    pacquet(&workspace.join("packages").join("a"), ["add", "@pnpm.e2e/foo"]).assert().success();
 
     assert_ran(&workspace, &["root", "a"], &["root", "a", "b"]);
 
@@ -223,9 +205,7 @@ fn add_in_a_member_runs_that_member_and_the_workspace_root() {
 fn remove_in_a_member_runs_no_project_scripts() {
     let (root, workspace, anchor) = installed_workspace(&["a", "b"]);
 
-    pacquet(&workspace.join("packages").join("a"), ["remove", DEP])
-        .assert()
-        .success();
+    pacquet(&workspace.join("packages").join("a"), ["remove", DEP]).assert().success();
 
     assert_ran(&workspace, &[], &["root", "a", "b"]);
 

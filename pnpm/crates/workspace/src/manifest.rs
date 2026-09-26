@@ -98,8 +98,7 @@ pub enum ReadWorkspaceManifestError {
 /// pattern default, falling back to `["."]` when `packages:` is absent.
 #[must_use]
 pub fn workspace_package_patterns(manifest: &WorkspaceManifest) -> Vec<String> {
-    manifest
-        .packages
+    manifest.packages
         .clone()
         .unwrap_or_else(|| vec![".".to_string()])
 }
@@ -126,9 +125,11 @@ pub fn read_workspace_manifest(
         return Ok(Some(WorkspaceManifest::default()));
     }
 
-    let manifest: WorkspaceManifest = serde_saphyr::from_str(&text).map_err(|source| {
-        ReadWorkspaceManifestError::ParseYaml { path: path.clone(), source: Box::new(source) }
-    })?;
+    let manifest: WorkspaceManifest = serde_saphyr::from_str(&text)
+        .map_err(|source| ReadWorkspaceManifestError::ParseYaml {
+            path: path.clone(),
+            source: Box::new(source),
+        })?;
 
     // serde_saphyr already enforces the array shape and string type
     // for `packages:` at deserialization. The remaining invariant —

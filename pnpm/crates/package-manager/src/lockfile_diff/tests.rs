@@ -15,9 +15,7 @@ fn pkg(name: &str) -> PkgName {
 }
 
 fn ver(version: &str) -> PkgVerPeer {
-    version
-        .parse()
-        .expect("parse PkgVerPeer")
+    version.parse().expect("parse PkgVerPeer")
 }
 
 /// The whole-lockfile diff `dedupe --check` reports: an importer whose
@@ -74,9 +72,7 @@ fn identical_lockfiles_yield_an_empty_diff() {
 }
 
 fn key(package_key: &str) -> PackageKey {
-    package_key
-        .parse()
-        .expect("parse PackageKey")
+    package_key.parse().expect("parse PackageKey")
 }
 
 /// A lockfile with one root importer and the given `snapshots:` entries.

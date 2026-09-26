@@ -107,8 +107,7 @@ async fn empty_runtime_spec_delegates_latest_to_npm_resolver() {
         .unwrap_err();
 
     assert_eq!(
-        npm_resolver
-            .seen
+        npm_resolver.seen
             .lock()
             .unwrap()
             .clone(),
@@ -135,8 +134,7 @@ async fn whitespace_runtime_spec_delegates_latest_to_npm_resolver() {
         .unwrap_err();
 
     assert_eq!(
-        npm_resolver
-            .seen
+        npm_resolver.seen
             .lock()
             .unwrap()
             .clone(),

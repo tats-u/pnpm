@@ -33,11 +33,7 @@ async fn head_probe_accepts_success_without_retrying() {
         .expect(1)
         .create_async()
         .await;
-    assert!(
-        real_probe()
-            .anonymous_head_ok(&format!("{}/foo/bar/tar.gz/abc", server.url()))
-            .await
-    );
+    assert!(real_probe().anonymous_head_ok(&format!("{}/foo/bar/tar.gz/abc", server.url())).await);
     mock.assert_async().await;
 }
 
@@ -50,19 +46,13 @@ async fn head_probe_does_not_retry_definitive_statuses() {
         .expect(1)
         .create_async()
         .await;
-    assert!(
-        !real_probe()
-            .anonymous_head_ok(&format!("{}/foo/bar/tar.gz/abc", server.url()))
-            .await
-    );
+    assert!(!real_probe().anonymous_head_ok(&format!("{}/foo/bar/tar.gz/abc", server.url())).await);
     mock.assert_async().await;
 }
 
 #[tokio::test]
 async fn head_probe_bounds_attempts_on_an_unresponsive_endpoint() {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     let hold_connections_open = tokio::spawn(async move {
         let mut held = Vec::new();
@@ -75,11 +65,7 @@ async fn head_probe_bounds_attempts_on_an_unresponsive_endpoint() {
         head_timeout: std::time::Duration::from_millis(100),
     };
     let started = std::time::Instant::now();
-    assert!(
-        !probe
-            .anonymous_head_ok(&format!("http://{addr}/foo/tar.gz/abc"))
-            .await
-    );
+    assert!(!probe.anonymous_head_ok(&format!("http://{addr}/foo/tar.gz/abc")).await);
     // 3 timed-out attempts plus 1.5s of backoff; generous slack for CI
     // load. Without the per-attempt deadline this hangs for the
     // client-wide timeout per attempt instead.
@@ -96,11 +82,7 @@ async fn head_probe_retries_transient_statuses_to_exhaustion() {
         .expect(3)
         .create_async()
         .await;
-    assert!(
-        !real_probe()
-            .anonymous_head_ok(&format!("{}/foo/bar/tar.gz/abc", server.url()))
-            .await
-    );
+    assert!(!real_probe().anonymous_head_ok(&format!("{}/foo/bar/tar.gz/abc", server.url())).await);
     mock.assert_async().await;
 }
 
@@ -111,10 +93,7 @@ async fn head_probe_retries_transient_statuses_to_exhaustion() {
 async fn a_missing_git_binary_is_reported_as_one() {
     let runner = RealGitRunner { git_bin: Some("/nonexistent/git".into()) };
 
-    let err = runner
-        .ls_remote("https://github.com/foo/bar.git", None)
-        .await
-        .unwrap_err();
+    let err = runner.ls_remote("https://github.com/foo/bar.git", None).await.unwrap_err();
 
     assert_eq!(
         err.to_string(),

@@ -116,8 +116,7 @@ impl NpmrcAuth {
             // `pnpm config get` / `list`, independent of the structured
             // parsing below (which only some of these keys feed).
             if crate::config_types::is_ini_config_key(&key) {
-                auth.raw_ini_config
-                    .insert(key.clone(), value.clone());
+                auth.raw_ini_config.insert(key.clone(), value.clone());
             }
             auth.apply_ini_entry(&key, value, npmrc_dir);
         }
@@ -154,12 +153,8 @@ impl NpmrcAuth {
             return None;
         }
         let (value, value_unresolved) = env_replace_lossy::<Sys>(raw_value);
-        for placeholder in key_unresolved
-            .into_iter()
-            .chain(value_unresolved)
-        {
-            self.warnings
-                .push(format!("Failed to replace env in config: {placeholder}"));
+        for placeholder in key_unresolved.into_iter().chain(value_unresolved) {
+            self.warnings.push(format!("Failed to replace env in config: {placeholder}"));
         }
         Some((key, value))
     }
@@ -205,9 +200,7 @@ impl NpmrcAuth {
             return;
         }
         if let Some(scope) = scoped_registry_key(key) {
-            self.routes
-                .scoped
-                .insert(scope.to_string(), normalize_registry_url(&value));
+            self.routes.scoped.insert(scope.to_string(), normalize_registry_url(&value));
             return;
         }
         if self.apply_network_key(key, &value, npmrc_dir) {
@@ -257,11 +250,7 @@ impl NpmrcAuth {
         } else {
             expand_inline_pem(value)
         };
-        let entry = self
-            .tls
-            .by_uri
-            .entry(uri.to_owned())
-            .or_default();
+        let entry = self.tls.by_uri.entry(uri.to_owned()).or_default();
         apply_tls_field(entry, field, resolved);
     }
 

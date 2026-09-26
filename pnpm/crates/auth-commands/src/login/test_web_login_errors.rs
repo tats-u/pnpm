@@ -131,9 +131,7 @@ async fn should_surface_a_web_login_transport_failure_as_a_request_error() {
     reset_login();
 
     let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind an ephemeral port");
-    let addr = listener
-        .local_addr()
-        .expect("read the assigned port");
+    let addr = listener.local_addr().expect("read the assigned port");
     let registry = format!("http://{addr}/");
     let config_dir = Path::new("/mock/config");
     let build_client = |redirect| {
@@ -159,11 +157,7 @@ async fn should_surface_a_web_login_transport_failure_as_a_request_error() {
             .as_deref(),
         Some("ERR_PNPM_AUTH_COMMANDS_LOGIN_REQUEST_FAILED"),
     );
-    assert!(
-        err.to_string()
-            .starts_with("The login request failed:"),
-        "unexpected message: {err}"
-    );
+    assert!(err.to_string().starts_with("The login request failed:"), "unexpected message: {err}");
 }
 
 #[tokio::test]
@@ -380,9 +374,7 @@ async fn should_refuse_a_registry_the_config_reader_would_reject() {
     let mut options = opts("https://user:secret@registry.example/", Path::new("/mock/config"));
     options.scope = Some("@acme");
 
-    let err = login::<FakeHost, RecordingReporter>(&client(), options)
-        .await
-        .unwrap_err();
+    let err = login::<FakeHost, RecordingReporter>(&client(), options).await.unwrap_err();
 
     let LoginError::UnrecordableLogin { reason } = &err else {
         panic!("expected UnrecordableLogin, got {err:?}");
@@ -403,9 +395,7 @@ async fn should_refuse_a_scope_the_config_reader_would_reject() {
     let mut options = opts("https://registry.example/", Path::new("/mock/config"));
     options.scope = Some("@foo/bar");
 
-    let err = login::<FakeHost, RecordingReporter>(&client(), options)
-        .await
-        .unwrap_err();
+    let err = login::<FakeHost, RecordingReporter>(&client(), options).await.unwrap_err();
 
     assert!(
         matches!(err, LoginError::UnrecordableLogin { .. }),

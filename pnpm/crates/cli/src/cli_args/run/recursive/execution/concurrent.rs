@@ -17,9 +17,7 @@ pub(super) fn run_scripts(run: &ProjectScripts<'_, '_, '_>) -> miette::Result<Pr
     let state = Mutex::new(ScriptRunState::queued());
     let abort: Mutex<Option<miette::Report>> = Mutex::new(None);
     let run_script = |selected: String| run_one_script(run, &ctx, &state, &abort, &selected);
-    let tasks: IndexMap<String, Vec<String>> = options
-        .node
-        .scripts
+    let tasks: IndexMap<String, Vec<String>> = options.node.scripts
         .iter()
         .cloned()
         .map(|name| (name, Vec::new()))
@@ -33,16 +31,10 @@ pub(super) fn run_scripts(run: &ProjectScripts<'_, '_, '_>) -> miette::Result<Pr
     )
     .continue_on_failure(!options.process.bail);
     schedule_graph(&tasks, &schedule).into_diagnostic()?;
-    if let Some(error) = abort
-        .into_inner()
-        .expect("run abort lock is not poisoned")
-    {
+    if let Some(error) = abort.into_inner().expect("run abort lock is not poisoned") {
         return Err(error);
     }
-    Ok(state
-        .into_inner()
-        .expect("run state lock is not poisoned")
-        .execution)
+    Ok(state.into_inner().expect("run state lock is not poisoned").execution)
 }
 
 /// Run one of the task's scripts against the state the run's threads
@@ -63,11 +55,7 @@ fn run_one_script(
     // Running the script pnpm is already inside would recurse; the guard
     // is what `pnpm -r test` from within a `test` script needs.
     if reenters_running_script(selected, run.options.node.project.as_path()) {
-        state
-            .lock()
-            .expect("run state lock is not poisoned")
-            .execution
-            .recursion_guarded = true;
+        state.lock().expect("run state lock is not poisoned").execution.recursion_guarded = true;
         return TaskCompletion::Passed;
     }
 
@@ -96,9 +84,7 @@ fn settle_script(
     status: ScriptExit,
     duration: f64,
 ) -> TaskCompletion {
-    let mut state = state
-        .lock()
-        .expect("run state lock is not poisoned");
+    let mut state = state.lock().expect("run state lock is not poisoned");
     if !apply_script_result(&mut state, ctx, status, duration) {
         return TaskCompletion::Cancelled;
     }
@@ -117,9 +103,7 @@ fn abort_run(
     abort: &Mutex<Option<miette::Report>>,
     error: miette::Report,
 ) -> TaskCompletion {
-    let mut abort = abort
-        .lock()
-        .expect("run abort lock is not poisoned");
+    let mut abort = abort.lock().expect("run abort lock is not poisoned");
     if abort.is_none() {
         *abort = Some(error);
     }

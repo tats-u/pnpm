@@ -175,10 +175,7 @@ pub fn run_pipeline(
         invocation,
         config,
         dir,
-        workspace_root: config
-            .workspace_dir
-            .as_deref()
-            .unwrap_or(dir),
+        workspace_root: config.workspace_dir.as_deref().unwrap_or(dir),
         emit: reporter_emit(reporter),
         silent: matches!(reporter, ReporterType::Ndjson | ReporterType::Silent),
     };
@@ -242,10 +239,7 @@ impl<'a> PipelineRun<'a> {
         (self.emit)(&LogEvent::Pnpm(PnpmLog {
             level: LogLevel::Info,
             message,
-            prefix: self
-                .workspace_root
-                .to_string_lossy()
-                .into_owned(),
+            prefix: self.workspace_root.to_string_lossy().into_owned(),
         }));
     }
 
@@ -258,17 +252,11 @@ impl<'a> PipelineRun<'a> {
         if self.config.pipelines.is_empty() {
             return Err(PipelineError::NoPipelines.into());
         }
-        let name = self
-            .invocation
-            .name
-            .as_deref()
-            .unwrap_or(DEFAULT_PIPELINE_NAME);
+        let name = self.invocation.name.as_deref().unwrap_or(DEFAULT_PIPELINE_NAME);
         let Some(requested_tasks) = self.config.pipelines.get(name) else {
             return Err(PipelineError::UnknownPipeline {
                 name: name.to_string(),
-                available: self
-                    .config
-                    .pipelines
+                available: self.config.pipelines
                     .keys()
                     .cloned()
                     .collect::<Vec<_>>()
@@ -319,9 +307,7 @@ impl<'a> PipelineRun<'a> {
             report: plan.report,
             environment: PipelineEnvironment {
                 init_cwd: env::current_dir().unwrap_or_else(|_| self.dir.to_path_buf()),
-                extra_env: self
-                    .config
-                    .extra_env_with_node_options(),
+                extra_env: self.config.extra_env_with_node_options(),
             },
             results: PipelineResults::new(&task_graph, self.workspace_root),
         };
@@ -340,8 +326,7 @@ impl<'a> PipelineRun<'a> {
         let counts = StatusCounts::of(statuses);
         let hits = plan.report.cache_hits();
 
-        plan.report
-            .finish(statuses, task_keys, self.workspace_root);
+        plan.report.finish(statuses, task_keys, self.workspace_root);
         self.conclude(
             plan.report,
             Some(format!(
@@ -359,32 +344,22 @@ impl<'a> PipelineRun<'a> {
     /// The task graph over the selection: the requested projects' tasks
     /// plus the `dependsOn` edges into the rest of the selected projects.
     fn task_graph(&self, plan: &PipelinePlan<'_, '_>) -> TaskGraph {
-        let selected_graph: ProjectGraph<GraphPkg<'_>> = plan
-            .graph
+        let selected_graph: ProjectGraph<GraphPkg<'_>> = plan.graph
             .iter()
-            .filter(|(root, _)| {
-                plan.selection
-                    .selected
-                    .contains(root.as_path())
-            })
+            .filter(|(root, _)| plan.selection.selected.contains(root.as_path()))
             .map(|(root, node)| (root.clone(), node.clone()))
             .collect();
         let project_dependencies =
             filtered_projects_dependencies(&selected_graph, plan.graph, None, &HashSet::new());
 
         let select_scripts = |project: &Path, task_name: &str| -> Vec<String> {
-            let manifest = plan.graph[project]
-                .package
-                .project
-                .manifest
-                .value();
+            let manifest = plan.graph[project].package.project.manifest.value();
             match ScriptSelector::new(task_name) {
                 Ok(selector) => selector.select(manifest),
                 Err(_) => Vec::new(),
             }
         };
-        let task_names: Vec<&str> = plan
-            .requested_tasks
+        let task_names: Vec<&str> = plan.requested_tasks
             .iter()
             .map(String::as_str)
             .collect();
@@ -462,10 +437,7 @@ impl TaskRunner<'_, '_> {
             config: self.run.config,
             invocation: self.run.invocation,
             cache: self.cache,
-            task_key: self
-                .task_keys
-                .get(&key)
-                .and_then(Option::as_deref),
+            task_key: self.task_keys.get(&key).and_then(Option::as_deref),
             environment: crate::cli_args::pipeline::execution::TaskEnvironment {
                 init_cwd: &self.environment.init_cwd,
                 extra_env: &self.environment.extra_env,
@@ -483,29 +455,19 @@ impl TaskRunner<'_, '_> {
     fn skip_task(&self, node: &TaskNode) {
         let key = TaskKey { project: node.project.clone(), task_name: node.task_name.clone() };
         let summary_key = format_task(&key, self.run.workspace_root);
-        self.results
-            .statuses
-            .lock()
-            .expect("status lock is not poisoned")[&summary_key]
-            .status = Status::Skipped;
+        self.results.statuses.lock().expect("status lock is not poisoned")[&summary_key].status =
+            Status::Skipped;
         self.report.task_skipped(&summary_key);
     }
 
     /// The settled statuses, unless a task could not run at all.
     fn finish(self) -> miette::Result<IndexMap<String, ExecutionStatus>> {
-        if let Some(error) = self
-            .results
-            .abort
-            .into_inner()
-            .expect("abort slot lock is not poisoned")
+        if let Some(error) =
+            self.results.abort.into_inner().expect("abort slot lock is not poisoned")
         {
             return Err(error);
         }
-        Ok(self
-            .results
-            .statuses
-            .into_inner()
-            .expect("status lock is not poisoned"))
+        Ok(self.results.statuses.into_inner().expect("status lock is not poisoned"))
     }
 }
 
@@ -514,15 +476,11 @@ impl TaskRunner<'_, '_> {
 /// install pruning `node_modules` cannot take the cache with it.
 fn pipeline_data_dir(config: &Config, workspace_root: &Path) -> PathBuf {
     let workspace_slug = pnpm_crypto_hash::create_short_hash(&workspace_root.to_string_lossy());
-    config
-        .cache_dir
-        .join("pipeline")
-        .join(workspace_slug)
+    config.cache_dir.join("pipeline").join(workspace_slug)
 }
 
 fn pipeline_base(invocation: &PipelineInvocation, config: &Config) -> String {
-    invocation
-        .base
+    invocation.base
         .clone()
         .or_else(|| config.pipeline_base.clone())
         .unwrap_or_else(|| DEFAULT_PIPELINE_BASE.to_string())

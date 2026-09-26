@@ -159,13 +159,8 @@ pub(super) fn linked_target_may_declare_peers(
         // for the picked version would duplicate
         // `resolve_workspace_range` to narrow an answer that is
         // only ever "walk this importer too".
-        let linked_name = spec
-            .alias
-            .as_deref()
-            .unwrap_or(entry_key);
-        return scan
-            .peer_declaring_names
-            .contains(linked_name)
+        let linked_name = spec.alias.as_deref().unwrap_or(entry_key);
+        return scan.peer_declaring_names.contains(linked_name)
             || !scan.project_names.contains(linked_name);
     }
     // Only `file:` reads the name: it resolves to a package
@@ -184,11 +179,8 @@ pub(super) fn linked_target_may_declare_peers(
     };
     let linked_id =
         pnpm_workspace::importer_id_from_root_dir(scan.lockfile_dir, &importer_dir.join(relative));
-    scan.peer_declaring_ids
-        .contains(linked_id.as_str())
-        || !scan
-            .importer_manifests
-            .contains_key(&linked_id)
+    scan.peer_declaring_ids.contains(linked_id.as_str())
+        || !scan.importer_manifests.contains_key(&linked_id)
 }
 pub(super) struct LockfileOnlyOptions<'a> {
     pub write:
@@ -227,10 +219,7 @@ pub(super) async fn finish_lockfile_only<Reporter: self::Reporter>(
         } else if opts.write.config.lockfile {
             let can_record_lockfile_verification = save_wanted_lockfile(
                 &opts.built_lockfile,
-                &opts
-                    .write
-                    .dir
-                    .join(opts.write.config.wanted_lockfile_name()),
+                &opts.write.dir.join(opts.write.config.wanted_lockfile_name()),
                 opts.write.hook,
                 opts.write.log,
             )

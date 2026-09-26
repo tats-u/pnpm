@@ -33,9 +33,7 @@ fn scrubbed_env() -> EnvGuard {
 fn every_flag_is_bound_to_the_env_var_named_after_it() {
     let mut bound = Vec::new();
     for arg in Args::command().get_arguments() {
-        let long = arg
-            .get_long()
-            .expect("every pnpr option has a long flag");
+        let long = arg.get_long().expect("every pnpr option has a long flag");
         let expected = format!("PNPR_{}", long.to_uppercase().replace('-', "_"));
         assert_eq!(arg.get_env(), Some(OsStr::new(&expected)), "--{long}");
         bound.push(expected);
@@ -73,12 +71,7 @@ fn env_vars_stand_in_for_omitted_flags() {
     let args = Args::try_parse_from(["pnpr"]).unwrap();
 
     assert_eq!(args.config.as_deref(), Some("/etc/pnpr/config.yaml".as_ref()));
-    assert_eq!(
-        args.listen,
-        "0.0.0.0:4873"
-            .parse::<SocketAddr>()
-            .unwrap()
-    );
+    assert_eq!(args.listen, "0.0.0.0:4873".parse::<SocketAddr>().unwrap());
     assert_eq!(args.paths.storage.as_deref(), Some("/var/lib/pnpr".as_ref()));
     assert_eq!(args.paths.cache.as_deref(), Some("/var/cache/pnpr".as_ref()));
     assert_eq!(args.public_url.as_deref(), Some("https://registry.example.com"));
@@ -96,12 +89,7 @@ fn omitted_flags_without_env_vars_keep_their_defaults() {
 
     let args = Args::try_parse_from(["pnpr"]).unwrap();
 
-    assert_eq!(
-        args.listen,
-        super::Config::DEFAULT_LISTEN
-            .parse::<SocketAddr>()
-            .unwrap()
-    );
+    assert_eq!(args.listen, super::Config::DEFAULT_LISTEN.parse::<SocketAddr>().unwrap());
     assert_eq!(args.config, None);
     assert_eq!(args.packument_ttl_secs, None);
     assert!(!args.osv_options.osv);
@@ -127,12 +115,7 @@ fn flags_on_the_command_line_win_over_env_vars() {
     ])
     .unwrap();
 
-    assert_eq!(
-        args.listen,
-        "127.0.0.1:7677"
-            .parse::<SocketAddr>()
-            .unwrap()
-    );
+    assert_eq!(args.listen, "127.0.0.1:7677".parse::<SocketAddr>().unwrap());
     assert_eq!(args.packument_ttl_secs, Some(5));
     assert!(args.features.disable_artifacts);
 }
@@ -158,23 +141,17 @@ fn invalid_env_values_are_rejected() {
     let env = scrubbed_env();
 
     env.set("PNPR_OSV", "maybe");
-    let err = Args::try_parse_from(["pnpr"])
-        .unwrap_err()
-        .to_string();
+    let err = Args::try_parse_from(["pnpr"]).unwrap_err().to_string();
     assert!(err.contains("'maybe' for '--osv'"), "{err}");
     env.set("PNPR_OSV", "true");
 
     env.set("PNPR_LISTEN", "not-an-address");
-    let err = Args::try_parse_from(["pnpr"])
-        .unwrap_err()
-        .to_string();
+    let err = Args::try_parse_from(["pnpr"]).unwrap_err().to_string();
     assert!(err.contains("'not-an-address' for '--listen"), "{err}");
     env.set("PNPR_LISTEN", "127.0.0.1:7677");
 
     env.set("PNPR_PACKUMENT_TTL_SECS", "soon");
-    let err = Args::try_parse_from(["pnpr"])
-        .unwrap_err()
-        .to_string();
+    let err = Args::try_parse_from(["pnpr"]).unwrap_err().to_string();
     assert!(err.contains("'soon' for '--packument-ttl-secs"), "{err}");
 }
 

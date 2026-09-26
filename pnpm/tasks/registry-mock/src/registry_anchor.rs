@@ -27,9 +27,7 @@ impl Drop for RegistryAnchor {
         let guard = GuardFile::lock();
 
         // load an up-to-date anchor, it is leaked to prevent dropping (again).
-        let anchor = RegistryAnchor::load()
-            .pipe(Box::new)
-            .pipe(Box::leak);
+        let anchor = RegistryAnchor::load().pipe(Box::new).pipe(Box::leak);
         if self.info != anchor.info {
             eprintln!("info: {:?} is outdated. Skip.", self.info);
             return;
@@ -111,10 +109,7 @@ impl RegistryAnchor {
         } else {
             let guard = GuardFile::lock();
             let mut anchor = RegistryAnchor::load();
-            anchor.ref_count = anchor
-                .ref_count
-                .checked_add(1)
-                .expect("increment ref_count");
+            anchor.ref_count = anchor.ref_count.checked_add(1).expect("increment ref_count");
             anchor.save();
             guard.unlock();
             anchor
@@ -134,9 +129,7 @@ struct GuardFile;
 
 impl Drop for GuardFile {
     fn drop(&mut self) {
-        GuardFile::path()
-            .unlock()
-            .expect("release file guard");
+        GuardFile::path().unlock().expect("release file guard");
     }
 }
 
@@ -155,9 +148,7 @@ impl GuardFile {
     }
 
     fn lock() -> Self {
-        GuardFile::path()
-            .lock()
-            .expect("acquire file guard");
+        GuardFile::path().lock().expect("acquire file guard");
         GuardFile
     }
 

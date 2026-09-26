@@ -31,9 +31,7 @@ impl ConfigDepsInstallOptions<'_> {
     /// dependency's tarball URL when the lockfile stored an
     /// integrity-only (registry-form) resolution.
     pub(crate) fn default_registry(&self) -> &str {
-        self.registries
-            .get("default")
-            .map_or(DEFAULT_REGISTRY, String::as_str)
+        self.registries.get("default").map_or(DEFAULT_REGISTRY, String::as_str)
     }
 
     /// Registry serving `name`: a scoped package consults its `@scope`
@@ -50,9 +48,7 @@ impl ConfigDepsInstallOptions<'_> {
     /// The `prefix`/`requester` string pnpm threads into fetch + log
     /// payloads — the install root.
     pub(crate) fn requester(&self) -> String {
-        self.root_dir
-            .to_string_lossy()
-            .into_owned()
+        self.root_dir.to_string_lossy().into_owned()
     }
 }
 

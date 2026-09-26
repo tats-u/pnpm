@@ -92,9 +92,7 @@ where
 {
     // TODO: If env variables start with ~, make sure to resolve it into home_dir.
     if let Some(pnpm_home) = Sys::var("PNPM_HOME") {
-        return PathBuf::from(pnpm_home)
-            .join("store")
-            .into();
+        return PathBuf::from(pnpm_home).join("store").into();
     }
 
     if let Some(xdg_data_home) = Sys::var("XDG_DATA_HOME") {
@@ -165,9 +163,7 @@ where
 
 pub fn default_modules_dir() -> PathBuf {
     // TODO: find directory with package.json
-    env::current_dir()
-        .expect("current directory is unavailable")
-        .join("node_modules")
+    env::current_dir().expect("current directory is unavailable").join("node_modules")
 }
 
 /// Resolve the directory pnpm reads `config.yaml` (the global config
@@ -220,9 +216,7 @@ pub fn resolve_configured_state_dir(default_state_dir: &Path, configured: &str) 
     if configured.is_absolute() {
         return configured.to_path_buf();
     }
-    let Some(state_root) = default_state_dir
-        .parent()
-        .filter(|state_root| state_root.is_absolute())
+    let Some(state_root) = default_state_dir.parent().filter(|state_root| state_root.is_absolute())
     else {
         return PathBuf::new();
     };
@@ -258,10 +252,11 @@ where
     let home_dir = Sys::home_dir().expect("Home directory is not available");
     match env::consts::OS {
         "macos" => home_dir.join("Library/Caches/pnpm"),
-        "windows" => Sys::var("LOCALAPPDATA").map_or_else(
-            || home_dir.join(".pnpm-cache"),
-            |local_app_data| PathBuf::from(local_app_data).join("pnpm-cache"),
-        ),
+        "windows" => Sys::var("LOCALAPPDATA")
+            .map_or_else(
+                || home_dir.join(".pnpm-cache"),
+                |local_app_data| PathBuf::from(local_app_data).join("pnpm-cache"),
+            ),
         _ => home_dir.join(".cache/pnpm"),
     }
 }
@@ -463,9 +458,7 @@ pub fn resolve_child_concurrency_with_parallelism(option: Option<i32>, paralleli
         // panics in debug builds on `n == i32::MIN` (negation
         // overflow); the former returns `i32::MAX as u32 + 1`
         // safely.
-        Some(n) => parallelism
-            .saturating_sub(n.unsigned_abs())
-            .max(1),
+        Some(n) => parallelism.saturating_sub(n.unsigned_abs()).max(1),
     }
 }
 

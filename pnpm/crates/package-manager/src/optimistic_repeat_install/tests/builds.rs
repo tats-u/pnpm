@@ -42,9 +42,7 @@ fn returns_skipped_when_patched_dependencies_drift() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -70,9 +68,7 @@ fn returns_skipped_when_patch_file_modified_after_validation() {
     let manifest = PackageManifest::from_path(manifest_path).unwrap();
     write_empty_lockfile(workspace_root);
 
-    let patch_path = workspace_root
-        .join("patches")
-        .join("foo.patch");
+    let patch_path = workspace_root.join("patches").join("foo.patch");
     fs::create_dir_all(patch_path.parent().unwrap()).unwrap();
     fs::write(&patch_path, "--- a\n+++ b\n").unwrap();
 
@@ -88,9 +84,7 @@ fn returns_skipped_when_patch_file_modified_after_validation() {
         current_settings(config, pnpm_config::NodeLinker::Isolated, isolated_included(), None);
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     // Validate everything on disk, then bump the patch past that timestamp.
@@ -117,9 +111,7 @@ fn returns_up_to_date_when_patch_file_unchanged() {
     let manifest = PackageManifest::from_path(manifest_path).unwrap();
     write_empty_lockfile(workspace_root);
 
-    let patch_path = workspace_root
-        .join("patches")
-        .join("foo.patch");
+    let patch_path = workspace_root.join("patches").join("foo.patch");
     fs::create_dir_all(patch_path.parent().unwrap()).unwrap();
     fs::write(&patch_path, "--- a\n+++ b\n").unwrap();
 
@@ -135,9 +127,7 @@ fn returns_up_to_date_when_patch_file_unchanged() {
         current_settings(config, pnpm_config::NodeLinker::Isolated, isolated_included(), None);
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     // Both the manifest and patch were written before this timestamp.
@@ -164,16 +154,12 @@ fn returns_skipped_when_allow_builds_drift() {
     let mut config = Config::new();
     config.modules_dir = workspace_root.join("node_modules");
     fs::create_dir_all(&config.modules_dir).unwrap();
-    config
-        .allow_builds
-        .insert("foo".to_string(), true);
+    config.allow_builds.insert("foo".to_string(), true);
     let config = config.leak();
 
     let mut stale_config = Config::new();
     stale_config.modules_dir = config.modules_dir.clone();
-    stale_config
-        .allow_builds
-        .insert("foo".to_string(), false);
+    stale_config.allow_builds.insert("foo".to_string(), false);
     let stale_settings = current_settings(
         &stale_config,
         pnpm_config::NodeLinker::Isolated,
@@ -182,9 +168,7 @@ fn returns_skipped_when_allow_builds_drift() {
     );
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), stale_settings, projects);
@@ -245,9 +229,7 @@ fn returns_up_to_date_when_state_has_empty_allow_builds_and_current_has_none() {
 
     let mut projects = BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         ProjectEntry { name: Some("root".into()), version: Some("1.0.0".into()) },
     );
     write_state(workspace_root, backdate_validated_files(workspace_root), settings, projects);

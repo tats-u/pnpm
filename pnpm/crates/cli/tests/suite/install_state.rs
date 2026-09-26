@@ -9,8 +9,13 @@ use std::{fs, process::Command};
 
 #[test]
 fn frozen_reinstall_writes_modules_manifest_current_lockfile_and_bins() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -30,21 +35,9 @@ fn frozen_reinstall_writes_modules_manifest_current_lockfile_and_bins() {
         .assert()
         .success();
 
-    assert!(
-        workspace
-            .join("node_modules/.modules.yaml")
-            .exists()
-    );
-    assert!(
-        workspace
-            .join("node_modules/.pnpm/lock.yaml")
-            .exists()
-    );
-    assert!(
-        workspace
-            .join("node_modules/.bin/hello-world-js-bin")
-            .exists()
-    );
+    assert!(workspace.join("node_modules/.modules.yaml").exists());
+    assert!(workspace.join("node_modules/.pnpm/lock.yaml").exists());
+    assert!(workspace.join("node_modules/.bin/hello-world-js-bin").exists());
 
     drop((root, mock_instance));
 }
@@ -53,8 +46,13 @@ fn frozen_reinstall_writes_modules_manifest_current_lockfile_and_bins() {
 /// (`deps-installer/test/install/misc.ts:1433`).
 #[test]
 fn pnp_install_without_symlinks_still_writes_modules_manifest_and_bin_directory() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -82,26 +80,12 @@ fn pnp_install_without_symlinks_still_writes_modules_manifest_and_bin_directory(
         .success();
 
     let modules_dir = workspace.join("node_modules");
-    assert!(
-        modules_dir
-            .join(".bin/hello-world-js-bin")
-            .exists()
-    );
-    assert!(
-        modules_dir
-            .join(".modules.yaml")
-            .exists()
-    );
-    assert!(
-        modules_dir
-            .join(".pnpm/lock.yaml")
-            .exists()
-    );
+    assert!(modules_dir.join(".bin/hello-world-js-bin").exists());
+    assert!(modules_dir.join(".modules.yaml").exists());
+    assert!(modules_dir.join(".pnpm/lock.yaml").exists());
     assert!(workspace.join(".pnp.cjs").exists());
     assert!(
-        !modules_dir
-            .join("@pnpm.e2e/hello-world-js-bin")
-            .exists(),
+        !modules_dir.join("@pnpm.e2e/hello-world-js-bin").exists(),
         "symlink:false must not create an importer dependency link",
     );
 
@@ -168,8 +152,13 @@ assert.strictEqual(api.resolveVirtual(packageJson), null);",
 
 #[test]
 fn pnp_loader_is_preloaded_for_lifecycle_run_and_exec_commands() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -217,9 +206,7 @@ fn pnp_loader_is_preloaded_for_lifecycle_run_and_exec_commands() {
         .assert()
         .success();
     assert!(
-        workspace
-            .join("postinstall-pnp")
-            .exists(),
+        workspace.join("postinstall-pnp").exists(),
         "the project postinstall should resolve its dependency through PnP",
     );
 
@@ -252,9 +239,7 @@ fn pnp_loader_is_preloaded_for_lifecycle_run_and_exec_commands() {
         .assert()
         .success();
     assert!(
-        workspace
-            .join("postinstall-pnp")
-            .exists(),
+        workspace.join("postinstall-pnp").exists(),
         "the frozen project postinstall should resolve its dependency through PnP",
     );
     let frozen_node_options = dependency_node_options();
@@ -297,9 +282,7 @@ fn pnp_loader_is_preloaded_for_lifecycle_run_and_exec_commands() {
         .assert()
         .success();
     assert!(
-        member_dir
-            .join("recursive-run-pnp")
-            .exists(),
+        member_dir.join("recursive-run-pnp").exists(),
         "recursive pnpm run should preload the workspace PnP loader",
     );
 
@@ -316,9 +299,7 @@ fn pnp_loader_is_preloaded_for_lifecycle_run_and_exec_commands() {
         .assert()
         .success();
     assert!(
-        member_dir
-            .join("recursive-exec-pnp")
-            .exists(),
+        member_dir.join("recursive-exec-pnp").exists(),
         "recursive pnpm exec should preload the workspace PnP loader",
     );
 
@@ -365,15 +346,11 @@ fn public_hoist_uses_the_project_root_when_the_lockfile_is_external() {
         .success();
 
     assert!(
-        workspace
-            .join("node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep/package.json")
-            .exists(),
+        workspace.join("node_modules/@pnpm.e2e/dep-of-pkg-with-1-dep/package.json").exists(),
         "the public hoist must be anchored at the lockfile/project root",
     );
     assert!(
-        project
-            .join("node_modules/@pnpm.e2e/pkg-with-1-dep/package.json")
-            .exists(),
+        project.join("node_modules/@pnpm.e2e/pkg-with-1-dep/package.json").exists(),
         "the selected project must keep its direct dependency link",
     );
 
@@ -386,8 +363,13 @@ fn public_hoist_uses_the_project_root_when_the_lockfile_is_external() {
 /// user's own entries with it (<https://github.com/pnpm/pnpm/issues/14062>).
 #[test]
 fn unreadable_modules_manifest_fails_the_install_without_purging_node_modules() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     fs::write(
@@ -419,9 +401,7 @@ fn unreadable_modules_manifest_fails_the_install_without_purging_node_modules() 
     );
     assert!(vendored.is_dir(), "the failed install must not purge node_modules:\n{stderr}");
     assert!(
-        modules_dir
-            .join("@pnpm.e2e/hello-world-js-bin/package.json")
-            .exists(),
+        modules_dir.join("@pnpm.e2e/hello-world-js-bin/package.json").exists(),
         "the failed install must leave the materialized tree alone:\n{stderr}",
     );
 
@@ -432,8 +412,13 @@ fn unreadable_modules_manifest_fails_the_install_without_purging_node_modules() 
 /// is used` (`deps-installer/test/install/modulesCache.ts:52`).
 #[test]
 fn expired_modules_cache_is_pruned_during_frozen_install() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     let manifest_path = workspace.join("package.json");
     fs::write(
@@ -518,8 +503,13 @@ fn expired_modules_cache_is_pruned_during_frozen_install() {
 /// (`deps-installer/test/install/misc.ts:1087`).
 #[test]
 fn rewrites_node_modules_created_by_npm() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
     fs::write(
         workspace.join("package.json"),
@@ -544,11 +534,7 @@ fn rewrites_node_modules_created_by_npm() {
         .assert()
         .success();
     assert!(is_symlink_or_junction(&npm_dep).expect("inspect installed dependency"));
-    assert!(
-        workspace
-            .join("node_modules/.bin/hello-world-js-bin")
-            .exists()
-    );
+    assert!(workspace.join("node_modules/.bin/hello-world-js-bin").exists());
 
     drop((root, mock_instance));
 }

@@ -24,9 +24,7 @@ use std::{
 };
 
 fn pacquet_at(workspace: &Path) -> Command {
-    Command::cargo_bin("pnpm")
-        .expect("find the pnpm binary")
-        .with_current_dir(workspace)
+    Command::cargo_bin("pnpm").expect("find the pnpm binary").with_current_dir(workspace)
 }
 
 /// An empty user-level `.npmrc`, returned for `--npmrc-auth-file`, so the
@@ -43,13 +41,9 @@ fn run_ping(workspace: &Path, auth_file: &Path, registry: Option<&str>) -> std::
         .with_arg(auth_file)
         .with_arg("ping");
     if let Some(registry) = registry {
-        command = command
-            .with_arg("--registry")
-            .with_arg(registry);
+        command = command.with_arg("--registry").with_arg(registry);
     }
-    command
-        .output()
-        .expect("spawn pacquet ping")
+    command.output().expect("spawn pacquet ping")
 }
 
 /// Match `GET /<path>-/ping?write=true`, the request `pacquet ping` issues.
@@ -87,8 +81,7 @@ fn reports_ping_and_pong_for_a_reachable_registry() {
         .expect("PONG line")
         .strip_suffix("ms")
         .expect("ms");
-    pong.parse::<u128>()
-        .expect("the elapsed time must be a number of milliseconds");
+    pong.parse::<u128>().expect("the elapsed time must be a number of milliseconds");
     drop((root, server));
 }
 
@@ -242,18 +235,9 @@ fn fails_on_a_network_failure() {
     let auth_file = empty_auth_file(root.path());
     let socket = tokio::net::TcpSocket::new_v4().expect("create registry socket");
     socket
-        .bind(
-            "127.0.0.1:0"
-                .parse()
-                .expect("loopback address"),
-        )
+        .bind("127.0.0.1:0".parse().expect("loopback address"))
         .expect("reserve registry port");
-    let registry = format!(
-        "http://{}/",
-        socket
-            .local_addr()
-            .expect("registry socket address")
-    );
+    let registry = format!("http://{}/", socket.local_addr().expect("registry socket address"));
 
     let output = run_ping(&workspace, &auth_file, Some(&registry));
 

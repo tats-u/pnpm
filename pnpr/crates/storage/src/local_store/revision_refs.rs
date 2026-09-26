@@ -5,9 +5,7 @@ use super::{
 
 impl Store {
     pub(in super::super) async fn read_revision_refs(&self, digest: &str) -> Result<Vec<Vec<u8>>> {
-        let index = self
-            .read_revision_ref_index(digest)
-            .await?;
+        let index = self.read_revision_ref_index(digest).await?;
         Ok(index
             .bodies()
             .map(<[u8]>::to_vec)
@@ -21,13 +19,8 @@ impl Store {
         owner: &str,
         bytes: &[u8],
     ) -> Result<HostedRevisionRefWrite> {
-        let _guard = self
-            .revision_ref_write_lock
-            .lock()
-            .await;
-        let mut index = self
-            .read_revision_ref_index(digest)
-            .await?;
+        let _guard = self.revision_ref_write_lock.lock().await;
+        let mut index = self.read_revision_ref_index(digest).await?;
         let outcome = index.insert(ref_id, owner, bytes)?;
         if outcome == HostedRevisionRefWrite::Claimed {
             write_atomic(&self.revision_ref_index_path(digest), &index.to_bytes()).await?;
@@ -41,13 +34,8 @@ impl Store {
         ref_id: &str,
         owner: &str,
     ) -> Result<()> {
-        let _guard = self
-            .revision_ref_write_lock
-            .lock()
-            .await;
-        let mut index = self
-            .read_revision_ref_index(digest)
-            .await?;
+        let _guard = self.revision_ref_write_lock.lock().await;
+        let mut index = self.read_revision_ref_index(digest).await?;
         if index.remove_if_owned(ref_id, owner) {
             write_atomic(&self.revision_ref_index_path(digest), &index.to_bytes()).await?;
         }
@@ -60,13 +48,8 @@ impl Store {
         ref_id: &str,
         owner: &str,
     ) -> Result<()> {
-        let _guard = self
-            .revision_ref_write_lock
-            .lock()
-            .await;
-        let mut index = self
-            .read_revision_ref_index(digest)
-            .await?;
+        let _guard = self.revision_ref_write_lock.lock().await;
+        let mut index = self.read_revision_ref_index(digest).await?;
         if index.commit_if_owned(ref_id, owner)? {
             write_atomic(&self.revision_ref_index_path(digest), &index.to_bytes()).await?;
         }
@@ -85,13 +68,10 @@ impl Store {
     }
 
     pub(in super::super) fn revision_refs_dir(&self, digest: &str) -> PathBuf {
-        self.root
-            .join(HOSTED_REVISION_REFS_DIR)
-            .join(digest)
+        self.root.join(HOSTED_REVISION_REFS_DIR).join(digest)
     }
 
     pub(in super::super) fn revision_ref_index_path(&self, digest: &str) -> PathBuf {
-        self.revision_refs_dir(digest)
-            .join(HOSTED_REVISION_REF_INDEX_FILE)
+        self.revision_refs_dir(digest).join(HOSTED_REVISION_REF_INDEX_FILE)
     }
 }

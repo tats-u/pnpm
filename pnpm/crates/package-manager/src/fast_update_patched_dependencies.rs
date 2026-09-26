@@ -36,10 +36,7 @@ pub(crate) fn detect_patched_drift(
     hashes: Option<&BTreeMap<String, String>>,
 ) -> Drift<PatchedPlan> {
     let empty = BTreeMap::new();
-    let recorded = lockfile
-        .patched_dependencies
-        .as_ref()
-        .unwrap_or(&empty);
+    let recorded = lockfile.patched_dependencies.as_ref().unwrap_or(&empty);
     let current = hashes.unwrap_or(&empty);
     if recorded == current {
         return Drift::Clean;
@@ -78,7 +75,8 @@ pub(crate) fn apply_patched_update(
         return false;
     };
     apply_rekeys(candidate, &rekeys);
-    candidate.patched_dependencies = (!plan.current.is_empty()).then(|| plan.current.clone());
+    candidate.patched_dependencies =
+        (!plan.current.is_empty()).then(|| plan.current.clone());
     true
 }
 
@@ -123,9 +121,7 @@ fn rekeyed_snapshot_key(key: &PackageKey, groups: &PatchGroupRecord) -> Rekey {
     let rendered = key.to_string();
     let suffix = index_of_dep_path_suffix(&rendered);
     let base = remove_suffix(&rendered);
-    let peers = suffix
-        .peers_index
-        .map_or("", |index| &rendered[index..]);
+    let peers = suffix.peers_index.map_or("", |index| &rendered[index..]);
     let (name, version) = pnpm_deps_restorer::parse_name_version_from_key(base);
     let Ok(patch) = get_patch_info(Some(groups), &name, &version) else {
         return Rekey::Unsupported;
@@ -327,9 +323,7 @@ pub(crate) fn unused_patches(
         .into_iter()
         .map(str::to_string)
         .collect();
-    pnpm_patching::verify_patches(&groups, &applied, true)
-        .ok()
-        .flatten()
+    pnpm_patching::verify_patches(&groups, &applied, true).ok().flatten()
 }
 
 /// Bucket `hashes` the way the resolver buckets configured patches.
@@ -343,9 +337,11 @@ pub(crate) fn unused_patches(
 /// range, leaving `ERR_PNPM_PATCH_NON_SEMVER_RANGE` to the resolver.
 fn groups_from_hashes(hashes: &BTreeMap<String, String>) -> Option<PatchGroupRecord> {
     group_patched_dependencies(
-        hashes.iter().map(|(key, hash)| {
-            (key.clone(), PatchInput { hash: hash.clone(), patch_file_path: None })
-        }),
+        hashes
+            .iter()
+            .map(|(key, hash)| {
+                (key.clone(), PatchInput { hash: hash.clone(), patch_file_path: None })
+            }),
     )
     .ok()
 }

@@ -3,9 +3,7 @@ use crate::cli_args::cli_command::{CliArgs, CliCommand};
 use clap::Parser;
 
 fn command(argv: &[&str]) -> CliCommand {
-    CliArgs::try_parse_from(argv)
-        .expect("parses")
-        .command
+    CliArgs::try_parse_from(argv).expect("parses").command
 }
 
 #[test]

@@ -48,9 +48,7 @@ pub(crate) fn report_peer_dependency_issues<Reporter: pnpm_reporter::Reporter>(
         .iter()
         .filter(|importer_id| {
             installed_importer_ids.contains(*importer_id)
-                && lockfile
-                    .importers
-                    .contains_key(*importer_id)
+                && lockfile.importers.contains_key(*importer_id)
         })
         .cloned()
         .collect();

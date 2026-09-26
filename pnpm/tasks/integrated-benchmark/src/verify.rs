@@ -5,11 +5,7 @@ use std::{
 use which::which;
 
 pub async fn ensure_virtual_registry(registry: &str) {
-    if let Err(error) = reqwest::Client::new()
-        .head(registry)
-        .send()
-        .await
-    {
+    if let Err(error) = reqwest::Client::new().head(registry).send().await {
         eprintln!("HEAD request to {registry} returned an error");
         eprintln!("Make sure the registry server is operational");
         panic!("{error}");
@@ -32,9 +28,7 @@ fn ensure_git_repo_common(path: &Path) {
         let contents = std::fs::read_to_string(&dot_git)
             .unwrap_or_else(|error| panic!("read {dot_git:?}: {error}"));
         assert!(
-            contents
-                .trim_start()
-                .starts_with("gitdir:"),
+            contents.trim_start().starts_with("gitdir:"),
             "{path:?} has a `.git` file that is not a worktree gitdir pointer",
         );
         return;
@@ -62,9 +56,7 @@ pub fn ensure_pnpm_git_repo(path: &Path) {
         .join("pnpm")
         .join("package.json")
         .is_file();
-    let has_workspace_yaml = path
-        .join("pnpm-workspace.yaml")
-        .is_file();
+    let has_workspace_yaml = path.join("pnpm-workspace.yaml").is_file();
     assert!(
         has_pnpm_dir || has_workspace_yaml,
         "{path:?} doesn't look like a pnpm checkout — \

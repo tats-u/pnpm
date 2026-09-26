@@ -349,11 +349,7 @@ impl PackageManifest {
     }
 
     fn remove_from_object(&mut self, key: &str, removed_packages: &[String]) {
-        if let Some(object) = self
-            .value
-            .get_mut(key)
-            .and_then(Value::as_object_mut)
-        {
+        if let Some(object) = self.value.get_mut(key).and_then(Value::as_object_mut) {
             for name in removed_packages {
                 object.remove(name);
             }
@@ -365,8 +361,7 @@ impl PackageManifest {
         command: &str,
         if_present: bool, // TODO: split this function into 2, one with --if-present, one without
     ) -> Result<Option<&str>, PackageManifestError> {
-        if let Some(script_str) = self
-            .value
+        if let Some(script_str) = self.value
             .get("scripts")
             .and_then(|scripts| scripts.get(command))
             .and_then(|script| script.as_str())
@@ -409,11 +404,7 @@ pub fn manifest_requires_build(manifest: &Value) -> bool {
         .is_some_and(|scripts| {
             ["preinstall", "install", "postinstall"]
                 .iter()
-                .any(|name| {
-                    scripts
-                        .get(*name)
-                        .is_some_and(script_is_set)
-                })
+                .any(|name| scripts.get(*name).is_some_and(script_is_set))
         })
 }
 
@@ -446,9 +437,7 @@ where
     Filenames: IntoIterator<Item = Filename>,
     Filename: AsRef<str>,
 {
-    filenames
-        .into_iter()
-        .any(|filename| file_path_requires_build(filename.as_ref()))
+    filenames.into_iter().any(|filename| file_path_requires_build(filename.as_ref()))
 }
 
 #[cfg(test)]
@@ -481,11 +470,7 @@ pub fn extract_license(manifest: &serde_json::Value) -> Option<String> {
     manifest
         .get("license")
         .and_then(extract_license_field)
-        .or_else(|| {
-            manifest
-                .get("licenses")
-                .and_then(extract_license_field)
-        })
+        .or_else(|| manifest.get("licenses").and_then(extract_license_field))
 }
 
 fn extract_license_field(field: &serde_json::Value) -> Option<String> {

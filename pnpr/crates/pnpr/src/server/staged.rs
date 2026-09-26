@@ -215,9 +215,7 @@ async fn serve_staged_publish(
         Ok(value) => value,
         Err(err) => return RegistryError::Json(err).into_response(),
     };
-    let body_name = incoming
-        .get("name")
-        .and_then(Value::as_str);
+    let body_name = incoming.get("name").and_then(Value::as_str);
     if body_name.is_some_and(|body_name| body_name != name.as_str()) {
         return RegistryError::BadRequest {
             reason: format!(
@@ -255,23 +253,10 @@ async fn store_staged(
     body: &axum::body::Bytes,
     record: &StagedRecord,
 ) -> Result<(), RegistryError> {
-    state
-        .inner
-        .storage
-        .create_staged_body(stage_id, body)
-        .await?;
+    state.inner.storage.create_staged_body(stage_id, body).await?;
     let meta_bytes = serde_json::to_vec(record).expect("a staged record serializes");
-    if let Err(err) = state
-        .inner
-        .storage
-        .create_staged_meta(stage_id, &meta_bytes)
-        .await
-    {
-        let _ = state
-            .inner
-            .storage
-            .remove_staged(stage_id)
-            .await;
+    if let Err(err) = state.inner.storage.create_staged_meta(stage_id, &meta_bytes).await {
+        let _ = state.inner.storage.remove_staged(stage_id).await;
         return Err(err);
     }
     Ok(())
@@ -287,12 +272,7 @@ async fn serve_staged_list(
     query: &StagedListQuery,
 ) -> Response {
     let per_page = query.per_page.clamp(1, MAX_PER_PAGE);
-    let ids = match state
-        .inner
-        .storage
-        .list_staged_ids()
-        .await
-    {
+    let ids = match state.inner.storage.list_staged_ids().await {
         Ok(ids) => ids,
         Err(err) => return err.into_response(),
     };
@@ -312,10 +292,7 @@ async fn serve_staged_list(
         }
         // The listing shows only what the caller could publish (and thus
         // approve); records outside their rights are simply not theirs to see.
-        if authorize_staged(state, identity, &record)
-            .await
-            .is_err()
-        {
+        if authorize_staged(state, identity, &record).await.is_err() {
             continue;
         }
         records.push(record);
@@ -364,12 +341,7 @@ async fn serve_staged_reject(
     if let Err(response) = load_authorized_record(state, identity, registry, stage_id).await {
         return response.into_response();
     }
-    match state
-        .inner
-        .storage
-        .remove_staged(stage_id)
-        .await
-    {
+    match state.inner.storage.remove_staged(stage_id).await {
         Ok(_) => Response::builder()
             .status(StatusCode::NO_CONTENT)
             .body(Body::empty())
@@ -389,12 +361,7 @@ async fn serve_staged_tarball(
     if let Err(response) = load_authorized_record(state, identity, registry, stage_id).await {
         return response.into_response();
     }
-    let body = match state
-        .inner
-        .storage
-        .read_staged_body(stage_id)
-        .await
-    {
+    let body = match state.inner.storage.read_staged_body(stage_id).await {
         Ok(Some(body)) => body,
         Ok(None) => return not_found(),
         Err(err) => return err.into_response(),
@@ -476,12 +443,7 @@ async fn read_staged_record(
     state: &AppState,
     stage_id: &str,
 ) -> Result<Option<StoredStagedRecord>, RegistryError> {
-    let Some(bytes) = state
-        .inner
-        .storage
-        .read_staged_meta(stage_id)
-        .await?
-    else {
+    let Some(bytes) = state.inner.storage.read_staged_meta(stage_id).await? else {
         return Ok(None);
     };
     let record = serde_json::from_slice(&bytes).map_err(RegistryError::Json)?;

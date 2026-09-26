@@ -251,9 +251,8 @@ impl FromStr for PkgVerPeer {
             return Ok(PkgVerPeer { prefix, version, peer: String::new() });
         }
 
-        let opening_parenthesis = body
-            .find('(')
-            .ok_or(ParsePkgVerPeerError::MismatchParenthesis)?;
+        let opening_parenthesis =
+            body.find('(').ok_or(ParsePkgVerPeerError::MismatchParenthesis)?;
         let version = parse_version_part(&body[..opening_parenthesis])?;
         let peer = body[opening_parenthesis..].to_string();
         Ok(PkgVerPeer { prefix, version, peer })

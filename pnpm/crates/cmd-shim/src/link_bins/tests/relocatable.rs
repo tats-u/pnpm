@@ -53,9 +53,7 @@ fn relocated_shim_resolves_node_path_from_its_new_location() {
         .env("CDPATH", &base)
         .current_dir(&root);
     let mut through_a_dir_symlink = Command::new("/bin/sh");
-    through_a_dir_symlink
-        .arg("bin-link/foo")
-        .current_dir(&base);
+    through_a_dir_symlink.arg("bin-link/foo").current_dir(&base);
 
     let mut through_absolute_dir_symlink = Command::new(base.join("bin-link/foo"));
     through_absolute_dir_symlink.current_dir(&base);
@@ -126,11 +124,7 @@ fn warm_install_upgrades_absolute_node_symlink_before_relocation() {
     )];
     let bin_dir = root.join("node_modules/.bin");
     link_bins_of_packages::<Host>(&packages, &bin_dir, &LinkBinsOptions::default()).unwrap();
-    assert!(
-        fs::read_link(bin_dir.join("node"))
-            .unwrap()
-            .is_absolute()
-    );
+    assert!(fs::read_link(bin_dir.join("node")).unwrap().is_absolute());
     link_bins_of_packages::<Host>(
         &packages,
         &bin_dir,
@@ -145,12 +139,7 @@ fn warm_install_upgrades_absolute_node_symlink_before_relocation() {
         &LinkBinsOptions { relocatable_root: Some(root.clone()), ..LinkBinsOptions::default() },
     )
     .unwrap();
-    assert_eq!(
-        fs::symlink_metadata(bin_dir.join("node"))
-            .unwrap()
-            .ino(),
-        original.ino()
-    );
+    assert_eq!(fs::symlink_metadata(bin_dir.join("node")).unwrap().ino(), original.ino());
     let moved = tmp.path().join("moved");
     fs::rename(root, &moved).unwrap();
     assert_eq!(
@@ -163,9 +152,7 @@ fn warm_install_upgrades_absolute_node_symlink_before_relocation() {
 fn node_bin_link_uses_the_physical_bin_directory() {
     for terminal in [false, true] {
         let tmp = tempdir().unwrap();
-        let root = dunce::canonicalize(tmp.path())
-            .unwrap()
-            .join("project");
+        let root = dunce::canonicalize(tmp.path()).unwrap().join("project");
         create_dir_all(root.join("deep/physical/.bin")).unwrap();
         create_dir_all(root.join("node-package")).unwrap();
         let runtime = tmp.path().join("external-node");
@@ -206,9 +193,7 @@ fn node_bin_link_uses_the_physical_bin_directory() {
 fn extra_node_path_through_directory_symlinks_resolves_before_and_after_move() {
     for terminal in [false, true] {
         let tmp = tempdir().unwrap();
-        let root = dunce::canonicalize(tmp.path())
-            .unwrap()
-            .join("project");
+        let root = dunce::canonicalize(tmp.path()).unwrap().join("project");
         create_dir_all(root.join("deep/physical/.bin")).unwrap();
         create_dir_all(root.join("package")).unwrap();
         symlink("deep/physical", root.join("alias")).unwrap();
@@ -265,12 +250,7 @@ fn extra_node_path_through_directory_symlinks_resolves_before_and_after_move() {
                 .unwrap();
             eprintln!("terminal={terminal}, root={current:?}, output={output:?}");
             assert!(output.status.success());
-            assert_eq!(
-                String::from_utf8(output.stdout)
-                    .unwrap()
-                    .trim(),
-                "resolved-extra"
-            );
+            assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), "resolved-extra");
         }
     }
 }
@@ -278,9 +258,7 @@ fn extra_node_path_through_directory_symlinks_resolves_before_and_after_move() {
 #[test]
 fn physical_paths_use_the_resolved_relocation_root() {
     let tmp = tempdir().unwrap();
-    let physical_root = dunce::canonicalize(tmp.path())
-        .unwrap()
-        .join("project");
+    let physical_root = dunce::canonicalize(tmp.path()).unwrap().join("project");
     create_dir_all(&physical_root).unwrap();
     let alias = tmp.path().join("project-alias");
     symlink(&physical_root, &alias).unwrap();
@@ -297,10 +275,7 @@ fn physical_paths_use_the_resolved_relocation_root() {
         .unwrap();
     eprintln!("{output:?}");
     assert!(output.status.success());
-    for entry in String::from_utf8(output.stdout)
-        .unwrap()
-        .split(':')
-    {
+    for entry in String::from_utf8(output.stdout).unwrap().split(':') {
         assert!(Path::new(entry).is_dir(), "NODE_PATH entry does not exist: {entry}");
     }
 }
@@ -366,9 +341,7 @@ fn external_node_path_alias_keeps_its_original_spelling() {
 #[test]
 fn physical_target_without_node_path_runs_through_a_directory_symlink() {
     let tmp = tempdir().unwrap();
-    let root = dunce::canonicalize(tmp.path())
-        .unwrap()
-        .join("project");
+    let root = dunce::canonicalize(tmp.path()).unwrap().join("project");
     create_dir_all(root.join("deep/physical/.bin")).unwrap();
     create_dir_all(root.join("package")).unwrap();
     symlink("deep/physical", root.join("alias")).unwrap();
@@ -395,12 +368,7 @@ fn physical_target_without_node_path_runs_through_a_directory_symlink() {
         .unwrap();
     eprintln!("{output:?}");
     assert!(output.status.success());
-    assert_eq!(
-        String::from_utf8(output.stdout)
-            .unwrap()
-            .trim(),
-        "physical-target"
-    );
+    assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), "physical-target");
 }
 
 #[test]
@@ -453,9 +421,7 @@ fn extra_node_path_escaping_root_stays_absolute() {
 #[test]
 fn warm_install_upgrades_physical_target_anchor_without_node_path() {
     let tmp = tempdir().unwrap();
-    let root = dunce::canonicalize(tmp.path())
-        .unwrap()
-        .join("project");
+    let root = dunce::canonicalize(tmp.path()).unwrap().join("project");
     create_dir_all(root.join("package")).unwrap();
     write_file(root.join("package/cli.js"), "#!/usr/bin/env node\nconsole.log('upgraded')\n")
         .unwrap();
@@ -472,16 +438,9 @@ fn warm_install_upgrades_physical_target_anchor_without_node_path() {
     write_file(&shim, &old).unwrap();
     link_bins_of_packages::<Host>(&packages, &bins, &options).unwrap();
     assert_eq!(read_to_string(&shim).unwrap(), current);
-    let inode = fs::symlink_metadata(&shim)
-        .unwrap()
-        .ino();
+    let inode = fs::symlink_metadata(&shim).unwrap().ino();
     link_bins_of_packages::<Host>(&packages, &bins, &options).unwrap();
-    assert_eq!(
-        fs::symlink_metadata(&shim)
-            .unwrap()
-            .ino(),
-        inode
-    );
+    assert_eq!(fs::symlink_metadata(&shim).unwrap().ino(), inode);
 }
 
 #[test]
@@ -520,21 +479,14 @@ fn external_target_runs_through_a_physical_bin_directory() {
         .unwrap();
     eprintln!("{output:?}");
     assert!(output.status.success());
-    assert_eq!(
-        String::from_utf8(output.stdout)
-            .unwrap()
-            .trim(),
-        "external-target"
-    );
+    assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), "external-target");
 }
 
 #[test]
 fn unresolved_optional_node_paths_do_not_prevent_linking_bins() {
     for destination in ["missing-modules", "extra"] {
         let tmp = tempdir().unwrap();
-        let root = dunce::canonicalize(tmp.path())
-            .unwrap()
-            .join("project");
+        let root = dunce::canonicalize(tmp.path()).unwrap().join("project");
         create_dir_all(root.join("package")).unwrap();
         let extra = root.join("extra");
         symlink(destination, &extra).unwrap();
@@ -569,12 +521,7 @@ fn unresolved_optional_node_paths_do_not_prevent_linking_bins() {
                 .unwrap();
             eprintln!("destination={destination}, name={name}, output={output:?}");
             assert!(output.status.success());
-            assert_eq!(
-                String::from_utf8(output.stdout)
-                    .unwrap()
-                    .trim(),
-                "linked"
-            );
+            assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), "linked");
         }
         fs::remove_file(&extra).unwrap();
         symlink("missing-modules", &extra).unwrap();
@@ -589,12 +536,7 @@ fn unresolved_optional_node_paths_do_not_prevent_linking_bins() {
             .unwrap();
         eprintln!("destination={destination}, repaired output={output:?}");
         assert!(output.status.success());
-        assert_eq!(
-            String::from_utf8(output.stdout)
-                .unwrap()
-                .trim(),
-            "loaded-later"
-        );
+        assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), "loaded-later");
     }
 }
 
@@ -632,12 +574,7 @@ fn external_target_directory_alias_can_be_retargeted_after_linking() {
         .unwrap();
     eprintln!("{output:?}");
     assert!(output.status.success());
-    assert_eq!(
-        String::from_utf8(output.stdout)
-            .unwrap()
-            .trim(),
-        "second"
-    );
+    assert_eq!(String::from_utf8(output.stdout).unwrap().trim(), "second");
 }
 
 #[test]

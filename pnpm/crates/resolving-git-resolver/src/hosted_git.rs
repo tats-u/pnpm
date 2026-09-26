@@ -62,9 +62,7 @@ impl HostedGitType {
     fn from_domain(host: &str) -> Option<HostedGitType> {
         // Strip leading `www.` to match upstream's
         // `parsed.hostname.startsWith('www.') ? parsed.hostname.slice(4) : parsed.hostname`.
-        let host = host
-            .strip_prefix("www.")
-            .unwrap_or(host);
+        let host = host.strip_prefix("www.").unwrap_or(host);
         match host {
             "github.com" => Some(HostedGitType::Github),
             "gitlab.com" => Some(HostedGitType::Gitlab),
@@ -167,10 +165,7 @@ impl HostedGit {
         // Look up host: shortcut first (so `github://...` wins over the
         // host's full URL parsing), then by domain.
         let shortcut_type = HostedGitType::from_shortcut(&parsed.scheme);
-        let domain_type = parsed
-            .host
-            .as_deref()
-            .and_then(HostedGitType::from_domain);
+        let domain_type = parsed.host.as_deref().and_then(HostedGitType::from_domain);
         let host_type = shortcut_type.or(domain_type)?;
 
         let segments = if shortcut_type.is_some() {
@@ -210,13 +205,8 @@ impl HostedGit {
         if self.user.is_empty() {
             return self.project.to_ascii_lowercase();
         }
-        format!(
-            "@{}/{}",
-            self.user
-                .replace('/', SUBGROUP_SEPARATOR),
-            self.project
-        )
-        .to_ascii_lowercase()
+        format!("@{}/{}", self.user.replace('/', SUBGROUP_SEPARATOR), self.project)
+            .to_ascii_lowercase()
     }
 
     /// Shorthand `<type>:<user>/<project>[#committish]`. Mirrors
@@ -239,8 +229,7 @@ impl HostedGit {
     /// `httpstemplate` (gitlab and github share the same shape).
     #[must_use]
     pub fn https(&self, opts: HostedOpts) -> Option<String> {
-        let auth = self
-            .auth
+        let auth = self.auth
             .as_deref()
             .map(|a| format!("{a}@"))
             .unwrap_or_default();

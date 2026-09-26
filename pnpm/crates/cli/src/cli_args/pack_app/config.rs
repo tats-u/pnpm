@@ -30,9 +30,14 @@ pub(super) fn default_runtime_version() -> String {
 pub(super) fn escapes_project(raw: &str) -> bool {
     let path = Path::new(raw);
     path.is_absolute()
-        || path.components().any(|component| {
-            matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_),)
-        })
+        || path
+            .components()
+            .any(|component| {
+                matches!(
+                    component,
+                    Component::ParentDir | Component::RootDir | Component::Prefix(_),
+                )
+            })
 }
 
 /// Whether `path` resolves (symlinks included) to a location inside `base`.
@@ -96,9 +101,7 @@ pub(super) fn parse_target(raw: &str) -> Result<ParsedTarget, PackAppError> {
 /// without a breaking change.
 pub(super) fn parse_runtime(spec: &str) -> Result<String, PackAppError> {
     let invalid = || PackAppError::InvalidRuntime { spec: spec.to_string() };
-    let (name, version) = spec
-        .split_once('@')
-        .ok_or_else(invalid)?;
+    let (name, version) = spec.split_once('@').ok_or_else(invalid)?;
     if name != "node" || version.is_empty() {
         return Err(invalid());
     }
@@ -123,9 +126,7 @@ pub(super) fn is_reserved_windows_name(name: &str) -> bool {
 /// Reject anything that would let the output escape its target directory,
 /// or that would fail filesystem-level validation on any supported host.
 pub(super) fn validate_output_name(name: &str) -> Result<String, PackAppError> {
-    let basename = Path::new(name)
-        .file_name()
-        .and_then(|n| n.to_str());
+    let basename = Path::new(name).file_name().and_then(|n| n.to_str());
     let invalid_chars = name
         .chars()
         .any(|c| matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*' | '\0'));
@@ -168,10 +169,11 @@ pub(super) fn read_project_app_config(
     let Ok(raw) = fs::read_to_string(&manifest_path) else {
         return Ok(ReadProjectAppConfigResult::default());
     };
-    let manifest: Value = parse_manifest(&raw).map_err(|err| PackAppError::InvalidPackageJson {
-        path: manifest_path.display().to_string(),
-        message: err.to_string(),
-    })?;
+    let manifest: Value = parse_manifest(&raw)
+        .map_err(|err| PackAppError::InvalidPackageJson {
+            path: manifest_path.display().to_string(),
+            message: err.to_string(),
+        })?;
     let Some(manifest) = manifest.as_object() else {
         return Ok(ReadProjectAppConfigResult::default());
     };
@@ -233,8 +235,7 @@ pub(super) fn derive_output_name_from_package(
     // a plain filename. The downstream `validate_output_name` pass rejects
     // any leftover path separators.
     let unscoped = if let Some(rest) = name.strip_prefix('@') {
-        rest.split_once('/')
-            .map_or(name, |(_, rest)| rest)
+        rest.split_once('/').map_or(name, |(_, rest)| rest)
     } else {
         name
     };

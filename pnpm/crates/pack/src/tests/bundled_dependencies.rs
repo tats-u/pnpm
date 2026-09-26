@@ -16,19 +16,10 @@ fn bundles_dependencies_listed_in_bundle_dependencies() {
 
     let result = api::<SilentReporter, Host>(&opts).unwrap();
 
+    assert!(result.contents.contains(&"node_modules/bundled-dep/package.json".to_string()));
+    assert!(result.contents.contains(&"node_modules/bundled-dep/index.js".to_string()));
     assert!(
-        result
-            .contents
-            .contains(&"node_modules/bundled-dep/package.json".to_string())
-    );
-    assert!(
-        result
-            .contents
-            .contains(&"node_modules/bundled-dep/index.js".to_string())
-    );
-    assert!(
-        !result
-            .contents
+        !result.contents
             .iter()
             .any(|path| path.contains("not-bundled")),
     );
@@ -51,19 +42,10 @@ fn bundles_every_dependency_when_bundle_dependencies_is_true() {
 
     let result = api::<SilentReporter, Host>(&opts).unwrap();
 
+    assert!(result.contents.contains(&"node_modules/bundled-dep/index.js".to_string()));
+    assert!(result.contents.contains(&"node_modules/bundled-dep/package.json".to_string()));
     assert!(
-        result
-            .contents
-            .contains(&"node_modules/bundled-dep/index.js".to_string())
-    );
-    assert!(
-        result
-            .contents
-            .contains(&"node_modules/bundled-dep/package.json".to_string())
-    );
-    assert!(
-        !result
-            .contents
+        !result.contents
             .iter()
             .any(|path| path.contains("not-a-dep")),
     );
@@ -99,15 +81,9 @@ fn bundles_transitive_dependencies_of_bundled_dependencies() {
 
     let result = api::<SilentReporter, Host>(&opts).unwrap();
 
+    assert!(result.contents.contains(&"node_modules/top/index.js".to_string()));
     assert!(
-        result
-            .contents
-            .contains(&"node_modules/top/index.js".to_string())
-    );
-    assert!(
-        result
-            .contents
-            .contains(&"node_modules/nested/index.js".to_string()),
+        result.contents.contains(&"node_modules/nested/index.js".to_string()),
         "hoisted transitive dep `nested` must be bundled: {:?}",
         result.contents,
     );

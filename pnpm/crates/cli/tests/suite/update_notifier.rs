@@ -30,8 +30,13 @@ struct Fixture {
 /// A fixture with the notifier on: the shared command harness turns it off
 /// for every other suite, so these tests opt back in.
 fn fixture() -> Fixture {
-    let CommandTempCwd { mut pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry_with_pnpm_version(NEWER_PNPM);
+    let CommandTempCwd {
+        mut pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry_with_pnpm_version(NEWER_PNPM);
     pacquet.env("PNPM_CONFIG_UPDATE_NOTIFIER", "true");
     let state_dir = root.path().join("pnpm-state");
     Fixture { pacquet, state_dir, workspace, root, npmrc_info }
@@ -70,7 +75,13 @@ fn append_to_workspace_yaml(workspace: &Path, line: &str) {
 
 #[test]
 fn an_install_announces_a_newer_pnpm_and_records_the_check() {
-    let Fixture { pacquet, state_dir, root, npmrc_info, .. } = fixture();
+    let Fixture {
+        pacquet,
+        state_dir,
+        root,
+        npmrc_info,
+        ..
+    } = fixture();
 
     let output = install(pacquet, &state_dir);
 
@@ -90,7 +101,13 @@ fn an_install_announces_a_newer_pnpm_and_records_the_check() {
 
 #[test]
 fn update_notifier_off_skips_the_check_entirely() {
-    let Fixture { mut pacquet, state_dir, workspace, root, npmrc_info } = fixture();
+    let Fixture {
+        mut pacquet,
+        state_dir,
+        workspace,
+        root,
+        npmrc_info,
+    } = fixture();
     // Drop the fixture's opt-in so the workspace manifest is what decides.
     pacquet.env_remove("PNPM_CONFIG_UPDATE_NOTIFIER");
     append_to_workspace_yaml(&workspace, "updateNotifier: false\n");
@@ -109,11 +126,15 @@ fn update_notifier_off_skips_the_check_entirely() {
 /// fresh one silences the very next install.
 #[test]
 fn a_check_recorded_today_silences_the_next_install() {
-    let Fixture { pacquet, state_dir, root, npmrc_info, .. } = fixture();
+    let Fixture {
+        pacquet,
+        state_dir,
+        root,
+        npmrc_info,
+        ..
+    } = fixture();
     fs::create_dir_all(&state_dir).expect("create the state dir");
-    let today = chrono::Utc::now()
-        .format("%a, %d %b %Y %H:%M:%S GMT")
-        .to_string();
+    let today = chrono::Utc::now().format("%a, %d %b %Y %H:%M:%S GMT").to_string();
     fs::write(state_file(&state_dir), serde_json::json!({ "lastUpdateCheck": today }).to_string())
         .expect("write pnpm-state.json");
 
@@ -132,7 +153,13 @@ fn a_check_recorded_today_silences_the_next_install() {
 #[test]
 fn the_other_commands_on_the_install_pipeline_do_not_check() {
     for command in ["ci", "install-test"] {
-        let Fixture { pacquet, state_dir, root, npmrc_info, .. } = fixture();
+        let Fixture {
+            pacquet,
+            state_dir,
+            root,
+            npmrc_info,
+            ..
+        } = fixture();
 
         let output = run(pacquet, &state_dir, command);
 
@@ -149,7 +176,13 @@ fn the_other_commands_on_the_install_pipeline_do_not_check() {
 /// through its own dispatch arm.
 #[test]
 fn an_add_announces_a_newer_pnpm_and_records_the_check() {
-    let Fixture { pacquet, state_dir, root, npmrc_info, .. } = fixture();
+    let Fixture {
+        pacquet,
+        state_dir,
+        root,
+        npmrc_info,
+        ..
+    } = fixture();
 
     let output = pacquet
         .with_args(["add", "@pnpm.e2e/foo", "--state-dir"])
@@ -170,7 +203,13 @@ fn an_add_announces_a_newer_pnpm_and_records_the_check() {
 #[cfg(unix)]
 #[test]
 fn a_global_add_announces_a_newer_pnpm() {
-    let Fixture { state_dir, root, npmrc_info, workspace, .. } = fixture();
+    let Fixture {
+        state_dir,
+        root,
+        npmrc_info,
+        workspace,
+        ..
+    } = fixture();
     let pnpm_home = root.path().join("pnpm-home");
     fs::create_dir_all(pnpm_home.join("bin")).expect("create the global bin dir");
     fs::write(pnpm_home.join(".npmrc"), format!("registry={}\n", npmrc_info.mock_instance.url()))

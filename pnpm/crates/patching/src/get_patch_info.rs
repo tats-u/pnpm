@@ -56,8 +56,7 @@ pub fn get_patch_info<'a>(
         return Ok(group.all.as_ref());
     };
 
-    let satisfied: Vec<&'a crate::types::PatchGroupRangeItem> = group
-        .range
+    let satisfied: Vec<&'a crate::types::PatchGroupRangeItem> = group.range
         .iter()
         .filter(|item| match Range::parse(&item.version) {
             Ok(range) => range.satisfies(&parsed_version),

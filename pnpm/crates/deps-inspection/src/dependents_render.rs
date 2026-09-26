@@ -60,10 +60,7 @@ fn root_label(
     multi_peer_pkgs: &HashMap<String, usize>,
     long: bool,
 ) -> String {
-    let displayed_name = tree
-        .display_name
-        .as_deref()
-        .unwrap_or(&tree.name);
+    let displayed_name = tree.display_name.as_deref().unwrap_or(&tree.name);
     let mut parts = vec![format!(
         "{}{}",
         bold_styled(&name_at_version_plain(displayed_name, &tree.version)),
@@ -79,11 +76,7 @@ fn root_label(
     }
     if long && let Some(path) = &tree.path {
         let info = read_long_pkg_info(Path::new(path));
-        parts.extend(
-            long_info_fields(&info)
-                .into_iter()
-                .map(|field| plain(&field)),
-        );
+        parts.extend(long_info_fields(&info).into_iter().map(|field| plain(&field)));
         parts.push(plain(path));
     }
     parts.join("\n")
@@ -114,10 +107,8 @@ fn why_summary(trees: &[DependentsTree]) -> String {
     let mut order: Vec<String> = Vec::new();
     let mut by_name: HashMap<String, Entry> = HashMap::new();
     for tree in trees {
-        let displayed_name = tree
-            .display_name
-            .clone()
-            .unwrap_or_else(|| tree.name.clone());
+        let displayed_name =
+            tree.display_name.clone().unwrap_or_else(|| tree.name.clone());
         let entry = by_name
             .entry(displayed_name.clone())
             .or_insert_with(|| {
@@ -125,9 +116,7 @@ fn why_summary(trees: &[DependentsTree]) -> String {
                 Entry { versions: Vec::new(), count: 0 }
             });
         if !entry.versions.contains(&tree.version) {
-            entry
-                .versions
-                .push(tree.version.clone());
+            entry.versions.push(tree.version.clone());
         }
         entry.count += 1;
     }
@@ -190,10 +179,7 @@ fn dependents_to_tree_nodes(
 }
 
 fn dependent_label(dep: &DependentNode, multi_peer_pkgs: &HashMap<String, usize>) -> String {
-    let displayed_name = dep
-        .display_name
-        .as_deref()
-        .unwrap_or(&dep.name);
+    let displayed_name = dep.display_name.as_deref().unwrap_or(&dep.name);
     let mut label = match dep.dep_field {
         // An importer (leaf node).
         Some(dep_field) => format!(
@@ -288,10 +274,7 @@ pub fn render_dependents_parseable(
 ) -> String {
     let mut lines: Vec<String> = Vec::new();
     for tree in trees {
-        let displayed_name = tree
-            .display_name
-            .as_deref()
-            .unwrap_or(&tree.name);
+        let displayed_name = tree.display_name.as_deref().unwrap_or(&tree.name);
         let root_segment = match (&tree.path, opts.long) {
             (Some(path), true) => ParseableSegment {
                 value: format!("{path}:{}", plain_name_at_version(displayed_name, &tree.version)),
@@ -321,10 +304,7 @@ fn collect_paths(
     max_depth: Option<usize>,
 ) {
     for dep in dependents {
-        let displayed_name = dep
-            .display_name
-            .as_deref()
-            .unwrap_or(&dep.name);
+        let displayed_name = dep.display_name.as_deref().unwrap_or(&dep.name);
         let mut new_path = current_path.to_vec();
         new_path.push(ParseableSegment {
             value: plain_name_at_version(displayed_name, &dep.version),

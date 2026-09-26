@@ -237,9 +237,7 @@ fn rejects_a_symlinked_state_directory() {
         panic!("symlinked state directory must be rejected");
     };
     assert!(
-        error
-            .to_string()
-            .contains("symbolic link or not a directory"),
+        error.to_string().contains("symbolic link or not a directory"),
         "unexpected error: {error:?}",
     );
     assert!(
@@ -326,18 +324,14 @@ fn finishing_an_older_invocation_preserves_the_newer_invocation_journal() {
         .start(&HashSet::from([key.clone()]))
         .expect("start newer state");
 
-    older
-        .finish()
-        .expect("finish older state");
+    older.finish().expect("finish older state");
 
     let completed = context
         .read_completed_tasks()
         .expect("read newer state")
         .expect("newer state remains compatible");
     assert_eq!(completed, HashSet::from([key]));
-    newer
-        .finish()
-        .expect("finish newer state");
+    newer.finish().expect("finish newer state");
     assert!(
         context
             .read_completed_tasks()
@@ -442,17 +436,13 @@ fn a_stale_pointer_does_not_hide_a_newer_published_invocation_journal() {
         .expect("read newer state")
         .expect("newer state remains compatible");
     assert_eq!(completed, HashSet::from([key.clone()]));
-    older
-        .finish()
-        .expect("finish older state");
+    older.finish().expect("finish older state");
     let completed = context
         .read_completed_tasks()
         .expect("read newer state")
         .expect("newer state remains compatible");
     assert_eq!(completed, HashSet::from([key]));
-    newer
-        .finish()
-        .expect("finish newer state");
+    newer.finish().expect("finish newer state");
 }
 
 #[test]
@@ -492,9 +482,7 @@ fn a_stale_start_cannot_revive_state_after_a_newer_invocation_finishes() {
         .start(&HashSet::from([key]))
         .expect("start newer state");
 
-    newer
-        .finish()
-        .expect("finish newer state");
+    newer.finish().expect("finish newer state");
     fs::write(&older.file_path, older_contents).expect("republish older journal");
     fs::write(&older.published_path, []).expect("republish older marker");
     fs::write(&context.latest_state_path, older_header).expect("write stale pointer");

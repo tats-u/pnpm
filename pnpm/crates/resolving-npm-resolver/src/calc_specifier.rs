@@ -35,9 +35,7 @@ pub fn calc_version_range(
             None => version.to_string(),
         };
     }
-    let style = prev_style
-        .or(spec_style)
-        .unwrap_or(default_style);
+    let style = prev_style.or(spec_style).unwrap_or(default_style);
     format!("{}{version}", style.range_prefix())
 }
 

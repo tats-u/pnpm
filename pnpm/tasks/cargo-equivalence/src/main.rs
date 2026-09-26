@@ -47,10 +47,7 @@ fn main() -> ExitCode {
         .collect::<Vec<_>>();
 
     print_report(&report);
-    if report
-        .iter()
-        .all(|(_, outcome)| outcome.accepted())
-    {
+    if report.iter().all(|(_, outcome)| outcome.accepted()) {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE

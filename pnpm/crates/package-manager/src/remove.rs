@@ -67,7 +67,11 @@ pub enum RemoveError {
 
 impl Remove<'_> {
     pub async fn run<Reporter: self::Reporter + 'static>(self) -> Result<(), RemoveError> {
-        let Self { options: remove, resources: owned, manifest } = self;
+        let Self {
+            options: remove,
+            resources: owned,
+            manifest,
+        } = self;
         validate_removable(manifest, remove.package_names, remove.save_type)
             .map_err(RemoveError::Validation)?;
         prepare_manifest::<Reporter>(manifest, remove.package_names, remove.save_type);
@@ -96,7 +100,11 @@ impl Remove<'_> {
         self,
         selected: SelectedProjects<'_>,
     ) -> Result<(), RemoveError> {
-        let Self { options: remove, resources: owned, manifest } = self;
+        let Self {
+            options: remove,
+            resources: owned,
+            manifest,
+        } = self;
         let selected_indices = selected_project_indices(
             selected.projects,
             selected.ordered_dirs,
@@ -264,9 +272,7 @@ fn persist_selected_manifests<Reporter: self::Reporter>(
 fn persist_manifest<Reporter: self::Reporter>(
     manifest: &mut PackageManifest,
 ) -> Result<(), RemoveError> {
-    let updated = manifest
-        .save_and_get_written_value()
-        .map_err(RemoveError::SaveManifest)?;
+    let updated = manifest.save_and_get_written_value().map_err(RemoveError::SaveManifest)?;
     let prefix = package_manifest_prefix(manifest);
     Reporter::emit(&LogEvent::PackageManifest(PackageManifestLog {
         level: LogLevel::Debug,
@@ -332,8 +338,7 @@ fn cannot_remove_missing_deps(
 }
 
 fn removal_workspace_root(config: &Config, manifest: &PackageManifest) -> std::path::PathBuf {
-    config
-        .workspace_dir
+    config.workspace_dir
         .clone()
         .unwrap_or_else(|| {
             manifest

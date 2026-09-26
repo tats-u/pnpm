@@ -45,13 +45,7 @@ fn resolves_a_reference_as_tag_or_digest() {
     document.insert_manifest(entry("one"));
     document.set_tag(tag("latest", "one", 1));
 
-    assert_eq!(
-        document
-            .resolve("latest")
-            .unwrap()
-            .digest,
-        digest_of("one")
-    );
+    assert_eq!(document.resolve("latest").unwrap().digest, digest_of("one"));
     assert_eq!(
         document
             .resolve(&digest_of("one").to_string())
@@ -301,13 +295,7 @@ fn a_document_stored_out_of_order_still_finds_its_entries() {
             .manifest(&digest_of("two"))
             .is_some(),
     );
-    assert_eq!(
-        document
-            .resolve("alpha")
-            .unwrap()
-            .digest,
-        digest_of("two")
-    );
+    assert_eq!(document.resolve("alpha").unwrap().digest, digest_of("two"));
     assert_eq!(document.resolve("zeta").unwrap().digest, digest_of("one"));
     assert_eq!(document.tag_names(), ["alpha", "zeta"]);
 }

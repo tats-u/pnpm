@@ -154,18 +154,14 @@ fn sync_fast_path_reads_the_workspace_root_wanted_lockfile_from_a_member() {
     };
     let mut projects = std::collections::BTreeMap::new();
     projects.insert(
-        workspace_root
-            .to_string_lossy()
-            .into_owned(),
+        workspace_root.to_string_lossy().into_owned(),
         workspace_state::ProjectEntry {
             name: Some("workspace-root".to_string()),
             version: Some("1.0.0".to_string()),
         },
     );
     projects.insert(
-        project_root
-            .to_string_lossy()
-            .into_owned(),
+        project_root.to_string_lossy().into_owned(),
         workspace_state::ProjectEntry {
             name: Some("app".to_string()),
             version: Some("1.0.0".to_string()),
@@ -202,9 +198,7 @@ fn sync_fast_path_reads_the_workspace_root_wanted_lockfile_from_a_member() {
     };
 
     assert_eq!(
-        install_already_up_to_date(&check)
-            .map(|up_to_date| up_to_date.root)
-            .as_deref(),
+        install_already_up_to_date(&check).map(|up_to_date| up_to_date.root).as_deref(),
         Some(&*workspace_root),
     );
     assert_eq!(std::fs::read_to_string(&wanted_path).expect("reread wanted lockfile"), current);
@@ -227,9 +221,7 @@ fn sync_fast_path_reads_the_workspace_root_wanted_lockfile_from_a_member() {
     };
 
     assert_eq!(
-        install_already_up_to_date(&per_project_check)
-            .map(|up_to_date| up_to_date.root)
-            .as_deref(),
+        install_already_up_to_date(&per_project_check).map(|up_to_date| up_to_date.root).as_deref(),
         Some(&*workspace_root),
     );
 }
@@ -268,9 +260,7 @@ pub(super) async fn optimistic_repeat_install_does_not_short_circuit_when_lockfi
         .expect("create modules dirs.dir so the deps gate passes");
     let manifest_path = dirs.project_root.join("package.json");
     let mut manifest = PackageManifest::create_if_needed(manifest_path.clone()).unwrap();
-    manifest
-        .add_dependency("sibling", "link:../sibling", DependencyGroup::Prod)
-        .unwrap();
+    manifest.add_dependency("sibling", "link:../sibling", DependencyGroup::Prod).unwrap();
     manifest.save().unwrap();
 
     // Deliberately do NOT write `pnpm-lock.yaml` and do NOT seed a
@@ -311,9 +301,7 @@ pub(super) async fn optimistic_repeat_install_does_not_short_circuit_when_lockfi
 
     let mut projects = std::collections::BTreeMap::new();
     projects.insert(
-        dirs.project_root
-            .to_string_lossy()
-            .into_owned(),
+        dirs.project_root.to_string_lossy().into_owned(),
         workspace_state::ProjectEntry {
             name: Some("project".to_string()),
             version: Some("1.0.0".to_string()),
@@ -398,10 +386,12 @@ pub(super) async fn optimistic_repeat_install_does_not_short_circuit_when_lockfi
 
     let captured = EVENTS.lock().unwrap();
     assert!(
-        !captured.iter().any(|event| matches!(
-            event,
-            LogEvent::Pnpm(log) if log.message == "Already up to date"
-        )),
+        !captured
+            .iter()
+            .any(|event| matches!(
+                event,
+                LogEvent::Pnpm(log) if log.message == "Already up to date"
+            )),
         "the optimistic 'Already up to date' log MUST NOT fire when \
          no lockfile exists in a single-project install; got events: {captured:#?}",
     );
@@ -491,9 +481,8 @@ async fn fresh_install_records_lockfile_verification_for_mtime_bypassed_noop() {
     .expect("first install must succeed");
 
     let lockfile_path = project_root.join(Lockfile::FILE_NAME);
-    let wanted_lockfile = Lockfile::load_wanted_from_dir(&project_root)
-        .expect("load wanted lockfile")
-        .unwrap();
+    let wanted_lockfile =
+        Lockfile::load_wanted_from_dir(&project_root).expect("load wanted lockfile").unwrap();
 
     drop(mock_instance);
 
@@ -578,11 +567,13 @@ async fn fresh_install_records_lockfile_verification_for_mtime_bypassed_noop() {
 
     let captured = EVENTS.lock().unwrap();
     assert!(
-        captured.iter().any(|event| matches!(
-            event,
-            LogEvent::Pnpm(log)
-                if log.message == "Lockfile is up to date, resolution step is skipped"
-        )),
+        captured
+            .iter()
+            .any(|event| matches!(
+                event,
+                LogEvent::Pnpm(log)
+                    if log.message == "Lockfile is up to date, resolution step is skipped"
+            )),
         "second install must reach the modules/current-lockfile no-op path; got {captured:#?}",
     );
     let verification_messages: Vec<_> = captured
@@ -687,10 +678,12 @@ async fn optimistic_repeat_install_restores_missing_lockfile_offline() {
 
     let captured = EVENTS.lock().unwrap();
     assert!(
-        captured.iter().any(|event| matches!(
-            event,
-            LogEvent::Pnpm(log) if log.message == "Already up to date"
-        )),
+        captured
+            .iter()
+            .any(|event| matches!(
+                event,
+                LogEvent::Pnpm(log) if log.message == "Already up to date"
+            )),
         "the deleted-lockfile repeat install must take the fast path; got {captured:#?}",
     );
     let pipeline_emits = captured

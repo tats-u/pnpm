@@ -47,12 +47,8 @@ fn scaffold_dedicated_link_workspace(workspace: &Path, pkg: &str) -> (PathBuf, P
             "packages:\n  - 'packages/*'\nsharedWorkspaceLockfile: false\noverrides:\n  '{pkg}': link:./local-dep\n",
         ),
     );
-    let second = project_dirs
-        .pop()
-        .expect("second project dir");
-    let first = project_dirs
-        .pop()
-        .expect("first project dir");
+    let second = project_dirs.pop().expect("second project dir");
+    let first = project_dirs.pop().expect("first project dir");
     (first, second)
 }
 
@@ -77,8 +73,13 @@ fn read_workspace_yaml(workspace: &Path) -> String {
 
 #[test]
 fn unlink_removes_single_named_link_override() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, &serde_json::json!({ "name": "test-project", "version": "1.0.0" }));
@@ -105,8 +106,13 @@ fn unlink_removes_single_named_link_override() {
 
 #[test]
 fn unlink_without_args_removes_all_link_overrides() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, &serde_json::json!({ "name": "test-project", "version": "1.0.0" }));
@@ -130,8 +136,13 @@ fn unlink_without_args_removes_all_link_overrides() {
 
 #[test]
 fn unlink_keeps_non_link_overrides() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, &serde_json::json!({ "name": "test-project", "version": "1.0.0" }));
@@ -153,8 +164,13 @@ fn unlink_keeps_non_link_overrides() {
 
 #[test]
 fn unlink_is_noop_without_overrides() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, &serde_json::json!({ "name": "test-project", "version": "1.0.0" }));
@@ -180,8 +196,13 @@ fn unlink_is_noop_without_overrides() {
 
 #[test]
 fn unlink_drops_overrides_block_when_it_empties() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, &serde_json::json!({ "name": "test-project", "version": "1.0.0" }));
@@ -207,8 +228,13 @@ fn unlink_drops_overrides_block_when_it_empties() {
 
 #[test]
 fn dislink_alias_works() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     write_manifest(&workspace, &serde_json::json!({ "name": "test-project", "version": "1.0.0" }));
@@ -239,8 +265,13 @@ fn dislink_alias_works() {
 /// lockfile records the registry version instead of the link.
 #[test]
 fn unlink_restores_registry_package_in_lockfile() {
-    let CommandTempCwd { pacquet, root, workspace, npmrc_info, .. } =
-        CommandTempCwd::init().add_mocked_registry();
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
     let AddMockedRegistry { mock_instance, .. } = npmrc_info;
 
     const PKG: &str = "@pnpm.e2e/dep-of-pkg-with-1-dep";
@@ -329,9 +360,10 @@ fn recursive_unlink_with_dedicated_lockfiles_reinstalls_each_project() {
         "the link override must be removed once: {workspace_yaml}",
     );
     for project in [&first, &second] {
-        let lockfile = fs::read_to_string(project.join("pnpm-lock.yaml")).unwrap_or_else(|error| {
-            panic!("each selected project must get its own lockfile ({error}): {project:?}")
-        });
+        let lockfile = fs::read_to_string(project.join("pnpm-lock.yaml"))
+            .unwrap_or_else(|error| {
+                panic!("each selected project must get its own lockfile ({error}): {project:?}")
+            });
         assert!(
             lockfile.contains("dep-of-pkg-with-1-dep@100.0.0"),
             "{project:?} must re-resolve the dependency from the registry: {lockfile}",
@@ -342,9 +374,7 @@ fn recursive_unlink_with_dedicated_lockfiles_reinstalls_each_project() {
         );
     }
     assert!(
-        !workspace
-            .join("pnpm-lock.yaml")
-            .exists(),
+        !workspace.join("pnpm-lock.yaml").exists(),
         "dedicated lockfiles must not write a shared workspace lockfile",
     );
 

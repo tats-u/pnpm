@@ -37,12 +37,7 @@ async fn calculated_specifier_keeps_the_operator_the_previous_specifier_declared
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(
-        result
-            .normalized_bare_specifier
-            .as_deref(),
-        Some("~1.1.0")
-    );
+    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("~1.1.0"));
 }
 
 #[tokio::test]
@@ -70,11 +65,7 @@ async fn jsr_specifier_routes_through_jsr_registry() {
         .await
         .unwrap()
         .unwrap();
-    let name_ver = result
-        .package
-        .name_ver
-        .as_ref()
-        .expect("npm resolver fills name_ver");
+    let name_ver = result.package.name_ver.as_ref().expect("npm resolver fills name_ver");
     assert_eq!(name_ver.name.to_string(), "@jsr/foo__bar");
     assert_eq!(name_ver.suffix.to_string(), "1.1.0");
     assert_eq!(result.resolved_via, "jsr-registry");
@@ -116,12 +107,7 @@ async fn jsr_calculated_specifier_keeps_the_operator_the_previous_specifier_decl
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(
-        result
-            .normalized_bare_specifier
-            .as_deref(),
-        Some("jsr:~1.1.0")
-    );
+    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("jsr:~1.1.0"));
 }
 
 /// `optionalDependencies` and `peerDependenciesMeta` round-trip from the
@@ -182,22 +168,13 @@ async fn resolved_manifest_carries_optional_dependencies_and_peer_dependencies_m
         .await
         .unwrap()
         .unwrap();
-    let manifest = result
-        .package
-        .manifest
-        .as_ref()
-        .expect("npm resolver populates manifest");
+    let manifest = result.package.manifest.as_ref().expect("npm resolver populates manifest");
 
     let optional = manifest
         .get("optionalDependencies")
         .and_then(serde_json::Value::as_object)
         .expect("optionalDependencies present");
-    assert_eq!(
-        optional
-            .get("sharp")
-            .and_then(serde_json::Value::as_str),
-        Some("^0.34.0")
-    );
+    assert_eq!(optional.get("sharp").and_then(serde_json::Value::as_str), Some("^0.34.0"));
 
     let peer_meta = manifest
         .get("peerDependenciesMeta")
@@ -266,18 +243,9 @@ async fn explicit_current_revision_accepts_its_matching_history_record() {
     let LockfileResolution::Tarball(resolution) = &result.resolution else {
         panic!("expected tarball resolution");
     };
+    assert_eq!(resolution.revision.map(TarballRevision::get), Some(2));
     assert_eq!(
-        resolution
-            .revision
-            .map(TarballRevision::get),
-        Some(2)
-    );
-    assert_eq!(
-        result
-            .package
-            .manifest
-            .as_ref()
-            .expect("manifest")["dependencies"],
+        result.package.manifest.as_ref().expect("manifest")["dependencies"],
         json!({
             "selected-current": "1.0.0",
         }),
@@ -310,11 +278,7 @@ async fn explicit_original_revision_omits_the_lockfile_revision() {
     };
     assert_eq!(resolution.revision, None);
     assert_eq!(
-        result
-            .package
-            .manifest
-            .as_ref()
-            .expect("manifest")["dependencies"],
+        result.package.manifest.as_ref().expect("manifest")["dependencies"],
         json!({
             "original": "1.0.0",
         }),
@@ -343,16 +307,8 @@ async fn unknown_and_invalid_explicit_revisions_are_hard_errors() {
             .await
             .unwrap_err();
         match expected_kind {
-            "missing" => assert!(
-                error
-                    .downcast_ref::<NoMatchingRevisionError>()
-                    .is_some()
-            ),
-            "invalid" => assert!(
-                error
-                    .downcast_ref::<InvalidRevisionSpecifierError>()
-                    .is_some()
-            ),
+            "missing" => assert!(error.downcast_ref::<NoMatchingRevisionError>().is_some()),
+            "invalid" => assert!(error.downcast_ref::<InvalidRevisionSpecifierError>().is_some()),
             _ => unreachable!(),
         }
     }
@@ -381,11 +337,7 @@ async fn current_revision_requires_a_matching_history_entry() {
         .await
         .unwrap_err();
 
-    assert!(
-        error
-            .downcast_ref::<MalformedRevisionHistoryError>()
-            .is_some()
-    );
+    assert!(error.downcast_ref::<MalformedRevisionHistoryError>().is_some());
 }
 
 #[tokio::test]
@@ -407,9 +359,7 @@ async fn unparsable_shasum_fails_the_resolve() {
         .await
         .expect_err("an unusable shasum must fail the resolve");
 
-    let error = error
-        .downcast_ref::<InvalidTarballIntegrityError>()
-        .expect("integrity error");
+    let error = error.downcast_ref::<InvalidTarballIntegrityError>().expect("integrity error");
     assert_eq!(error.shasum, "not-a-hex-digest");
     assert_eq!(error.tarball, "https://registry/acme-1.0.0.tgz");
 }

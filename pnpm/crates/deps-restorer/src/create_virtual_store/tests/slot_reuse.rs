@@ -8,9 +8,7 @@ const NEW: &str = "sha512-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 fn key() -> PackageKey {
     PackageKey {
         name: name("dep-a"),
-        suffix: "1.0.0"
-            .parse::<PkgVerPeer>()
-            .expect("parse version"),
+        suffix: "1.0.0".parse::<PkgVerPeer>().expect("parse version"),
     }
 }
 

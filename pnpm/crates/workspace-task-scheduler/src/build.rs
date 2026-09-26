@@ -85,9 +85,13 @@ where
             }
             let settings = self.task_settings(&task_name);
             let dependencies = self.dependency_keys(&project, &task_name, settings);
-            queue.extend(dependencies.iter().map(|dependency| {
-                (dependency.project.clone(), dependency.task_name.clone(), false)
-            }));
+            queue.extend(
+                dependencies
+                    .iter()
+                    .map(|dependency| {
+                        (dependency.project.clone(), dependency.task_name.clone(), false)
+                    }),
+            );
             let scripts = (self.select_scripts)(&project, &task_name);
             graph.insert(
                 key,
@@ -105,8 +109,7 @@ where
     }
 
     fn task_settings(&self, task_name: &str) -> Option<&TaskSettings> {
-        self.tasks
-            .and_then(|tasks| tasks.get(task_name))
+        self.tasks.and_then(|tasks| tasks.get(task_name))
     }
 
     /// Every requested task of every seed project, which is either the
@@ -114,10 +117,7 @@ where
     fn seed_queue(&self) -> VecDeque<(PathBuf, String, bool)> {
         let seed_projects: Vec<&PathBuf> = match self.requested_projects {
             Some(requested) => requested.iter().collect(),
-            None => self
-                .project_dependencies
-                .keys()
-                .collect(),
+            None => self.project_dependencies.keys().collect(),
         };
         seed_projects
             .into_iter()
@@ -138,10 +138,7 @@ where
         settings: Option<&TaskSettings>,
     ) -> Vec<TaskKey> {
         let entries: Vec<String> = match settings {
-            Some(settings) => settings
-                .depends_on
-                .clone()
-                .unwrap_or_default(),
+            Some(settings) => settings.depends_on.clone().unwrap_or_default(),
             None => vec![format!("^{task_name}")],
         };
         let mut dependencies: Vec<TaskKey> = Vec::new();

@@ -17,9 +17,7 @@ fn publish_directory_mismatch_returns_publish_directory_mismatch() {
         "        version: 17.0.2"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -45,9 +43,7 @@ fn link_directory_mismatch_returns_link_directory_mismatch() {
         "    publishDirectory: ./dist"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -76,9 +72,7 @@ fn publish_directory_match_satisfies() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",

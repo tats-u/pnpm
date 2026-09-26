@@ -42,8 +42,7 @@ pub async fn read_bun_assets(
 ) -> Result<Vec<PlatformAssetResolution>, ReadBunAssetsError> {
     let release = release_base(mirror, version);
     let integrities_url = format!("{release}/SHASUMS256.txt");
-    let items = fetch_shasums_file(http_client, &integrities_url)
-        .await
+    let items = fetch_shasums_file(http_client, &integrities_url).await
         .map_err(ReadBunAssetsError::FetchShasumsFile)?;
 
     let mut variants = Vec::new();
@@ -71,8 +70,7 @@ fn asset_resolution(
     item: &ShasumsFileItem,
     parsed: BunAssetName,
 ) -> Result<PlatformAssetResolution, ReadBunAssetsError> {
-    let integrity: Integrity = item
-        .integrity
+    let integrity: Integrity = item.integrity
         .parse()
         .map_err(|error| ReadBunAssetsError::Integrity {
             integrity: item.integrity.clone(),
@@ -84,10 +82,7 @@ fn asset_resolution(
         integrity,
         bin: BinarySpec::Single(bun_bin_path(&parsed.platform).to_string()),
         archive: BinaryArchive::Zip,
-        prefix: item
-            .file_name
-            .strip_suffix(".zip")
-            .map(str::to_string),
+        prefix: item.file_name.strip_suffix(".zip").map(str::to_string),
     };
     let target = PlatformAssetTarget {
         os: parsed.platform,

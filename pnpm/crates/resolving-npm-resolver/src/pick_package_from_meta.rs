@@ -199,9 +199,7 @@ where
     // owned filtered clone only materializes on that (rare) path.
     let mut undecodable_excluded: Option<Package> = None;
     loop {
-        let meta_now: &Package = undecodable_excluded
-            .as_ref()
-            .unwrap_or(meta_ref);
+        let meta_now: &Package = undecodable_excluded.as_ref().unwrap_or(meta_ref);
         let Some(version) = pick_version(&pick_version_by_range, opts, meta_now, spec) else {
             return Ok(None);
         };
@@ -256,10 +254,7 @@ fn mature_view<'a>(
     if !view.needs_full_metadata {
         return Ok(view.filtered.as_deref().unwrap_or(meta));
     }
-    let modified_date = meta
-        .modified
-        .as_deref()
-        .and_then(parse_packument_timestamp);
+    let modified_date = meta.modified.as_deref().and_then(parse_packument_timestamp);
     match modified_date {
         Some(date) if date <= cutoff => Ok(meta),
         _ => Err(PickPackageFromMetaError::MissingTime { pkg_name: meta.name.clone() }),
@@ -279,9 +274,7 @@ where
 {
     match spec.spec_type {
         RegistryPackageSpecType::Version => Some(spec.fetch_spec.clone()),
-        RegistryPackageSpecType::Tag => meta
-            .dist_tag(&spec.fetch_spec)
-            .map(str::to_string),
+        RegistryPackageSpecType::Tag => meta.dist_tag(&spec.fetch_spec).map(str::to_string),
         RegistryPackageSpecType::Range => {
             pick_version_by_range(&PickVersionByVersionRangeOptions {
                 meta,
@@ -302,15 +295,12 @@ fn without_version(meta: &Package, version: &str) -> Package {
         // Tags pointing at the removed version go with it — the
         // latest-tag fast path would otherwise re-pick the version
         // this clone exists to exclude.
-        dist_tags: meta
-            .dist_tags
+        dist_tags: meta.dist_tags
             .iter()
             .filter(|(_, target)| *target != version)
             .map(|(tag, target)| (tag.clone(), target.clone()))
             .collect(),
-        versions: meta
-            .versions
-            .filtered(|candidate| candidate != version),
+        versions: meta.versions.filtered(|candidate| candidate != version),
         time: meta.time.clone(),
         modified: meta.modified.clone(),
         etag: meta.etag.clone(),
@@ -355,9 +345,7 @@ pub fn pick_version_by_version_range(
         return Some(latest.to_string());
     }
 
-    let all_versions: Vec<&str> = opts
-        .meta
-        .versions
+    let all_versions: Vec<&str> = opts.meta.versions
         .keys()
         .map(String::as_str)
         .collect();
@@ -371,9 +359,7 @@ fn preferred_max_pick(
     opts: &PickVersionByVersionRangeOptions<'_>,
     latest: Option<&str>,
 ) -> Option<String> {
-    let selectors = opts
-        .preferred_version_selectors
-        .filter(|selectors| !selectors.is_empty())?;
+    let selectors = opts.preferred_version_selectors.filter(|selectors| !selectors.is_empty())?;
     let groups = prioritize_preferred_versions(opts.meta, opts.version_range, Some(selectors));
     for group in groups {
         if let Some(latest) = latest
@@ -404,12 +390,7 @@ fn non_deprecated_pick(
     let non_deprecated: Vec<&str> = all_versions
         .iter()
         .copied()
-        .filter(|version| {
-            !opts
-                .meta
-                .versions
-                .is_deprecated(version)
-        })
+        .filter(|version| !opts.meta.versions.is_deprecated(version))
         .collect();
     max_satisfying(&non_deprecated, opts.version_range)
 }
@@ -431,9 +412,7 @@ pub fn pick_lowest_version_by_version_range(
         }
     }
 
-    let all_versions: Vec<&str> = opts
-        .meta
-        .versions
+    let all_versions: Vec<&str> = opts.meta.versions
         .keys()
         .map(String::as_str)
         .collect();
@@ -447,9 +426,7 @@ pub fn pick_lowest_version_by_version_range(
             })
             .collect();
         parsed.sort_by(|left, right| left.0.cmp(&right.0));
-        return parsed
-            .first()
-            .map(|(_, raw)| (*raw).to_string());
+        return parsed.first().map(|(_, raw)| (*raw).to_string());
     }
     min_satisfying(&all_versions, opts.version_range)
 }

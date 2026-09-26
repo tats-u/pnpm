@@ -126,10 +126,7 @@ fn checked_project_dirs(
     if !recursive {
         return Ok(vec![dir.to_path_buf()]);
     }
-    let workspace_root = config
-        .workspace_dir
-        .as_deref()
-        .unwrap_or(dir);
+    let workspace_root = config.workspace_dir.as_deref().unwrap_or(dir);
     let (projects, _) = discover_workspace_projects(workspace_root, config)?;
     Ok(select_recursive_projects(&projects, config, dir, AutoExcludeRoot::Disabled)?
         .selected

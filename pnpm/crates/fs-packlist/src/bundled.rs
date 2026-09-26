@@ -161,9 +161,7 @@ fn escapes_package_tree(
     let Some(canonical_dep) = canonical_dep else {
         return true;
     };
-    canonical_dep
-        .strip_prefix(canonical_root)
-        .is_err()
+    canonical_dep.strip_prefix(canonical_root).is_err()
 }
 
 /// Resolve a bundled dependency `name` to its directory using the
@@ -263,10 +261,7 @@ fn root_bundle_dep_names(manifest: &Value) -> Vec<String> {
 fn nested_bundle_dep_names(manifest: &Value) -> Vec<String> {
     let mut names = Vec::new();
     for field in ["dependencies", "optionalDependencies"] {
-        if let Some(map) = manifest
-            .get(field)
-            .and_then(Value::as_object)
-        {
+        if let Some(map) = manifest.get(field).and_then(Value::as_object) {
             names.extend(map.keys().cloned());
         }
     }

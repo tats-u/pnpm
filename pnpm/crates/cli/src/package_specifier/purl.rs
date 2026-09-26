@@ -50,9 +50,7 @@ impl Purl {
     /// as it was written, which the error messages quote back.
     pub(super) fn parse(body: &str, source: Shown<'_>) -> Result<Self> {
         reject_unsupported_components(body, source)?;
-        let (package_type, path) = body
-            .split_once('/')
-            .ok_or_else(|| missing_name(source))?;
+        let (package_type, path) = body.split_once('/').ok_or_else(|| missing_name(source))?;
         let package_type = parse_type(package_type, source)?;
         let (namespace, last_segment) = split_namespace(path.trim_matches('/'));
         let (name, version) = split_version(last_segment, source)?;
@@ -69,9 +67,7 @@ impl Purl {
                 .map(|namespace| decode_namespace(namespace, source))
                 .transpose()?,
             name,
-            version: version
-                .map(|version| decode(version, source))
-                .transpose()?,
+            version: version.map(|version| decode(version, source)).transpose()?,
         })
     }
 }

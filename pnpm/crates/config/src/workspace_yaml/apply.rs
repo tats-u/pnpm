@@ -51,9 +51,7 @@ impl WorkspaceSettings {
 
         overlay_some(&mut config.pipeline_base, self.pipeline_base.take());
         if let Some(concurrency_groups) = self.concurrency_groups.take() {
-            config
-                .concurrency_groups
-                .extend(concurrency_groups);
+            config.concurrency_groups.extend(concurrency_groups);
         }
 
         if let Some(virtual_store_type) = virtual_store_type {
@@ -169,10 +167,7 @@ impl WorkspaceSettings {
         overlay(&mut config.python, self.python.take());
         overlay_tools(&mut config.tools, self.tools.take());
         if let Some(v) = self.remote_side_effects_cache.take() {
-            config
-                .remote_side_effects_cache
-                .get_or_insert_default()
-                .overlay(v);
+            config.remote_side_effects_cache.get_or_insert_default().overlay(v);
         }
         self.apply_side_effects_cache(config);
         self.apply_named_registries(config, declared_prefixes);
@@ -196,18 +191,10 @@ impl WorkspaceSettings {
             config.registry = registry;
         }
         let declared_prefixes = !lookups.registries_by_prefix.is_empty();
-        config
-            .registries_by_scope
-            .extend(lookups.registries_by_scope);
-        config
-            .registries_by_prefix
-            .extend(lookups.registries_by_prefix);
-        config
-            .registry_options_by_url
-            .extend(lookups.registry_options_by_url);
-        config
-            .indexes_by_ecosystem
-            .extend(lookups.indexes_by_ecosystem);
+        config.registries_by_scope.extend(lookups.registries_by_scope);
+        config.registries_by_prefix.extend(lookups.registries_by_prefix);
+        config.registry_options_by_url.extend(lookups.registry_options_by_url);
+        config.indexes_by_ecosystem.extend(lookups.indexes_by_ecosystem);
         declared_prefixes
     }
 
@@ -224,10 +211,7 @@ impl WorkspaceSettings {
                 config.side_effects_cache_read_setting = Some(settings.read.unwrap_or(true));
                 config.side_effects_cache_write_setting = Some(settings.write.unwrap_or(true));
                 if let Some(remote) = settings.remote {
-                    config
-                        .remote_side_effects_cache
-                        .get_or_insert_default()
-                        .overlay(remote);
+                    config.remote_side_effects_cache.get_or_insert_default().overlay(remote);
                 }
             }
             None => {}
@@ -258,10 +242,7 @@ impl WorkspaceSettings {
                 );
                 continue;
             }
-            config
-                .registries_by_prefix
-                .entry(name)
-                .or_insert(registry);
+            config.registries_by_prefix.entry(name).or_insert(registry);
         }
     }
 
@@ -323,8 +304,7 @@ impl WorkspaceSettings {
         overlay_some(&mut config.supported_architectures, self.supported_architectures.take());
         overlay_some(
             &mut config.ignored_optional_dependencies,
-            self.ignored_optional_dependencies
-                .take(),
+            self.ignored_optional_dependencies.take(),
         );
     }
 
@@ -363,8 +343,7 @@ impl WorkspaceSettings {
         );
         overlay(
             &mut config.minimum_release_age_ignore_missing_time,
-            self.minimum_release_age_ignore_missing_time
-                .take(),
+            self.minimum_release_age_ignore_missing_time.take(),
         );
         overlay_some(
             &mut config.minimum_release_age_strict,

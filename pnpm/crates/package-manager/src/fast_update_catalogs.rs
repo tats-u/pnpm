@@ -119,8 +119,7 @@ fn retarget_catalog_entry(
 }
 
 pub(crate) fn catalog_references_have_snapshots(lockfile: &Lockfile, catalogs: &Catalogs) -> bool {
-    lockfile
-        .importers
+    lockfile.importers
         .values()
         .all(|importer| {
             [
@@ -132,10 +131,7 @@ pub(crate) fn catalog_references_have_snapshots(lockfile: &Lockfile, catalogs: &
             .flatten()
             .flat_map(|dependencies| dependencies.iter())
             .all(|(alias, dependency)| {
-                let Some(catalog_name) = dependency
-                    .specifier
-                    .strip_prefix("catalog:")
-                else {
+                let Some(catalog_name) = dependency.specifier.strip_prefix("catalog:") else {
                     return true;
                 };
                 let catalog_name = if catalog_name.is_empty() { "default" } else { catalog_name };
@@ -144,8 +140,7 @@ pub(crate) fn catalog_references_have_snapshots(lockfile: &Lockfile, catalogs: &
                     .get(catalog_name)
                     .and_then(|catalog| catalog.get(&alias))
                     .is_some()
-                    && lockfile
-                        .catalogs
+                    && lockfile.catalogs
                         .as_ref()
                         .and_then(|catalogs| catalogs.get(catalog_name))
                         .and_then(|catalog| catalog.get(&alias))
@@ -162,8 +157,7 @@ pub(crate) fn catalog_entry_is_referenced(
     let Ok(alias) = PkgName::parse(alias) else { return true };
     // Parsed rather than compared to a rebuilt protocol string, so the
     // `catalog:default` spelling of the default catalog counts too.
-    lockfile
-        .importers
+    lockfile.importers
         .values()
         .any(|importer| {
             [

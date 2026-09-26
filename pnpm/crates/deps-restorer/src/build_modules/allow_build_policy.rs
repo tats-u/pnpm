@@ -115,9 +115,7 @@ impl AllowBuildPolicy {
         if self.denies(&normalized_dep_path, git_repo_key, (&name, &name_at_version)) {
             return Some(false);
         }
-        if self
-            .allowed_dep_paths
-            .contains(&normalized_dep_path)
+        if self.allowed_dep_paths.contains(&normalized_dep_path)
             || git_repo_key.is_some_and(|key| self.allowed_git_repos.contains(key))
         {
             return Some(true);
@@ -130,10 +128,7 @@ impl AllowBuildPolicy {
         if node_semver::Version::parse(&version).is_err() {
             return None;
         }
-        if self.expanded_allowed.contains(&name)
-            || self
-                .expanded_allowed
-                .contains(&name_at_version)
+        if self.expanded_allowed.contains(&name) || self.expanded_allowed.contains(&name_at_version)
         {
             return Some(true);
         }
@@ -150,13 +145,10 @@ impl AllowBuildPolicy {
         named: (&str, &str),
     ) -> bool {
         let (name, name_at_version) = named;
-        self.disallowed_dep_paths
-            .contains(normalized_dep_path)
+        self.disallowed_dep_paths.contains(normalized_dep_path)
             || git_repo_key.is_some_and(|key| self.disallowed_git_repos.contains(key))
             || self.expanded_disallowed.contains(name)
-            || self
-                .expanded_disallowed
-                .contains(name_at_version)
+            || self.expanded_disallowed.contains(name_at_version)
     }
 }
 
@@ -233,8 +225,7 @@ impl<'c> BuildKeys<'c> {
         if is_git_repo_allow_build_key(spec) {
             self.git_repos.insert(spec.to_owned());
         } else if is_dep_path_allow_build_key(spec) {
-            self.dep_paths
-                .insert(normalize_build_dep_path(spec));
+            self.dep_paths.insert(normalize_build_dep_path(spec));
         } else {
             self.specs.push(spec);
         }

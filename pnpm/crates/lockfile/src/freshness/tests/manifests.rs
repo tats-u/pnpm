@@ -15,9 +15,7 @@ fn matching_manifest_and_lockfile_satisfies() {
         "        version: 17.0.2"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -42,9 +40,7 @@ fn equivalent_git_specifiers_satisfy_manifest() {
         "        version: git+https://github.com/kevva/is-positive.git#97edff6"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -70,9 +66,7 @@ fn different_git_specifiers_do_not_satisfy_manifest() {
         "        version: git+https://github.com/kevva/is-positive.git#97edff6"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     for specifier in [
         "git+https://gitlab.com/kevva/is-positive.git#97edff6",
         "git+https://github.com/kevva/different.git#97edff6",
@@ -108,9 +102,7 @@ fn manifest_adds_dep_returns_specifier_diff() {
         "        version: 17.0.2"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -126,12 +118,7 @@ fn manifest_adds_dep_returns_specifier_diff() {
     let StalenessReason::SpecifiersDiffer(diff) = err else {
         panic!("expected SpecifiersDiffer, got {err:?}");
     };
-    assert_eq!(
-        diff.added
-            .get("lodash")
-            .map(String::as_str),
-        Some("^4.17.21")
-    );
+    assert_eq!(diff.added.get("lodash").map(String::as_str), Some("^4.17.21"));
     assert!(diff.removed.is_empty());
     assert!(diff.modified.is_empty());
 }
@@ -151,9 +138,7 @@ fn manifest_drops_dep_returns_specifier_diff() {
         "        version: 4.17.21"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -168,12 +153,7 @@ fn manifest_drops_dep_returns_specifier_diff() {
     let StalenessReason::SpecifiersDiffer(diff) = err else {
         panic!("expected SpecifiersDiffer, got {err:?}");
     };
-    assert_eq!(
-        diff.removed
-            .get("lodash")
-            .map(String::as_str),
-        Some("^4.17.21")
-    );
+    assert_eq!(diff.removed.get("lodash").map(String::as_str), Some("^4.17.21"));
 }
 
 #[test]
@@ -188,9 +168,7 @@ fn manifest_bumps_specifier_returns_specifier_diff() {
         "        version: 17.0.2"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -205,10 +183,7 @@ fn manifest_bumps_specifier_returns_specifier_diff() {
     let StalenessReason::SpecifiersDiffer(diff) = err else {
         panic!("expected SpecifiersDiffer, got {err:?}");
     };
-    let modified = diff
-        .modified
-        .get("react")
-        .expect("react bucketed under modified");
+    let modified = diff.modified.get("react").expect("react bucketed under modified");
     assert_eq!(modified.0, "^17.0.2");
     assert_eq!(modified.1, "^18.0.0");
 }
@@ -230,9 +205,7 @@ fn manifest_optional_only_but_lockfile_records_prod_is_stale() {
         "        version: 1.0.0"
     })
     .expect("parse fixture lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer present");
+    let importer = lockfile.root_project().expect("root importer present");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",
@@ -266,9 +239,7 @@ fn ignored_optional_filtered_out_of_manifest_diff() {
         "        version: 2.0.0"
     })
     .expect("parse lockfile");
-    let importer = lockfile
-        .root_project()
-        .expect("root importer");
+    let importer = lockfile.root_project().expect("root importer");
     let (_dir, manifest) = manifest_from_json(
         r#"{
         "name": "x",

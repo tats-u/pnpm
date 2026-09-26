@@ -25,19 +25,13 @@ fn owner_entry_deserializes_array() {
 #[test]
 fn error_add_args_required_display() {
     let err = OwnerError::AddArgsRequired;
-    assert!(
-        err.to_string()
-            .contains("Package name and owner are required")
-    );
+    assert!(err.to_string().contains("Package name and owner are required"));
 }
 
 #[test]
 fn error_rm_args_required_display() {
     let err = OwnerError::RmArgsRequired;
-    assert!(
-        err.to_string()
-            .contains("Package name and owner are required")
-    );
+    assert!(err.to_string().contains("Package name and owner are required"));
 }
 
 #[test]
@@ -54,10 +48,7 @@ fn error_unauthorized_display() {
         body: "token expired".to_string(),
     };
     assert!(err.to_string().contains("logged in"));
-    assert!(
-        err.to_string()
-            .contains("token expired")
-    );
+    assert!(err.to_string().contains("token expired"));
 }
 
 #[test]
@@ -135,10 +126,7 @@ async fn owner_ls_success() {
 
     let config = config_with_registry(&server.url());
     let args = owner_args("ls", &["my-pkg"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner ls must succeed");
+    let result = args.run(&config).await.expect("owner ls must succeed");
 
     mock.assert_async().await;
     eprintln!("OWNERS:\n{}\n", result.as_deref().unwrap_or_default());
@@ -253,10 +241,7 @@ async fn owner_ls_scoped_package_encodes_correctly() {
 
     let config = config_with_registry(&server.url());
     let args = owner_args("ls", &["@scope/pkg"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner ls must succeed");
+    let result = args.run(&config).await.expect("owner ls must succeed");
 
     mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("alice <a@b.com>"));
@@ -274,10 +259,7 @@ async fn owner_ls_list_alias() {
 
     let config = config_with_registry(&server.url());
     let args = owner_args("list", &["my-pkg"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner list must succeed");
+    let result = args.run(&config).await.expect("owner list must succeed");
 
     mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("carol <c@d.com>"));
@@ -307,10 +289,7 @@ async fn owner_add_success() {
 
     let config = config_with_registry(&server.url());
     let args = owner_args("add", &["my-pkg", "alice"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner add must succeed");
+    let result = args.run(&config).await.expect("owner add must succeed");
 
     mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("+alice: my-pkg"));
@@ -416,10 +395,7 @@ async fn owner_add_sends_otp_header() {
 
     let config = config_with_registry(&server.url());
     let args = owner_args_with_otp("123456", "add", &["my-pkg", "alice"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner add with OTP must succeed");
+    let result = args.run(&config).await.expect("owner add with OTP must succeed");
 
     mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("+alice: my-pkg"));
@@ -448,10 +424,7 @@ async fn owner_rm_success() {
 
     let config = config_with_registry(&server.url());
     let args = owner_args("rm", &["my-pkg", "alice"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner rm must succeed");
+    let result = args.run(&config).await.expect("owner rm must succeed");
 
     mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("-alice: my-pkg"));
@@ -528,10 +501,7 @@ async fn owner_rm_sends_otp_header() {
 
     let config = config_with_registry(&server.url());
     let args = owner_args_with_otp("654321", "rm", &["my-pkg", "bob"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner rm with OTP must succeed");
+    let result = args.run(&config).await.expect("owner rm with OTP must succeed");
 
     mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("-bob: my-pkg"));
@@ -558,10 +528,7 @@ async fn owner_rm_encodes_owner_in_url() {
 
     let config = config_with_registry(&server.url());
     let args = owner_args("rm", &["my-pkg", "user@example.com"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner rm must succeed");
+    let result = args.run(&config).await.expect("owner rm must succeed");
 
     mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("-user@example.com: my-pkg"));
@@ -581,10 +548,7 @@ async fn owner_no_subcommand_defaults_to_ls() {
 
     let config = config_with_registry(&server.url());
     let args = OwnerArgs { registry: None, otp: None, params: vec!["my-pkg".to_string()] };
-    let result = args
-        .run(&config)
-        .await
-        .expect("default ls must succeed");
+    let result = args.run(&config).await.expect("default ls must succeed");
 
     mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("dave <dave@example.com>"));
@@ -612,10 +576,7 @@ async fn owner_ls_registry_override() {
 
     let config = config_with_registry(&default_server.url());
     let args = owner_args_with_registry(&override_server.url(), "ls", &["my-pkg"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner ls with registry override must succeed");
+    let result = args.run(&config).await.expect("owner ls with registry override must succeed");
 
     override_mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("correct <correct@example.com>"));
@@ -640,10 +601,7 @@ async fn owner_add_registry_override() {
 
     let config = config_with_registry(&default_server.url());
     let args = owner_args_with_registry(&override_server.url(), "add", &["my-pkg", "alice"]);
-    let result = args
-        .run(&config)
-        .await
-        .expect("owner add with registry override must succeed");
+    let result = args.run(&config).await.expect("owner add with registry override must succeed");
 
     override_mock.assert_async().await;
     assert_eq!(result.as_deref(), Some("+alice: my-pkg"));

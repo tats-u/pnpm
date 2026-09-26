@@ -154,10 +154,7 @@ fn exponent_consumes_all(tail: &str) -> bool {
     let rest = rest
         .strip_prefix(['-', '+'])
         .unwrap_or(rest);
-    !rest.is_empty()
-        && rest
-            .bytes()
-            .all(|byte| byte.is_ascii_digit())
+    !rest.is_empty() && rest.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 /// Port of `type/timestamp.js`'s `resolveYamlTimestamp` (date and full forms).
@@ -168,17 +165,11 @@ fn resolves_timestamp(string: &str) -> bool {
 fn matches_date(string: &str) -> bool {
     let bytes = string.as_bytes();
     bytes.len() == 10
-        && bytes[..4]
-            .iter()
-            .all(u8::is_ascii_digit)
+        && bytes[..4].iter().all(u8::is_ascii_digit)
         && bytes[4] == b'-'
-        && bytes[5..7]
-            .iter()
-            .all(u8::is_ascii_digit)
+        && bytes[5..7].iter().all(u8::is_ascii_digit)
         && bytes[7] == b'-'
-        && bytes[8..10]
-            .iter()
-            .all(u8::is_ascii_digit)
+        && bytes[8..10].iter().all(u8::is_ascii_digit)
 }
 
 fn matches_timestamp(string: &str) -> bool {

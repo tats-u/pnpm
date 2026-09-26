@@ -37,9 +37,7 @@ fn patch_state_write_creates_pnpm_state_file() {
 
     write_edit_dir_state(&modules_dir, &edit_dir, &sample_state()).unwrap();
 
-    let state_path = modules_dir
-        .join(".pnpm_patches")
-        .join("state.json");
+    let state_path = modules_dir.join(".pnpm_patches").join("state.json");
     let text = fs::read_to_string(state_path).expect("state file");
     let key = dunce::canonicalize(&edit_dir)
         .expect("canonical edit dir")
@@ -85,9 +83,7 @@ fn patch_state_write_updates_existing_state_file() {
         .expect("canonical second edit dir")
         .display()
         .to_string();
-    let state_path = modules_dir
-        .join(".pnpm_patches")
-        .join("state.json");
+    let state_path = modules_dir.join(".pnpm_patches").join("state.json");
     let text = fs::read_to_string(state_path).expect("state file");
     assert_eq!(
         serde_json::from_str::<serde_json::Value>(&text).expect("valid JSON"),
@@ -147,9 +143,7 @@ fn patch_state_malformed_json_is_an_error() {
 fn patch_state_read_errors_when_state_path_is_not_a_file() {
     let tmp = tempdir().expect("temp dir");
     let modules_dir = tmp.path().join("node_modules");
-    let state_path = modules_dir
-        .join(".pnpm_patches")
-        .join("state.json");
+    let state_path = modules_dir.join(".pnpm_patches").join("state.json");
     fs::create_dir_all(&state_path).expect("create state dir at file path");
 
     let err = read_edit_dir_state(&modules_dir, &tmp.path().join("edit")).unwrap_err();
@@ -161,15 +155,8 @@ fn patch_state_read_errors_when_state_path_is_not_a_file() {
 fn patch_state_read_rejects_oversized_state_file() {
     let tmp = tempdir().expect("temp dir");
     let modules_dir = tmp.path().join("node_modules");
-    let state_path = modules_dir
-        .join(".pnpm_patches")
-        .join("state.json");
-    fs::create_dir_all(
-        state_path
-            .parent()
-            .expect("state parent"),
-    )
-    .expect("create state dir");
+    let state_path = modules_dir.join(".pnpm_patches").join("state.json");
+    fs::create_dir_all(state_path.parent().expect("state parent")).expect("create state dir");
     fs::write(&state_path, " ".repeat(super::MAX_STATE_FILE_BYTES + 1))
         .expect("write oversized state");
 
@@ -182,9 +169,7 @@ fn patch_state_read_rejects_oversized_state_file() {
 fn patch_state_write_errors_when_existing_state_path_is_not_a_file() {
     let tmp = tempdir().expect("temp dir");
     let modules_dir = tmp.path().join("node_modules");
-    let state_path = modules_dir
-        .join(".pnpm_patches")
-        .join("state.json");
+    let state_path = modules_dir.join(".pnpm_patches").join("state.json");
     fs::create_dir_all(&state_path).expect("create state dir at file path");
 
     let err =
@@ -243,9 +228,7 @@ fn patch_state_write_uses_current_dir_for_relative_edit_dirs() {
 
     write_edit_dir_state(&modules_dir, Path::new("edit"), &sample_state()).unwrap();
 
-    let state_path = modules_dir
-        .join(".pnpm_patches")
-        .join("state.json");
+    let state_path = modules_dir.join(".pnpm_patches").join("state.json");
     let text = fs::read_to_string(state_path).expect("state file");
     let key = dunce::canonicalize(tmp.path().join("edit"))
         .expect("canonical edit dir")
@@ -287,9 +270,7 @@ fn patch_state_write_uses_normalized_missing_edit_dir_key() {
 
     write_edit_dir_state(&modules_dir, &missing_edit_dir, &sample_state()).unwrap();
 
-    let state_path = modules_dir
-        .join(".pnpm_patches")
-        .join("state.json");
+    let state_path = modules_dir.join(".pnpm_patches").join("state.json");
     let text = fs::read_to_string(state_path).expect("state file");
     assert!(
         serde_json::from_str::<serde_json::Value>(&text).expect("valid JSON")

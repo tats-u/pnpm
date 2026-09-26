@@ -73,9 +73,7 @@ impl DirGlob {
             return true;
         }
         let candidate_segments: Vec<&str> = candidate.split('/').collect();
-        self.alternatives
-            .iter()
-            .any(|segments| match_segments(segments, &candidate_segments))
+        self.alternatives.iter().any(|segments| match_segments(segments, &candidate_segments))
     }
 }
 
@@ -147,9 +145,7 @@ fn expand_alternatives(pattern: &str) -> Option<Vec<String>> {
                 return None;
             }
         }
-        let literal: String = chars[literal_start..group.start]
-            .iter()
-            .collect();
+        let literal: String = chars[literal_start..group.start].iter().collect();
         expanded = join_branches(&expanded, &literal, &branches);
         literal_start = group.close + 1;
     }
@@ -267,11 +263,7 @@ fn split_top_level(content: &str, separator: &[char]) -> Vec<String> {
             '[' => index = bracket_end(&chars, brackets, index + 1).unwrap_or(index + 1),
             '{' => index = spans.closes[index].map_or(index + 1, |close| close + 1),
             _ if chars[index..].starts_with(separator) => {
-                parts.push(
-                    chars[part_start..index]
-                        .iter()
-                        .collect(),
-                );
+                parts.push(chars[part_start..index].iter().collect());
                 index += separator.len();
                 part_start = index;
             }
@@ -436,8 +428,7 @@ impl CharClass {
     }
 
     fn matches(&self, character: char) -> bool {
-        let contains = self
-            .members
+        let contains = self.members
             .iter()
             .any(|member| match *member {
                 ClassMember::Char(member) => member == character,
