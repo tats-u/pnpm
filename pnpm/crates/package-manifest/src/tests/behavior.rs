@@ -1,7 +1,9 @@
 use super::{
-    DependencyGroup, InitOptions, NamedTempFile, PackageManifest, Write, assert_eq, json,
-    manifest_requires_build, read_to_string, tempdir,
+    BINDING_GYP, DependencyGroup, InitOptions, NamedTempFile, PackageManifest, Write, assert_eq,
+    files_build_triggers, json, manifest_opts_out_of_gyp_build, manifest_requires_build,
+    pkg_requires_build, read_to_string, tempdir,
 };
+use crate::BuildTriggers;
 
 #[cfg(unix)]
 use super::{PackageManifestError, safe_read_package_json_from_dir};
@@ -137,6 +139,50 @@ fn save_preserves_the_source_indentation() {
     );
 }
 
+/// A save keeps the blank lines the source file puts between object
+/// members, at the top level and in nested objects.
+#[test]
+fn save_preserves_blank_lines_between_members() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("package.json");
+    std::fs::write(
+        &path,
+        "{\n  \"name\": \"foo\",\n  \"scripts\": {\n    \"test\": \"a\",\n\n    \"foo\": \"bar\"\n  },\n\n  \"license\": \"ISC\"\n}\n",
+    )
+    .unwrap();
+    let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
+    manifest.add_dependency("axios", "^1.1.3", DependencyGroup::Prod).unwrap();
+    manifest.save().unwrap();
+
+    assert_eq!(
+        read_to_string(&path).unwrap(),
+        "{\n  \"name\": \"foo\",\n  \"scripts\": {\n    \"test\": \"a\",\n\n    \"foo\": \"bar\"\n  },\n\n  \"license\": \"ISC\",\n  \"dependencies\": {\n    \"axios\": \"^1.1.3\"\n  }\n}\n",
+    );
+}
+
+/// A member removed by one save comes back without its old blank line
+/// when the same manifest adds it again.
+#[test]
+fn save_forgets_the_blank_line_of_a_removed_member() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("package.json");
+    std::fs::write(
+        &path,
+        "{\n  \"name\": \"foo\",\n  \"dependencies\": {\n    \"a\": \"1.0.0\",\n\n    \"b\": \"1.0.0\"\n  }\n}\n",
+    )
+    .unwrap();
+    let mut manifest = PackageManifest::from_path(path.clone()).unwrap();
+    manifest.remove_dependencies(&["b".to_string()], None);
+    manifest.save().unwrap();
+    manifest.add_dependency("b", "1.0.0", DependencyGroup::Prod).unwrap();
+    manifest.save().unwrap();
+
+    assert_eq!(
+        read_to_string(&path).unwrap(),
+        "{\n  \"name\": \"foo\",\n  \"dependencies\": {\n    \"a\": \"1.0.0\",\n    \"b\": \"1.0.0\"\n  }\n}\n",
+    );
+}
+
 /// The preserved indentation unit is capped at 10 characters on write,
 /// like `JSON.stringify`'s `space` argument.
 #[test]
@@ -166,4 +212,54 @@ fn a_script_without_a_value_is_not_build_work() {
     ));
     assert!(!manifest_requires_build(&json!({ "scripts": { "preinstall": false } })));
     assert!(!manifest_requires_build(&json!({ "scripts": { "test": "node x.js" } })));
+}
+
+#[test]
+fn only_a_false_gypfile_opts_out_of_the_gyp_build() {
+    assert!(manifest_opts_out_of_gyp_build(&json!({ "gypfile": false })));
+    assert!(!manifest_opts_out_of_gyp_build(&json!({ "gypfile": true })));
+    assert!(!manifest_opts_out_of_gyp_build(&json!({ "gypfile": "false" })));
+    assert!(!manifest_opts_out_of_gyp_build(&json!({})));
+}
+
+#[test]
+fn gypfile_false_silences_only_the_binding_gyp_trigger() {
+    let dir = tempdir().expect("create temp dir");
+    let pkg_root = dir.path();
+    std::fs::write(pkg_root.join(BINDING_GYP), "{'targets':[]}").expect("write binding.gyp");
+
+    std::fs::write(pkg_root.join("package.json"), json!({ "gypfile": false }).to_string())
+        .expect("write manifest");
+    assert!(!pkg_requires_build(pkg_root));
+
+    std::fs::write(pkg_root.join("package.json"), json!({}).to_string()).expect("write manifest");
+    assert!(pkg_requires_build(pkg_root));
+
+    std::fs::write(
+        pkg_root.join("package.json"),
+        json!({ "gypfile": false, "scripts": { "postinstall": "node x.js" } }).to_string(),
+    )
+    .expect("write manifest");
+    assert!(pkg_requires_build(pkg_root));
+
+    std::fs::create_dir(pkg_root.join(".hooks")).expect("create .hooks");
+    std::fs::write(pkg_root.join("package.json"), json!({ "gypfile": false }).to_string())
+        .expect("write manifest");
+    assert!(pkg_requires_build(pkg_root));
+}
+
+#[test]
+fn file_triggers_report_binding_gyp_and_hooks_separately() {
+    let gyp = files_build_triggers([BINDING_GYP, "lib/index.js"]);
+    assert!(gyp.binding_gyp);
+    assert!(!gyp.hooks);
+    assert!(gyp.requires_build());
+    assert!(!BuildTriggers { gyp_build_opted_out: true, ..gyp }.requires_build());
+
+    let hooks = files_build_triggers([".hooks/postinstall"]);
+    assert!(hooks.hooks);
+    assert!(!hooks.binding_gyp);
+    assert!(BuildTriggers { gyp_build_opted_out: true, ..hooks }.requires_build());
+
+    assert!(!files_build_triggers(["lib/binding.gyp", ".hooksfile"]).requires_build());
 }

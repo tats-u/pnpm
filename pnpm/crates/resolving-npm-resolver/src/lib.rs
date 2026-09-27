@@ -18,7 +18,9 @@
 pub mod mirror;
 
 pub use calc_specifier::{calc_prefixed_specifier, calc_specifier, calc_version_range};
-pub use calc_specifier_for_workspace_dep::{DeclaredSpecifiers, calc_specifier_for_workspace_dep};
+pub use calc_specifier_for_workspace_dep::{
+    DeclaredSpecifiers, calc_specifier_for_workspace_dep, can_drop_workspace_protocol,
+};
 pub use create_npm_resolution_verifier::{
     CreateNpmResolutionVerifierOptions, DistStats, NpmResolutionVerifier, ObservedDistStats,
     VerificationArtifacts, VerificationMetadataClient, VerificationReleaseAgeOptions,
@@ -32,14 +34,16 @@ pub use fetch_full_metadata::{
     FetchFullMetadataOptions, FetchFullMetadataOutcome, MetadataHttpClient, fetch_full_metadata,
 };
 pub use fetch_full_metadata_cached::{FetchFullMetadataCachedOptions, fetch_full_metadata_cached};
-pub use infer_range_spec_style::infer_range_spec_style;
+pub use infer_range_spec_style::{infer_range_spec_style, range_of_specifier};
 pub use mirror::{ABBREVIATED_META_DIR, FULL_FILTERED_META_DIR, FULL_META_DIR};
 pub use named_registry::{
     BUILTIN_REGISTRIES_BY_PREFIX, MergeNamedRegistriesError, merge_named_registries,
     named_registry_tarball_prefixes, pick_registry_for_version,
 };
 pub use named_registry_resolver::NamedRegistryResolver;
-pub use npm_resolver::{NpmResolver, RegistryMetadataClient, RegistryMetadataFormat};
+pub use npm_resolver::{
+    NpmResolver, RegistryMetadataClient, RegistryMetadataFormat, normalize_tarball_url,
+};
 pub use parse_bare_specifier::{
     JsrRegistryPackageSpec, NamedRegistryPackageSpec, ParseNamedRegistrySpecifierError,
     parse_bare_specifier, parse_jsr_specifier_to_registry_package_spec,
@@ -90,4 +94,5 @@ mod registry_url;
 mod resolve_from_workspace;
 mod trust_checks;
 mod violation_codes;
+mod warn_once;
 mod workspace_pref_to_npm;

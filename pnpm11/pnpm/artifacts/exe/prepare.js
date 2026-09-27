@@ -22,7 +22,7 @@ for (const name of ['pnpm']) {
 // first there, and would find nothing at all when the directory holding these
 // bins is not on `PATH`.
 //
-// The .cmd and .ps1 wrappers resolve pnpm through the caller's `PATH` instead,
+// The .cmd wrappers resolve pnpm through the caller's `PATH` instead,
 // deliberately. `bin` is extensionless for every alias, so neither install
 // state makes them a shim target: with install scripts, setup.js hardlinks
 // pn.exe/pnpx.exe/pnx.exe and repoints `bin` at those; without them, `bin`
@@ -38,8 +38,10 @@ for (const [name, subcommand] of [['pn', ''], ['pnpx', ' dlx'], ['pnx', ' dlx']]
     if (e.code !== 'ENOENT') throw e
   }
   fs.writeFileSync(file, unixScript(name, subcommand), { mode: 0o755 })
-  fs.writeFileSync(path.join(ownDir, name + '.cmd'), `@echo off\npnpm${subcommand} %*\n`)
-  fs.writeFileSync(path.join(ownDir, name + '.ps1'), `pnpm${subcommand} @args\n`)
+  fs.writeFileSync(path.join(ownDir, name + '.cmd'), `@echo off\npnpm${subcommand} %*\nexit /b %errorlevel%\n`)
+  // No .ps1 wrapper: PowerShell would prefer it over the .cmd, and it fails
+  // wherever the execution policy blocks unsigned scripts.
+  fs.rmSync(path.join(ownDir, name + '.ps1'), { force: true })
 }
 
 function unixScript (name, subcommand) {
@@ -48,6 +50,24 @@ function unixScript (name, subcommand) {
 # file itself before looking beside it. The hop cap matches the kernel's ELOOP
 # limit, so a cycle cannot hang the script. Directories come from \`\${self%/*}\`
 # and \`readlink\` runs through \`command -p\`, so the caller's PATH decides nothing here.
+#
+# Where no default path is compiled in, as on Nix, \`command -p\` searches PATH
+# instead, so the helpers run with node_modules and relative entries dropped from
+# PATH.
+caller_path_set=\${PATH+set}
+caller_path=\${PATH-}
+helper_path=
+rest=$caller_path:
+while [ -n "$rest" ]; do
+  dir=\${rest%%:*}
+  rest=\${rest#*:}
+  case "$dir" in
+    */node_modules/*|*/node_modules) ;;
+    /*) helper_path=\${helper_path:+$helper_path:}$dir ;;
+  esac
+done
+# An empty PATH searches the current directory.
+PATH=\${helper_path:-/}
 self=$0
 # MSYS and Cygwin can launch this with a native Windows path, which has no slash
 # for \`\${self%/*}\` to strip. Only a drive letter or a UNC prefix marks one; a
@@ -79,6 +99,7 @@ while [ -L "$self" ] && [ "$hops" -lt 40 ]; do
     *) self=\${self%/*}/$link ;;
   esac
 done
+if [ -n "$caller_path_set" ]; then PATH=$caller_path; else unset PATH; fi
 
 # The walk has to end at a regular file. Running out of hops leaves $self a
 # symlink; a chain that changed under us can leave it dangling or a directory, and

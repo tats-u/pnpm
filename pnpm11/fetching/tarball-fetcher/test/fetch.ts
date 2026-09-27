@@ -1,5 +1,7 @@
 /// <reference path="../../../__typings__/index.d.ts" />
 import fs from 'node:fs'
+import http from 'node:http'
+import type { AddressInfo, Socket } from 'node:net'
 import path from 'node:path'
 
 import { afterAll, afterEach, beforeAll, beforeEach, expect, jest, test } from '@jest/globals'
@@ -646,6 +648,55 @@ test('do not retry when package does not exist', async () => {
   )
 })
 
+test.each(['ENOSPC', 'ERR_PNPM_ENOSPC'])('do not retry when a tarball fetch runs out of disk space (%s)', async (code) => {
+  const noSpace = Object.assign(new Error('no space left on device'), { code })
+  mockAgent.get(registry)
+    .intercept({ path: '/foo.tgz', method: 'GET' })
+    .replyWithError(noSpace)
+    .times(2)
+
+  process.chdir(temporaryDirectory())
+  const err = await fetch.remoteTarball(cafs, {
+    integrity: tarballIntegrity,
+    tarball: `${registry}/foo.tgz`,
+  }, {
+    filesIndexFile,
+    lockfileDir: process.cwd(),
+    pkg,
+  }).then(() => undefined, (error: unknown) => error)
+
+  expect(err).toHaveProperty('code', code)
+  expect(mockAgent.pendingInterceptors()).toHaveLength(1)
+})
+
+// https://github.com/pnpm/pnpm/issues/9134
+test('do not retry when the server certificate is untrusted', async () => {
+  const certificateError = Object.assign(
+    new Error('unable to verify the first certificate'),
+    { code: 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' }
+  )
+  mockAgent.get(registry)
+    .intercept({ path: '/foo.tgz', method: 'GET' })
+    .replyWithError(certificateError)
+    .times(2)
+
+  process.chdir(temporaryDirectory())
+
+  const resolution = {
+    integrity: tarballIntegrity,
+    tarball: `${registry}/foo.tgz`,
+  }
+
+  const err = await fetch.remoteTarball(cafs, resolution, {
+    filesIndexFile,
+    lockfileDir: process.cwd(),
+    pkg,
+  }).then(() => undefined, (error: unknown) => error)
+  expect(err).toHaveProperty('code', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE')
+  expect(err).toHaveProperty('message', 'unable to verify the first certificate')
+  expect(mockAgent.pendingInterceptors()).toHaveLength(1)
+})
+
 test('accessing private packages', async () => {
   const tarballContent = fs.readFileSync(tarballPath)
   const mockPool = mockAgent.get(registry)
@@ -923,7 +974,7 @@ test('fail when extracting a broken tarball', async () => {
       lockfileDir: process.cwd(),
       pkg,
     })
-  ).rejects.toThrow(`Failed to add tarball from "${registry}/foo.tgz" to store: Invalid checksum for TAR header at offset 0. Expected 0, got NaN`
+  ).rejects.toThrow(`Failed to add tarball from "${registry}/foo.tgz" to store: Unexpected end of TAR archive at offset 27`
   )
 })
 
@@ -1061,4 +1112,45 @@ test('fail when path is not exists', async () => {
     lockfileDir: process.cwd(),
     pkg,
   })).rejects.toThrow(`Failed to prepare git-hosted package fetched from "${tarball}": Path "${path}" is not a directory`)
+})
+
+test.each([
+  ['never answers', () => {}],
+  ['stops sending the body', (res: http.ServerResponse) => {
+    res.writeHead(200, { 'content-length': '1000' })
+    res.write(Buffer.alloc(100))
+  }],
+])('a tarball download from a registry that %s fails with a timeout error', async (_, respond) => {
+  setGlobalDispatcher(originalDispatcher)
+  const sockets = new Set<Socket>()
+  const server = http.createServer((_req, res) => {
+    respond(res)
+  })
+  server.on('connection', (socket) => {
+    sockets.add(socket)
+    socket.on('close', () => sockets.delete(socket))
+  })
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', resolve)
+  })
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/stalled.tgz`
+  const download = createDownloader(fetchFromRegistry, {
+    retry: { retries: 0 },
+    timeout: 200,
+  })
+
+  try {
+    await expect(download(url, {
+      getAuthHeaderByURI: () => undefined,
+      cafs,
+      storeIndex,
+      filesIndexFile,
+    })).rejects.toMatchObject({
+      code: 'ERR_PNPM_FETCH_TIMEOUT',
+      message: `GET ${url}: timed out, no data received for 200ms`,
+    })
+  } finally {
+    for (const socket of sockets) socket.destroy()
+    server.close()
+  }
 })

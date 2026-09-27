@@ -1,7 +1,13 @@
 import * as dp from '@pnpm/deps.path'
+import { LockfileMissingDependencyError } from '@pnpm/error'
 import { DepType, type DepTypes, detectDepTypes } from '@pnpm/lockfile.detect-dep-types'
 import { convertToLockfileObject } from '@pnpm/lockfile.fs'
-import type { EnvLockfile, LockfileObject, ResolvedDependencies } from '@pnpm/lockfile.types'
+import {
+  getPeerSatisfactionEdgesToSkip,
+  isPeerSatisfactionEdge,
+  type PeerSatisfactionEdges,
+} from '@pnpm/lockfile.peer-edges'
+import type { EnvLockfile, LockfileObject, PackageSnapshot, ResolvedDependencies } from '@pnpm/lockfile.types'
 import { nameVerFromPkgSnapshot } from '@pnpm/lockfile.utils'
 import { lockfileWalkerGroupImporterSteps, type LockfileWalkerStep } from '@pnpm/lockfile.walker'
 import type { DependenciesField, DepPath, ProjectId } from '@pnpm/types'
@@ -31,6 +37,7 @@ export interface AuditIndexRequest {
 export interface AuditIndexOptions {
   envLockfile?: EnvLockfile | null
   include?: { [dependenciesField in DependenciesField]: boolean }
+  resolvePeersFromWorkspaceRoot?: boolean
   // Pre-computed dep types. Callers that also call buildAuditPathIndex on the
   // same lockfile can share this to avoid walking the lockfile twice.
   depTypes?: DepTypes
@@ -44,9 +51,12 @@ export function lockfileToAuditRequest (
   opts: AuditIndexOptions
 ): AuditIndexRequest {
   const importerIds = Object.keys(lockfile.importers) as ProjectId[]
-  const importerWalkers = lockfileWalkerGroupImporterSteps(lockfile, importerIds, { include: opts.include })
-  const depTypes = opts.depTypes ?? detectDepTypes(lockfile)
-  const optionalOnly = opts.optionalOnly ?? collectOptionalOnlyDepPaths(lockfile, opts.include)
+  const importerWalkers = lockfileWalkerGroupImporterSteps(lockfile, importerIds, {
+    include: opts.include,
+    resolvePeersFromWorkspaceRoot: opts.resolvePeersFromWorkspaceRoot,
+  })
+  const depTypes = opts.depTypes ?? detectDepTypes(lockfile, opts)
+  const optionalOnly = opts.optionalOnly ?? collectOptionalOnlyDepPaths(lockfile, opts)
 
   // Use null-prototype objects for records keyed by package names so a
   // hostile or unusual package name (e.g. "__proto__") cannot pollute the
@@ -100,6 +110,9 @@ export function lockfileToAuditRequest (
   // untrusted lockfile cannot overflow the call stack.
   const makeVisitor = (graphDepTypes: DepTypes, graphOptionalOnly: Set<DepPath>) => {
     return (rootStep: LockfileWalkerStep): void => {
+      if (rootStep.missing.length > 0) {
+        throw new LockfileMissingDependencyError(rootStep.missing[0])
+      }
       const stack: Array<{ dependencies: LockfileWalkerStep['dependencies'], next: number }> = [{ dependencies: rootStep.dependencies, next: 0 }]
       while (stack.length > 0) {
         const frame = stack[stack.length - 1]
@@ -117,7 +130,11 @@ export function lockfileToAuditRequest (
             optionalOnly: graphOptionalOnly.has(depPath),
           })
         }
-        stack.push({ dependencies: next().dependencies, next: 0 })
+        const nextStep = next()
+        if (nextStep.missing.length > 0) {
+          throw new LockfileMissingDependencyError(nextStep.missing[0])
+        }
+        stack.push({ dependencies: nextStep.dependencies, next: 0 })
       }
     }
   }
@@ -129,7 +146,7 @@ export function lockfileToAuditRequest (
   if (opts.envLockfile) {
     const envLockfileObject = envLockfileToLockfileObject(opts.envLockfile)
     const envDepTypes = detectDepTypes(envLockfileObject)
-    const envOptionalOnly = collectOptionalOnlyDepPaths(envLockfileObject, opts.include)
+    const envOptionalOnly = collectOptionalOnlyDepPaths(envLockfileObject, { include: opts.include })
     const visitEnv = makeVisitor(envDepTypes, envOptionalOnly)
     for (const { step } of lockfileWalkerGroupImporterSteps(envLockfileObject, Object.keys(envLockfileObject.importers) as ProjectId[], { include: opts.include })) {
       visitEnv(step)
@@ -147,8 +164,8 @@ export function buildAuditPathIndex (
   // Null-prototype record keyed by package name to avoid prototype pollution
   // from registry-supplied or lockfile-supplied names.
   const paths: AuditPathIndex = Object.create(null)
-  const depTypes = opts.depTypes ?? detectDepTypes(lockfile)
-  const optionalOnly = opts.optionalOnly ?? collectOptionalOnlyDepPaths(lockfile, opts.include)
+  const depTypes = opts.depTypes ?? detectDepTypes(lockfile, opts)
+  const optionalOnly = opts.optionalOnly ?? collectOptionalOnlyDepPaths(lockfile, opts)
 
   walkForPaths({
     lockfile,
@@ -157,6 +174,7 @@ export function buildAuditPathIndex (
     depTypes,
     optionalOnly,
     include: opts.include,
+    resolvePeersFromWorkspaceRoot: opts.resolvePeersFromWorkspaceRoot,
     importerSegmentOf: (importerId) => importerId.replace(/\//g, '__'),
   })
 
@@ -167,7 +185,7 @@ export function buildAuditPathIndex (
       vulnerableNames,
       paths,
       depTypes: detectDepTypes(envLockfileObject),
-      optionalOnly: collectOptionalOnlyDepPaths(envLockfileObject, opts.include),
+      optionalOnly: collectOptionalOnlyDepPaths(envLockfileObject, { include: opts.include }),
       include: opts.include,
       importerSegmentOf: (importerId) => importerId,
     })
@@ -189,6 +207,7 @@ interface WalkForPathsCtx {
   depTypes: DepTypes
   optionalOnly: Set<DepPath>
   include?: AuditIndexOptions['include']
+  resolvePeersFromWorkspaceRoot?: boolean
   importerSegmentOf: (importerId: string) => string
 }
 
@@ -198,7 +217,8 @@ function walkForPaths (ctx: WalkForPathsCtx): void {
   const includeDevDeps = include?.devDependencies !== false
   const includeOptDeps = include?.optionalDependencies !== false
   const packages = lockfile.packages ?? {}
-  const reachableVulnerabilities = createReachableVulnerabilitiesGetter(lockfile, vulnerableNames, includeOptDeps)
+  const skippedPeerEdges = getPeerSatisfactionEdgesToSkip(lockfile, ctx)
+  const reachableVulnerabilities = createReachableVulnerabilitiesGetter(lockfile, vulnerableNames, { includeOptDeps, skippedPeerEdges })
 
   // Tracks the depPaths on the current DFS trail so cycles terminate. A frame is
   // added when its node is opened and removed when the frame is unwound, so the
@@ -211,12 +231,17 @@ function walkForPaths (ctx: WalkForPathsCtx): void {
   // deep chain O(depth^2). The chain is materialized into a path string only
   // when a vulnerable node is recorded.
   const stack: Array<{ depPath: DepPath, trail: TrailNode, children: Array<{ name: string, depPath: DepPath }>, next: number }> = []
+  // Findings the current importer has already contributed a path to. Each
+  // importer records its first path to a finding even past the per-finding
+  // cap, so a project with a heavily shared dependency cannot hide that another
+  // project depends on the same vulnerable package.
+  let importerFindings = new Set<string>()
 
   // Apply the per-node logic and, unless the node is pruned, push a frame so its
   // children are visited. Records a path when the node is itself vulnerable.
   const open = (edge: { name: string, depPath: DepPath }, parentTrail: TrailNode): void => {
     const reachable = reachableVulnerabilities(edge)
-    if (reachable.size === 0 || allReachableVulnerabilitiesSaturated(paths, reachable, depTypes, optionalOnly)) return
+    if (reachable.size === 0 || allReachableVulnerabilitiesSaturated(paths, reachable, { depTypes, optionalOnly, importerFindings })) return
     if (inTrail.has(edge.depPath)) return
     const pkgSnapshot = packages[edge.depPath]
     if (pkgSnapshot == null) return
@@ -224,22 +249,23 @@ function walkForPaths (ctx: WalkForPathsCtx): void {
     const resolvedName = name ?? edge.name
     const trail: TrailNode = { name: resolvedName, parent: parentTrail }
     if (version && vulnerableNames.has(resolvedName)) {
-      recordPath(paths, resolvedName, version, joinTrail(trail),
-        depTypes[edge.depPath] === DepType.DevOnly,
-        optionalOnly.has(edge.depPath))
+      const findingKey = `${resolvedName}\0${version}`
+      recordPath(paths, resolvedName, version, joinTrail(trail), {
+        isDev: depTypes[edge.depPath] === DepType.DevOnly,
+        isOptional: optionalOnly.has(edge.depPath),
+        exceedCap: !importerFindings.has(findingKey),
+      })
+      importerFindings.add(findingKey)
     }
-    if (allReachableVulnerabilitiesSaturated(paths, reachable, depTypes, optionalOnly)) return
-    const children: Array<{ name: string, depPath: DepPath }> = []
-    appendNamedDepPaths(children, pkgSnapshot.dependencies ?? {})
-    if (includeOptDeps) {
-      appendNamedDepPaths(children, pkgSnapshot.optionalDependencies ?? {})
-    }
+    if (allReachableVulnerabilitiesSaturated(paths, reachable, { depTypes, optionalOnly, importerFindings })) return
+    const children = snapshotChildren({ depPath: edge.depPath, snapshot: pkgSnapshot }, { includeOptDeps, skippedPeerEdges })
     inTrail.add(edge.depPath)
     stack.push({ depPath: edge.depPath, trail, children, next: 0 })
   }
 
   for (const [importerId, importer] of Object.entries(lockfile.importers)) {
     const trail: TrailNode = { name: importerSegmentOf(importerId), parent: null }
+    importerFindings = new Set()
     const roots: Array<{ name: string, depPath: DepPath }> = []
     if (includeDeps) appendNamedDepPaths(roots, importer.dependencies ?? {})
     if (includeDevDeps) appendNamedDepPaths(roots, importer.devDependencies ?? {})
@@ -285,7 +311,7 @@ function joinTrail (node: TrailNode): string {
 function createReachableVulnerabilitiesGetter (
   lockfile: LockfileObject,
   vulnerableNames: Set<string>,
-  includeOptDeps: boolean
+  childOpts: SnapshotChildrenOptions
 ): (edge: { name: string, depPath: DepPath }) => ReadonlySet<string> {
   const packages = lockfile.packages ?? {}
   // Final reachable set per node, shared across its SCC.
@@ -313,21 +339,16 @@ function createReachableVulnerabilitiesGetter (
       sccStack.push(edge.depPath)
       onStack.add(edge.depPath)
 
-      // Derive children from this single read rather than via a helper that would
-      // read the snapshot again.
       const pkgSnapshot = packages[edge.depPath]
       const own = new Set<string>()
-      const children: Array<{ name: string, depPath: DepPath }> = []
+      let children: Array<{ name: string, depPath: DepPath }> = []
       if (pkgSnapshot != null) {
         const { name, version } = nameVerFromPkgSnapshot(edge.depPath, pkgSnapshot)
         const resolvedName = name ?? edge.name
         if (version && vulnerableNames.has(resolvedName)) {
           own.add(vulnerabilityKey(resolvedName, version, edge.depPath))
         }
-        appendNamedDepPaths(children, pkgSnapshot.dependencies ?? {})
-        if (includeOptDeps) {
-          appendNamedDepPaths(children, pkgSnapshot.optionalDependencies ?? {})
-        }
+        children = snapshotChildren({ depPath: edge.depPath, snapshot: pkgSnapshot }, childOpts)
       }
       partial.set(edge.depPath, own)
       work.push({ edge, own, children, next: 0 })
@@ -407,13 +428,13 @@ function createReachableVulnerabilitiesGetter (
 function allReachableVulnerabilitiesSaturated (
   paths: AuditPathIndex,
   reachable: ReadonlySet<string>,
-  depTypes: DepTypes,
-  optionalOnly: Set<DepPath>
+  { depTypes, optionalOnly, importerFindings }: { depTypes: DepTypes, optionalOnly: Set<DepPath>, importerFindings: Set<string> }
 ): boolean {
   for (const key of reachable) {
     const { name, version, depPath } = parseVulnerabilityKey(key)
     const info = paths[name]?.get(version)
     if (!info || info.paths.length < MAX_PATHS_PER_FINDING) return false
+    if (!importerFindings.has(`${name}\0${version}`)) return false
     if (depTypes[depPath] !== DepType.DevOnly && info.dev) return false
     if (!optionalOnly.has(depPath) && info.optional) return false
   }
@@ -438,10 +459,18 @@ function addAll<T> (target: Set<T>, source: Set<T>): void {
 // Per-(name, version) cap on recorded paths. The CLI only ever displays the
 // first few and follows with a "run pnpm why" hint, so keeping tens of
 // thousands of equivalent chains is wasted memory/CPU for projects with
-// heavy sharing (e.g. diamond dependencies deep in the graph).
+// heavy sharing (e.g. diamond dependencies deep in the graph). A path with
+// `exceedCap` set (an importer's first path to the finding) is recorded
+// regardless, so the total is bounded by the cap plus the number of importers.
 const MAX_PATHS_PER_FINDING = 100
 
-function recordPath (paths: AuditPathIndex, name: string, version: string, joined: string, isDev: boolean, isOptional: boolean): void {
+interface RecordPathOptions {
+  isDev: boolean
+  isOptional: boolean
+  exceedCap: boolean
+}
+
+function recordPath (paths: AuditPathIndex, name: string, version: string, joined: string, { isDev, isOptional, exceedCap }: RecordPathOptions): void {
   let byVersion = paths[name]
   if (!byVersion) {
     byVersion = new Map()
@@ -454,7 +483,7 @@ function recordPath (paths: AuditPathIndex, name: string, version: string, joine
   }
   if (!isDev) info.dev = false
   if (!isOptional) info.optional = false
-  if (info.paths.length >= MAX_PATHS_PER_FINDING) return
+  if (info.paths.length >= MAX_PATHS_PER_FINDING && !exceedCap) return
   // Dedupe — the same joined trail can be produced when a package appears in
   // both `dependencies` and `optionalDependencies` of the same parent, or via
   // equivalent peer-suffix variants.
@@ -466,11 +495,36 @@ function recordPath (paths: AuditPathIndex, name: string, version: string, joine
 // input, and spreading a pathologically large dependency list into push()
 // arguments can exceed the engine's argument limit and throw, crashing the
 // audit. Appending in a loop also avoids the intermediate array.
-function appendNamedDepPaths (target: Array<{ name: string, depPath: DepPath }>, deps: ResolvedDependencies): void {
+function appendNamedDepPaths (
+  target: Array<{ name: string, depPath: DepPath }>,
+  deps: ResolvedDependencies,
+  isSkipped?: (alias: string) => boolean
+): void {
   for (const [alias, ref] of Object.entries(deps)) {
+    if (isSkipped?.(alias)) continue
     const depPath = dp.refToRelative(ref, alias)
     if (depPath != null) target.push({ name: alias, depPath })
   }
+}
+
+interface SnapshotChildrenOptions {
+  includeOptDeps: boolean
+  skippedPeerEdges: PeerSatisfactionEdges | undefined
+}
+
+function snapshotChildren (
+  parent: { depPath: DepPath, snapshot: PackageSnapshot },
+  opts: SnapshotChildrenOptions
+): Array<{ name: string, depPath: DepPath }> {
+  const children: Array<{ name: string, depPath: DepPath }> = []
+  const isSkipped = opts.skippedPeerEdges?.has(parent.depPath)
+    ? (alias: string) => isPeerSatisfactionEdge(opts.skippedPeerEdges, parent.depPath, alias)
+    : undefined
+  appendNamedDepPaths(children, parent.snapshot.dependencies ?? {}, isSkipped)
+  if (opts.includeOptDeps) {
+    appendNamedDepPaths(children, parent.snapshot.optionalDependencies ?? {}, isSkipped)
+  }
+  return children
 }
 
 // Returns the set of depPaths that are reachable only through optional edges
@@ -486,13 +540,25 @@ function appendNamedDepPaths (target: Array<{ name: string, depPath: DepPath }>,
 // "optional-only" classification.
 export function collectOptionalOnlyDepPaths (
   lockfile: LockfileObject,
-  include?: AuditIndexOptions['include']
+  opts: Pick<AuditIndexOptions, 'include' | 'resolvePeersFromWorkspaceRoot'>
 ): Set<DepPath> {
+  const { include } = opts
   const includeDeps = include?.dependencies !== false
   const includeDevDeps = include?.devDependencies !== false
   const includeOptDeps = include?.optionalDependencies !== false
   const withoutOptional = new Set<DepPath>()
   const withOptional = new Set<DepPath>()
+  const withOptionalChildOpts: SnapshotChildrenOptions = {
+    includeOptDeps,
+    skippedPeerEdges: getPeerSatisfactionEdgesToSkip(lockfile, opts),
+  }
+  const withoutOptionalChildOpts: SnapshotChildrenOptions = {
+    includeOptDeps: false,
+    skippedPeerEdges: getPeerSatisfactionEdgesToSkip(lockfile, {
+      include: { dependencies: includeDeps, devDependencies: includeDevDeps, optionalDependencies: false },
+      resolvePeersFromWorkspaceRoot: opts.resolvePeersFromWorkspaceRoot,
+    }),
+  }
   for (const importer of Object.values(lockfile.importers)) {
     const nonOptionalRoots = [
       ...(includeDeps ? resolvedDepsToDepPaths(importer.dependencies ?? {}) : []),
@@ -502,8 +568,8 @@ export function collectOptionalOnlyDepPaths (
       ...nonOptionalRoots,
       ...(includeOptDeps ? resolvedDepsToDepPaths(importer.optionalDependencies ?? {}) : []),
     ]
-    walkReachable(lockfile, nonOptionalRoots, withoutOptional, false)
-    walkReachable(lockfile, allRoots, withOptional, includeOptDeps)
+    walkReachable(lockfile, nonOptionalRoots, { seen: withoutOptional, childOpts: withoutOptionalChildOpts })
+    walkReachable(lockfile, allRoots, { seen: withOptional, childOpts: withOptionalChildOpts })
   }
   const result = new Set<DepPath>()
   for (const depPath of withOptional) {
@@ -515,7 +581,11 @@ export function collectOptionalOnlyDepPaths (
 // Explicit stack rather than recursion: a lockfile is untrusted input, and a
 // deep dependency chain would otherwise overflow the call stack. Order does not
 // matter — the result is the reachable set, so a LIFO walk is equivalent.
-function walkReachable (lockfile: LockfileObject, depPaths: DepPath[], seen: Set<DepPath>, includeOptionalEdges: boolean): void {
+function walkReachable (
+  lockfile: LockfileObject,
+  depPaths: DepPath[],
+  { seen, childOpts }: { seen: Set<DepPath>, childOpts: SnapshotChildrenOptions }
+): void {
   const packages = lockfile.packages ?? {}
   const stack: DepPath[] = []
   for (const depPath of depPaths) stack.push(depPath)
@@ -525,10 +595,7 @@ function walkReachable (lockfile: LockfileObject, depPaths: DepPath[], seen: Set
     seen.add(depPath)
     const snapshot = packages[depPath]
     if (!snapshot) continue
-    for (const child of resolvedDepsToDepPaths(snapshot.dependencies ?? {})) stack.push(child)
-    if (includeOptionalEdges) {
-      for (const child of resolvedDepsToDepPaths(snapshot.optionalDependencies ?? {})) stack.push(child)
-    }
+    for (const child of snapshotChildren({ depPath, snapshot }, childOpts)) stack.push(child.depPath)
   }
 }
 

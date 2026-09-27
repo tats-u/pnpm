@@ -9,8 +9,8 @@ use super::{
     PingArgs, PipelineArgs, PkgArgs, PrefixArgs, PruneArgs, PublishArgs, RebuildArgs, RemoveArgs,
     RepoArgs, RestartArgs, RootArgs, RunArgs, RuntimeArgs, SbomArgs, ScriptShortcutArgs,
     SearchArgs, SelfUpdateArgs, SetScriptArgs, SetupArgs, ShimArgs, StageArgs, StarArgs, StarsArgs,
-    StoreCommand, Subcommand, SummaryScope, TeamArgs, UndeprecateArgs, UnlinkArgs, UnpublishArgs,
-    UnstarArgs, UpdateArgs, VersionArgs, ViewArgs, WhyArgs, WithArgs,
+    StoreCommand, Subcommand, SummaryScope, TasksArgs, TeamArgs, UndeprecateArgs, UnlinkArgs,
+    UnpublishArgs, UnstarArgs, UpdateArgs, VersionArgs, ViewArgs, WhyArgs, WithArgs,
 };
 
 #[derive(Debug, strum::IntoStaticStr, Subcommand)]
@@ -28,7 +28,7 @@ pub enum CliCommand {
     /// Install packages
     #[clap(visible_alias = "i")]
     Install(InstallArgs),
-    /// Runs a `pnpm install` followed immediately by a `pnpm test`. It takes exactly the same arguments as `pnpm install`.
+    /// Runs a `pnpm install` followed immediately by a `pnpm test`. Accepts the same arguments as `pnpm install`, plus `--no-bail` to continue running workspace tests after a failure.
     #[clap(name = "install-test", visible_alias = "it")]
     InstallTest(InstallTestArgs),
     /// Update packages to their newest version based on the specified range
@@ -100,7 +100,10 @@ pub enum CliCommand {
     /// built-in command regardless.
     #[clap(name = "rb")]
     Rb(RebuildArgs),
-    /// Create a tarball from a package
+    /// Create a tarball from a package.
+    ///
+    /// Use --silent to suppress the tarball contents and summary.
+    /// With --json, lifecycle output and the final JSON result remain visible.
     Pack(PackArgs),
     /// Publish a package to the registry
     Publish(PublishArgs),
@@ -132,6 +135,9 @@ pub enum CliCommand {
     /// Runs a defined package script.
     #[clap(visible_alias = "run-script")]
     Run(RunArgs),
+    /// Inspect tasks in concurrency groups.
+    /// A same-named script takes precedence. Use `pnpm pm tasks` to force the built-in.
+    Tasks(TasksArgs),
     /// Runs a named pipeline of workspace tasks the way a CI run would:
     /// a frozen install, affected-since-base selection, the task graph in
     /// dependency order without bailing, and cached task results restored
@@ -152,8 +158,8 @@ pub enum CliCommand {
     Start(ScriptShortcutArgs),
     /// Runs a package's "stop" script, if one was provided.
     Stop(ScriptShortcutArgs),
-    /// Restarts a package. Runs "stop", "restart", and "start" scripts,
-    /// and associated pre- and post- scripts.
+    /// Restarts a package. Runs "stop", "restart" (if present), and "start"
+    /// scripts, and associated pre- and post- scripts.
     Restart(RestartArgs),
     /// Lists the packages that include the file with the specified hash.
     FindHash(FindHashArgs),
@@ -313,6 +319,7 @@ impl CliCommand {
                 | CliCommand::SetScript(_)
                 | CliCommand::Start(_)
                 | CliCommand::Stop(_)
+                | CliCommand::Tasks(_)
                 | CliCommand::Test(_),
         )
     }

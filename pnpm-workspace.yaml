@@ -25,9 +25,11 @@ packages:
   - pnpm11/global/*
   - pnpm11/hooks/*
   - pnpm11/lockfile/*
+  - pnpm11/log/*
   - pnpm11/network/*
   - pnpm11/modules-mounter/*
   - pnpm11/object/*
+  - pnpm11/os/env/*
   - pnpm11/core/*
   - pnpm11/bins/*
   - pnpm11/installing/*
@@ -114,6 +116,7 @@ tasks:
     concurrencyGroup: cargo
   pre-push:rust:
     concurrencyGroup: cargo
+    priority: 10
   ready:rust:
     concurrencyGroup: cargo
   test:rust:
@@ -225,20 +228,17 @@ catalog:
   '@npm/types': ^2.1.0
   '@pnpm/byline': ^1.0.0
   '@pnpm/colorize-semver-diff': ^2.0.0
-  '@pnpm/config.env-replace': ^4.1.0
   '@pnpm/exec': ^4.0.0
-  '@pnpm/log.group': 4.0.1
   '@pnpm/logger': '^1100.0.0'
   '@pnpm/meta-updater': 2.0.6
   '@pnpm/nopt': ^0.3.1
   '@pnpm/npm-package-arg': ^2.0.0
-  '@pnpm/os.env.path-extender': ^3.0.1
   '@pnpm/patch-package': 0.0.1
   '@pnpm/semver-diff': ^2.0.0
   '@pnpm/tabtab': ^0.5.4
   '@pnpm/tgz-fixtures': 0.0.0
   '@reflink/reflink': 0.1.19
-  '@rushstack/worker-pool': 0.7.27
+  '@rushstack/worker-pool': 0.7.28
   '@stylistic/eslint-plugin': ^5.10.0
   '@types/adm-zip': ^0.5.8
   '@types/archy': 0.0.36
@@ -280,7 +280,7 @@ catalog:
   '@types/write-file-atomic': ^4.0.3
   '@types/yarnpkg__lockfile': ^1.1.9
   '@types/zkochan__table': npm:@types/table@6.3.2
-  '@typescript-eslint/utils': ^8.70.0
+  '@typescript-eslint/utils': ^8.70.1
   '@typescript/native-preview': 7.0.0-dev.20260707.2
   '@yarnpkg/core': 4.9.1
   '@yarnpkg/extensions': 2.0.7
@@ -293,7 +293,8 @@ catalog:
   '@zkochan/rimraf': ^4.0.0
   '@zkochan/table': ^2.0.1
   adm-zip: ^0.6.1
-  amaro: ^1.2.0
+  agentkeepalive: ^4.6.0
+  amaro: ^1.2.1
   ansi-diff: ^1.2.0
   archy: ^1.0.0
   better-path-resolve: 2.0.0
@@ -307,9 +308,10 @@ catalog:
   # Keep bole 5 until the published @pnpm/logger ships with bole 6.
   bole: ^5.0.29
   boxen: npm:@zkochan/boxen@5.1.2
+  bz2: 1.0.1
   c8: ^12.0.0
   camelcase: ^9.0.0
-  camelcase-keys: ^10.0.2
+  camelcase-keys: ^10.0.3
   can-link: ^3.0.0
   can-write-to-dir: ^2.0.0
   chalk: ^6.0.0
@@ -343,7 +345,7 @@ catalog:
   exists-link: 2.0.0
   fast-deep-equal: ^3.1.3
   fast-glob: ^3.3.3
-  fs-extra: ^11.4.0
+  fs-extra: ^11.4.1
   fuse-native: ^2.2.6
   # Bundled into the pnpm 12 wrapper's dist/ payload, where the Corepack entry
   # point loads it from; see pnpm/npm/pnpm/bin/pnpm.mjs.
@@ -353,6 +355,8 @@ catalog:
   graceful-fs: ^4.2.11
   graph-cycles: 3.0.0
   hosted-git-info: npm:@pnpm/hosted-git-info@1.0.0
+  http-proxy-agent: ^7.0.2
+  https-proxy-agent: ^7.0.6
   https-proxy-server-express: 0.1.2
   husky: ^9.1.7
   hyperdrive-schemas: ^2.0.0
@@ -381,7 +385,7 @@ catalog:
   lru-cache: ^11.5.3
   make-empty-dir: ^4.0.0
   mdast-util-to-string: ^4.0.0
-  memfs: ^4.78.1
+  memfs: ^4.79.0
   memoize: ^11.0.0
   micromatch: ^4.0.8
   msgpackr: 2.1.0
@@ -421,6 +425,7 @@ catalog:
   pretty-bytes: ^7.1.3
   pretty-ms: ^9.3.1
   promise-share: ^2.0.1
+  proxy: ^4.1.0
   proxyquire: ^2.1.3
   ps-list: ^9.0.0
   qrcode-terminal: ^0.12.0
@@ -445,7 +450,9 @@ catalog:
   semver-utils: ^1.1.4
   shlex: ^3.0.0
   shx: ^0.4.0
+  signal-exit: ^4.1.0
   socks: ^2.8.10
+  socks-proxy-agent: ^8.0.5
   sort-keys: ^6.0.1
   spdx-expression-parse: 5.0.0
   split-cmd: ^1.1.0
@@ -458,7 +465,7 @@ catalog:
   string-width: ^8.2.2
   strip-bom: ^5.0.0
   strip-comments-strings: 1.2.0
-  symlink-dir: ^10.0.2
+  symlink-dir: ^10.0.3
   tar: ^7.5.22
   tar-stream: ^3.2.1
   # tempy >=3.1.0 uses temp-dir 3.x which has an async fs.realpath() in its
@@ -474,7 +481,7 @@ catalog:
   # yet (https://github.com/typescript-eslint/typescript-eslint/issues/10940); the
   # 7.x compiler ships separately as @typescript/native-preview (tsgo).
   typescript: 6.0.3
-  typescript-eslint: ^8.70.0
+  typescript-eslint: ^8.70.1
   uid-number: 0.0.6
   # undici 8.x requires Node.js >=22.19.0, above pnpm's supported floor of
   # Node.js >=22.13.

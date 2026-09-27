@@ -1,10 +1,9 @@
-import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import util from 'node:util'
 import { parentPort } from 'node:worker_threads'
 
-import { pkgRequiresBuild } from '@pnpm/building.pkg-requires-build'
+import { pkgRequiresBuild, storedRequiresBuildNeedsManifestCheck } from '@pnpm/building.pkg-requires-build'
 import { formatIntegrity, parseIntegrity } from '@pnpm/crypto.integrity'
 import { PnpmError } from '@pnpm/error'
 import { hardLinkDir } from '@pnpm/fs.hard-link-dir'
@@ -18,15 +17,17 @@ import {
   HASH_ALGORITHM,
   normalizeBundledManifest,
   type PackageFilesIndex,
+  parseJsonBufferSync,
   takeVerifiedFileIntegrity,
   type VerifyResult,
 } from '@pnpm/store.cafs'
 import type { Cafs, FilesMap, PackageFiles, SideEffectsDiff } from '@pnpm/store.cafs-types'
 import { createCafsStore } from '@pnpm/store.create-cafs-store'
-import { packForStorage, ReadOnlyStoreIndex, StoreIndex } from '@pnpm/store.index'
+import { packForStorage, ReadOnlyStoreIndex, StoreIndex, storeIndexKey } from '@pnpm/store.index'
 import type { BundledManifest, DependencyManifest } from '@pnpm/types'
 
 import { equalOrSemverEqual } from './equalOrSemverEqual.js'
+import { hashBuffer } from './hashBuffer.js'
 import type {
   AddDirToStoreMessage,
   HardLinkDirMessage,
@@ -84,7 +85,7 @@ async function handleMessage (
   try {
     switch (message.type) {
       case 'extract': {
-        parentPort!.postMessage(addTarballToStore(message))
+        parentPort!.postMessage(await addTarballToStore(message))
         break
       }
       case 'link': {
@@ -145,7 +146,7 @@ async function handleMessage (
           verifyResult = buildFileMapsFromIndex(storeDir, pkgFilesIndex)
         }
         const bundledManifest = pkgFilesIndex.manifest
-        const requiresBuild = pkgFilesIndex.requiresBuild ?? pkgRequiresBuild(bundledManifest, verifyResult.filesMap)
+        const requiresBuild = resolveRequiresBuild(pkgFilesIndex.requiresBuild, bundledManifest, verifyResult.filesMap)
 
         parentPort!.postMessage({
           status: 'success',
@@ -196,10 +197,34 @@ async function handleMessage (
   }
 }
 
-function addTarballToStore ({ buffer, storeDir, integrity, filesIndexFile, appendManifest, ignoreFilePattern }: TarballExtractMessage) {
+function resolveRequiresBuild (
+  stored: boolean | undefined,
+  bundledManifest: BundledManifest | undefined,
+  filesMap: FilesMap
+): boolean {
+  if (stored == null) return pkgRequiresBuild(bundledManifest, filesMap)
+  if (!stored || !storedRequiresBuildNeedsManifestCheck(bundledManifest, filesMap)) return stored
+  const manifest = readManifestFromCafs(filesMap)
+  return manifest == null ? stored : pkgRequiresBuild(manifest, filesMap)
+}
+
+function readManifestFromCafs (filesMap: FilesMap): DependencyManifest | undefined {
+  const manifestPath = filesMap.get('package.json')
+  if (manifestPath == null) return undefined
+  try {
+    return parseJsonBufferSync(fs.readFileSync(manifestPath)) as DependencyManifest
+  } catch (err: unknown) {
+    if (err instanceof SyntaxError || (util.types.isNativeError(err) && 'code' in err && err.code === 'ENOENT')) {
+      return undefined
+    }
+    throw err
+  }
+}
+
+async function addTarballToStore ({ buffer, storeDir, integrity, filesIndexFile, pkgId, appendManifest, ignoreFilePattern }: TarballExtractMessage) {
   if (integrity) {
     const { algorithm, hexDigest } = parseIntegrity(integrity)
-    const calculatedHash: string = crypto.hash(algorithm, buffer, 'hex')
+    const calculatedHash = hashBuffer(algorithm, buffer)
     if (calculatedHash !== hexDigest) {
       return {
         status: 'error',
@@ -217,7 +242,7 @@ function addTarballToStore ({ buffer, storeDir, integrity, filesIndexFile, appen
   }
   const cafs = cafsCache.get(storeDir)!
   const ignore = ignoreFilePattern ? makeIgnoreFromPattern(ignoreFilePattern) : undefined
-  let { filesIndex, manifest } = cafs.addFilesFromTarball(buffer, true, ignore)
+  let { filesIndex, manifest } = await cafs.addFilesFromTarballBounded(buffer, true, ignore)
   if (appendManifest && manifest == null) {
     manifest = appendManifest
     addManifestToCafs(cafs, filesIndex, appendManifest)
@@ -233,20 +258,28 @@ function addTarballToStore ({ buffer, storeDir, integrity, filesIndexFile, appen
     algo: HASH_ALGORITHM,
     files: filesIntegrity,
   }
+  const packedFilesIndex = packToShared(pkgFilesIndex)
+  const indexWrites: IndexWrite[] = [{ key: filesIndexFile, buffer: packedFilesIndex }]
+  if (!integrity) {
+    integrity = calcIntegrity(buffer)
+    if (pkgId) {
+      indexWrites.push({ key: storeIndexKey(integrity, pkgId), buffer: packedFilesIndex })
+    }
+  }
   return {
     status: 'success',
     value: {
       filesMap,
       manifest: bundledManifest,
       requiresBuild,
-      integrity: integrity ?? calcIntegrity(buffer),
+      integrity,
     },
-    indexWrites: [{ key: filesIndexFile, buffer: packToShared(pkgFilesIndex) }],
+    indexWrites,
   }
 }
 
 function calcIntegrity (buffer: Buffer): string {
-  const calculatedHash: string = crypto.hash('sha512', buffer, 'hex')
+  const calculatedHash = hashBuffer('sha512', buffer)
   return formatIntegrity('sha512', calculatedHash)
 }
 
@@ -446,7 +479,8 @@ function calculateDiff (baseFiles: PackageFiles, sideEffectsFiles: PackageFiles)
     } else if (
       !baseFiles.has(file) ||
       baseFiles.get(file)!.digest !== sideEffectsFiles.get(file)!.digest ||
-      baseFiles.get(file)!.mode !== sideEffectsFiles.get(file)!.mode
+      // On Windows, the mode read back from disk does not preserve the mode stored from the tarball.
+      (process.platform !== 'win32' && baseFiles.get(file)!.mode !== sideEffectsFiles.get(file)!.mode)
     ) {
       added.set(file, sideEffectsFiles.get(file)!)
     }

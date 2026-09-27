@@ -11,10 +11,11 @@
 
 use crate::{
     InstallabilityHost, SkippedSnapshots, add_direct_runtime_skips, compute_skipped_snapshots,
-    extend_skipped_with_dependency_closure,
+    extend_skipped_with_dependency_closure, find_root_runtime_node_version,
     install_frozen_lockfile::{find_runtime_node_major, parse_major_from_version},
 };
-use pnpm_lockfile::{PackageKey, ProjectSnapshot, SnapshotEntry};
+use pnpm_config::Config;
+use pnpm_lockfile::ProjectSnapshot;
 use pnpm_package_is_installable::{InstallabilityError, SupportedArchitectures};
 use std::{
     collections::HashMap,
@@ -249,10 +250,29 @@ pub fn compute_skip_set<Reporter: pnpm_reporter::Reporter>(
         inputs.closure.lockfile,
         inputs.closure.root,
         inputs.closure.importer_ids,
-        inputs.closure.included,
+        inputs.closure.groups,
     );
 
     Ok(skipped)
+}
+
+/// `host` with its Node.js version set to the one the root project's
+/// runtime dependency is locked to, unless `nodeVersion` is configured.
+#[must_use]
+pub fn with_locked_runtime_node(
+    host: Option<&InstallabilityHost>,
+    config: &Config,
+    importers: &HashMap<String, ProjectSnapshot>,
+) -> Option<InstallabilityHost> {
+    let host = host?.clone();
+    let locked_node_version = config.node_version
+        .is_none()
+        .then(|| find_root_runtime_node_version(importers))
+        .flatten();
+    Some(match locked_node_version {
+        Some(node_version) => InstallabilityHost { node_version, ..host },
+        None => host,
+    })
 }
 
 /// A `node --version` probe still in flight. See
@@ -324,22 +344,22 @@ pub fn engine_name_from_host(host_node: &HostNode) -> Option<String> {
         .map(|major| pnpm_graph_hasher::engine_name(major, None, None))
 }
 
-/// The engine name a lockfile `node@runtime:` pin implies, when one is
+/// The engine name the root project's `node@runtime:` pin implies, when one is
 /// present. Both engine-resolution paths — [`resolve_engine_name`] and
 /// the frozen path's deferred-host branch — apply this one rule, so
 /// they can't drift apart on how a pin keys the store.
 #[must_use]
 pub fn engine_name_from_runtime_pin(
-    snapshots: Option<&HashMap<PackageKey, SnapshotEntry>>,
+    importers: &HashMap<String, ProjectSnapshot>,
 ) -> Option<String> {
-    find_runtime_node_major(snapshots)
+    find_runtime_node_major(importers)
         .map(|major| pnpm_graph_hasher::engine_name(major, None, None))
 }
 
 /// Resolve the engine name that keys the install's store slots and the
 /// side-effects-cache prefix.
 ///
-/// A `node@runtime:` pin in the lockfile wins outright, so pinned and
+/// The root project's `node@runtime:` pin wins outright, so pinned and
 /// non-pinned installs on the same host share one store rather than
 /// splitting it under whatever `node --version` the shell reports. Then
 /// the already-detected host, then a probe.
@@ -349,10 +369,10 @@ pub fn engine_name_from_runtime_pin(
 /// store, whose layout needs the name synchronously.
 pub async fn resolve_engine_name(
     enable_global_virtual_store: bool,
-    snapshots: Option<&HashMap<PackageKey, SnapshotEntry>>,
+    importers: &HashMap<String, ProjectSnapshot>,
     host_node: Option<&HostNode>,
 ) -> (Option<String>, Option<DeferredEngineName>) {
-    if let Some(name) = engine_name_from_runtime_pin(snapshots) {
+    if let Some(name) = engine_name_from_runtime_pin(importers) {
         return (Some(name), None);
     }
     match host_node {

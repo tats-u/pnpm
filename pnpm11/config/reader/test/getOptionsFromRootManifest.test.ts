@@ -89,6 +89,29 @@ test('getOptionsFromPnpmSettings() ignores env variables inside pnprServer setti
   expect(options.pnprServer).toBeUndefined()
 })
 
+test('getOptionsFromPnpmSettings() ignores env variables inside userAgent setting', () => {
+  process.env.PNPM_TEST_TOKEN = 'super-secret-token'
+  const options = getOptionsFromPnpmSettings(process.cwd(), {
+    userAgent: 'agent/${PNPM_TEST_TOKEN}',
+  } as any) as any // eslint-disable-line
+  expect(options.userAgent).toBeUndefined()
+})
+
+test('getOptionsFromPnpmSettings() keeps a literal userAgent setting', () => {
+  const options = getOptionsFromPnpmSettings(process.cwd(), {
+    userAgent: 'my-agent/2.0',
+  } as any) as any // eslint-disable-line
+  expect(options.userAgent).toBe('my-agent/2.0')
+})
+
+test('getOptionsFromPnpmSettings() may expand env variables inside a trusted userAgent setting', () => {
+  process.env.PNPM_TEST_TOKEN = 'ci-build'
+  const options = getOptionsFromPnpmSettings(process.cwd(), {
+    userAgent: 'agent/${PNPM_TEST_TOKEN}',
+  } as any, { expandRequestDestinationEnv: true }) as any // eslint-disable-line
+  expect(options.userAgent).toBe('agent/ci-build')
+})
+
 test('getOptionsFromPnpmSettings() may expand env variables inside trusted request destinations', () => {
   process.env.PNPM_TEST_HOST = 'registry.example.com'
   const options = getOptionsFromPnpmSettings(process.cwd(), {
@@ -266,6 +289,44 @@ test('getOptionsFromPnpmSettings() rejects non-object overrides values', () => {
   })).toThrow(expect.objectContaining({
     code: 'ERR_PNPM_INVALID_OVERRIDES',
     message: 'The overrides field should be an object, but got array',
+  }))
+})
+
+test('getOptionsFromPnpmSettings() rejects non-string patchedDependencies values', () => {
+  expect(() => getOptionsFromPnpmSettings(process.cwd(), {
+    patchedDependencies: {
+      foo: null,
+    } as unknown as Record<string, string>,
+  })).toThrow(expect.objectContaining({
+    code: 'ERR_PNPM_INVALID_PATCHED_DEPENDENCY',
+    message: 'The value of patchedDependencies.foo should be a string, but got null',
+  }))
+})
+
+test('getOptionsFromPnpmSettings() rejects array patchedDependencies', () => {
+  expect(() => getOptionsFromPnpmSettings(process.cwd(), {
+    patchedDependencies: [] as unknown as Record<string, string>,
+  })).toThrow(expect.objectContaining({
+    code: 'ERR_PNPM_INVALID_PATCHED_DEPENDENCY',
+    message: 'The patchedDependencies field should be an object, but got array',
+  }))
+})
+
+test('getOptionsFromPnpmSettings() rejects null patchedDependencies', () => {
+  expect(() => getOptionsFromPnpmSettings(process.cwd(), {
+    patchedDependencies: null as unknown as Record<string, string>,
+  })).toThrow(expect.objectContaining({
+    code: 'ERR_PNPM_INVALID_PATCHED_DEPENDENCY',
+    message: 'The patchedDependencies field should be an object, but got null',
+  }))
+})
+
+test('getOptionsFromPnpmSettings() rejects string patchedDependencies', () => {
+  expect(() => getOptionsFromPnpmSettings(process.cwd(), {
+    patchedDependencies: 'foo' as unknown as Record<string, string>,
+  })).toThrow(expect.objectContaining({
+    code: 'ERR_PNPM_INVALID_PATCHED_DEPENDENCY',
+    message: 'The patchedDependencies field should be an object, but got string',
   }))
 })
 
@@ -789,6 +850,7 @@ test('getOptionsFromPnpmSettings() keeps task settings that only pnpm 12 reads',
       cache: false,
       cargoTargetDir: 'target',
       concurrencyGroup: 'cargo',
+      priority: 1,
       dependsOn: ['^build'],
       env: ['CARGO_PROFILE'],
       inputs: ['src/**'],

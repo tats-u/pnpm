@@ -1,4 +1,6 @@
-pub(crate) use configuration::{apply_install_cli_config, derive_config_root};
+pub(crate) use configuration::{
+    apply_install_cli_config, derive_config_root, warn_about_config_root,
+};
 pub(crate) use install::InstallPipeline;
 pub(crate) use maintenance::{DedupePipeline, PrunePipeline};
 pub(crate) use mutation::{AddPipeline, DeployPipeline, RemovePipeline, UpdatePipeline};
@@ -25,7 +27,6 @@ use crate::{
         legacy_pnpm_field::warn_ignored_pnpm_manifest_fields,
         override_version_references::warn_deprecated_override_version_references,
         reporter::{ReporterType, reporter_emit},
-        yarn_workspaces_field::warn_unsupported_workspaces_field,
     },
     config_deps, ecosystem_add, ecosystem_install,
     package_specifier::EcosystemPackageSpecifier,
@@ -38,6 +39,7 @@ use install::init_shared_state;
 use miette::Context;
 
 use pnpm_config::{Config, Host};
+use pnpm_injected_deps_syncer::{injected_source_dirs, sync_injected_deps_of_modules_dir};
 use pnpm_network::ThrottledClient;
 use pnpm_package_manager::{PathNode, graph_sequencer};
 use pnpm_reporter::Reporter;
@@ -137,12 +139,39 @@ pub(crate) struct DedicatedProjects {
     /// from the manifests the selection already parsed. Empty when the
     /// setting is unset, which is the only thing the names feed.
     names: HashMap<PathBuf, String>,
+    /// Whether the selection is every workspace project, so that the run
+    /// leaves no project's lockfile behind its manifest.
+    covers_workspace: bool,
+    /// The sources whose injected copies are synced once every project ran
+    /// its lifecycle scripts, taken from the manifests read before they ran.
+    injected_source_dirs: HashSet<PathBuf>,
 }
 
 impl DedicatedProjects {
     fn new(config: &Config, selection: InstallFamilySelection) -> Self {
         let names = project_names(config, &selection.projects);
-        DedicatedProjects { dependencies: selection.project_dependencies, names }
+        let normalized_root = pnpm_fs::lexical_normalize(&selection.workspace_root);
+        let root_is_project =
+            pnpm_package_manifest::project_manifest_path(&normalized_root).is_file();
+        let covers_workspace = selection.projects
+            .iter()
+            .all(|project| selection.selected_dirs.contains(&project.root_dir))
+            && (!root_is_project
+                || selection.selected_dirs
+                    .iter()
+                    .any(|dir| pnpm_fs::lexical_normalize(dir) == normalized_root));
+        let injected_source_dirs = injected_source_dirs(
+            selection.projects
+                .iter()
+                .filter(|project| selection.project_dependencies.contains_key(&project.root_dir))
+                .map(|project| (project.root_dir.as_path(), Some(project.manifest.value()))),
+        );
+        DedicatedProjects {
+            dependencies: selection.project_dependencies,
+            names,
+            covers_workspace,
+            injected_source_dirs,
+        }
     }
 
     fn is_empty(&self) -> bool {
@@ -185,6 +214,15 @@ struct DedicatedProjectRuns<'a> {
     projects: DedicatedProjects,
     require_lockfile: bool,
     http_client: Option<Arc<ThrottledClient>>,
+    /// Whether the command may write the workspace manifest, so that the
+    /// exclude-list prune each project's install skipped runs once all of
+    /// them succeeded and they cover the workspace. See
+    /// [`prune_after_dedicated_installs`].
+    prune_excludes: bool,
+    /// Whether the command installs the projects' dependencies, so that
+    /// their injected copies are synced once all of them ran. See
+    /// [`sync_dedicated_injected_deps`].
+    sync_injected_deps: bool,
 }
 
 impl DedicatedProjectRuns<'_> {
@@ -193,10 +231,36 @@ impl DedicatedProjectRuns<'_> {
         Runner: Fn(State) -> RunFuture + Sync,
         RunFuture: Future<Output = miette::Result<()>> + Send,
     {
+        self.run_projects(run).await?;
+        if self.prune_excludes && self.projects.covers_workspace {
+            prune_after_dedicated_installs(self.config)?;
+        }
+        if self.sync_injected_deps {
+            let project_dirs: Vec<PathBuf> = self.projects.dependencies
+                .keys()
+                .cloned()
+                .collect();
+            sync_dedicated_injected_deps(
+                self.config,
+                &project_dirs,
+                &DedicatedSync {
+                    names: &self.projects.names,
+                    source_dirs: &self.projects.injected_source_dirs,
+                },
+            )?;
+        }
+        Ok(())
+    }
+
+    async fn run_projects<Runner, RunFuture>(&self, run: Runner) -> miette::Result<()>
+    where
+        Runner: Fn(State) -> RunFuture + Sync,
+        RunFuture: Future<Output = miette::Result<()>> + Send,
+    {
         let first_error: std::sync::Mutex<Option<miette::Report>> = std::sync::Mutex::new(None);
         let config = self.config;
         let require_lockfile = self.require_lockfile;
-        let http_client = self.http_client;
+        let http_client = &self.http_client;
         let names = &self.projects.names;
         let run = &run;
         let run_node = |project_dir: PathBuf| {
@@ -233,6 +297,51 @@ impl DedicatedProjectRuns<'_> {
             .expect("dedicated install error lock is not poisoned")
             .map_or(Ok(()), Err)
     }
+}
+
+/// The `minimumReleaseAgeExcludePrune` / `trustPolicyExcludePrune` pass
+/// of a `sharedWorkspaceLockfile: false` workspace. Each project's install
+/// skips it because its own lockfile cannot prove what a sibling resolves,
+/// so it runs once here, after a run that installed every project. A
+/// filtered run skips it: an unselected project's lockfile may lag behind
+/// its manifest.
+fn prune_after_dedicated_installs(config: &Config) -> miette::Result<()> {
+    let Some(workspace_dir) = config.workspace_dir.as_deref() else {
+        return Ok(());
+    };
+    pnpm_package_manager::prune_against_project_lockfiles(config, workspace_dir)
+        .wrap_err("prune the workspace manifest")
+}
+
+/// With a shared lockfile, an injected workspace project is synced into its
+/// copies after its own lifecycle scripts run. With a lockfile per project,
+/// every project is installed on its own, so the copies that `project_dirs`
+/// hold of each other are synced once all of them ran their scripts.
+fn sync_dedicated_injected_deps(
+    config: &Config,
+    project_dirs: &[PathBuf],
+    sync: &DedicatedSync<'_>,
+) -> miette::Result<()> {
+    if config.ignore_scripts || config.virtual_store_only {
+        return Ok(());
+    }
+    for project_dir in project_dirs {
+        let modules_dir = config.project_modules_dir(
+            project_dir,
+            sync.names.get(project_dir).map(String::as_str),
+        );
+        sync_injected_deps_of_modules_dir(project_dir, &modules_dir, sync.source_dirs)?;
+    }
+    Ok(())
+}
+
+/// What [`sync_dedicated_injected_deps`] needs to know about the projects
+/// beyond their directories.
+pub(super) struct DedicatedSync<'a> {
+    /// See [`DedicatedProjects::names`].
+    pub(super) names: &'a HashMap<PathBuf, String>,
+    /// See [`injected_source_dirs`].
+    pub(super) source_dirs: &'a HashSet<PathBuf>,
 }
 
 /// The selection in build order. Sequenced over borrowed paths: cloning a
@@ -321,13 +430,33 @@ fn init_dedicated_project_state(
     .wrap_err_with(|| format!("initialize the state for {}", project_dir.display()))
 }
 
-fn anchor_active_project(cfg: &mut Config, manifest_path: &Path) {
+pub(in crate::cli_args) fn anchor_active_project(cfg: &mut Config, manifest_path: &Path) {
     let manifest_dir = manifest_path
         .parent()
         .expect("manifest path always has a parent dir")
         .to_path_buf();
     let name = dedicated_project_name(cfg, &manifest_dir);
     cfg.anchor_dedicated_project(&manifest_dir, name.as_deref());
+}
+
+/// The config through which a command finds the installed packages of the
+/// active project. In a workspace whose projects keep their own lockfiles,
+/// those are in the active project's modules directory, not the workspace
+/// root's.
+pub(in crate::cli_args) fn installed_project_config(
+    config: &'static Config,
+    manifest_path: &Path,
+) -> &'static Config {
+    if !keeps_project_lockfiles(config) {
+        return config;
+    }
+    let mut config = config.clone();
+    anchor_active_project(&mut config, manifest_path);
+    Config::leak(config)
+}
+
+pub(in crate::cli_args) fn keeps_project_lockfiles(config: &Config) -> bool {
+    !config.shares_one_lockfile() && config.workspace_dir.is_some()
 }
 
 fn record_dedicated_result(
@@ -357,6 +486,7 @@ fn precomputed_workspace_cycles(
 }
 
 mod install;
+mod nested_workspace_manifests;
 mod selection;
 
 mod mutation;

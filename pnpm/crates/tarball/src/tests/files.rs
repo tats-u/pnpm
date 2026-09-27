@@ -2,9 +2,9 @@ use super::{
     Arc, ArchiveStoreProjection, AuthHeaders, CafsFileInfo, HashMap, IngestTarballToStore,
     PackageFilesIndex, PathBuf, PrefetchIntegrityCheck, PrefetchedCasPaths,
     SharedReportedProgressKeys, SharedVerifiedFilesCache, SilentReporter, StoreIndex,
-    StoreIndexWriter, TarballError, assert_eq, fast_fail_client, gzipped_tar, integrity,
-    prefetch_cas_paths, store_index_cache_key, store_index_key, tempdir, tempdir_with_leaked_path,
-    test_retry_opts,
+    StoreIndexWriter, TarballError, UNREACHABLE_URL, assert_eq, fast_fail_client, gzipped_tar,
+    integrity, prefetch_cas_paths, store_index_cache_key, store_index_key, tempdir,
+    tempdir_with_leaked_path, test_retry_opts,
 };
 
 /// When the `SQLite` index already has an entry for this
@@ -72,7 +72,7 @@ async fn reuses_cached_cas_paths_when_index_entry_is_live() {
             integrity: Some(&pkg_integrity),
             unpacked_size: None,
             file_count: None,
-            url: "http://127.0.0.1:1/unreachable.tgz",
+            url: UNREACHABLE_URL,
             id: pkg_id,
         },
         store: crate::ArchiveStoreContext {
@@ -156,7 +156,7 @@ async fn reuses_prefetched_cas_paths_when_provided() {
             integrity: Some(&pkg_integrity),
             unpacked_size: None,
             file_count: None,
-            url: "http://127.0.0.1:1/unreachable.tgz",
+            url: UNREACHABLE_URL,
             id: pkg_id,
         },
         store: crate::ArchiveStoreContext {
@@ -294,6 +294,53 @@ async fn prefetch_cas_paths_recomputes_requires_build_for_legacy_rows() {
     assert_eq!(map.get("package.json"), Some(&pkg_json_path));
     assert_eq!(prefetched.requires_build.get(&index_key), Some(&true));
     drop(store_dir);
+}
+
+#[tokio::test]
+async fn prefetch_cas_paths_rereads_gypfile_for_rows_that_predate_it() {
+    async fn prefetched_requires_build(package_json: &[u8]) -> Option<bool> {
+        let (store_dir, store_path) = tempdir_with_leaked_path();
+        let mut files = HashMap::new();
+        for (name, contents) in [("package.json", package_json), ("binding.gyp", b"{}")] {
+            let (_, hash) = store_path.write_cas_file(contents, false).unwrap();
+            let digest = format!("{hash:x}");
+            let size = contents.len() as u64;
+            files.insert(
+                name.to_string(),
+                CafsFileInfo { digest, mode: 0o644, size, checked_at: None },
+            );
+        }
+        let index_key = store_index_key(
+            "sha512-q/IXcMGuF8v7ZLf/JeYfE/pB4Wg1yxT6jXJz8JxRK7a4mJSXV1QKMXDPfZkvMHTZpYxWBDoJiXtptDWFnoCA2w==",
+            "fake@1.0.0",
+        );
+        let entry = PackageFilesIndex {
+            manifest: Some(serde_json::json!({ "name": "fake" })),
+            requires_build: Some(true),
+            requires_prepare: None,
+            algo: "sha512".to_string(),
+            files,
+            side_effects: None,
+            remote_side_effects_quarantine: None,
+        };
+        StoreIndex::open_in(store_path)
+            .unwrap()
+            .set(&index_key, &entry)
+            .unwrap();
+        let prefetched = prefetch_cas_paths(
+            StoreIndex::shared_readonly_in(store_path),
+            store_path,
+            vec![index_key.clone()],
+            PrefetchIntegrityCheck::Eager,
+            SharedVerifiedFilesCache::default(),
+        )
+        .await;
+        drop(store_dir);
+        prefetched.requires_build.get(&index_key).copied()
+    }
+
+    assert_eq!(prefetched_requires_build(br#"{"name":"fake","gypfile":false}"#).await, Some(false));
+    assert_eq!(prefetched_requires_build(br#"{"name":"fake"}"#).await, Some(true));
 }
 
 /// With `verify_store_integrity = false`, `prefetch_cas_paths`
@@ -470,7 +517,7 @@ async fn falls_through_when_cafs_file_missing() {
             integrity: Some(&pkg_integrity),
             unpacked_size: None,
             file_count: None,
-            url: "http://127.0.0.1:1/unreachable.tgz",
+            url: UNREACHABLE_URL,
             id: pkg_id,
         },
         store: crate::ArchiveStoreContext {
@@ -549,7 +596,7 @@ async fn falls_through_when_cafs_path_is_a_directory() {
             integrity: Some(&pkg_integrity),
             unpacked_size: None,
             file_count: None,
-            url: "http://127.0.0.1:1/unreachable.tgz",
+            url: UNREACHABLE_URL,
             id: pkg_id,
         },
         store: crate::ArchiveStoreContext {

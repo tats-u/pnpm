@@ -8,7 +8,6 @@ use pnpm_executor::LifecycleScriptError;
 use pnpm_lockfile::{LoadLockfileError, SaveLockfileError, StalenessReason};
 use pnpm_lockfile_verification::VerifyError;
 use pnpm_modules_yaml::{ReadModulesError, WriteModulesError};
-use pnpm_workspace_state::UpdateWorkspaceStateError;
 use std::path::PathBuf;
 
 pub(super) fn map_frozen_lockfile_error(error: InstallFrozenLockfileError) -> InstallError {
@@ -99,11 +98,14 @@ pub enum InstallError {
     /// on, an install whose resolution left unmet peers behind fails
     /// once the artifacts are written, the same way `IgnoredBuilds`
     /// does — the tree is installed, and the run reports the verdict on
-    /// it. The listing and its hints have already gone out through the
-    /// reporter by the time this is returned.
+    /// it. `rendered` carries the block deferred to the CLI; `None` means
+    /// the selected reporter has already handled it.
     #[display("Unmet peer dependencies")]
     #[diagnostic(code(ERR_PNPM_PEER_DEP_ISSUES))]
-    PeerDependencyIssues,
+    PeerDependencyIssues {
+        #[error(not(source))]
+        rendered: Option<String>,
+    },
 
     /// A custom resolver hook failed (loading the pnpmfile's resolvers
     /// or running `shouldRefreshResolution`) while deciding whether the
@@ -117,12 +119,22 @@ pub enum InstallError {
     #[diagnostic(code(ERR_PNPM_PNPMFILE_FAIL))]
     ReadPackageHook(#[error(not(source))] pnpm_hooks::HookError),
 
+    #[diagnostic(code(ERR_PNPM_BAD_READ_PACKAGE_HOOK_RESULT))]
+    BadReadPackageHookResult(#[error(not(source))] pnpm_hooks::HookError),
+
     #[diagnostic(transparent)]
     FrozenLockfile(#[error(source)] InstallFrozenLockfileError),
 
+    #[diagnostic(transparent)]
+    LocalTarballIntegrity(#[error(source)] pnpm_tarball::TarballError),
+
+    /// A pre-resolution lifecycle hook (`pnpm:devPreinstall` or root
+    /// `preinstall`) failed before resolution and materialization began.
+    #[diagnostic(transparent)]
+    PreResolutionLifecycleScript(#[error(source)] LifecycleScriptError),
+
     /// A workspace project's own lifecycle script
-    /// (`pnpm:devPreinstall`, or
-    /// preinstall/install/postinstall/preprepare/prepare/postprepare)
+    /// (preinstall/install/postinstall/preprepare/prepare/postprepare)
     /// exited non-zero. Unlike a dependency build failure — which
     /// `BuildModules` can swallow for optional deps — a project script
     /// failure always fails the install, matching pnpm.
@@ -131,6 +143,9 @@ pub enum InstallError {
 
     #[diagnostic(transparent)]
     ProjectBinLink(#[error(source)] LinkBinsError),
+
+    #[diagnostic(transparent)]
+    SyncInjectedDeps(#[error(source)] pnpm_injected_deps_syncer::SyncInjectedDepsError),
 
     #[display("Failed to create the workspace lifecycle scheduler: {_0}")]
     #[diagnostic(code(ERR_PNPM_PACKAGE_MANAGER_LIFECYCLE_THREAD_POOL))]
@@ -255,6 +270,38 @@ pub enum InstallError {
     )]
     LockfileConfigMismatch { setting: &'static str },
 
+    /// The lockfile's `(patch_hash=...)` depPath suffixes disagree with
+    /// its own `patchedDependencies` map. Distinct from
+    /// [`InstallError::LockfileConfigMismatch`], which is the lockfile
+    /// disagreeing with the *configuration*: no configuration change
+    /// repairs this one, so the fix quoted is a re-resolve rather than a
+    /// setting to look at.
+    #[display(
+        r#"Cannot proceed with the frozen installation. The lockfile records dependency paths whose patch hashes disagree with its own "patchedDependencies""#
+    )]
+    #[diagnostic(
+        code(ERR_PNPM_INCONSISTENT_PATCH_HASH),
+        help(
+            r#"The lockfile disagrees with itself, which usually means it was hand-edited or a merge conflict was incorrectly resolved. Repair your lockfile using "pnpm install --no-frozen-lockfile""#
+        )
+    )]
+    InconsistentPatchHash,
+
+    /// The lockfile's `(patch_hash=...)` depPath suffixes could not be checked
+    /// against its own `patchedDependencies`. A frozen install cannot
+    /// re-resolve to settle the question, and installing from a lockfile whose
+    /// patches are unverified is what this check exists to prevent.
+    #[display(
+        r#"Cannot proceed with the frozen installation. The lockfile's patch hashes cannot be checked against its own "patchedDependencies""#
+    )]
+    #[diagnostic(
+        code(ERR_PNPM_UNCHECKABLE_PATCH_HASH),
+        help(
+            r#"The lockfile has a malformed patch hash, or is missing a package version or a usable "patchedDependencies" entry that checking needs. Repair your lockfile using "pnpm install --no-frozen-lockfile""#
+        )
+    )]
+    UncheckablePatchHash,
+
     /// `--frozen-lockfile` was requested against a lockfile whose
     /// `importers` map has no entry for the root project. Distinct
     /// from `NoLockfile` (file missing) — here the file exists but
@@ -321,15 +368,6 @@ pub enum InstallError {
     #[diagnostic(transparent)]
     LockfileVerification(#[error(source)] VerifyError),
 
-    /// Surfaces a failure to persist `.pnpm-workspace-state-v1.json`.
-    /// Missing or unreadable state forces `pnpm run`'s
-    /// `verifyDepsBeforeRun` check to fall back to "outdated", which
-    /// is exactly the regression CI hits when pacquet runs the
-    /// install — fail the install rather than letting a silent write
-    /// error compound into spurious reinstalls.
-    #[diagnostic(transparent)]
-    WriteWorkspaceState(#[error(source)] UpdateWorkspaceStateError),
-
     /// Surfaces a failure to record the `allowBuilds` placeholders for the
     /// builds this install ignored. Fatal rather than silent: the install
     /// is about to tell the user to decide those builds, and a message
@@ -391,6 +429,18 @@ pub enum InstallError {
     #[diagnostic(code(ERR_PNPM_CONFIG_CONFLICT_VIRTUAL_STORE_ONLY_WITH_NO_MODULES_DIR))]
     ConfigConflictVirtualStoreOnlyWithNoModulesDir,
 }
+
+impl From<pnpm_hooks::HookError> for InstallError {
+    fn from(err: pnpm_hooks::HookError) -> Self {
+        match err {
+            pnpm_hooks::HookError::BadReadPackageResult { .. } => {
+                Self::BadReadPackageHookResult(err)
+            }
+            _ => Self::ReadPackageHook(err),
+        }
+    }
+}
+
 /// Hold back an [`InstallError::IgnoredBuilds`] verdict so the calling
 /// command can finish writing `package.json` and `pnpm-workspace.yaml`
 /// before it aborts: the install materialized the tree, and pnpm reports

@@ -81,8 +81,8 @@ test('prepare writes correct content for all bin files', () => {
   // pn.exe/pnpx.exe/pnx.exe and points `bin` at those, so these only run when
   // setup.js did not — where there is no sibling binary and PATH is all they have.
   for (const { name, shell } of ALIASES) {
-    expect(fs.readFileSync(path.join(exeDir, name + '.cmd'), 'utf8')).toBe(`@echo off\npnpm${shell} %*\n`)
-    expect(fs.readFileSync(path.join(exeDir, name + '.ps1'), 'utf8')).toBe(`pnpm${shell} @args\n`)
+    expect(fs.readFileSync(path.join(exeDir, name + '.cmd'), 'utf8')).toBe(`@echo off\npnpm${shell} %*\nexit /b %errorlevel%\n`)
+    expect(fs.existsSync(path.join(exeDir, name + '.ps1'))).toBe(false)
   }
 });
 
@@ -118,6 +118,127 @@ test('the committed alias scripts are what prepare.js writes', () => {
   const stdout = execFileSync(pnpmBin, ['-v'], { encoding: 'utf8', timeout: 30_000 }).trim()
   expect(stdout).toMatch(/^\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/)
 })
+
+const npmShimTest = isWindows ? test : test.skip
+
+npmShimTest('npm global PowerShell shim waits for the standalone executable', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pnpm-exe-npm-shim-'))
+  try {
+    const prefix = installExeFixtureWithNpm(root, ['--global'])
+    expectShimsRunTheExecutable(prefix)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+// `--location=global` leaves npm_config_global unset and sets npm's project
+// prefix to the global prefix, so only npm_config_location marks it global.
+npmShimTest('npm global shims name the standalone executable with --location=global', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pnpm-exe-npm-shim-'))
+  try {
+    const prefix = installExeFixtureWithNpm(root, ['--location=global'])
+    expectShimsRunTheExecutable(prefix)
+    expect(fs.existsSync(path.join(prefix, 'node_modules', '.bin'))).toBe(false)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+npmShimTest('npm project shims name the standalone executable', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pnpm-exe-npm-shim-'))
+  try {
+    const prefix = installExeFixtureWithNpm(root, [])
+    expectShimsRunTheExecutable(path.join(prefix, 'node_modules', '.bin'))
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+/**
+ * Install a minimal @pnpm/exe, whose platform package carries node.exe as the
+ * standalone executable, with npm into `<root>/prefix` and return that prefix.
+ * Without a `--global` or `--location` flag the prefix is a project, and the
+ * shims land in its `node_modules/.bin`. Throws when npm fails.
+ */
+function installExeFixtureWithNpm (root: string, npmFlags: string[]): string {
+  const nativePackageDir = path.join(root, 'native-package')
+  fs.mkdirSync(nativePackageDir)
+  const nativePackageName = exePlatformPkgName(platform, process.arch, familySync())
+  fs.writeFileSync(path.join(nativePackageDir, 'package.json'), JSON.stringify({
+    name: nativePackageName,
+    version: '1.0.0',
+  }))
+  const nativeBinary = path.join(nativePackageDir, 'pnpm.exe')
+  try {
+    fs.linkSync(process.execPath, nativeBinary)
+  } catch (err) {
+    // EPERM is a same-volume link the process may not create, such as
+    // node.exe under Program Files.
+    const code = (err as NodeJS.ErrnoException).code
+    if (code !== 'EXDEV' && code !== 'EPERM') throw err
+    fs.copyFileSync(process.execPath, nativeBinary)
+  }
+
+  const fixtureDir = path.join(root, 'wrapper')
+  fs.mkdirSync(fixtureDir)
+  for (const name of ['setup.js', 'platform-pkg-name.js']) {
+    fs.copyFileSync(path.join(exeDir, name), path.join(fixtureDir, name))
+  }
+  for (const name of ['pnpm', 'pn', 'pnpx', 'pnx']) {
+    fs.writeFileSync(path.join(fixtureDir, name), 'placeholder')
+  }
+  const exeManifest = JSON.parse(fs.readFileSync(path.join(exeDir, 'package.json'), 'utf8')) as {
+    scripts: { preinstall: string, postinstall?: string },
+  }
+  fs.writeFileSync(path.join(fixtureDir, 'package.json'), JSON.stringify({
+    name: '@pnpm/exe',
+    version: '1.0.0',
+    type: 'module',
+    bin: { pnpm: 'pnpm', pn: 'pn', pnpx: 'pnpx', pnx: 'pnx' },
+    scripts: {
+      preinstall: exeManifest.scripts.preinstall,
+      postinstall: exeManifest.scripts.postinstall,
+    },
+    dependencies: {
+      'detect-libc': `file:${fs.realpathSync(path.join(exeDir, 'node_modules', 'detect-libc'))}`,
+    },
+    optionalDependencies: { [nativePackageName]: `file:${nativePackageDir}` },
+  }))
+
+  const npmCli = execFileSync('where.exe', ['npm.cmd'], { encoding: 'utf8' })
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(launcher => path.join(path.dirname(launcher), 'node_modules', 'npm', 'bin', 'npm-cli.js'))
+    .find(candidate => fs.existsSync(candidate))
+  expect(npmCli).toBeDefined()
+  const prefix = path.join(root, 'prefix')
+  fs.mkdirSync(prefix)
+  if (!npmFlags.some(flag => flag.startsWith('--global') || flag.startsWith('--location'))) {
+    fs.writeFileSync(path.join(prefix, 'package.json'), JSON.stringify({ name: 'project', version: '1.0.0' }))
+  }
+  execFileSync(process.execPath, [
+    npmCli!, 'install', ...npmFlags, '--install-links=true', '--dangerously-allow-all-scripts',
+    '--prefix', prefix, fixtureDir,
+  ], { cwd: root, stdio: 'pipe', timeout: 60_000 })
+  return prefix
+}
+
+function expectShimsRunTheExecutable (binDir: string): void {
+  for (const name of ['pnpm', 'pn', 'pnpx', 'pnx']) {
+    for (const ext of ['cmd', 'ps1']) {
+      expect(fs.readFileSync(path.join(binDir, `${name}.${ext}`), 'utf8')).toContain(`${name}.exe`)
+    }
+  }
+  const shim = path.join(binDir, 'pnpm.ps1')
+  expect(execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', shim, '--version'], {
+    encoding: 'utf8',
+    timeout: 10_000,
+  }).trim()).toBe(process.version)
+  const failure = spawnSync('powershell.exe', [
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', shim, '-e', 'process.exit(7)',
+  ], { encoding: 'utf8', timeout: 10_000 })
+  expect(failure.status).toBe(7)
+}
 
 // Stand up a minimal sandbox that mimics @pnpm/exe with NO platform package
 // installed: setup.js + platform-pkg-name.js + a package.json (so Node loads
@@ -399,6 +520,53 @@ describe('alias bins', () => {
   }
 })
 
+const SYSTEM32 = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32')
+
+const winCmdTest = isWindows ? test : test.skip
+
+describe('Windows fallback wrappers', () => {
+  for (const { name, argv } of ALIASES) {
+    const expected = `stub: ${[...argv, 'add', 'foo'].join(' ')}`
+
+    winCmdTest(`${name}.cmd propagates non-zero exit status from pnpm on PATH`, () => {
+      const { sandbox, stubDir } = buildFallbackSandbox()
+      try {
+        const result = spawnSync('cmd.exe', ['/d', '/c', path.join(sandbox, `${name}.cmd`), 'fail'], {
+          cwd: sandbox,
+          encoding: 'utf8',
+          timeout: 10_000,
+          env: getWindowsFallbackEnv(stubDir),
+        })
+        expect({ status: result.status, stderr: result.stderr }).toEqual({
+          status: 42,
+          stderr: '',
+        })
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true })
+      }
+    })
+
+    winCmdTest(`${name}.cmd propagates successful exit status and arguments`, () => {
+      const { sandbox, stubDir } = buildFallbackSandbox()
+      try {
+        const result = spawnSync('cmd.exe', ['/d', '/c', path.join(sandbox, `${name}.cmd`), 'add', 'foo'], {
+          cwd: sandbox,
+          encoding: 'utf8',
+          timeout: 10_000,
+          env: getWindowsFallbackEnv(stubDir),
+        })
+        expect({ status: result.status, stdout: result.stdout.trim(), stderr: result.stderr }).toEqual({
+          status: 0,
+          stdout: expected,
+          stderr: '',
+        })
+      } finally {
+        fs.rmSync(sandbox, { recursive: true, force: true })
+      }
+    })
+  }
+})
+
 /**
  * An @pnpm/exe directory as prepare.js leaves it, with `pnpm` replaced by a
  * stand-in that reports the arguments it was handed — which is all the aliases
@@ -452,4 +620,56 @@ function runNativeAlias (cwd: string, arg0: string) {
     timeout: 10_000,
     env: { ...process.env, PATH: BARE_PATH },
   })
+}
+
+function buildFallbackSandbox (): { sandbox: string, stubDir: string } {
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'pnpm-exe-fallback-'))
+  fs.copyFileSync(path.join(exeDir, 'prepare.js'), path.join(sandbox, 'prepare.js'))
+  fs.writeFileSync(path.join(sandbox, 'package.json'), JSON.stringify({ name: '@pnpm/exe', type: 'module' }))
+  execFileSync(process.execPath, [path.join(sandbox, 'prepare.js')], { cwd: sandbox })
+
+  const stubDir = path.join(sandbox, 'stub')
+  fs.mkdirSync(stubDir, { recursive: true })
+
+  // Use an executable binary stand-in (node) for pnpm, so on Windows cmd.exe executes
+  // an .exe via CreateProcess and regains control in the wrapper rather than transferring
+  // execution to a chained .cmd batch file.
+  const stubJs = path.join(stubDir, 'stub.cjs')
+  fs.writeFileSync(
+    stubJs,
+    `const path = require('path')
+const args = process.argv.slice(1).map((arg) => {
+  const base = path.basename(arg)
+  return ['dlx', 'fail', 'add', 'foo'].includes(base) ? base : arg
+})
+if (args.includes('fail')) {
+  process.exit(42)
+}
+console.log('stub: ' + args.join(' '))
+process.exit(0)
+`
+  )
+
+  const pnpmBin = path.join(stubDir, isWindows ? 'pnpm.exe' : 'pnpm')
+  try {
+    fs.linkSync(process.execPath, pnpmBin)
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'EXDEV') throw err
+    fs.copyFileSync(process.execPath, pnpmBin)
+  }
+
+  return { sandbox, stubDir }
+}
+
+function getWindowsFallbackEnv (stubDir: string): NodeJS.ProcessEnv {
+  const pathParts = isWindows
+    ? [stubDir, SYSTEM32, process.env.PATH]
+    : [stubDir, process.env.PATH]
+  const stubJs = path.join(stubDir, 'stub.cjs').replace(/\\/g, '/')
+  const prevNodeOptions = process.env.NODE_OPTIONS ?? ''
+  return {
+    ...process.env,
+    PATH: pathParts.filter(Boolean).join(path.delimiter),
+    NODE_OPTIONS: `${prevNodeOptions} --require "${stubJs}"`.trim(),
+  }
 }

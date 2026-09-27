@@ -5,6 +5,7 @@ import util from 'node:util'
 
 import { createHexHash } from '@pnpm/crypto.hash'
 import { PnpmError } from '@pnpm/error'
+import { DirLock } from '@pnpm/fs.dir-lock'
 import type { TaskGraph, TaskKey, TaskNode } from '@pnpm/workspace.task-scheduler'
 import writeFileAtomic from 'write-file-atomic'
 
@@ -14,8 +15,6 @@ const LATEST_STATE_FILE = 'latest.json'
 const PUBLISHED_SUFFIX = '.published'
 const FINISHED_SUFFIX = '.finished'
 const START_LOCK_DIR = 'start.lock'
-const LOCK_OWNER_FILE = 'owner'
-const LOCK_POLL_INTERVAL_MS = 50
 const LOCK_WAIT_MS = 2_000
 const LOCK_ABANDONED_MS = 30_000
 const RUN_GENERATION_LENGTH = 12
@@ -186,10 +185,10 @@ export class TaskRunStateContext {
     let filePath = this.journalPath(run)
     let file: FileHandle | undefined
     let journalCreated = false
-    let lock: StateStartLock | undefined
+    let lock: DirLock | undefined
     try {
       await this.validateStateDirectory(true)
-      lock = await StateStartLock.acquire(path.join(this.stateDir, START_LOCK_DIR))
+      lock = await DirLock.acquire(path.join(this.stateDir, START_LOCK_DIR), { waitMs: LOCK_WAIT_MS, abandonedMs: LOCK_ABANDONED_MS })
       if (lock == null) {
         return new TaskRunState(filePath, this.publishedPath(run), this.finishedPath(run), undefined, this.opts.workspaceDir, run, completedTasks)
       }
@@ -420,62 +419,6 @@ export class TaskRunState {
     if (file == null) return
     this.closePromise ??= this.pendingWrite.then(async () => file.close())
     await this.closePromise
-  }
-}
-
-class StateStartLock {
-  private readonly lockPath: string
-  private readonly token: string
-
-  private constructor (
-    lockPath: string,
-    token: string
-  ) {
-    this.lockPath = lockPath
-    this.token = token
-  }
-
-  static async acquire (lockPath: string): Promise<StateStartLock | undefined> {
-    return StateStartLock.acquireUntil(lockPath, Date.now() + LOCK_WAIT_MS)
-  }
-
-  private static async acquireUntil (lockPath: string, deadline: number): Promise<StateStartLock | undefined> {
-    try {
-      await fs.mkdir(lockPath)
-      const token = `${process.pid}-${Date.now()}-${crypto.randomUUID()}`
-      try {
-        await fs.writeFile(path.join(lockPath, LOCK_OWNER_FILE), token, { mode: 0o600 })
-      } catch (err: unknown) {
-        await fs.rm(lockPath, { force: true, recursive: true }).catch(() => {})
-        throw err
-      }
-      return new StateStartLock(lockPath, token)
-    } catch (err: unknown) {
-      if (!(util.types.isNativeError(err) && 'code' in err && err.code === 'EEXIST')) throw err
-    }
-    const stats = await fs.lstat(lockPath).catch(() => undefined)
-    if (stats == null || stats.isSymbolicLink() || !stats.isDirectory()) return undefined
-    if (Date.now() - stats.mtimeMs > LOCK_ABANDONED_MS) {
-      const removed = await fs.rm(lockPath, { force: true, recursive: true }).then(() => true, () => false)
-      if (removed) return StateStartLock.acquireUntil(lockPath, deadline)
-    }
-    if (Date.now() >= deadline) return undefined
-    await new Promise(resolve => setTimeout(resolve, LOCK_POLL_INTERVAL_MS))
-    return StateStartLock.acquireUntil(lockPath, deadline)
-  }
-
-  async isOwner (): Promise<boolean> {
-    try {
-      return await fs.readFile(path.join(this.lockPath, LOCK_OWNER_FILE), 'utf8') === this.token
-    } catch (err: unknown) {
-      if (util.types.isNativeError(err) && 'code' in err && err.code === 'ENOENT') return false
-      throw err
-    }
-  }
-
-  async release (): Promise<void> {
-    if (!await this.isOwner().catch(() => false)) return
-    await fs.rm(this.lockPath, { force: true, recursive: true }).catch(() => {})
   }
 }
 

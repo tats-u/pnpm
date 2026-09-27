@@ -6,6 +6,28 @@ use super::{
 };
 
 impl WorkspaceTreeCtx {
+    /// Runs `inspect` on the package recorded under `pkg_id`, if any.
+    pub(crate) fn inspect_package<Output>(
+        &self,
+        pkg_id: &str,
+        inspect: impl FnOnce(&crate::ResolvedPackage) -> Output,
+    ) -> Option<Output> {
+        lock_recoverable(&self.tree.packages).get(pkg_id).map(inspect)
+    }
+
+    /// Calls `visit` on every recorded package.
+    pub(crate) fn for_each_package(&self, visit: impl FnMut(&crate::ResolvedPackage)) {
+        lock_recoverable(&self.tree.packages).values().for_each(visit);
+    }
+
+    pub(crate) fn duplicate_versions(&self) -> pnpm_resolving_resolver_base::PreferredVersions {
+        self.run_preferred_versions().versions
+            .iter()
+            .filter(|(_, versions)| versions.len() > 1)
+            .map(|(name, versions)| (name.clone(), versions.clone()))
+            .collect()
+    }
+
     /// Snapshot the workspace context into a [`ResolvedTree`] without
     /// consuming `self`. `direct` carries the combined direct-dep
     /// envelopes the caller built up across importers; multi-importer

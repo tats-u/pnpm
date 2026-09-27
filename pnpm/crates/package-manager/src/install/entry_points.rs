@@ -205,16 +205,17 @@ where
     /// workspace discovery stays anchored at the source workspace so
     /// `workspace:` dependencies still resolve to their projects.
     ///
-    /// The source workspace also still owns `pnpm-lock.yaml`, and this
-    /// resolution describes the deployed project rather than the
-    /// workspace, so nothing is written to it (pnpm's
-    /// `saveLockfile: false`).
+    /// The source workspace also still owns `pnpm-lock.yaml` and
+    /// `node_modules/.pnpm-workspace-state-v1.json`, and this install
+    /// describes the deployed project rather than the workspace, so
+    /// nothing is written to either (pnpm's `saveLockfile: false`).
     pub async fn run_legacy_deploy<Reporter: self::Reporter + 'static>(
-        self,
+        mut self,
     ) -> Result<(), InstallError> {
+        self.execution.mutation = ProjectMutation::Deploy;
         Box::pin(self.run_inner::<Reporter>(InstallRunOptions {
             root_manifest_as_workspace_root: true,
-            save_lockfile: false,
+            save: crate::install::InstallSaveOptions { lockfile: false, workspace_state: false },
             manifests: crate::install::InstallManifestOptions {
                 deploy_hook: true,
                 ..Default::default()
@@ -267,33 +268,56 @@ where
     }
 }
 pub fn apply_deploy_manifest_hook(manifest: &mut serde_json::Value) {
-    let names = deploy_workspace_dependency_names(manifest).map(str::to_owned).collect::<Vec<_>>();
+    let names =
+        deploy_dependency_names(manifest, "workspace:").map(str::to_owned).collect::<Vec<_>>();
     inject_deploy_dependencies_meta(manifest, names);
+    copy_deploy_linked_dependencies(manifest);
 }
 pub(crate) fn apply_deploy_manifest_hook_to_arc(
     mut manifest: Arc<serde_json::Value>,
 ) -> Arc<serde_json::Value> {
-    let names = deploy_workspace_dependency_names(&manifest).map(str::to_owned).collect::<Vec<_>>();
-    if names.is_empty() {
+    if deploy_dependency_names(&manifest, "workspace:").next().is_none()
+        && deploy_dependency_names(&manifest, "link:").next().is_none()
+    {
         return manifest;
     }
-    inject_deploy_dependencies_meta(Arc::make_mut(&mut manifest), names);
+    apply_deploy_manifest_hook(Arc::make_mut(&mut manifest));
     manifest
 }
-pub(super) fn deploy_workspace_dependency_names(
-    manifest: &serde_json::Value,
-) -> impl Iterator<Item = &str> {
+fn deploy_dependency_names<'a>(
+    manifest: &'a serde_json::Value,
+    protocol: &'static str,
+) -> impl Iterator<Item = &'a str> {
     ["optionalDependencies", "dependencies", "devDependencies"]
         .into_iter()
         .filter_map(move |field| manifest.get(field)?.as_object())
         .flat_map(|dependencies| dependencies.iter())
-        .filter_map(|(name, specifier)| {
+        .filter_map(move |(name, specifier)| {
             specifier
                 .as_str()
-                .is_some_and(|specifier| specifier.starts_with("workspace:"))
+                .is_some_and(|specifier| specifier.starts_with(protocol))
                 .then_some(name.as_str())
         })
 }
+
+fn copy_deploy_linked_dependencies(manifest: &mut serde_json::Value) {
+    for field in ["optionalDependencies", "dependencies", "devDependencies"] {
+        let Some(dependencies) = manifest.get_mut(field).and_then(serde_json::Value::as_object_mut)
+        else {
+            continue;
+        };
+        for specifier in dependencies.values_mut() {
+            let Some(directory) = specifier
+                .as_str()
+                .and_then(|value| value.strip_prefix("link:"))
+            else {
+                continue;
+            };
+            *specifier = serde_json::Value::String(format!("file:{directory}"));
+        }
+    }
+}
+
 pub(super) fn inject_deploy_dependencies_meta(
     manifest: &mut serde_json::Value,
     names: Vec<String>,

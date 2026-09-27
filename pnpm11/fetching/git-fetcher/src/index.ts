@@ -1,4 +1,5 @@
 import assert from 'node:assert'
+import fs from 'node:fs'
 import path from 'node:path'
 import { URL } from 'node:url'
 import util from 'node:util'
@@ -8,7 +9,7 @@ import { preparePackage } from '@pnpm/exec.prepare-package'
 import type { GitFetcher } from '@pnpm/fetching.fetcher-base'
 import { packlist } from '@pnpm/fs.packlist'
 import { globalWarn } from '@pnpm/logger'
-import { nonInteractiveGitEnv } from '@pnpm/network.git-utils'
+import { nonInteractiveGitEnv, nonInteractiveGitSubmoduleEnv, safeGitEnv } from '@pnpm/network.git-utils'
 import { createGitHostedPkgId } from '@pnpm/resolving.git-resolver'
 import { gitHostedStoreIndexKey, type StoreIndex } from '@pnpm/store.index'
 import { addFilesFromDir } from '@pnpm/worker'
@@ -40,14 +41,20 @@ export function createGitFetcher (createOpts: CreateGitFetcherOptions): { git: G
       } else {
         await execGit(['clone', resolution.repo, tempLocation], { env: await nonInteractiveGitEnv() })
       }
+      await execGit(['checkout', resolution.commit], { cwd: tempLocation })
+      const receivedCommit = await execGit(['rev-parse', 'HEAD'], { cwd: tempLocation })
+      if (receivedCommit.trim() !== resolution.commit) {
+        throw new PnpmError('GIT_CHECKOUT_FAILED', `received commit ${receivedCommit.trim()} does not match expected value ${resolution.commit}`)
+      }
+      if (await hasGitSubmodules(tempLocation)) {
+        await execGit(['submodule', 'update', '--init', '--recursive', '--checkout'], {
+          cwd: tempLocation,
+          env: await nonInteractiveGitSubmoduleEnv({ cwd: tempLocation }),
+        })
+      }
     } catch (err: unknown) {
       assert(util.types.isNativeError(err))
       throw gitFetchError(err, resolution.repo, opts.pkg?.name)
-    }
-    await execGit(['checkout', resolution.commit], { cwd: tempLocation })
-    const receivedCommit = await execGit(['rev-parse', 'HEAD'], { cwd: tempLocation })
-    if (receivedCommit.trim() !== resolution.commit) {
-      throw new PnpmError('GIT_CHECKOUT_FAILED', `received commit ${receivedCommit.trim()} does not match expected value ${resolution.commit}`)
     }
     let pkgDir: string
     let requiresPrepare: boolean
@@ -148,6 +155,10 @@ function sshRemediationHint (repo: string, pkgName?: string): string | undefined
   if (host == null) return undefined
   return `The lockfile records an SSH remote for this dependency, so fetching it needs an SSH key for ${redactAndSanitize(host)}.
 
+If git reported "Permission denied (publickey)", the host was reached and refused the key. Make sure ssh-agent has a key loaded:
+
+    ssh-add -l
+
 If its specifier does not ask for SSH (for example "github:owner/repo"), the lockfile entry was written before pnpm v11.21 and can be re-recorded over HTTPS:
 
     pnpm update ${pkgName ?? '<package>'}
@@ -198,6 +209,17 @@ function prefixGitArgs (): string[] {
 
 async function execGit (args: string[], opts?: { cwd?: string, env?: NodeJS.ProcessEnv }): Promise<string> {
   const fullArgs = prefixGitArgs().concat(args || [])
-  const { stdout } = await execa('git', fullArgs, opts)
+  const env = safeGitEnv(opts?.env)
+  const { stdout } = await execa('git', fullArgs, { ...opts, env })
   return stdout as string
+}
+
+async function hasGitSubmodules (location: string): Promise<boolean> {
+  try {
+    return (await fs.promises.stat(path.join(location, '.gitmodules'))).isFile()
+  } catch (err: unknown) {
+    assert(util.types.isNativeError(err))
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw err
+  }
 }

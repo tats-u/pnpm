@@ -11,11 +11,15 @@ import { execute } from '@yarnpkg/shell'
 import uidNumber from 'uid-number'
 
 import { extendPath } from './extendPath.js'
+import { makePackageManagerEnv } from './makePackageManagerEnv.js'
+import { missingScriptShellError, SCRIPT_SHELL_NOT_FOUND } from './missingScriptShell.js'
+import { scriptBody, selectShell } from './selectShell.js'
 import { relaySignals, reserveSignalRelay, type SignalRelayReservation, spawnsInOwnProcessGroup } from './signals.js'
-import { type LifecycleChildProcess, spawn } from './spawn.js'
+import { type LifecycleChildProcess, spawn, type SpawnError } from './spawn.js'
 
-export type { RelaySignalsOptions, SignalRelay, SignalTarget } from './signals.js'
-export { hasControllingTerminal, relaySignals, reserveSignalRelay, spawnsInOwnProcessGroup, waitForProcessGroup } from './signals.js'
+export { makePackageManagerEnv } from './makePackageManagerEnv.js'
+export type { ProcessGroupWatchdog, RelaySignalsOptions, SignalRelay, SignalTarget } from './signals.js'
+export { hasControllingTerminal, relaySignals, reserveSignalRelay, spawnsInOwnProcessGroup, waitForProcessGroup, watchProcessGroup } from './signals.js'
 export type { LifecycleChildProcess } from './spawn.js'
 
 export interface LifecycleLog {
@@ -44,6 +48,8 @@ export interface LifecyclePackage {
 export interface LifecycleOptions {
   /** The `node_modules` directory whose `.hooks/<stage>` hook runs after the script. */
   dir: string
+  /** The `.bin` holding `wd`'s own executables, in place of `<wd>/node_modules/.bin`. */
+  wdBinDir?: string
   extraBinPaths?: string[]
   extraEnv?: Record<string, string>
   failOk?: boolean
@@ -77,6 +83,8 @@ export interface LifecycleError extends Error {
   pkgid?: string
   pkgname?: string
   script?: string
+  /** The signal that killed the script, if one did. */
+  signal?: NodeJS.Signals
   stage?: string
 }
 
@@ -154,17 +162,8 @@ export function lifecycle (pkg: LifecyclePackage, stage: string, wd: string, opt
 
         const env = makeEnv(pkg, opts)
         env.npm_lifecycle_event = stage
-        env.npm_node_execpath = env.NODE = env.NODE || process.execPath
+        Object.assign(env, makePackageManagerEnv(env))
         env.npm_package_json = path.join(wd, 'package.json')
-        if ((process as { pkg?: unknown }).pkg != null) {
-          // If the pnpm CLI was bundled by vercel/pkg then we cannot use the js path for npm_execpath
-          // because in that case the js is in a virtual filesystem inside the executor.
-          // Instead, we use the path to the exe file.
-          env.npm_execpath = process.execPath
-        } else {
-          env.npm_execpath = process.argv[1] || process.cwd()
-        }
-        env.INIT_CWD = process.cwd()
         if (!env.npm_config_node_gyp && DEFAULT_NODE_GYP_PATH) {
           env.npm_config_node_gyp = DEFAULT_NODE_GYP_PATH
         }
@@ -353,28 +352,20 @@ function runCmdAs (run: ScriptRun, owner: { uid: number, gid: number } | null, c
     conf.gid = owner.gid ^ 0
   }
 
-  let sh = 'sh'
-  let shFlag = '-c'
-
-  const customShell = opts.scriptShell
-
-  if (customShell) {
-    sh = customShell
-  } else if (process.platform === 'win32') {
-    sh = process.env.comspec ?? 'cmd'
-    shFlag = '/d /s /c'
+  const shell = selectShell(opts.scriptShell || undefined, process.platform, process.env.comspec)
+  if (shell.windowsVerbatimArguments) {
     conf.windowsVerbatimArguments = true
   }
 
   opts.log.verbose('lifecycle', logId(pkg, stage), 'PATH:', env[PATH])
   opts.log.verbose('lifecycle', logId(pkg, stage), 'CWD:', wd)
-  opts.log.silly('lifecycle', logId(pkg, stage), 'Args:', [shFlag, cmd])
+  opts.log.silly('lifecycle', logId(pkg, stage), 'Args:', [shell.shFlag, cmd])
 
   if (opts.shellEmulator) {
     runEmulated(run, cb)
     return
   }
-  const proc = spawn(sh, [shFlag, cmd], { ...conf, log: opts.log })
+  const proc = spawn(shell.sh, [shell.shFlag, scriptBody(shell, cmd)], { ...conf, log: opts.log })
   runSpawned(run, { proc, ownProcessGroup }, cb)
 }
 
@@ -468,8 +459,8 @@ function runSpawned (run: ScriptRun, spawned: SpawnedScript, cb: Callback): void
     }, (err: LifecycleError) => procError(raiseError ?? err))
   }
 
-  proc.on('error', (err: LifecycleError) => {
-    finish(spawnObserverFailed ? spawnObserverError : err)
+  proc.on('error', (err: SpawnError) => {
+    finish(spawnObserverFailed ? spawnObserverError : missingScriptShellError(err, opts.scriptShell, run.wd) ?? err)
   })
   proc.on('close', (code: number | null, signal: NodeJS.Signals | null) => {
     opts.log.silly('lifecycle', logId(pkg, stage), 'Returned: code:', code, ' signal:', signal)
@@ -478,6 +469,7 @@ function runSpawned (run: ScriptRun, spawned: SpawnedScript, cb: Callback): void
       err = spawnObserverError
     } else if (signal) {
       err = new PnpmError('CHILD_PROCESS_FAILED', `Command failed with signal "${signal}"`)
+      err.signal = signal
       deathSignal = signal
     } else if (code) {
       err = new PnpmError('CHILD_PROCESS_FAILED', `Exit status ${code}`)
@@ -519,7 +511,7 @@ function createProcError (run: ScriptRun, cb: Callback): (er?: LifecycleError | 
     if (er) {
       opts.log.info('lifecycle', logId(pkg, stage), `Failed to exec ${stage} script`)
       er.message = `${pkg._id} ${stage}: \`${cmd}\`\n${er.message}`
-      if (er.code !== 'EPERM') {
+      if (er.code !== 'EPERM' && er.code !== SCRIPT_SHELL_NOT_FOUND) {
         er.code = 'ELIFECYCLE'
       }
       fs.stat(opts.dir, (statError) => {

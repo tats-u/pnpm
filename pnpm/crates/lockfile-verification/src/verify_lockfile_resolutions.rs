@@ -57,6 +57,25 @@ pub struct VerifyLockfileResolutionsOptions<'a> {
     /// (under the same or stricter policy). Omitting either field
     /// disables the cache (every call rehashes + reruns the gate).
     pub cache_dir: Option<&'a Path>,
+    /// Entries the install re-resolves instead of reusing. See
+    /// [`ReplacedEntries`].
+    pub replaced: Option<ReplacedEntries<'a>>,
+}
+
+/// Matches the lockfile entries, by name and version, that the install
+/// re-resolves instead of reusing, such as the targets of
+/// `pnpm update <pkg>`. The resolver applies the policies to whatever it
+/// picks for them, so the verifiers skip their locked versions, which the
+/// registry may no longer serve. The offline shape and alias checks still
+/// cover them. A run that skips an entry does not record the lockfile as
+/// verified.
+#[derive(Clone, Copy)]
+pub struct ReplacedEntries<'a>(pub &'a (dyn Fn(&PkgName, &str) -> bool + Send + Sync));
+
+impl std::fmt::Debug for ReplacedEntries<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ReplacedEntries(..)")
+    }
 }
 
 /// Whether a recorded verification already covers `lockfile` as it sits
@@ -76,7 +95,7 @@ pub fn lockfile_verification_is_cached(
     lockfile: &Lockfile,
     verifiers: &[Arc<dyn ResolutionVerifier>],
 ) -> bool {
-    if verify_lockfile_dependency_names(lockfile).is_err() {
+    if verify_offline_structural_checks(lockfile).is_err() {
         return false;
     }
     if lockfile.packages.is_none() {
@@ -100,7 +119,7 @@ pub fn lockfile_verification_is_cached_by_content(
     lockfile: &Lockfile,
     verifiers: &[Arc<dyn ResolutionVerifier>],
 ) -> bool {
-    if verify_lockfile_dependency_names(lockfile).is_err() {
+    if verify_offline_structural_checks(lockfile).is_err() {
         return false;
     }
     if lockfile.packages.is_none() {
@@ -111,6 +130,12 @@ pub fn lockfile_verification_is_cached_by_content(
         &hash_lockfile(lockfile),
         &with_offline_check_cache_identities(verifiers),
     )
+}
+
+fn verify_offline_structural_checks(lockfile: &Lockfile) -> Result<(), VerifyError> {
+    verify_lockfile_dependency_names(lockfile)?;
+    verify_lockfile_importer_snapshot_links(lockfile)?;
+    Ok(())
 }
 
 /// Run every active [`ResolutionVerifier`] against every entry in
@@ -125,10 +150,9 @@ pub async fn verify_lockfile_resolutions<Reporter: self::Reporter>(
     opts: &VerifyLockfileResolutionsOptions<'_>,
 ) -> Result<(), VerifyError> {
     // Offline structural gate first: reject invalid dependency names
-    // before the `packages`-absent short-circuit and the cache lookup,
-    // so a lockfile that carries a path-traversal alias but no
-    // `packages:` section (e.g. only `link:` deps) is still rejected.
-    verify_lockfile_dependency_names(lockfile)?;
+    // or missing importer snapshot links before the `packages`-absent
+    // short-circuit and the cache lookup.
+    verify_offline_structural_checks(lockfile)?;
 
     if lockfile.packages.is_none() {
         return Ok(());
@@ -161,13 +185,11 @@ pub async fn verify_lockfile_resolutions<Reporter: self::Reporter>(
         CacheOutcome::Miss(precomputed) => precomputed,
     };
 
-    let (candidates, shape_violations) = collect_candidates(lockfile);
-    if !shape_violations.is_empty() {
-        return Err(build_verification_error(shape_violations));
-    }
+    let (candidates, skipped_replaced) = collect_candidates_to_verify(lockfile, opts.replaced)?;
     if verifiers.is_empty() {
         return Ok(());
     }
+    let cache_inputs = cache_inputs.filter(|_| !skipped_replaced);
     if candidates.is_empty() {
         // Persist the success so the next install can stat-only the
         // lockfile. An empty fan-out is still a successful run.
@@ -183,6 +205,24 @@ pub async fn verify_lockfile_resolutions<Reporter: self::Reporter>(
         return Ok(());
     }
     Err(build_verification_error(violations))
+}
+
+/// The lockfile entries the policy verifiers check, after the offline
+/// shape check passes. Entries `replaced` matches are left out, and the
+/// returned flag tells whether any was.
+fn collect_candidates_to_verify(
+    lockfile: &Lockfile,
+    replaced: Option<ReplacedEntries<'_>>,
+) -> Result<(Vec<Candidate>, bool), VerifyError> {
+    let (mut candidates, shape_violations) = collect_candidates(lockfile);
+    if !shape_violations.is_empty() {
+        return Err(build_verification_error(shape_violations));
+    }
+    let Some(ReplacedEntries(is_replaced)) = replaced else { return Ok((candidates, false)) };
+    let entries = candidates.len();
+    candidates.retain(|candidate| !is_replaced(&candidate.name, &candidate.version));
+    let skipped_replaced = candidates.len() < entries;
+    Ok((candidates, skipped_replaced))
 }
 
 /// Run the verifiers over every candidate, reporting the run's start and,
@@ -492,6 +532,14 @@ pub fn verify_lockfile_dependency_names(lockfile: &Lockfile) -> Result<(), Verif
     }
     let invalid: Vec<String> = invalid.into_iter().collect();
     Err(VerifyError::invalid_dependency_aliases(&invalid))
+}
+
+/// Rejects a lockfile when an importer dependency references a snapshot key
+/// that does not exist in `snapshots`.
+pub fn verify_lockfile_importer_snapshot_links(lockfile: &Lockfile) -> Result<(), VerifyError> {
+    lockfile
+        .verify_importer_snapshot_links()
+        .map_err(|error| VerifyError::missing_dependency(&error.0))
 }
 
 fn emit<Reporter: self::Reporter>(level: LogLevel, message: LockfileVerificationMessage) {

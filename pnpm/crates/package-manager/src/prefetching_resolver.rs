@@ -101,6 +101,7 @@ pub struct PrefetchPolicy<'a> {
 /// independent set without leaking lifetimes back into the resolver's
 /// type.
 struct OwnedFetchCtx {
+    config: &'static Config,
     mem_cache: Arc<MemCache>,
     requester: Arc<str>,
     progress_reported: SharedReportedProgressKeys,
@@ -193,6 +194,9 @@ impl<Reporter: self::Reporter + 'static> PrefetchingResolver<Reporter> {
     /// pass to abort before the rest of the tree walk completes,
     /// which is the opposite of what we want for a prefetch.
     fn maybe_kickoff_download(&self, result: &ResolveResult) {
+        if !is_remote_tarball(&result.resolution) {
+            return;
+        }
         // Only spawn for tarball-shaped resolutions with both URL and
         // integrity. Mirrors the gate in
         // `install_package_from_registry::extract_tarball`; other
@@ -351,6 +355,7 @@ fn owned_fetch_context(prefetch_ctx: &PrefetchContext<'_>) -> OwnedFetchCtx {
             },
     } = prefetch_ctx;
     OwnedFetchCtx {
+        config,
         mem_cache: Arc::clone(mem_cache),
         requester: Arc::<str>::from(*requester),
         progress_reported: SharedReportedProgressKeys::clone(progress_reported),

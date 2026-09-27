@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { FILTERING } from '@pnpm/cli.common-cli-options-help'
 import { docsUrl } from '@pnpm/cli.utils'
-import { type Config, types as configTypes } from '@pnpm/config.reader'
+import { type Config, type ConfigContext, types as configTypes } from '@pnpm/config.reader'
 import { WORKSPACE_MANIFEST_FILENAME } from '@pnpm/constants'
 import { PnpmError } from '@pnpm/error'
 import { fetchFromDir } from '@pnpm/fetching.directory-fetcher'
@@ -21,6 +21,7 @@ import { writeYamlFile } from 'write-yaml-file'
 
 import { createDeployFiles } from './createDeployFiles.js'
 import { deployHook } from './deployHook.js'
+import { inheritPackageManager, writeInheritedPackageManager } from './inheritPackageManager.js'
 
 const FORCE_LEGACY_DEPLOY = 'force-legacy-deploy' satisfies keyof typeof configTypes
 
@@ -85,7 +86,8 @@ export function help (): string {
 
 export type DeployOptions =
   & Omit<install.InstallCommandOptions, 'useLockfile'>
-  & Pick<Config, 'allowBuilds' | 'forceLegacyDeploy'>
+  & Pick<Config, 'allowBuilds' | 'forceLegacyDeploy' | 'resolvePeersFromWorkspaceRoot'>
+  & Pick<ConfigContext, 'enginePinManifest'>
 
 export async function handler (opts: DeployOptions, params: string[]): Promise<void> {
   if (!opts.workspaceDir) {
@@ -153,12 +155,17 @@ export async function handler (opts: DeployOptions, params: string[]): Promise<v
     }
   }
 
-  const deployedProject = opts.allProjects?.find(({ rootDir }) => rootDir === selectedProject.rootDir)
-  if (deployedProject) {
-    deployedProject.modulesDir = path.relative(selectedProject.rootDir, path.join(deployDir, 'node_modules'))
+  await writeInheritedPackageManager(deployDir, opts.enginePinManifest)
+  const deployNodeModules = path.join(deployDir, 'node_modules')
+  if (opts.allProjects) {
+    for (const project of opts.allProjects) {
+      project.modulesDir = path.relative(project.rootDir, deployNodeModules)
+    }
   }
   await install.handler({
     ...opts,
+    deploy: true,
+    configDependencies: undefined,
     confirmModulesPurge: false,
     // Deploy doesn't work with dedupePeerDependents=true currently as for deploy
     // we need to select a single project for install, while dedupePeerDependents
@@ -207,7 +214,7 @@ export async function handler (opts: DeployOptions, params: string[]): Promise<v
       ...opts.hooks,
       readPackage: [
         ...(opts.hooks?.readPackage ?? []),
-        deployHook,
+        pkg => deployHook(pkg, { convertLinksToFileProtocol: true }),
       ],
     },
     frozenLockfile: false,
@@ -216,7 +223,11 @@ export async function handler (opts: DeployOptions, params: string[]): Promise<v
     // TODO: make it work as we need to prefer packages from the lockfile during deployment.
     useLockfile: opts.nodeLinker !== 'hoisted',
     saveLockfile: false,
-    virtualStoreDir: path.join(deployDir, 'node_modules/.pnpm'),
+    // The workspace state describes the source workspace's own install,
+    // which this install of the deployed project must neither check nor replace.
+    optimisticRepeatInstall: false,
+    saveWorkspaceState: false,
+    virtualStoreDir: resolveDeployVirtualStoreDir(deployDir, opts),
     modulesDir: path.relative(opts.workspaceDir, path.join(deployDir, 'node_modules')),
     includeOnlyPackageFiles,
   })
@@ -224,9 +235,10 @@ export async function handler (opts: DeployOptions, params: string[]): Promise<v
 
 async function copyProject (src: string, dest: string, opts: { includeOnlyPackageFiles: boolean }): Promise<void> {
   const { filesMap } = await fetchFromDir(src, opts)
-  const importPkg = createIndexedPkgImporter('clone-or-copy')
+  const importPkg = createIndexedPkgImporter('clone-or-copy', { disableLogging: true })
   importPkg(dest, { filesMap, force: true, resolvedFrom: 'local-dir' })
 }
+
 
 function validateDeployTarget (
   deployDir: string,
@@ -385,11 +397,17 @@ async function deployFromSharedLockfile (
     lockfile,
     lockfileDir,
     patchedDependencies: opts.patchedDependencies,
-    selectedProjectManifest: selectedProject.manifest,
+    selectedProjectManifest: inheritPackageManager(selectedProject.manifest, opts.enginePinManifest),
     projectId,
+    resolvePeersFromWorkspaceRoot: opts.resolvePeersFromWorkspaceRoot,
     rootProjectManifestDir,
     allowBuilds: opts.allowBuilds,
   })
+
+  const virtualStoreDir = getConfiguredVirtualStoreDir(opts)
+  if (virtualStoreDir != null) {
+    deployFiles.workspaceManifest.virtualStoreDir = virtualStoreDir
+  }
 
   const filesToWrite: Array<Promise<unknown>> = [
     fs.promises.writeFile(
@@ -398,16 +416,15 @@ async function deployFromSharedLockfile (
     ),
     writeWantedLockfile(deployDir, deployFiles.lockfile),
   ]
-  if (deployFiles.workspaceManifest) {
-    filesToWrite.push(
-      writeYamlFile(path.join(deployDir, WORKSPACE_MANIFEST_FILENAME), deployFiles.workspaceManifest)
-    )
-  }
+  filesToWrite.push(
+    writeYamlFile(path.join(deployDir, WORKSPACE_MANIFEST_FILENAME), deployFiles.workspaceManifest)
+  )
   await Promise.all(filesToWrite)
 
   try {
     await install.handler({
       ...opts,
+      deploy: true,
       allProjects: undefined,
       allProjectsGraph: undefined,
       selectedProjectsGraph: undefined,
@@ -418,20 +435,22 @@ async function deployFromSharedLockfile (
       rootProjectManifestDir: deployDir,
       dir: deployDir,
       lockfileDir: deployDir,
-      workspaceDir: undefined,
-      virtualStoreDir: undefined,
+      workspaceDir: deployDir,
+      virtualStoreDir: resolveDeployVirtualStoreDir(deployDir, opts),
+      localDirPackageImportMethod: 'clone-or-copy',
       modulesDir: undefined,
       confirmModulesPurge: false,
       frozenLockfile: true,
-      injectWorkspacePackages: undefined, // the effects of injecting workspace packages should already be part of the package snapshots
+      injectWorkspacePackages: false, // the effects of injecting workspace packages should already be part of the package snapshots
       overrides: undefined, // the effects of the overrides should already be part of the package snapshots
       packageExtensions: undefined, // the effects of the package extensions should already be part of the package snapshots
       configDependencies: undefined, // configDependencies (e.g. pacquet) are not installed into the deploy dir, so the install engine they designate isn't on disk to invoke
+      workspacePackagePatterns: ['.'],
       hooks: {
         ...opts.hooks,
         readPackage: [
           ...(opts.hooks?.readPackage ?? []),
-          deployHook,
+          pkg => deployHook(pkg),
         ],
         calculatePnpmfileChecksum: undefined, // the effects of the pnpmfile should already be part of the package snapshots
       },
@@ -445,4 +464,25 @@ As a workaround, add the following to pnpm-workspace.yaml:
   }
 
   return undefined
+}
+
+// A global virtual store or an absolute virtualStoreDir is shared with the
+// source workspace, and the self-contained deploy must not write into it.
+function getConfiguredVirtualStoreDir (
+  opts: Pick<DeployOptions, 'enableGlobalVirtualStore' | 'virtualStoreDir'>
+): string | undefined {
+  if (opts.enableGlobalVirtualStore || opts.virtualStoreDir == null || path.isAbsolute(opts.virtualStoreDir)) {
+    return undefined
+  }
+  return opts.virtualStoreDir
+}
+
+function resolveDeployVirtualStoreDir (
+  deployDir: string,
+  opts: Pick<DeployOptions, 'enableGlobalVirtualStore' | 'virtualStoreDir'>
+): string {
+  const virtualStoreDir = getConfiguredVirtualStoreDir(opts)
+  return virtualStoreDir == null
+    ? path.join(deployDir, 'node_modules/.pnpm')
+    : path.resolve(deployDir, virtualStoreDir)
 }

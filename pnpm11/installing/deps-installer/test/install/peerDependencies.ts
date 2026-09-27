@@ -1524,6 +1524,23 @@ test('local tarball dependency with peer dependency', async () => {
   }
 })
 
+test('local tarball dependency with aliased peer dependency does not report peer issues', async () => {
+  prepareEmpty()
+
+  const reporter = jest.fn()
+  const tarballPath = f.find('tar-pkg-with-aliased-peer-1.0.0.tgz')
+
+  await addDependenciesToPackage({}, [
+    `file:${tarballPath}`,
+    'peer-a-aliased@npm:@pnpm.e2e/peer-a@1.0.0',
+    '@pnpm.e2e/peer-a@1.0.0',
+  ], testDefaults({ reporter, strictPeerDependencies: false }))
+
+  expect(reporter).not.toHaveBeenCalledWith(expect.objectContaining({
+    name: 'pnpm:peer-dependency-issues',
+  }))
+})
+
 test('peer dependency that is resolved by a dev dependency', async () => {
   const project = prepareEmpty()
   const manifest = {
@@ -2651,4 +2668,24 @@ test('adding unrelated dep does not churn transitivePeerDependencies', async () 
   for (const [key, snapshot] of Object.entries(allSnapshotsBefore)) {
     expect(lockfileAfter.snapshots[key]).toStrictEqual(snapshot)
   }
+})
+
+// Covers https://github.com/pnpm/pnpm/issues/8912
+test.each([true, false])('an optional peer that is also a regular dependency is installed as the dependency, with autoInstallPeers=%s', async (autoInstallPeers) => {
+  await addDistTag({ package: '@pnpm.e2e/bravo-dep', version: '1.1.0', distTag: 'latest' })
+  const project = prepareEmpty()
+
+  const { updatedManifest: manifest } = await addDependenciesToPackage(
+    {},
+    ['@pnpm.e2e/has-optional-peer-also-in-deps@1.0.0'],
+    testDefaults({ autoInstallPeers })
+  )
+
+  const snapshotKey = '@pnpm.e2e/has-optional-peer-also-in-deps@1.0.0'
+  expect(project.readLockfile().snapshots[snapshotKey]?.dependencies).toStrictEqual({ '@pnpm.e2e/bravo-dep': '1.0.0' })
+  expect(fs.existsSync(path.resolve('node_modules/.pnpm/@pnpm.e2e+has-optional-peer-also-in-deps@1.0.0/node_modules/@pnpm.e2e/bravo-dep'))).toBeTruthy()
+
+  await addDependenciesToPackage(manifest, ['is-negative@1.0.0'], testDefaults({ autoInstallPeers }))
+
+  expect(project.readLockfile().snapshots[snapshotKey]?.dependencies).toStrictEqual({ '@pnpm.e2e/bravo-dep': '1.0.0' })
 })

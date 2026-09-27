@@ -7,6 +7,8 @@ use std::{
 use tokio::sync::watch;
 
 #[cfg(unix)]
+use group_watchdog::GroupWatchdog;
+#[cfg(unix)]
 use std::{io::Read, os::unix::process::CommandExt, process::Stdio, ptr, time::Duration};
 
 /// Tracks the processes started by one command so a bailing task can stop
@@ -78,7 +80,15 @@ impl ProcessTracker {
                 .collect::<Vec<_>>()
         };
         #[cfg(unix)]
-        let descendants = descendant_processes(std::process::id());
+        let roots: Vec<u32> = executions
+            .iter()
+            .filter_map(|exec| match exec {
+                RunningExecution::Process { pid, .. } => Some(*pid),
+                RunningExecution::Emulated(_) => None,
+            })
+            .collect();
+        #[cfg(unix)]
+        let descendants = descendant_processes(&roots);
         for execution in executions {
             execution.cancel();
         }
@@ -122,7 +132,9 @@ impl ProcessTracker {
 /// not pass it on, and [`SpawnedChild::wait`] outlasts that shell.
 ///
 /// Every child also joins the interrupt relay for as long as the returned
-/// handle lives, so a terminal signal reaches it and pnpm waits for it.
+/// handle lives, so a terminal signal reaches it and pnpm waits for it. A
+/// Unix child with a group of its own is watched as well, so the group ends
+/// with pnpm should pnpm die before the child.
 pub fn spawn_child<'tracker>(
     command: &mut Command,
     process_tracker: Option<&'tracker ProcessTracker>,
@@ -138,6 +150,8 @@ pub fn spawn_child<'tracker>(
     // Only Unix gives a child a process group of its own, and only then
     // must a relayed signal address that group rather than the child.
     let own_process_group = cfg!(unix) && separate_process_group;
+    #[cfg(unix)]
+    let (child, watchdog) = watch_process_group(child, own_process_group)?;
     let relay = crate::interrupt::relay_to_child(child.id(), own_process_group);
     let registration = process_tracker.map(|tracker| {
         tracker.register(RunningExecution::Process {
@@ -145,7 +159,37 @@ pub fn spawn_child<'tracker>(
             separate_process_group: own_process_group,
         })
     });
-    Ok(SpawnedChild { child, own_process_group, _registration: registration, relay })
+    Ok(SpawnedChild {
+        child,
+        own_process_group,
+        _registration: registration,
+        relay,
+        #[cfg(unix)]
+        watchdog,
+    })
+}
+
+/// Start a watchdog for `child` when it leads a process group of its own.
+///
+/// A child left without its watchdog would be the very orphan the watchdog
+/// exists to prevent, so if one cannot be started the child's group is
+/// killed before the failure is returned.
+#[cfg(unix)]
+fn watch_process_group(
+    mut child: Child,
+    own_process_group: bool,
+) -> io::Result<(Child, Option<GroupWatchdog>)> {
+    if !own_process_group {
+        return Ok((child, None));
+    }
+    match GroupWatchdog::spawn(child.id()) {
+        Ok(watchdog) => Ok((child, watchdog)),
+        Err(error) => {
+            terminate_process(child.id(), true);
+            let _ = child.wait();
+            Err(error)
+        }
+    }
 }
 
 #[cfg(unix)]
@@ -163,6 +207,8 @@ pub struct SpawnedChild<'tracker> {
     own_process_group: bool,
     _registration: Option<Registration<'tracker>>,
     relay: crate::interrupt::SignalRelay,
+    #[cfg(unix)]
+    watchdog: Option<GroupWatchdog>,
 }
 
 impl SpawnedChild<'_> {
@@ -172,11 +218,17 @@ impl SpawnedChild<'_> {
 
     /// Wait for the child, and after a relayed signal for its whole process
     /// group: a shell that died from the signal may have left the script it
-    /// started still shutting down.
+    /// started still shutting down. The group's watchdog is released once
+    /// pnpm is done with the group, so whatever the child left running in
+    /// it is not ended by pnpm's own exit.
     pub fn wait(&mut self) -> io::Result<std::process::ExitStatus> {
         let status = self.child.wait()?;
         if self.own_process_group && self.relay.relayed() {
             wait_for_process_group(self.child.id());
+        }
+        #[cfg(unix)]
+        if let Some(watchdog) = self.watchdog.take() {
+            watchdog.release();
         }
         Ok(status)
     }
@@ -267,13 +319,16 @@ fn terminate_descendant(pid: i32) {
 }
 
 #[cfg(unix)]
-fn descendant_processes(root: u32) -> Vec<i32> {
+fn descendant_processes(roots: &[u32]) -> Vec<i32> {
+    if roots.is_empty() {
+        return Vec::new();
+    }
     let Some(listing) = process_listing() else {
         return Vec::new();
     };
     let children = parse_parent_child_pids(&listing);
     let mut descendants = Vec::new();
-    let mut stack = vec![root];
+    let mut stack = roots.to_vec();
     while let Some(parent) = stack.pop() {
         for &pid in children
             .get(&parent)
@@ -384,6 +439,9 @@ fn taskkill_path() -> Option<std::path::PathBuf> {
         )
     }
 }
+
+#[cfg(unix)]
+mod group_watchdog;
 
 #[cfg(all(test, unix))]
 mod tests;

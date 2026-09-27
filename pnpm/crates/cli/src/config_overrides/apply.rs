@@ -26,6 +26,8 @@ where
     }
     let resolved = resolve_store_dir::<Sys>(store_dir, &workspace_dir)?;
     config.store_dir = StoreDir::from(lexical_normalize(&resolved));
+    config.store_dir_placement_skipped = false;
+    config.store_relocation = None;
     if let Some(store_dir) = store_dir.to_str() {
         config.explicit_settings.insert(
             "storeDir".to_string(),
@@ -193,6 +195,7 @@ impl ConfigOverrides {
             unsafe_perm => "unsafePerm",
             dangerously_allow_all_builds => "dangerouslyAllowAllBuilds",
             engine_strict => "engineStrict",
+            force_ignores_platform => "forceIgnoresPlatform",
             frozen_store => "frozenStore",
             ignore_pnpmfile => "ignorePnpmfile",
         );

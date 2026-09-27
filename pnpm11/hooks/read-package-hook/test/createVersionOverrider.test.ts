@@ -439,6 +439,56 @@ test('createVersionsOverrider() overrides dependencies with file with relative p
   })
 })
 
+test('createVersionsOverrider() overrides dependencies with bare relative tarball path for workspace package', () => {
+  const rootDir = process.cwd()
+  const overrider = createVersionsOverrider([
+    {
+      targetPkg: {
+        name: 'qar',
+      },
+      newBareSpecifier: './tarballs/qar-1.0.0.tgz',
+    },
+  ], rootDir)
+  expect(overrider({
+    name: 'foo',
+    version: '1.2.0',
+    dependencies: {
+      qar: '3.0.0',
+    },
+  }, path.join(rootDir, 'packages', 'pkg'))).toStrictEqual({
+    name: 'foo',
+    version: '1.2.0',
+    dependencies: {
+      qar: '../../tarballs/qar-1.0.0.tgz',
+    },
+  })
+})
+
+test('createVersionsOverrider() does not rewrite remote tarball URLs', () => {
+  const rootDir = process.cwd()
+  const overrider = createVersionsOverrider([
+    {
+      targetPkg: {
+        name: 'qar',
+      },
+      newBareSpecifier: 'https://example.com/qar-1.0.0.tgz',
+    },
+  ], rootDir)
+  expect(overrider({
+    name: 'foo',
+    version: '1.2.0',
+    dependencies: {
+      qar: '3.0.0',
+    },
+  }, path.join(rootDir, 'packages', 'pkg'))).toStrictEqual({
+    name: 'foo',
+    version: '1.2.0',
+    dependencies: {
+      qar: 'https://example.com/qar-1.0.0.tgz',
+    },
+  })
+})
+
 test('createVersionsOverrider() overrides dependencies with file specified with absolute path', () => {
   const absolutePath = path.join(import.meta.dirname, 'qar')
   const overrider = createVersionsOverrider([
@@ -618,6 +668,32 @@ test('createVersionsOverrider() overrides peerDependencies of another dependency
     peerDependencies: {
       react: '18.1.0',
     },
+  })
+})
+
+test.each(['unwanted-peer', 'my-app>unwanted-peer'])('createVersionsOverrider() removes optional peer metadata with %s', (selector) => {
+  const overrider = createVersionsOverrider(parseOverrides({ [selector]: '-' }, {}), process.cwd())
+  const manifest = {
+    name: 'my-app',
+    version: '1.0.0',
+    peerDependencies: { 'unwanted-peer': '^1.0.0', kept: '^2.0.0' },
+    peerDependenciesMeta: Object.freeze({
+      'unwanted-peer': { optional: true },
+      kept: { optional: true },
+    }),
+  }
+
+  expect(overrider(manifest)).toStrictEqual({
+    name: 'my-app',
+    version: '1.0.0',
+    dependencies: {},
+    peerDependencies: { kept: '^2.0.0' },
+    peerDependenciesMeta: { kept: { optional: true } },
+  })
+  expect(manifest.peerDependencies).toStrictEqual({ 'unwanted-peer': '^1.0.0', kept: '^2.0.0' })
+  expect(manifest.peerDependenciesMeta).toStrictEqual({
+    'unwanted-peer': { optional: true },
+    kept: { optional: true },
   })
 })
 

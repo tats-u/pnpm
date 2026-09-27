@@ -139,7 +139,7 @@ fn writes_shim_for_bin_string() {
     assert!(shim_path.exists(), "shim should be created");
 
     let body = read_to_string(&shim_path).unwrap();
-    assert!(body.contains(r#""$basedir/../foo/bin/cli.js""#), "shim body: {body}");
+    assert!(body.contains(r#""$basedir_abs/../foo/bin/cli.js""#), "shim body: {body}");
     assert!(is_shim_pointing_at(&body, &shim_path, &pkg_dir.join("bin/cli.js")));
 
     #[cfg(unix)]
@@ -230,7 +230,7 @@ fn link_bins_propagates_create_bin_dir_error_via_di() {
         }
     }
     impl FsEnsureExecutableBits for FailingCreateDir {
-        fn ensure_executable_bits(_: &Path) -> io::Result<()> {
+        fn ensure_executable_bits(_: &Path, _: Option<&Path>) -> io::Result<()> {
             unreachable!()
         }
     }
@@ -303,7 +303,7 @@ fn link_bins_propagates_write_shim_error_via_di() {
         }
     }
     impl FsEnsureExecutableBits for FailingWrite {
-        fn ensure_executable_bits(_: &Path) -> io::Result<()> {
+        fn ensure_executable_bits(_: &Path, _: Option<&Path>) -> io::Result<()> {
             unreachable!()
         }
     }
@@ -373,7 +373,7 @@ fn link_bins_swallows_shim_chmod_not_found_via_di() {
         }
     }
     impl FsEnsureExecutableBits for NotFoundShimChmod {
-        fn ensure_executable_bits(_: &Path) -> io::Result<()> {
+        fn ensure_executable_bits(_: &Path, _: Option<&Path>) -> io::Result<()> {
             Ok(())
         }
     }
@@ -442,7 +442,7 @@ fn link_bins_propagates_probe_shim_source_error_via_di() {
         }
     }
     impl FsEnsureExecutableBits for FailingProbe {
-        fn ensure_executable_bits(_: &Path) -> io::Result<()> {
+        fn ensure_executable_bits(_: &Path, _: Option<&Path>) -> io::Result<()> {
             unreachable!()
         }
     }

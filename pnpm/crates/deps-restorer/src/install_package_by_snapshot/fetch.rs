@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     CreateVirtualDirBySnapshot, build_modules::exec_scripts_prepend_node_path,
-    retry_config::retry_opts_from_config,
+    create_virtual_store::requires_build_from_cas_paths, retry_config::retry_opts_from_config,
 };
 use pnpm_config::NodeLinker;
 use pnpm_executor::ScriptsPrependNodePath as ExecScriptsPrependNodePath;
@@ -45,6 +45,8 @@ pub(super) struct SlotLink<'s> {
     snapshot: &'s SnapshotEntry,
     package_id: &'s str,
     source_is_mutable: bool,
+    /// See [`crate::SlotImportSource::source_exists`].
+    source_exists: bool,
 }
 pub(super) struct TarballFetch<'a, AllowBuild> {
     download: &'a IngestTarballToStore<'a>,
@@ -62,16 +64,10 @@ pub(super) struct TarballFetch<'a, AllowBuild> {
 /// owned `HashMap` is cloned out of the shared `Arc` so the rest of the
 /// pass keeps its by-value contract.
 ///
-/// The caller passes a mem cache only for registry resolutions: those
-/// are the only ones the background prefetchers populate — the pnpr
-/// `TarballPrefetcher` and the resolve-time `PrefetchingResolver` both
-/// key by `name@version`, and a remote tarball resolves with no
-/// `name_ver`, so they skip it. Its only mem-cache entry comes from the
-/// resolver's download-to-resolve, and a hit on that entry returns the
-/// extraction without touching the store index. Taking the standalone
-/// path instead keeps this pass reconciling the row itself, so a later
-/// re-resolve finds the warm store whatever the resolver did or didn't
-/// write.
+/// Registry resolutions reuse background downloads. Commit-addressed git archives
+/// reuse the raw extraction from manifest recovery and still run prepare and
+/// packlist processing at installation. Other tarballs fetch standalone to
+/// reconcile their store index entries.
 pub(super) async fn download_tarball<Reporter: self::Reporter>(
     download: IngestTarballToStore<'_>,
     tarball_mem_cache: Option<&MemCache>,
@@ -99,21 +95,25 @@ pub(super) async fn download_tarball<Reporter: self::Reporter>(
         Err(err) => Err(err),
     }
 }
+/// Returns the file map alongside whether the source directory existed to
+/// walk. See [`crate::SlotImportSource::source_exists`] for why the caller
+/// needs that distinction.
 pub(super) fn fetch_directory_resolution(
     workspace_root: &Path,
     dir_resolution: &DirectoryResolution,
     include_only_package_files: bool,
-) -> Result<HashMap<String, PathBuf>, InstallPackageBySnapshotError> {
+) -> Result<(HashMap<String, PathBuf>, bool), InstallPackageBySnapshotError> {
     let directory = lexical_normalize(&workspace_root.join(&dir_resolution.directory));
     let output = pnpm_directory_fetcher::DirectoryFetcher {
         directory,
         include_only_package_files,
         resolve_symlinks: false,
+        preserve_symlinks: true,
         allow_path_escape: false,
     }
     .run()
     .map_err(InstallPackageBySnapshotError::DirectoryFetch)?;
-    Ok(output.files_map)
+    Ok((output.files_map, output.exists))
 }
 /// `pnpm:progress` `resolved` for a frozen-lockfile snapshot the
 /// cold-batch path is about to fetch: one event per (resolved)
@@ -172,8 +172,8 @@ impl InstallPackageBySnapshot<'_> {
         // then the file map points at mutable source even though the
         // lockfile entry says otherwise.
         let source_is_mutable = matches!(resolution, LockfileResolution::Directory(_));
-        let cas_paths = match custom.cas_paths {
-            Some(paths) => paths,
+        let (cas_paths, source_exists) = match custom.cas_paths {
+            Some(paths) => (paths, true),
             None => {
                 self.fetch_cas_paths::<Reporter>(SnapshotFetch {
                     package_key,
@@ -185,10 +185,16 @@ impl InstallPackageBySnapshot<'_> {
             }
         };
         self.link_slot::<Reporter>(
-            SlotLink { package_key, snapshot, package_id: &package_id, source_is_mutable },
+            SlotLink {
+                package_key,
+                snapshot,
+                package_id: &package_id,
+                source_is_mutable,
+                source_exists,
+            },
             &cas_paths,
         )?;
-        Ok(InstalledPackage { cas_paths, source_is_mutable })
+        Ok(InstalledPackage { cas_paths, source_is_mutable, source_exists })
     }
 
     fn ingest<'d>(
@@ -232,18 +238,22 @@ impl InstallPackageBySnapshot<'_> {
         }
     }
 
+    /// Returns the fetched CAS paths alongside whether the source they came
+    /// from existed. Always `true` except for a directory resolution; see
+    /// [`crate::SlotImportSource::source_exists`].
     async fn fetch_cas_paths<Reporter: self::Reporter>(
         &self,
         fetch: SnapshotFetch<'_>,
-    ) -> Result<HashMap<String, PathBuf>, InstallPackageBySnapshotError> {
+    ) -> Result<(HashMap<String, PathBuf>, bool), InstallPackageBySnapshotError> {
         let config = self.ctx.config;
         // Named local so both git fetchers can borrow it across their
         // `.await` without depending on temporary-lifetime extension.
         let allow_build = self.allow_build();
         match fetch.resolution {
-            LockfileResolution::Tarball(_) | LockfileResolution::Registry(_) => {
-                self.fetch_snapshot_tarball::<Reporter>(&fetch, &allow_build).await
-            }
+            LockfileResolution::Tarball(_) | LockfileResolution::Registry(_) => self
+                .fetch_snapshot_tarball::<Reporter>(&fetch, &allow_build)
+                .await
+                .map(|cas_paths| (cas_paths, true)),
             LockfileResolution::Directory(dir_resolution) => {
                 // Injected workspace dep (`file:./local-pkg` with
                 // `dependenciesMeta[*].injected = true`). The source
@@ -271,9 +281,10 @@ impl InstallPackageBySnapshot<'_> {
             // `BinaryResolution` extractor.
             LockfileResolution::Binary(binary) => {
                 self.fetch_binary::<Reporter>(binary, fetch.package_key).await
+                    .map(|cas_paths| (cas_paths, true))
             }
-            LockfileResolution::Variations(variations) => {
-                self.fetch_binary::<Reporter>(
+            LockfileResolution::Variations(variations) => self
+                .fetch_binary::<Reporter>(
                     binary_variant_for_host(
                         variations,
                         fetch.package_key,
@@ -282,10 +293,11 @@ impl InstallPackageBySnapshot<'_> {
                     fetch.package_key,
                 )
                 .await
-            }
-            LockfileResolution::Git(git_resolution) => {
-                self.fetch_git::<Reporter>(&fetch, git_resolution, &allow_build).await
-            }
+                .map(|cas_paths| (cas_paths, true)),
+            LockfileResolution::Git(git_resolution) => self
+                .fetch_git::<Reporter>(&fetch, git_resolution, &allow_build)
+                .await
+                .map(|cas_paths| (cas_paths, true)),
             // A custom-typed resolution cannot be materialized without
             // a custom fetcher that claims it.
             LockfileResolution::Custom(custom) => {
@@ -344,15 +356,18 @@ impl InstallPackageBySnapshot<'_> {
                 removed_aliases: &[],
                 symlink: config.symlink,
             },
-            import: crate::PackageImportOptions {
-                method: config.package_import_method,
-                logged_methods: self.ctx.logged_methods,
-                requester: self.ctx.requester,
-            },
+            import: crate::PackageImportOptions::from_config(
+                config,
+                self.ctx.logged_methods,
+                self.ctx.requester,
+            ),
             source: crate::SlotImportSource {
                 is_mutable: slot.source_is_mutable,
+                source_exists: slot.source_exists,
                 force: false,
                 build_marker: None,
+                needs_build: requires_build_from_cas_paths(cas_paths)
+                    || crate::snapshot_has_patch(slot.package_key),
             },
             layout: self.ctx.linker.layout,
             cas_paths,

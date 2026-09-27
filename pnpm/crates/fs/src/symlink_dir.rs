@@ -41,6 +41,28 @@ pub fn symlink_dir(original: &Path, link: &Path) -> io::Result<()> {
     }
 }
 
+/// Create a directory link at `link` holding `contents` as given, which
+/// may be relative to the link.
+///
+/// On Windows a process that may not create symlinks gets a junction
+/// instead, which only holds an absolute path, so `original` has to be the
+/// absolute path `contents` resolves to from where the link finally lives.
+pub fn symlink_dir_with_contents(original: &Path, contents: &Path, link: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        let _ = original;
+        std::os::unix::fs::symlink(contents, link)
+    }
+    #[cfg(windows)]
+    {
+        windows::create_with_contents(
+            &to_native_separators(original),
+            &to_native_separators(contents),
+            &to_native_separators(link),
+        )
+    }
+}
+
 /// Rewrite every `/` in `path` to the native `\` on Windows.
 ///
 /// A scoped alias like `@scope/name` is joined into a path as a single
@@ -66,7 +88,7 @@ pub fn to_native_separators(path: &Path) -> Cow<'_, Path> {
     // path `components` treats `/` as a literal byte and leaves it in
     // place. Package paths are valid Unicode, so `to_str` succeeds.
     match path.to_str() {
-        Some(s) => Cow::Owned(PathBuf::from(s.replace('/', "\\"))),
+        Some(s) => Cow::Owned(PathBuf::from(s.replace('/', r"\"))),
         None => Cow::Borrowed(path),
     }
 }
@@ -99,7 +121,7 @@ pub fn is_symlink_or_junction(link: &Path) -> io::Result<bool> {
     {
         // Check the symlink case first so a true symlink never reaches
         // `junction::exists`.
-        if link.is_symlink() {
+        if crate::symlink_metadata_with_retry(link)?.file_type().is_symlink() {
             return Ok(true);
         }
         // `junction::exists` reports a path that is not a reparse point
@@ -107,7 +129,7 @@ pub fn is_symlink_or_junction(link: &Path) -> io::Result<bool> {
         // rather than `Ok(false)`; for this question that is a plain
         // "no".
         const ERROR_NOT_A_REPARSE_POINT: i32 = 4390;
-        match junction::exists(link) {
+        match crate::retry::retry_transient_file_locks(|| junction::exists(link)) {
             Ok(is_junction) => Ok(is_junction),
             Err(error) if error.raw_os_error() == Some(ERROR_NOT_A_REPARSE_POINT) => Ok(false),
             Err(error) => Err(error),
@@ -128,11 +150,10 @@ pub fn is_symlink_or_junction(link: &Path) -> io::Result<bool> {
 /// `ERROR_ACCESS_DENIED`. Wrapping the platform split here keeps
 /// callers free of `#[cfg]`.
 ///
-/// On Windows the unlink follows the retry policy of
-/// [`crate::rename_with_retry`].
+/// The unlink follows the retry policy of [`crate::rename_with_retry`].
 pub fn remove_symlink_dir(link: &Path) -> io::Result<()> {
     #[cfg(unix)]
-    return std::fs::remove_file(link);
+    return retry_transient_file_locks(|| std::fs::remove_file(link));
     #[cfg(windows)]
     return retry_transient_file_locks(|| std::fs::remove_dir(link));
 }
@@ -152,7 +173,13 @@ pub fn remove_symlink_dir(link: &Path) -> io::Result<()> {
 /// backticks rather than an intra-doc link because the `junction`
 /// crate is only in scope on Windows targets — a link would
 /// break the Linux doc build.)
+///
+/// Target inspection follows the retry policy of [`crate::rename_with_retry`].
 pub fn read_symlink_dir(link: &Path) -> io::Result<PathBuf> {
+    retry_transient_file_locks(|| read_symlink_dir_once(link))
+}
+
+fn read_symlink_dir_once(link: &Path) -> io::Result<PathBuf> {
     #[cfg(unix)]
     return std::fs::read_link(link);
     #[cfg(windows)]
@@ -238,11 +265,7 @@ fn force_symlink_inner(
         _ => return Err(initial_err),
     }
 
-    // The read waits out a refusal: on Windows a link another installer
-    // created moments ago can refuse it while a handle on it is open. A real
-    // file or directory refuses for a reason that is not a lock, so it
-    // answers at once.
-    let Ok(existing) = retry_transient_file_locks(|| read_symlink_dir(link)) else {
+    let Ok(existing) = read_symlink_dir(link) else {
         return replace_unreadable_occupant(target, link, tried, create_symlink, initial_err);
     };
     if existing_symlink_up_to_date(target, link, &existing) {
@@ -347,8 +370,8 @@ mod windows {
     };
 
     /// Cached choice of writer. `UNDECIDED` until the first successful
-    /// call resolves the EPERM probe; afterward `USE_SYMLINK` or
-    /// `USE_JUNCTION`. Caching the winning branch after the first call
+    /// call resolves the EPERM probe; afterward [`USE_SYMLINK`] or
+    /// [`USE_JUNCTION`]. Caching the winning branch after the first call
     /// avoids re-probing on every subsequent symlink.
     const UNDECIDED: u8 = 0;
     const USE_SYMLINK: u8 = 1;
@@ -372,7 +395,11 @@ mod windows {
         create_with_contents(original, original, link)
     }
 
-    fn create_with_contents(original: &Path, contents: &Path, link: &Path) -> io::Result<()> {
+    pub(super) fn create_with_contents(
+        original: &Path,
+        contents: &Path,
+        link: &Path,
+    ) -> io::Result<()> {
         match MODE.load(Ordering::Relaxed) {
             USE_SYMLINK => match std::os::windows::fs::symlink_dir(contents, link) {
                 Err(error) if should_fallback_to_junction(&error) => {
@@ -444,9 +471,9 @@ mod windows {
 
     /// Publish `staging` at `link` with an atomic rename, folding a lost race
     /// into the `AlreadyExists` reuse signal. A transient Windows file lock
-    /// on the rename is retried, one [`attempt_commit`] per try.
+    /// on inspection or rename is retried, one [`attempt_commit`] per try.
     fn commit_staged_junction(link: &Path, staging: &Path) -> io::Result<()> {
-        let rename_error = match super::retry_transient_file_locks(|| attempt_commit(link, staging))
+        let commit_error = match super::retry_transient_file_locks(|| attempt_commit(link, staging))
         {
             Ok(CommitAttempt::Committed) => return Ok(()),
             Ok(CommitAttempt::DestinationTaken) => {
@@ -458,15 +485,15 @@ mod windows {
             Err(error) => error,
         };
 
-        // The rename either lost a cross-process race or genuinely failed;
+        // The commit either lost a cross-process race or genuinely failed;
         // re-inspecting the destination tells those apart.
-        let after_rename = format!(" after a failed rename ({rename_error})");
+        let after_commit = format!(" after a failed commit ({commit_error})");
         match inspect_destination(link) {
-            Destination::Exists => Err(reuse_completed_destination(link, staging, &after_rename)),
+            Destination::Exists => Err(reuse_completed_destination(link, staging, &after_commit)),
             Destination::InspectFailed(error) => {
-                Err(inspect_failed(link, staging, &error, &after_rename))
+                Err(inspect_failed(link, staging, &error, &after_commit))
             }
-            Destination::Missing => Err(discard_staging_after_rename(staging, link, rename_error)),
+            Destination::Missing => Err(discard_staging_after_commit(staging, link, commit_error)),
         }
     }
 
@@ -485,13 +512,18 @@ mod windows {
     /// slow part — the reparse-point conversion inside [`stage_junction`] —
     /// running in parallel. Re-inspecting the destination on every try means
     /// a race lost while waiting is reused rather than retried through the
-    /// budget. Only the rename failure is returned as `Err`, so the retry
-    /// never repeats a final verdict about the destination.
+    /// budget. A delete-pending destination can deny inspection temporarily;
+    /// that error follows the same bounded retry policy as a locked rename.
     fn attempt_commit(link: &Path, staging: &Path) -> io::Result<CommitAttempt> {
         let _commit_guard = JUNCTION_COMMIT_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
         match inspect_destination(link) {
             Destination::Missing => {}
             Destination::Exists => return Ok(CommitAttempt::DestinationTaken),
+            Destination::InspectFailed(error)
+                if crate::retry::is_transient_file_lock_error(&error) =>
+            {
+                return Err(error);
+            }
             Destination::InspectFailed(error) => return Ok(CommitAttempt::InspectFailed(error)),
         }
         fs::rename(staging, link).map(|()| CommitAttempt::Committed)
@@ -559,25 +591,25 @@ mod windows {
         }
     }
 
-    /// The rename genuinely failed and left nothing at `link`. Discard staging
-    /// and surface the rename error — but never as `AlreadyExists`, or
+    /// The commit genuinely failed and left nothing at `link`. Discard staging
+    /// and surface the commit error — but never as `AlreadyExists`, or
     /// [`super::force_symlink_inner`] would treat the missing link as reusable.
     /// A rename that lost the race only to have the winner vanish before the
     /// re-inspection can carry that kind, so strip it to `Other`; every other
     /// kind (including `NotFound`, which drives a mkdir + retry) is informative
     /// and safe to surface unchanged.
-    pub(super) fn discard_staging_after_rename(
+    pub(super) fn discard_staging_after_commit(
         staging: &Path,
         link: &Path,
-        rename_error: io::Error,
+        commit_error: io::Error,
     ) -> io::Error {
         match fs::remove_dir(staging) {
-            Ok(()) if rename_error.kind() != io::ErrorKind::AlreadyExists => rename_error,
+            Ok(()) if commit_error.kind() != io::ErrorKind::AlreadyExists => commit_error,
             Ok(()) => io::Error::other(format!(
-                "failed to rename staged junction {staging:?} to {link:?}: {rename_error}",
+                "failed to commit staged junction {staging:?} to {link:?}: {commit_error}",
             )),
             Err(cleanup) => io::Error::other(format!(
-                "failed to rename staged junction {staging:?} to {link:?}: {rename_error}; \
+                "failed to commit staged junction {staging:?} to {link:?}: {commit_error}; \
                  cleanup failed: {cleanup}",
             )),
         }

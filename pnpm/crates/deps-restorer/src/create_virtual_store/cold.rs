@@ -9,7 +9,8 @@ use crate::{CasPathsByPkgId, InstallPackageBySnapshot, InstallPackageBySnapshotE
 use futures_util::{StreamExt, stream::FuturesUnordered};
 use pnpm_lockfile::{PackageKey, PackageMetadata, PkgName, SnapshotEntry};
 use pnpm_reporter::Reporter;
-use pnpm_tarball::PrefetchResult;
+use pnpm_store_dir::store_index_key;
+use pnpm_tarball::{PrefetchResult, pending_progress_key};
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
@@ -31,13 +32,24 @@ pub(super) struct ColdCapture<'a> {
     pub(super) cas_paths: HashMap<String, PathBuf>,
     pub(super) requires_build: bool,
     pub(super) source_is_mutable: bool,
+    /// See [`crate::SlotImportSource::source_exists`].
+    pub(super) source_exists: bool,
     pub(super) force_import: bool,
 }
 pub(super) fn add_cold_cas_paths(map: &mut CasPathsByPkgId, cold_cas_paths: Vec<ColdCapture<'_>>) {
     map.reserve(cold_cas_paths.len());
-    for ColdCapture { snapshot_key, cas_paths: paths, .. } in cold_cas_paths {
+    for ColdCapture {
+        snapshot_key,
+        cas_paths: paths,
+        source_is_mutable,
+        ..
+    } in cold_cas_paths
+    {
         map.entry(cas_paths_key(snapshot_key))
-            .or_insert_with(|| Arc::new(paths));
+            .or_insert_with(|| crate::HoistedPackageFiles {
+                cas_paths: Arc::new(paths),
+                source_is_mutable,
+            });
     }
 }
 /// An optional snapshot whose fetch fails is dropped rather than aborting the
@@ -135,9 +147,24 @@ pub(super) async fn download_one<'a, Reporter: self::Reporter>(
         })?;
     let installed = match batch.installer.run::<Reporter>(snapshot_key, metadata, snapshot).await {
         Ok(installed) => installed,
-        Err(err) => return swallow_optional_fetch_failure(snapshot_key, snapshot, err),
+        Err(err) => {
+            let failure = swallow_optional_fetch_failure(snapshot_key, snapshot, err);
+            if failure.is_ok()
+                && let Some(integrity) = metadata.resolution.integrity()
+            {
+                let key = store_index_key(&integrity.to_string(), &metadata_key.pkg_id());
+                if batch.link_template.progress_reported.contains(&pending_progress_key(&key)) {
+                    batch.link_template.progress_reported.insert(key);
+                }
+            }
+            return failure;
+        }
     };
-    let crate::InstalledPackage { cas_paths, source_is_mutable } = installed;
+    let crate::InstalledPackage {
+        cas_paths,
+        source_is_mutable,
+        source_exists,
+    } = installed;
     Ok((
         None,
         Some(ColdCapture {
@@ -146,6 +173,7 @@ pub(super) async fn download_one<'a, Reporter: self::Reporter>(
             requires_build: requires_build_from_cas_paths(&cas_paths),
             cas_paths,
             source_is_mutable,
+            source_exists,
             force_import: batch.reuse.must_replace(snapshot_key),
         }),
     ))

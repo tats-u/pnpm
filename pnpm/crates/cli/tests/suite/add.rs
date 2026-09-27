@@ -258,6 +258,34 @@ fn should_add_to_package_json() {
     drop((root, anchor)); // cleanup
 }
 
+/// An empty `peerDependencies` the user wrote survives an add
+/// (pnpm/pnpm#5096).
+#[test]
+fn add_keeps_an_empty_peer_dependencies_field() {
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
+    std::fs::write(
+        workspace.join("package.json"),
+        serde_json::json!({ "name": "fixture", "peerDependencies": {} }).to_string(),
+    )
+    .expect("write package.json");
+    pacquet
+        .with_args(["add", "@pnpm.e2e/hello-world-js-bin"])
+        .assert()
+        .success();
+    let manifest: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(workspace.join("package.json")).unwrap())
+            .unwrap();
+    assert_eq!(manifest.get("peerDependencies"), Some(&serde_json::json!({})));
+    assert!(manifest["dependencies"].get("@pnpm.e2e/hello-world-js-bin").is_some());
+    drop((root, npmrc_info));
+}
+
 /// A one-member workspace whose `fixtures/` packages let a `-w` add use
 /// `file:` specs instead of reaching the registry. Returns the member's
 /// directory.
@@ -743,7 +771,7 @@ fn add_updates_dependency_in_the_group_it_already_occupies() {
     .expect("write package.json");
 
     pacquet
-        .with_args(["add", "@pnpm.e2e/foo@100.1.0", "@pnpm.e2e/bar@100.1.0", "--lockfile-only"])
+        .with_args(["add", "@pnpm.e2e/foo@latest", "@pnpm.e2e/bar@latest", "--lockfile-only"])
         .assert()
         .success();
 
@@ -983,4 +1011,33 @@ fn install_with_a_package_skips_dependencies_when_dev_is_set() {
     assert_eq!(group_spec(DependencyGroup::Dev).as_deref(), Some("100.0.0"));
     assert_eq!(group_spec(DependencyGroup::Prod), None);
     drop((root, npmrc_info)); // cleanup
+}
+
+#[test]
+fn add_exact_version_honors_exact_when_range_already_exists() {
+    let CommandTempCwd {
+        pacquet,
+        root,
+        workspace,
+        npmrc_info,
+        ..
+    } = CommandTempCwd::init().add_mocked_registry();
+    std::fs::write(
+        workspace.join("package.json"),
+        r#"{ "name": "p", "version": "1.0.0", "dependencies": { "is-positive": "^0.5.0" } }"#,
+    )
+    .unwrap();
+
+    pacquet
+        .with_args(["add", "is-positive@1.0.0"])
+        .assert()
+        .success();
+
+    let manifest = PackageManifest::from_path(workspace.join("package.json")).unwrap();
+    let spec = manifest
+        .dependencies([DependencyGroup::Prod])
+        .find(|(key, _)| *key == "is-positive")
+        .map(|(_, spec)| spec.to_string());
+    assert_eq!(spec.as_deref(), Some("1.0.0"));
+    drop((root, npmrc_info));
 }

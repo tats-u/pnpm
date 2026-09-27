@@ -236,6 +236,22 @@ pub struct IncludedDependencies {
     pub optional_dependencies: bool,
 }
 
+impl IncludedDependencies {
+    /// Whether at least one dependency group is left out.
+    #[must_use]
+    pub fn excludes_a_group(self) -> bool {
+        !(self.dependencies && self.dev_dependencies && self.optional_dependencies)
+    }
+
+    /// Whether a project's own `optionalDependencies` are included. They
+    /// install with its production dependencies, so `--dev` leaves them
+    /// out while it still installs the optional dependencies of packages.
+    #[must_use]
+    pub fn includes_project_optional_dependencies(self) -> bool {
+        self.dependencies && self.optional_dependencies
+    }
+}
+
 /// Linker variant the install pipeline used. The string variants match
 /// pnpm's runtime values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

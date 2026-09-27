@@ -211,6 +211,7 @@ fn resolve_projects_options() -> ResolveProjectsOptions {
             dependencies: BTreeMap::from([("acme".to_string(), "catalog:".to_string())]),
             dev_dependencies: BTreeMap::new(),
             optional_dependencies: BTreeMap::new(),
+            peer_dependencies: BTreeMap::new(),
         }],
         fix_lockfile: false,
         routing: crate::RegistryRouting {
@@ -351,16 +352,41 @@ fn a_violations_frame_rebuilds_a_verify_error() {
 }
 
 #[test]
-fn tarball_mismatch_maps_to_the_generic_envelope() {
+fn tarball_mismatch_keeps_its_own_variant() {
     let line = br#"{"type":"violations","violations":[{"name":"acme","version":"1.0.0","code":"TARBALL_URL_MISMATCH","reason":"url mismatch"}]}"#;
     let Frame::Violations { violations } = parse_frame(line).expect("frame parses") else {
         panic!("expected a violations frame");
     };
     let verify_err = build_verify_error(violations);
-    assert!(
-        matches!(verify_err, VerifyError::LockfileResolutionVerification { .. }),
-        "got {verify_err:?}",
-    );
+    assert!(matches!(verify_err, VerifyError::TarballUrlMismatch { .. }), "got {verify_err:?}");
+}
+
+#[test]
+fn structural_violations_keep_their_code_and_hint() {
+    for code in [
+        "MISSING_TARBALL_INTEGRITY",
+        "RESOLUTION_SHAPE_MISMATCH",
+        "TARBALL_URL_MISMATCH",
+        "TARBALL_REVISION_MISMATCH",
+        "MISSING_NAMED_REGISTRY",
+    ] {
+        let line = format!(
+            r#"{{"type":"violations","violations":[{{"name":"acme","version":"1.0.0","code":"{code}","reason":"broken"}},{{"name":"bravo","version":"1.0.0","code":"MINIMUM_RELEASE_AGE_VIOLATION","reason":"young"}}]}}"#,
+        );
+        let Frame::Violations { violations } = parse_frame(line.as_bytes()).expect("frame parses")
+        else {
+            panic!("expected a violations frame");
+        };
+        let verify_err = build_verify_error(violations);
+        assert!(
+            verify_err
+                .to_string()
+                .contains(&format!("[{code}]")),
+            "got {verify_err}",
+        );
+        let help = miette::Diagnostic::help(&verify_err).expect("hint").to_string();
+        assert!(!help.contains("relax the policy"), "{code}: {help}");
+    }
 }
 
 #[test]

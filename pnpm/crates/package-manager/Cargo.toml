@@ -42,6 +42,7 @@ pnpm-local-spec = { workspace = true }
 pnpm-deps-inspection-peers = { workspace = true }
 pnpm-graph-hasher = { workspace = true }
 pnpm-hooks = { workspace = true }
+pnpm-injected-deps-syncer = { workspace = true }
 pnpm-package-manifest = { workspace = true }
 pnpm-package-is-installable = { workspace = true }
 pnpm-patching = { workspace = true }
@@ -73,9 +74,9 @@ derive_more = { workspace = true }
 dialoguer = { workspace = true }
 dunce = { workspace = true }
 futures-util = { workspace = true }
+home = { workspace = true }
 httpdate = { workspace = true }
 indexmap = { workspace = true }
-is_ci = { workspace = true }
 node-semver = { workspace = true }
 pathdiff = { workspace = true }
 pipe-trait = { workspace = true }

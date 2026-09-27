@@ -7,7 +7,7 @@ import type {
   Modules,
 } from '@pnpm/installing.modules-yaml'
 import { readProjectsContext } from '@pnpm/installing.read-projects-context'
-import type { LockfileObject } from '@pnpm/lockfile.fs'
+import type { LockfileObject, PatchedDepPathsStatus } from '@pnpm/lockfile.fs'
 import type { WorkspacePackages } from '@pnpm/resolving.resolver-base'
 import { registerProject } from '@pnpm/store.controller'
 import type {
@@ -41,6 +41,8 @@ export interface PnpmContext {
   /** Affected by existing modules directory, if it exists. */
   extraNodePaths: string[]
   lockfileHadConflicts: boolean
+  /** Whether the lockfile's `(patch_hash=...)` dependency paths agree with its `patchedDependencies`. */
+  patchedDepPathsStatus: PatchedDepPathsStatus
   hoistedDependencies: HoistedDependencies
   /** Required included dependencies or dependencies currently included by the modules directory. */
   include: IncludedDependencies
@@ -217,6 +219,8 @@ export interface PnpmSingleContext {
   extraBinPaths: string[]
   extraNodePaths: string[]
   lockfileHadConflicts: boolean
+  /** Whether the lockfile's `(patch_hash=...)` dependency paths agree with its `patchedDependencies`. */
+  patchedDepPathsStatus: PatchedDepPathsStatus
   hoistedDependencies: HoistedDependencies
   hoistedModulesDir: string
   hoistPattern: string[] | undefined
@@ -318,7 +322,7 @@ export async function getContextForSingleImporter (
   if (opts.hoistPattern?.length) {
     extraBinPaths.unshift(path.join(hoistedModulesDir, '.bin'))
   }
-  const hookedManifest = await opts.readPackageHook?.(manifest) ?? manifest
+  const hookedManifest = await opts.readPackageHook?.(manifest, opts.dir) ?? manifest
   const ctx: PnpmSingleContext = {
     extraBinPaths,
     extraNodePaths: getExtraNodePaths({

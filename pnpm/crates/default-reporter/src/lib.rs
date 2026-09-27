@@ -31,11 +31,12 @@ use std::{
 
 use console::Term;
 use pnpm_config::ColorMode;
-use pnpm_reporter::{FetchingProgressMessage, LogEvent, PromptAction, Reporter};
+use pnpm_reporter::{LogEvent, PromptAction, Reporter};
 
 use crate::{
     colors::Colors,
     format::visible_width,
+    progress::is_coalesceable,
     state::{Output, ReporterState},
 };
 
@@ -171,6 +172,16 @@ pub fn set_max_log_level(level: MaxLogLevel) {
     let _ = MAX_LOG_LEVEL.set(level);
 }
 
+/// The configured verbosity ceiling, or [`MaxLogLevel::Info`] when
+/// [`set_max_log_level`] was not called. Output written outside the reporter
+/// reads it to stay behind the same `--loglevel` gate.
+pub fn max_log_level() -> MaxLogLevel {
+    MAX_LOG_LEVEL
+        .get()
+        .copied()
+        .unwrap_or(MaxLogLevel::Info)
+}
+
 /// Configure ANSI color rendering. Call before the first reporter event.
 pub fn set_color_mode(mode: ColorMode) {
     let _ = COLOR_MODE.set(mode);
@@ -203,6 +214,10 @@ fn cwd() -> String {
 pub struct DefaultReporter;
 
 impl Reporter for DefaultReporter {
+    fn report_fatal_error(message: String) -> Option<String> {
+        Some(message)
+    }
+
     fn emit(event: &LogEvent) {
         if progress::is_suppressed(event) {
             return;
@@ -214,19 +229,6 @@ impl Reporter for DefaultReporter {
         }
         let output = sink.state.handle(event);
         sink.write(output, is_coalesceable(event));
-    }
-}
-
-/// Whether an event is a high-volume progress update that may be dropped
-/// under throttling, mirroring pnpm's `throttleProgress` on the progress
-/// stream.
-fn is_coalesceable(event: &LogEvent) -> bool {
-    match event {
-        LogEvent::Progress(_) => true,
-        LogEvent::FetchingProgress(log) => {
-            matches!(log.message, FetchingProgressMessage::InProgress { .. })
-        }
-        _ => false,
     }
 }
 
@@ -489,10 +491,7 @@ impl Sink {
 fn reporter_options(append_only: bool) -> state::ReporterOptions {
     state::ReporterOptions {
         append_only,
-        max_log_level: MAX_LOG_LEVEL
-            .get()
-            .copied()
-            .unwrap_or(MaxLogLevel::Info),
+        max_log_level: max_log_level(),
         lifecycle: crate::state::LifecycleOptions {
             stream_output: STREAM_LIFECYCLE_OUTPUT.get().is_some_and(|value| *value),
             aggregate_output: AGGREGATE_OUTPUT.get().is_some_and(|value| *value),

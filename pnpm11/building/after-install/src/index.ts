@@ -11,18 +11,20 @@ import {
   WANTED_LOCKFILE,
 } from '@pnpm/constants'
 import { skippedOptionalDependencyLogger } from '@pnpm/core-loggers'
-import { calcDepState, type DepsStateCache, findRuntimeNodeVersion, iterateHashedGraphNodes, iteratePkgMeta, lockfileToDepGraph } from '@pnpm/deps.graph-hasher'
+import { calcDepState, type DepsStateCache, iterateHashedGraphNodes, iteratePkgMeta, lockfileToDepGraph } from '@pnpm/deps.graph-hasher'
 import * as dp from '@pnpm/deps.path'
 import { PnpmError } from '@pnpm/error'
 import {
+  PROJECT_INSTALL_STAGES as EXEC_PROJECT_INSTALL_STAGES,
   runLifecycleHooksConcurrently,
   runPostinstallHooks,
 } from '@pnpm/exec.lifecycle'
 import { safeJoinModulesDir } from '@pnpm/fs.symlink-dependency'
-import { getContext, type PnpmContext } from '@pnpm/installing.context'
+import type { PnpmContext } from '@pnpm/installing.context'
 import { writeModulesManifest } from '@pnpm/installing.modules-yaml'
 import type { TarballResolution } from '@pnpm/lockfile.types'
 import {
+  findLockedRootNodeRuntime,
   type LockfileObject,
   nameVerFromPkgSnapshot,
   packageIsIndependent,
@@ -45,6 +47,7 @@ import type {
 } from '@pnpm/types'
 import { hardLinkDir } from '@pnpm/worker'
 import { scheduleGraph, type TaskCompletion } from '@pnpm/workspace.task-scheduler'
+import { strict as isStrictSubdir } from 'is-subdir'
 import pLimit from 'p-limit'
 import semver from 'semver'
 
@@ -53,8 +56,12 @@ import {
   extendBuildOptions,
   type StrictBuildOptions,
 } from './extendBuildOptions.js'
+import { getRebuildContext } from './getRebuildContext.js'
 
 export type { BuildOptions }
+
+export const PROJECT_INSTALL_STAGES = ['preinstall', 'install', 'postinstall', 'prepublish']
+export const PROJECT_LIFECYCLE_STAGES = ['preinstall', 'install', 'postinstall', 'prepublish', 'prepare']
 
 // Serializes builds of a shared GVS projection across concurrent per-project
 // rebuilds: the first build proceeds, concurrent ones await it and reuse the
@@ -120,7 +127,7 @@ export async function buildSelectedPkgs (
     streamParser.on('data', reporter)
   }
   const opts = await extendBuildOptions(maybeOpts)
-  const ctx = await getContext({ ...opts, allProjects: projects })
+  const ctx = await getRebuildContext(projects, opts)
 
   if (ctx.currentLockfile?.packages == null) return {}
   const packages = ctx.currentLockfile.packages
@@ -193,7 +200,7 @@ export async function buildProjects (
     streamParser.on('data', reporter)
   }
   const opts = await extendBuildOptions(maybeOpts)
-  const ctx = await getContext({ ...opts, allProjects: projects })
+  const ctx = await getRebuildContext(projects, opts)
 
   let idsToRebuild: string[] = []
 
@@ -216,6 +223,7 @@ export async function buildProjects (
   const store = await createStoreController(opts)
   const scriptsOpts = {
     extraBinPaths: ctx.extraBinPaths,
+    extendNodePath: opts.extendNodePath,
     extraNodePaths: ctx.extraNodePaths,
     extraEnv: opts.extraEnv,
     preferSymlinkedExecutables: opts.preferSymlinkedExecutables,
@@ -231,7 +239,11 @@ export async function buildProjects (
     importers: Object.values(ctx.projects),
     opts: scriptsOpts,
     projectDependencies: opts.projectDependencies,
-    stages: ['preinstall', 'install', 'postinstall', 'prepublish', 'prepare'],
+    stages: opts.stages ?? (opts.deploy
+      ? EXEC_PROJECT_INSTALL_STAGES
+      : (ctx.include?.devDependencies !== false
+        ? PROJECT_LIFECYCLE_STAGES
+        : PROJECT_INSTALL_STAGES)),
   })
   for (const { id, manifest } of Object.values(ctx.projects)) {
     if (((manifest?.scripts) != null) && (!opts.pending || ctx.pendingBuilds.includes(id))) {
@@ -250,6 +262,7 @@ export async function buildProjects (
     packageManager: `${opts.packageManager.name}@${opts.packageManager.version}`,
     pendingBuilds: ctx.pendingBuilds,
     publicHoistPattern: ctx.publicHoistPattern,
+    allowBuilds: opts.allowBuilds,
     skipped: Array.from(ctx.skipped),
     storeDir: ctx.storeDir,
     virtualStoreDir: ctx.virtualStoreDir,
@@ -302,11 +315,11 @@ async function _rebuild (
 ): Promise<{ pkgsThatWereRebuilt: Set<string>, ignoredPkgs: IgnoredBuilds }> {
   const depGraph = lockfileToDepGraph(ctx.currentLockfile, opts.supportedArchitectures)
   const depsStateCache: DepsStateCache = {}
-  // Resolved `engines.runtime` Node version (when one is pinned) —
-  // every side-effects-cache key computed below is anchored to it so
+  // The root project's `engines.runtime` Node version (when one is
+  // pinned) anchors every side-effects-cache key computed below, so
   // the prefix tracks the script-runner Node rather than pnpm's own
   // `process.version`.
-  const nodeVersion = findRuntimeNodeVersion(Object.keys(depGraph))
+  const nodeVersion = findLockedRootNodeRuntime(ctx.currentLockfile)?.version
   const pkgsThatWereRebuilt = new Set<string>()
   const graph = new Map<DepPath, DepPath[]>()
   const pkgSnapshots: PackageSnapshots = ctx.currentLockfile.packages ?? {}
@@ -322,6 +335,7 @@ async function _rebuild (
           devDependencies: opts.development,
           optionalDependencies: opts.optional,
         },
+        resolvePeersFromWorkspaceRoot: opts.resolvePeersFromWorkspaceRoot,
       }
     ).step,
     nodesToBuildAndTransitive,
@@ -380,9 +394,7 @@ async function _rebuild (
       }
     )) {
       const preferredGvsDir = path.join(globalVirtualStoreDir, hash)
-      gvsDirByDepPath.set(pkgMeta.depPath, fs.existsSync(preferredGvsDir)
-        ? preferredGvsDir
-        : findLinkedGvsDir(pkgMeta.name, Object.values(ctx.projects), globalVirtualStoreDir) ?? preferredGvsDir)
+      gvsDirByDepPath.set(pkgMeta.depPath, preferredGvsDir)
     }
   }
   const pkgModulesDir = (depPath: DepPath): string =>
@@ -428,13 +440,14 @@ async function _rebuild (
       }
     }
     try {
-      const extraBinPaths = ctx.extraBinPaths
+      let extraBinPaths: string[]
       if (opts.nodeLinker !== 'hoisted') {
         const modules = pkgModulesDir(depPath)
         const binPath = path.join(pkgRoot, 'node_modules', '.bin')
         await linkBins(modules, binPath, { extraNodePaths: ctx.extraNodePaths, warn })
+        extraBinPaths = ctx.extraBinPaths
       } else {
-        extraBinPaths.push(...binDirsInAllParentDirs(pkgRoot, opts.lockfileDir))
+        extraBinPaths = [...ctx.extraBinPaths, ...binDirsInAllParentDirs(pkgRoot, opts.lockfileDir)]
       }
       const resolution = (pkgSnapshot.resolution as TarballResolution)
       let sideEffectsCacheKey: string | undefined
@@ -442,7 +455,7 @@ async function _rebuild (
       // @pnpm/installing.package-requester: that's the tarball URL for
       // git-hosted packages (nonSemverVersion) and `name@version` otherwise.
       const pkgId = pkgInfo.nonSemverVersion ?? `${pkgInfo.name}@${pkgInfo.version}`
-      if (opts.skipIfHasSideEffectsCache && (resolution.gitHosted || resolution.integrity)) {
+      if (opts.skipIfHasSideEffectsCache && !fs.existsSync(path.join(pkgRoot, '.pnpm-needs-build')) && (resolution.gitHosted || resolution.integrity)) {
         const filesIndexFile = pickStoreIndexKey(resolution, pkgId, { built: true })
         const pkgFilesIndex = storeIndex!.get(filesIndexFile) as PackageFilesIndex | undefined
         if (pkgFilesIndex) {
@@ -477,6 +490,9 @@ async function _rebuild (
         unsafePerm: opts.unsafePerm || false,
         userAgent: opts.userAgent,
       })
+      if (hasSideEffects && gvsDir != null) {
+        await fs.promises.rm(path.join(pkgRoot, '.pnpm-needs-build'), { force: true })
+      }
       if (hasSideEffects && (opts.sideEffectsCacheWrite ?? true) && (resolution.gitHosted || resolution.integrity)) {
         builtDepPaths.add(depPath)
         const filesIndexFile = pickStoreIndexKey(resolution, pkgId, { built: true })
@@ -504,6 +520,14 @@ async function _rebuild (
     } catch (err: unknown) {
       assert(util.types.isNativeError(err))
       if (pkgSnapshot.optional) {
+        // Other projects may link a global virtual store slot, so it is kept.
+        if (!gvsDirByDepPath.has(depPath)) {
+          // Hoisted package roots come from .modules.yaml, which is not validated.
+          const rootsToRemove = opts.nodeLinker === 'hoisted'
+            ? pkgRoots.filter((root) => isStrictSubdir(opts.lockfileDir, root))
+            : pkgRoots
+          await Promise.all(rootsToRemove.map((root) => fs.promises.rm(root, { recursive: true, force: true })))
+        }
         // TODO: add parents field to the log
         skippedOptionalDependencyLogger.debug({
           details: err.toString(),
@@ -569,38 +593,6 @@ async function _rebuild (
   }
 
   return { pkgsThatWereRebuilt, ignoredPkgs }
-}
-
-// TODO: delete once rebuild relocates GVS projections to the newly computed
-// hash instead of building in place (https://github.com/pnpm/pnpm/issues/12302).
-function findLinkedGvsDir (
-  pkgName: string,
-  projects: Array<{ rootDir: ProjectRootDir }>,
-  globalVirtualStoreDir: string
-): string | undefined {
-  const normalizedGvsRoot = `${path.resolve(globalVirtualStoreDir)}${path.sep}`
-  for (const { rootDir } of projects) {
-    const pkgLink = path.join(rootDir, 'node_modules', pkgName)
-    try {
-      const target = fs.readlinkSync(pkgLink)
-      const pkgRoot = path.resolve(path.dirname(pkgLink), target)
-      if (!pkgRoot.startsWith(normalizedGvsRoot)) continue
-      return nthAncestorDir(pkgRoot, pkgName.split('/').length + 1)
-    } catch (err: unknown) {
-      // EINVAL: pkgLink exists but is not a symlink.
-      if (util.types.isNativeError(err) && 'code' in err && (err.code === 'EINVAL' || err.code === 'ENOENT')) continue
-      throw err
-    }
-  }
-  return undefined
-}
-
-function nthAncestorDir (dir: string, levels: number): string {
-  let result = dir
-  for (let i = 0; i < levels; i++) {
-    result = path.dirname(result)
-  }
-  return result
 }
 
 function binDirsInAllParentDirs (pkgRoot: string, lockfileDir: string): string[] {

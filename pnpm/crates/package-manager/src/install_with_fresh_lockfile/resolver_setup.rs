@@ -65,10 +65,15 @@ pub(super) struct StoreCaches {
 pub(super) async fn open_store_index_handles(
     config: &Config,
     store_dir: &'static StoreDir,
+    progress_reported: Option<SharedReportedProgressKeys>,
 ) -> StoreIndexHandles {
     let index = StoreIndex::open_shared(store_dir, config.frozen_store).await;
     let (writer, writer_task) = StoreIndexWriter::spawn_for(store_dir, config.frozen_store);
-    StoreIndexHandles { index, writer, writer_task, caches: StoreCaches::default() }
+    let caches = StoreCaches {
+        progress_reported: progress_reported.unwrap_or_default(),
+        ..StoreCaches::default()
+    };
+    StoreIndexHandles { index, writer, writer_task, caches }
 }
 
 #[derive(Default)]
@@ -279,6 +284,7 @@ impl ResolverChainInputs<'_> {
                 prefer_offline: self.config.prefer_offline,
                 ignore_missing_time_field: self.config.minimum_release_age_ignore_missing_time,
             },
+            store_index: self.store.index.cloned(),
         })
     }
 
@@ -291,7 +297,9 @@ impl ResolverChainInputs<'_> {
     fn git_resolver(&self) -> GitResolver<RealGitProbe, RealGitRunner> {
         GitResolver::new(
             Arc::new(RealGitProbe::new(Arc::clone(self.fetching.http_client))),
-            Arc::new(RealGitRunner::new()),
+            Arc::new(
+                RealGitRunner::new().with_connect_guard(self.fetching.auth_headers.connect_guard()),
+            ),
         )
         .with_fetch_context(GitFetchContext {
             source_cache: Arc::clone(self.fetching.git_sources),
@@ -320,6 +328,7 @@ impl ResolverChainInputs<'_> {
                 auth_headers: Arc::clone(self.fetching.auth_headers),
                 retry_opts: self.retry_opts(),
                 prior_tarball_entries: Arc::new(prior_tarball_entries(self.project.lockfile)),
+                cache_dir: Some(self.config.cache_dir.clone()),
                 store: pnpm_tarball::ArchiveStoreContext {
                     strict_pkg_content_check: false,
                     prefetched_cas_paths: None,

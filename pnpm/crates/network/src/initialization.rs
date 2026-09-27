@@ -1,9 +1,10 @@
 use super::{
     Arc, Client, ClientBuildInputs, ClientPair, DEFAULT_FETCH_MIN_SPEED_KI_BPS,
-    DEFAULT_FETCH_WARN_TIMEOUT_MS, Duration, ForInstallsError, NetworkSettings, NoProxyMatcher,
-    PerRegistryTls, PrioritySemaphore, ProxyConfig, RedirectGuard, ThrottledClient, TlsConfig,
-    build_client_with_root_fallback, configured_proxy, default_network_concurrency, ignore_warning,
-    load_node_extra_ca_certs, merge_tls, tls,
+    DEFAULT_FETCH_WARN_TIMEOUT_MS, Duration, ForInstallsError, HostSocketLimit, NetworkSettings,
+    NoProxyMatcher, PerRegistryTls, PrioritySemaphore, ProxyConfig, ProxyRouting, RedirectGuard,
+    Resolve, ThrottledClient, TlsConfig, build_client_with_root_fallback, configured_proxy,
+    default_network_concurrency, ignore_warning, load_node_extra_ca_certs, merge_tls,
+    native_dns_resolver, tls,
 };
 
 impl ThrottledClient {
@@ -55,8 +56,8 @@ impl ThrottledClient {
     ///
     /// Hostnames resolve through the platform's `getaddrinfo` behind a
     /// process-wide four-lookup cap shared by every client, matching
-    /// Node's libuv DNS pool. `configure_dns` documents why no pure-Rust
-    /// resolver is used on any platform.
+    /// Node's libuv DNS pool. [`native_dns_resolver`]
+    /// documents why no pure-Rust resolver is used on any platform.
     #[must_use]
     pub fn new_for_installs() -> Self {
         Self::for_installs(
@@ -104,7 +105,14 @@ impl ThrottledClient {
         per_registry: &PerRegistryTls,
         settings: &NetworkSettings,
     ) -> Result<Self, ForInstallsError> {
-        Self::for_installs_with_redirect(proxy, tls, per_registry, settings, None)
+        Self::for_installs_with_redirect(
+            proxy,
+            tls,
+            per_registry,
+            settings,
+            None,
+            native_dns_resolver(),
+        )
     }
 
     /// Like [`Self::for_installs`] with an optional redirect guard.
@@ -117,7 +125,14 @@ impl ThrottledClient {
         settings: &NetworkSettings,
         redirect_guard: Option<&RedirectGuard>,
     ) -> Result<Self, ForInstallsError> {
-        Self::for_installs_with_redirect(proxy, tls, per_registry, settings, redirect_guard)
+        Self::for_installs_with_redirect(
+            proxy,
+            tls,
+            per_registry,
+            settings,
+            redirect_guard,
+            native_dns_resolver(),
+        )
     }
 
     /// Like [`Self::new_for_installs`] but installs `redirect_guard` as the
@@ -133,6 +148,17 @@ impl ThrottledClient {
     pub fn new_for_installs_with_redirect_guard(
         is_allowed: impl Fn(&reqwest::Url) -> bool + Send + Sync + 'static,
     ) -> Self {
+        Self::new_for_installs_with_guards(is_allowed, native_dns_resolver())
+    }
+
+    /// Like [`Self::new_for_installs_with_redirect_guard`], resolving
+    /// hostnames through `dns_resolver`. A [`GuardedDnsResolver`](crate::GuardedDnsResolver)
+    /// there checks the address every connection is opened to.
+    #[must_use]
+    pub fn new_for_installs_with_guards(
+        is_allowed: impl Fn(&reqwest::Url) -> bool + Send + Sync + 'static,
+        dns_resolver: Arc<dyn Resolve>,
+    ) -> Self {
         let redirect_guard: RedirectGuard = Arc::new(is_allowed);
         Self::for_installs_with_redirect(
             &ProxyConfig::default(),
@@ -140,6 +166,7 @@ impl ThrottledClient {
             &PerRegistryTls::default(),
             &NetworkSettings::default(),
             Some(&redirect_guard),
+            dns_resolver,
         )
         .expect("default proxy + TLS configs carry no URLs/PEMs and cannot fail")
     }
@@ -150,21 +177,26 @@ impl ThrottledClient {
         per_registry: &PerRegistryTls,
         settings: &NetworkSettings,
         redirect_guard: Option<&RedirectGuard>,
+        dns_resolver: Arc<dyn Resolve>,
     ) -> Result<Self, ForInstallsError> {
         if settings.network_concurrency == 0 {
             return Err(ForInstallsError::ZeroNetworkConcurrency);
         }
-        // See the empty-value contract on `ProxyConfig`.
-        let https = configured_proxy(proxy.https_proxy.as_deref())?;
-        let http = configured_proxy(proxy.http_proxy.as_deref())?;
-        let no_proxy = Arc::new(NoProxyMatcher::from(proxy.no_proxy.as_ref()));
+        let proxy_routing = resolve_proxy_routing(proxy)?;
         // Read once here, not inside `build_client`: `for_installs`
         // builds one client per per-registry override, so loading the
         // bundle per call would re-read and re-parse it N times.
         let extra_ca_certs = load_node_extra_ca_certs();
 
-        let inputs =
-            ClientBuildInputs { settings, https, http, no_proxy, extra_ca_certs, redirect_guard };
+        let inputs = ClientBuildInputs {
+            settings,
+            https: proxy_routing.https.clone(),
+            http: proxy_routing.http.clone(),
+            no_proxy: Arc::clone(&proxy_routing.no_proxy),
+            extra_ca_certs,
+            redirect_guard,
+            dns_resolver,
+        };
         let build_client = |effective_tls: &TlsConfig, forbid_redirects: bool| {
             build_client_with_root_fallback(&inputs, effective_tls, forbid_redirects)
         };
@@ -186,7 +218,7 @@ impl ThrottledClient {
             })
         })?;
 
-        Ok(Self::from_client_pairs(default_clients, per_registry, settings))
+        Ok(Self::from_client_pairs(default_clients, per_registry, proxy_routing, settings))
     }
 
     /// Assemble the client around its built pairs and the settings every
@@ -194,13 +226,15 @@ impl ThrottledClient {
     pub(super) fn from_client_pairs(
         default_clients: ClientPair,
         per_registry: tls::PerRegistryMap<ClientPair>,
+        proxy_routing: ProxyRouting,
         settings: &NetworkSettings,
     ) -> Self {
         ThrottledClient {
             semaphore: PrioritySemaphore::new(settings.network_concurrency),
             default_clients,
             per_registry,
-            host_socket_limit: None,
+            host_socket_limit: HostSocketLimit::new(None),
+            proxy_routing,
             fetch_warn_timeout: settings.fetch_warn_timeout,
             fetch_min_speed_ki_bps: settings.fetch_min_speed_ki_bps,
             warning_handler: std::sync::RwLock::new(ignore_warning),
@@ -221,10 +255,19 @@ impl ThrottledClient {
                 no_redirects: client_without_redirects,
             },
             per_registry: tls::PerRegistryMap::default(),
-            host_socket_limit: None,
+            host_socket_limit: HostSocketLimit::new(None),
+            proxy_routing: ProxyRouting::default(),
             fetch_warn_timeout: Duration::from_millis(DEFAULT_FETCH_WARN_TIMEOUT_MS),
             fetch_min_speed_ki_bps: DEFAULT_FETCH_MIN_SPEED_KI_BPS,
             warning_handler: std::sync::RwLock::new(ignore_warning),
         }
     }
+}
+
+fn resolve_proxy_routing(proxy: &ProxyConfig) -> Result<ProxyRouting, ForInstallsError> {
+    Ok(ProxyRouting {
+        https: configured_proxy(proxy.https_proxy.as_deref())?,
+        http: configured_proxy(proxy.http_proxy.as_deref())?,
+        no_proxy: Arc::new(NoProxyMatcher::from(proxy.no_proxy.as_ref())),
+    })
 }

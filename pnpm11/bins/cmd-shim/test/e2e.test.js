@@ -13,6 +13,56 @@ import { cmdShim } from '@pnpm/bins.cmd-shim'
 const describeOnWindows = process.platform === 'win32' ? describe : describe.skip
 const describeOnPosix = process.platform === 'win32' ? describe.skip : describe
 
+describeOnWindows('CMD shims with Unicode paths', () => {
+  for (const codepage of [437, 936, 65001]) {
+    for (const exitCode of [0, 7]) {
+      test(`runs a Unicode target under CP ${codepage} and preserves exit ${exitCode}`, async () => {
+        const tempDir = temporaryDirectory()
+        try {
+          const targetDir = path.join(tempDir, '工具')
+          fs.mkdirSync(targetDir)
+          const target = path.join(targetDir, 'cli.js')
+          fs.writeFileSync(target, '#!/usr/bin/env node\nconsole.log(JSON.stringify(process.argv.slice(2)))\nprocess.exit(Number(process.argv[4]))\n', 'utf8')
+          await cmdShim(target, path.join(tempDir, 'shim'))
+          fs.writeFileSync(path.join(tempDir, 'run.cmd'), [
+            '@echo off',
+            '@for /f "tokens=2 delims=:" %%a in (\'chcp\') do @set "original_codepage=%%a"',
+            `@chcp ${codepage}>nul`,
+            `@call shim.cmd "argument with spaces" "a&b" ${exitCode}`,
+            '@set "shim_exit=%errorlevel%"',
+            '@chcp',
+            '@chcp %original_codepage%>nul',
+            '@exit /b %shim_exit%',
+          ].join('\r\n') + '\r\n', 'utf8')
+          const result = spawnSync('cmd.exe', ['/d', '/c', 'run.cmd'], {
+            cwd: tempDir,
+            encoding: 'utf8',
+            windowsHide: true,
+            timeout: 30000,
+          })
+          assert.equal(result.status, exitCode, `stdout: ${result.stdout}\nstderr: ${result.stderr}`)
+          const [args, restoredCodepage] = result.stdout.trim().split(/\r?\n/)
+          assert.deepEqual(JSON.parse(args), ['argument with spaces', 'a&b', String(exitCode)])
+          assert.match(restoredCodepage, new RegExp(`\\b${codepage}\\b`))
+          if (codepage === 936) {
+            fs.writeFileSync(path.join(tempDir, 'exit-only.cmd'), `@shim.cmd "argument with spaces" "a&b" ${exitCode}\r\n`, 'utf8')
+            const shadowedResult = spawnSync('cmd.exe', ['/d', '/c', 'exit-only.cmd'], {
+              cwd: tempDir,
+              env: { ...process.env, ERRORLEVEL: '99' },
+              encoding: 'utf8',
+              windowsHide: true,
+              timeout: 30000,
+            })
+            assert.equal(shadowedResult.status, exitCode, `stdout: ${shadowedResult.stdout}\nstderr: ${shadowedResult.stderr}`)
+          }
+        } finally {
+          fs.rmSync(tempDir, { recursive: true, force: true })
+        }
+      })
+    }
+  }
+})
+
 describeOnWindows('create a command shim for a .exe file', () => {
   test('shim files', async (t) => {
     const tempDir = temporaryDirectory()
@@ -56,6 +106,65 @@ describeOnWindows('sh shim wrapping a .cmd target invoked from Git Bash', () => 
       /Microsoft Windows \[Version/,
       'cmd.exe started interactively — the /C switch was dropped'
     )
+  })
+})
+
+describeOnWindows('sh shim NODE_PATH invoked from Git Bash', () => {
+  // Regression for pnpm/pnpm#3360: a shim written outside MSYS used to bake
+  // NODE_PATH as /mnt/c/..., which MSYS turns into a path under the Git
+  // install directory before node starts. The shim now passes the Windows form.
+  const bash = process.env.PROGRAMFILES
+    ? path.join(process.env.PROGRAMFILES, 'Git', 'bin', 'bash.exe')
+    : 'bash'
+  const runShim = async (inheritedNodePath) => {
+    const tempDir = temporaryDirectory()
+    const target = path.join(tempDir, 'print.js')
+    fs.writeFileSync(target, '#!/usr/bin/env node\nprocess.stdout.write(process.env.NODE_PATH)\n', 'utf8')
+    const nodePath = path.join(tempDir, 'node_modules')
+    const shim = path.join(tempDir, 'shim')
+    await cmdShim(target, shim, { nodePath: [nodePath] })
+    const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => name.toUpperCase() !== 'NODE_PATH'))
+    if (inheritedNodePath != null) env.NODE_PATH = inheritedNodePath
+    const r = spawnSync(bash, ['--noprofile', '--norc', shim], { encoding: 'utf8', env })
+    assert.equal(r.status, 0, `bash exited ${r.status}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`)
+    return { nodePath, stdout: r.stdout }
+  }
+
+  test('passes the Windows form of the shim entries to node', async () => {
+    const { nodePath, stdout } = await runShim()
+    assert.equal(stdout, nodePath)
+  })
+
+  test('prepends the shim entries to an inherited NODE_PATH with a semicolon', async () => {
+    const { nodePath, stdout } = await runShim('C:\\inherited\\node_modules')
+    assert.equal(stdout, `${nodePath};C:\\inherited\\node_modules`)
+  })
+})
+
+describeOnWindows('sh shim running node from PATH without MSYS path conversion', () => {
+  // Regression for pnpm/pnpm#12845: Cygwin, unlike MSYS2, starts the native
+  // Windows node found on PATH without rewriting POSIX path arguments, so node
+  // looked for the target under C:\cygdrive\c\... Git Bash behaves the same way
+  // when MSYS2_ARG_CONV_EXCL excludes every argument from conversion.
+  test('passes the Windows form of the target to node', async () => {
+    const tempDir = temporaryDirectory()
+    const target = path.join(tempDir, 'tool.js')
+    fs.writeFileSync(target, '#!/usr/bin/env node\nconsole.log("SHIM_OK")\n', 'utf8')
+    const shim = path.join(tempDir, 'tool')
+    await cmdShim(target, shim, { createCmdFile: false, createPwshFile: false })
+
+    const bash = process.env.PROGRAMFILES
+      ? path.join(process.env.PROGRAMFILES, 'Git', 'bin', 'bash.exe')
+      : 'bash'
+    // Run the shim by its absolute POSIX path, as a PATH lookup does, so the
+    // shim's basedir is a POSIX path.
+    const r = spawnSync(bash, ['--noprofile', '--norc', '-c', 'exec "$(cygpath -u "$1")"', 'bash', shim], {
+      encoding: 'utf8',
+      env: { ...process.env, MSYS2_ARG_CONV_EXCL: '*' },
+    })
+
+    assert.equal(r.status, 0, `bash exited ${r.status}\nstdout: ${r.stdout}\nstderr: ${r.stderr}`)
+    assert.equal(r.stdout.trim(), 'SHIM_OK')
   })
 })
 
@@ -281,6 +390,57 @@ describeOnPosix('sh shim resolves its helpers off the caller\'s PATH', () => {
 
     runWithDecoys(tempDir, 'sh', ['tsc-link'], binDir)
   })
+
+  // Where no default path is compiled in, as on Nix, command -p searches the
+  // caller's PATH. No test host behaves that way, so the shim's command -p is
+  // rewritten to the plain command such a shell amounts to.
+  test('skips node_modules and relative PATH entries when command -p searches PATH', async () => {
+    const tempDir = temporaryDirectory()
+    const binDir = await makeShimmedTool(tempDir)
+    const shim = path.join(binDir, 'tsc')
+    writeExecutable(shim, fs.readFileSync(shim, 'utf8').replaceAll('command -p ', 'command '))
+    const decoyDir = plantHijackTreeAndDecoys(tempDir)
+    const callersPath = [path.dirname(process.execPath), process.env.PATH].join(path.delimiter)
+    const run = (PATH, cwd) => spawnSync(path.join(binDir, 'tsc-link'), [], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, PATH },
+    }).stdout.trim()
+
+    assert.equal(
+      run([decoyDir, callersPath].join(path.delimiter), tempDir),
+      'hijacked',
+      'precondition: the rewritten shim resolves its helpers through PATH'
+    )
+    const nodeModulesBin = path.join(tempDir, 'proj', 'node_modules', '.bin')
+    fs.mkdirSync(path.dirname(nodeModulesBin), { recursive: true })
+    fs.renameSync(decoyDir, nodeModulesBin)
+    assert.equal(
+      run([nodeModulesBin, callersPath].join(path.delimiter), tempDir),
+      'tsc-output',
+      'the shim took a helper from a node_modules entry of PATH'
+    )
+    assert.equal(
+      run(['.bin', callersPath].join(path.delimiter), path.dirname(nodeModulesBin)),
+      'tsc-output',
+      'the shim took a helper from a relative entry of PATH'
+    )
+    assert.equal(
+      run(['', callersPath].join(path.delimiter), nodeModulesBin),
+      'tsc-output',
+      'the shim took a helper from an empty entry of PATH'
+    )
+    // Nothing survives the filter here, and an empty PATH would search the
+    // current directory, which holds the decoys.
+    fs.mkdirSync(path.join(nodeModulesBin, 'node-dir'))
+    fs.symlinkSync(process.execPath, path.join(nodeModulesBin, 'node-dir', 'node'))
+    assert.notEqual(
+      run('node-dir', nodeModulesBin),
+      'hijacked',
+      'the shim took a helper from the current directory'
+    )
+  })
 })
 
 describeOnPosix('sh shim converts a Windows-form path', () => {
@@ -396,5 +556,54 @@ describeOnPosix('sh shim picks its Windows path converter', () => {
       [BASEDIR, ''],
       'WSL2 with no converter at all must not claim a Windows exe'
     )
+  })
+})
+
+describeOnPosix('sh shim run through a symlinked package directory', () => {
+  // Node normalizes the `..` of its script path lexically, so a target reached
+  // from `node_modules/vite/node_modules/.bin` must not climb out of the
+  // `node_modules/vite` symlink.
+  test('runs the target in the virtual store', async () => {
+    const root = fs.realpathSync(temporaryDirectory())
+    const virtualStoreDir = path.join(root, 'node_modules/.pnpm/vite@6.0.0/node_modules')
+    const binDir = path.join(virtualStoreDir, 'vite/node_modules/.bin')
+    const target = path.join(virtualStoreDir, 'esbuild/bin/esbuild')
+    fs.mkdirSync(binDir, { recursive: true })
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.writeFileSync(target, '#!/usr/bin/env node\nprocess.stdout.write(__filename)\n', 'utf8')
+    fs.symlinkSync(path.join(virtualStoreDir, 'vite'), path.join(root, 'node_modules/vite'))
+    await cmdShim(target, path.join(binDir, 'esbuild'), { createCmdFile: false })
+
+    const r = spawnSync('node_modules/vite/node_modules/.bin/esbuild', {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    assert.equal(r.status, 0, `shim exited ${r.status}\nstderr: ${r.stderr}`)
+    assert.equal(r.stdout, target)
+  })
+})
+
+describeOnPosix('sh shim written through a symlinked bin directory', () => {
+  // The shim climbs from its physical directory, so a bin directory that is a
+  // symlink to a deeper directory must not shift the relative target.
+  test('runs the target', async () => {
+    const root = fs.realpathSync(temporaryDirectory())
+    const target = path.join(root, 'pkg/cli.js')
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.writeFileSync(target, '#!/usr/bin/env node\nprocess.stdout.write(__filename)\n', 'utf8')
+    const physicalBinDir = path.join(root, 'storage/deep/bin')
+    fs.mkdirSync(physicalBinDir, { recursive: true })
+    fs.symlinkSync(physicalBinDir, path.join(root, 'bin'))
+    await cmdShim(target, path.join(root, 'bin/tool'), { createCmdFile: false })
+
+    const r = spawnSync(path.join(root, 'bin/tool'), {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    assert.equal(r.status, 0, `shim exited ${r.status}\nstderr: ${r.stderr}`)
+    assert.equal(r.stdout, target)
   })
 })

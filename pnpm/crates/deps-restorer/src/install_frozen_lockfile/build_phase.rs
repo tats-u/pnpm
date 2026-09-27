@@ -76,7 +76,8 @@ pub fn resolve_snapshot_patches(
             let mut map = HashMap::new();
             for key in snaps.keys() {
                 let metadata_key = key.without_peer();
-                let (name, version) = crate::name_version_from_package_key(&metadata_key, packages);
+                let (name, version) =
+                    pnpm_lockfile::name_version_from_package_key(&metadata_key, packages);
                 // Propagate `ERR_PNPM_PATCH_KEY_CONFLICT` rather than
                 // silently skipping the snapshot. Failing here makes the
                 // user add an exact-version entry to disambiguate.
@@ -104,6 +105,9 @@ pub struct BuildPhaseInputs<'a> {
     pub policy: crate::BuildPhasePolicy<'a>,
     pub extra_env: &'a HashMap<String, String>,
     pub skipped: &'a SkippedSnapshots,
+    /// Nested `.bin` directories the hoisted linker held bins back in. See
+    /// [`crate::link_hoisted_modules()`].
+    pub held_back_bins_dirs: &'a [crate::HeldBackBinsDir],
 }
 
 /// Run dependency lifecycle scripts, report ignored builds, and
@@ -125,7 +129,7 @@ pub fn run_build_phase<Reporter: self::Reporter>(
         inputs.graph.packages,
     )?;
     let shared_side_effects_publisher =
-        crate::shared_side_effects::shared_side_effects_publisher(config, inputs.graph.snapshots);
+        crate::shared_side_effects::shared_side_effects_publisher(config, inputs.graph.importers);
 
     let build_output = build_or_defer::<Reporter>(
         inputs,
@@ -156,17 +160,18 @@ pub fn run_build_phase<Reporter: self::Reporter>(
         return Ok(build_output);
     }
 
+    link_held_back_bins(inputs)?;
+
     // Post-`BuildModules` per-importer top-level bin link
     // (pnpm/pacquet#342). Resolves direct-over-hoisted precedence and
     // shims lifecycle-script-created bins that didn't exist at extract
     // time. Idempotent for unchanged shims. Runs after `buildModules`.
-    let modules_dir_basename: &OsStr =
-        config.modules_dir.file_name().unwrap_or_else(|| OsStr::new("node_modules"));
+    let modules_dir_name = config.modules_dir_name();
     for (importer_id, importer_snapshot) in inputs.graph.importers {
         link_importer_top_level_bins(
             inputs,
             build_output.mutated_slots,
-            modules_dir_basename,
+            modules_dir_name,
             importer_id,
             importer_snapshot,
         )?;
@@ -259,11 +264,25 @@ fn build_modules<'a>(
     }
 }
 
+/// Link the bins the hoisted linker held back in nested `.bin` directories,
+/// now that the builds that may create their targets ran.
+fn link_held_back_bins(inputs: &BuildPhaseInputs<'_>) -> Result<(), BuildPhaseError> {
+    for held_back in inputs.held_back_bins_dirs {
+        crate::link_direct_dep_bins(
+            &held_back.modules_dir,
+            &held_back.dep_names,
+            inputs.directories.link_options,
+        )
+        .map_err(BuildPhaseError::TopLevelBinLink)?;
+    }
+    Ok(())
+}
+
 /// Re-link one importer's top-level `.bin` after the build phase.
 fn link_importer_top_level_bins(
     inputs: &BuildPhaseInputs<'_>,
     mutated_slots: bool,
-    modules_dir_basename: &OsStr,
+    modules_dir_name: &OsStr,
     importer_id: &str,
     importer_snapshot: &pnpm_lockfile::ProjectSnapshot,
 ) -> Result<(), BuildPhaseError> {
@@ -281,11 +300,18 @@ fn link_importer_top_level_bins(
     // candidate set, so re-resolving it would only re-read every direct
     // dep's manifest per importer. Hoisted installs always relink: this
     // pass is their only importer bin pass.
-    if !inputs.directories.is_hoisted && !mutated_slots && hoisted_names.is_empty() {
+    let peer_locations =
+        if inputs.policy.config.auto_install_peers && !inputs.directories.is_hoisted {
+            auto_installed_peer_bin_locations(inputs, importer_snapshot)
+        } else {
+            Vec::new()
+        };
+    let relink_direct = inputs.directories.is_hoisted || mutated_slots || !hoisted_names.is_empty();
+    if !relink_direct && peer_locations.is_empty() {
         return Ok(());
     }
     let project_dir = importer_root_dir(inputs.directories.top_level_bin_root, importer_id);
-    let modules_dir = project_dir.join(modules_dir_basename);
+    let modules_dir = project_dir.join(modules_dir_name);
     // Same filter the symlink phase used so the post-build pass sees the
     // same candidate set (skipping installability-skipped deps avoids
     // dangling shims at a slot that was never extracted).
@@ -295,6 +321,71 @@ fn link_importer_top_level_bins(
         inputs.skipped,
         false,
     );
-    link_top_level_bins(&modules_dir, &direct_names, hoisted_names, inputs.directories.link_options)
-        .map_err(BuildPhaseError::TopLevelBinLink)
+    link_top_level_bins(
+        &modules_dir,
+        &direct_names,
+        hoisted_names,
+        &peer_locations,
+        inputs.directories.link_options,
+    )
+    .map_err(BuildPhaseError::TopLevelBinLink)
+}
+
+fn auto_installed_peer_bin_locations(
+    inputs: &BuildPhaseInputs<'_>,
+    importer: &pnpm_lockfile::ProjectSnapshot,
+) -> Vec<std::path::PathBuf> {
+    let (Some(packages), Some(snapshots)) = (inputs.graph.packages, inputs.graph.snapshots) else {
+        return Vec::new();
+    };
+    let mut locations: Vec<_> = importer
+        .dependencies_by_groups(inputs.graph.dependency_groups.iter().copied())
+        .filter_map(|(name, spec)| spec.version.resolved_key(name))
+        .filter(|key| !inputs.skipped.contains(key))
+        .filter_map(|key| Some((packages.get(&key.without_peer())?, snapshots.get(&key)?)))
+        .flat_map(|(metadata, snapshot)| resolved_auto_installed_peers(metadata, snapshot))
+        .filter(|key| !inputs.skipped.contains(key))
+        .filter(|key| {
+            packages
+                .get(&key.without_peer())
+                .is_some_and(crate::link_bins::may_have_bin)
+                || inputs.cache.requires_build_by_snapshot.get(key) == Some(&true)
+        })
+        .map(|key| {
+            inputs.directories.layout
+                .slot_dir(&key)
+                .join("node_modules")
+                .join(key.name.to_string())
+        })
+        .collect();
+    locations.sort_unstable();
+    locations.dedup();
+    locations
+}
+
+fn resolved_auto_installed_peers<'a>(
+    metadata: &'a PackageMetadata,
+    snapshot: &'a SnapshotEntry,
+) -> impl Iterator<Item = PackageKey> + 'a {
+    metadata.peer_dependencies
+        .iter()
+        .flat_map(|peers| peers.keys())
+        .filter(|name| {
+            !metadata.peer_dependencies_meta
+                .as_ref()
+                .and_then(|meta| meta.get(*name))
+                .is_some_and(|meta| meta.optional)
+        })
+        .filter_map(|name| {
+            let alias = name.parse::<pnpm_lockfile::PkgName>().ok()?;
+            snapshot.dependencies
+                .as_ref()
+                .and_then(|deps| deps.get(&alias))
+                .or_else(|| {
+                    snapshot.optional_dependencies
+                        .as_ref()
+                        .and_then(|deps| deps.get(&alias))
+                })
+                .and_then(|reference| reference.resolve(&alias))
+        })
 }

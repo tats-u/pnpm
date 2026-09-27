@@ -1,6 +1,7 @@
 use super::{
-    LifecycleScriptError, RunPostinstallHooks, StreamedScript, output::STREAMED_OUTPUT_CHUNK_BYTES,
-    run_postinstall_hooks,
+    LifecycleScriptError, RunPostinstallHooks, StreamedScript, install_stage_script,
+    output::{PumpLink, STREAMED_OUTPUT_CHUNK_BYTES},
+    read_lifecycle_manifest, run_postinstall_hooks,
 };
 use crate::extend_path::ScriptsPrependNodePath;
 use pnpm_package_manifest::PackageManifestError;
@@ -37,6 +38,7 @@ fn streamed_output_splits_newline_free_data_into_bounded_chunks() {
         .pump_stream(
             Cursor::new(vec![b'a'; STREAMED_OUTPUT_CHUNK_BYTES + trailing_bytes]),
             LifecycleStdio::Stdout,
+            PumpLink::new().0,
         )
         .join()
         .expect("output pump");
@@ -107,6 +109,7 @@ fn lifecycle_emits_script_stdio_and_exit_in_order() {
             prepend_node_path: ScriptsPrependNodePath::Never,
             shell: None,
             shell_emulator: false,
+            wd_bin_dir: None,
         },
         dep_path: "/x@1.0.0",
         pkg_root,
@@ -228,6 +231,7 @@ fn lifecycle_events_carry_optional_flag() {
             prepend_node_path: ScriptsPrependNodePath::Never,
             shell: None,
             shell_emulator: false,
+            wd_bin_dir: None,
         },
         dep_path: "/opt@1.0.0",
         pkg_root,
@@ -308,6 +312,7 @@ fn lifecycle_emits_exit_with_nonzero_code_on_failure() {
             prepend_node_path: ScriptsPrependNodePath::Never,
             shell: None,
             shell_emulator: false,
+            wd_bin_dir: None,
         },
         dep_path: "/y@1.0.0",
         pkg_root,
@@ -362,6 +367,7 @@ fn lifecycle_runs_under_silent_reporter() {
             prepend_node_path: ScriptsPrependNodePath::Never,
             shell: None,
             shell_emulator: false,
+            wd_bin_dir: None,
         },
         dep_path: "/z@1.0.0",
         pkg_root,
@@ -398,6 +404,7 @@ fn missing_manifest_returns_false() {
             prepend_node_path: ScriptsPrependNodePath::Never,
             shell: None,
             shell_emulator: false,
+            wd_bin_dir: None,
         },
         dep_path: "/missing@1.0.0",
         pkg_root,
@@ -490,6 +497,7 @@ fn child_sees_stamped_npm_package_and_preserves_user_config() {
             prepend_node_path: ScriptsPrependNodePath::Never,
             shell: None,
             shell_emulator: false,
+            wd_bin_dir: None,
         },
         dep_path: "/stamp-target@9.9.9",
         pkg_root,
@@ -546,6 +554,7 @@ fn malformed_manifest_propagates_error() {
             prepend_node_path: ScriptsPrependNodePath::Never,
             shell: None,
             shell_emulator: false,
+            wd_bin_dir: None,
         },
         dep_path: "/malformed@1.0.0",
         pkg_root,
@@ -566,6 +575,44 @@ fn malformed_manifest_propagates_error() {
         panic!("expected ReadManifest(Parse), got {err:?}")
     };
     assert_eq!(path, &pkg_root.join("package.json"));
+}
+
+#[test]
+fn lifecycle_manifest_prefers_package_json_over_package_yaml() {
+    let dir = tempdir().expect("create temp dir");
+    let pkg_root = dir.path();
+    fs::write(
+        pkg_root.join("package.json"),
+        serde_json::json!({ "scripts": { "pnpm:devPreinstall": "from-json" } }).to_string(),
+    )
+    .expect("write package.json");
+    fs::write(pkg_root.join("package.yaml"), "scripts:\n  pnpm:devPreinstall: from-yaml\n")
+        .expect("write package.yaml");
+
+    let manifest = read_lifecycle_manifest(pkg_root)
+        .expect("read lifecycle manifest")
+        .expect("manifest exists");
+    assert_eq!(manifest["scripts"]["pnpm:devPreinstall"], "from-json");
+}
+
+#[test]
+fn malformed_package_yaml_reports_the_selected_manifest() {
+    let dir = tempdir().expect("create temp dir");
+    let pkg_root = dir.path();
+    let package_yaml = pkg_root.join("package.yaml");
+    fs::write(&package_yaml, "scripts:\n  [not valid yaml\n")
+        .expect("write malformed package.yaml");
+
+    let err = read_lifecycle_manifest(pkg_root).expect_err("malformed YAML must fail");
+    let LifecycleScriptError::ReadManifest {
+        path: error_path,
+        source: PackageManifestError::ParseYaml { path, .. },
+    } = &err
+    else {
+        panic!("expected ReadManifest(ParseYaml), got {err:?}")
+    };
+    assert_eq!(error_path, &package_yaml.display().to_string());
+    assert_eq!(path, &package_yaml);
 }
 
 /// The emulator path pumps output through its own line sink rather than
@@ -613,6 +660,7 @@ fn shell_emulator_lifecycle_emits_stdio_and_a_failing_exit() {
             prepend_node_path: ScriptsPrependNodePath::Never,
             shell: None,
             shell_emulator: true,
+            wd_bin_dir: None,
         },
         dep_path: "/emulated@1.0.0",
         pkg_root,
@@ -726,6 +774,7 @@ fn shell_emulator_runs_an_external_command_from_a_long_package_root() {
             prepend_node_path: ScriptsPrependNodePath::Never,
             shell: None,
             shell_emulator: true,
+            wd_bin_dir: None,
         },
         dep_path: "/emulated-long-path@1.0.0",
         pkg_root: &pkg_root,
@@ -748,4 +797,36 @@ fn native_path_len(path: &std::path::Path) -> usize {
     {
         path.as_os_str().len()
     }
+}
+
+/// `better-sqlite3` v13 ships a prebuilt binary for every platform it supports
+/// and sets `gypfile: false` so no package manager rebuilds it from source.
+#[test]
+fn gypfile_false_suppresses_the_synthesized_node_gyp_rebuild() {
+    let dir = tempdir().expect("create temp dir");
+    let pkg_root = dir.path();
+    fs::write(pkg_root.join("binding.gyp"), "{'targets':[]}").expect("write binding.gyp");
+
+    let manifest = serde_json::json!({ "name": "prebuilt", "version": "1.0.0" });
+    fs::write(pkg_root.join("package.json"), manifest.to_string()).expect("write manifest");
+    assert_eq!(install_stage_script(&manifest, pkg_root).as_deref(), Some("node-gyp rebuild"));
+
+    let opted_out = serde_json::json!({ "name": "prebuilt", "version": "1.0.0", "gypfile": false });
+    fs::write(pkg_root.join("package.json"), opted_out.to_string()).expect("write manifest");
+    assert_eq!(install_stage_script(&opted_out, pkg_root), None);
+}
+
+#[test]
+fn gypfile_false_leaves_an_explicit_install_script_alone() {
+    let dir = tempdir().expect("create temp dir");
+    let pkg_root = dir.path();
+    fs::write(pkg_root.join("binding.gyp"), "{'targets':[]}").expect("write binding.gyp");
+
+    let manifest = serde_json::json!({
+        "name": "custom-build",
+        "version": "1.0.0",
+        "gypfile": false,
+        "scripts": { "install": "node install.js" },
+    });
+    assert_eq!(install_stage_script(&manifest, pkg_root).as_deref(), Some("node install.js"));
 }

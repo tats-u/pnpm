@@ -1,7 +1,9 @@
 pub use powershell::generate_pwsh_shim;
 pub use quoting::{cmd_escape, sh_single_quote};
 pub(crate) use relocatable::{is_relocatable_shim, is_within_root};
-pub use sh::{generate_sh_shim, is_sh_shim_hardened, is_shim_pointing_at};
+pub use sh::{
+    generate_sh_shim, is_sh_shim_basedir_anchor_current, is_sh_shim_hardened, is_shim_pointing_at,
+};
 
 use crate::{capabilities::FsReadHead, path_util::lexical_normalize};
 use std::{
@@ -159,27 +161,23 @@ fn strip_env_prefix(input: &str) -> (&str, bool) {
 
 /// Render `node_path` entries into the platform variants cmd-shim's
 /// `normalizePathEnvVar` produces: `win32` joins with `;` and
-/// backslashes, `posix` joins with `:` and forward slashes. On a
-/// Windows host the posix form additionally rewrites the drive prefix
-/// (`C:` → `/proc/cygdrive/c` under Cygwin/MSYS, `/mnt/c` otherwise),
-/// matching cmd-shim. On Unix the entries pass through unchanged.
+/// backslashes, `posix` joins with `:` and forward slashes. When the shim
+/// is generated on Windows (`windows_host`), the posix form additionally
+/// maps a drive prefix to WSL's mount (`C:` → `/mnt/c`). Shells under
+/// Cygwin and MSYS read the `win32` form instead, which the shim picks at
+/// run time, so the rendering doesn't depend on the installing shell. On
+/// Unix the entries pass through unchanged.
 struct NodePathEnvVar {
     win32: String,
     posix: String,
 }
 
-fn normalize_node_path_env_var(node_path: &[String]) -> NodePathEnvVar {
-    // The Cygwin/MSYS probe is process-invariant — read the
-    // environment once, not per entry.
-    let mount = cfg!(windows).then(windows_posix_mount_prefix);
+fn normalize_node_path_env_var(node_path: &[String], windows_host: bool) -> NodePathEnvVar {
     let mut win32 = String::new();
     let mut posix = String::new();
     for entry in node_path {
         let entry_win32 = entry.replace('/', r"\");
-        let entry_posix = match mount {
-            Some(mount) => windows_entry_to_posix(entry, mount),
-            None => entry.clone(),
-        };
+        let entry_posix = if windows_host { windows_entry_to_posix(entry) } else { entry.clone() };
         if !win32.is_empty() {
             win32.push(';');
         }
@@ -192,24 +190,9 @@ fn normalize_node_path_env_var(node_path: &[String]) -> NodePathEnvVar {
     NodePathEnvVar { win32, posix }
 }
 
-/// The mount prefix a Windows drive letter maps to in the posix
-/// rendering. Cygwin/MSYS is detected the way cmd-shim does —
-/// `TERM=CYGWIN` or a set `MSYSTEM`.
-///
-/// NOTE: the probe runs at shim-*generation* time, so the posix path
-/// baked into the `.ps1` reflects the installing shell. A shim
-/// generated under Cygwin and later run under WSL points at a
-/// `/proc/cygdrive` path that doesn't exist there — the same known
-/// trap cmd-shim has.
-fn windows_posix_mount_prefix() -> &'static str {
-    let is_cygwin = std::env::var("TERM").is_ok_and(|term| term == "CYGWIN")
-        || std::env::var_os("MSYSTEM").is_some();
-    if is_cygwin { "/proc/cygdrive" } else { "/mnt" }
-}
-
 /// cmd-shim's Windows-host posix rendering: flip backslashes and map a
-/// leading drive letter to the [`windows_posix_mount_prefix`].
-fn windows_entry_to_posix(entry: &str, mount: &str) -> String {
+/// leading drive letter under WSL's `/mnt`.
+fn windows_entry_to_posix(entry: &str) -> String {
     let flipped = entry.replace('\\', "/");
     let Some((drive, rest)) = flipped.split_once(':') else {
         return flipped;
@@ -217,7 +200,7 @@ fn windows_entry_to_posix(entry: &str, mount: &str) -> String {
     if drive.is_empty() || drive.contains('/') {
         return flipped;
     }
-    format!("{mount}/{}{rest}", drive.to_lowercase())
+    format!("/mnt/{}{rest}", drive.to_lowercase())
 }
 
 /// Generate the Windows `.cmd` shim contents for `target_path`. Pacquet
@@ -234,7 +217,7 @@ pub fn generate_cmd_shim(
     runtime: Option<&ScriptRuntime>,
     node_path: &[String],
 ) -> String {
-    let cmd_target_rel = relative_target_windows(target_path, shim_path);
+    let cmd_target_rel = cmd_escape(&relative_target_windows(target_path, shim_path));
     let quoted_target = if Path::new(&cmd_target_rel).is_absolute() {
         format!(r#""{cmd_target_rel}""#)
     } else {
@@ -243,7 +226,7 @@ pub fn generate_cmd_shim(
 
     let mut cmd = String::from("@SETLOCAL\r\n");
 
-    let cmd_node_path = normalize_node_path_env_var(node_path).win32;
+    let cmd_node_path = cmd_escape(&normalize_node_path_env_var(node_path, cfg!(windows)).win32);
     if !cmd_node_path.is_empty() {
         write!(
             cmd,
@@ -254,6 +237,8 @@ pub fn generate_cmd_shim(
 
     match runtime {
         Some(ScriptRuntime { prog: Some(prog), args }) => {
+            let prog = cmd_escape(prog);
+            let args = cmd_escape(args);
             let long_prog = format!(r#""%~dp0\{prog}.exe""#);
             writeln!(
                 cmd,
@@ -262,11 +247,29 @@ pub fn generate_cmd_shim(
             .unwrap();
         }
         runtime_opt => {
-            let args = runtime_opt.map_or("", |runtime| runtime.args.as_str());
+            let args = runtime_opt.map_or(String::new(), |runtime| cmd_escape(&runtime.args));
             writeln!(cmd, "@{quoted_target} {args} %*\r").unwrap();
         }
     }
 
+    with_utf8_codepage(cmd)
+}
+
+fn with_utf8_codepage(mut cmd: String) -> String {
+    if !cmd.is_ascii() {
+        cmd.insert_str(
+            "@SETLOCAL\r\n".len(),
+            "@SET \"_PNPM_CODEPAGE=\"\r\n\
+             @FOR /F \"tokens=2 delims=:\" %%a IN ('\"%SystemRoot%\\System32\\chcp.com\"') DO @SET \"_PNPM_CODEPAGE=%%a\"\r\n\
+             @\"%SystemRoot%\\System32\\chcp.com\" 65001 >NUL\r\n\
+             @SET \"ERRORLEVEL=\"\r\n",
+        );
+        cmd.push_str(
+            "@SET \"_PNPM_EXIT_CODE=%ERRORLEVEL%\"\r\n\
+             @IF DEFINED _PNPM_CODEPAGE @\"%SystemRoot%\\System32\\chcp.com\" %_PNPM_CODEPAGE% >NUL\r\n\
+             @EXIT /B %_PNPM_EXIT_CODE%\r\n",
+        );
+    }
     cmd
 }
 

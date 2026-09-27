@@ -5,7 +5,7 @@ pub(super) use listing::ScriptSelector;
 
 use super::{
     exec::{ExecArgs, ExecDirs},
-    reporter::{ReporterType, reporter_emit},
+    reporter::{ReporterType, reporter_emit, suppresses_info_output},
 };
 use clap::Args;
 use derive_more::{Display, Error};
@@ -31,6 +31,7 @@ use pnpm_package_manager::{
 use pnpm_package_manifest::PackageManifest;
 use pnpm_workspace::{ReadProjectManifestOnlyError, read_project_manifest_only};
 use pnpm_workspace_task_scheduler::{ScheduleGraphOptions, TaskCompletion, schedule_graph};
+use recursive::RecursiveRunOutcome;
 use regex::Regex;
 use serde_json::Value;
 use std::{
@@ -248,7 +249,7 @@ impl RunArgs {
             init_cwd: &init_cwd,
             config,
             extra_env: &extra_env,
-            silent: matches!(reporter, ReporterType::Silent),
+            silent: suppresses_info_output(reporter),
             output: if interleaved {
                 ScriptOutput::Streamed { dep_path: &dep_path, emit: reporter_emit(reporter) }
             } else {
@@ -277,18 +278,30 @@ impl RunArgs {
         dir: &Path,
         reporter: ReporterType,
     ) -> miette::Result<()> {
-        // A dry run prints what would execute and runs nothing, so it must
-        // not let the dependency verification trigger an install either.
-        if !self.dry_run {
-            super::verify_deps::verify_deps_before_run(dir, config, reporter)?;
+        recursive::run_recursive(self, config, dir, reporter, false).map(drop)
+    }
+
+    /// Like [`Self::run_recursive`], but when no selected project has a
+    /// script the name matches, the command is handed to a recursive
+    /// `exec` over the same selection.
+    pub async fn run_recursive_fallback(
+        &self,
+        config: &Config,
+        dir: &Path,
+        reporter: ReporterType,
+    ) -> miette::Result<()> {
+        match recursive::run_recursive(self, config, dir, reporter, true)? {
+            RecursiveRunOutcome::Done => Ok(()),
+            RecursiveRunOutcome::NoMatchingScript => {
+                ExecArgs {
+                    command: self.script.clone(),
+                    shell_mode: false,
+                    workspace: self.workspace.clone(),
+                }
+                .run_recursive(config, dir, reporter)
+                .await
+            }
         }
-        recursive::run_recursive(
-            self,
-            config,
-            dir,
-            reporter_emit(reporter),
-            matches!(reporter, ReporterType::Ndjson | ReporterType::Silent),
-        )
     }
 }
 

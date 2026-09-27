@@ -31,6 +31,7 @@ import type {
   PackageManifest,
   PackageVersionPolicy,
   RangeSpecStyle,
+  ReadPackageHook,
   SupportedArchitectures,
   TrustPolicy,
 } from '@pnpm/types'
@@ -165,6 +166,17 @@ export interface RequestPackageOptions {
   ignoreScripts?: boolean
   projectDir: string
   lockfileDir: string
+  /**
+   * The Node.js version this package's engines are checked against. Defaults
+   * to the one the store controller was created with.
+   */
+  nodeVersion?: string
+  /**
+   * When this returns true under `engineStrict`, `engines` are not checked
+   * yet. A patch applied later may change them; the build phase checks the
+   * patched manifest.
+   */
+  deferEnginesCheck?: (manifest: { name?: string, version?: string }) => boolean
   preferredVersions: PreferredVersions
   preferWorkspacePackages?: boolean
   sideEffectsCache?: boolean
@@ -190,6 +202,7 @@ export interface RequestPackageOptions {
   trustPolicy?: TrustPolicy
   trustPolicyExclude?: PackageVersionPolicy
   trustPolicyIgnoreAfter?: number
+  readPackageHook?: ReadPackageHook
 }
 
 export type BundledManifestFunction = () => Promise<BundledManifest | undefined>
@@ -232,6 +245,7 @@ export interface PackageResponse {
      * `ResolutionPolicyViolation` in `@pnpm/resolving.resolver-base`.
      */
     policyViolation?: ResolutionPolicyViolation
+    hooked?: boolean
   } & (
     {
       isLocal: true
@@ -247,6 +261,8 @@ export interface ImportOptions {
   filesMap: FilesMap
   force: boolean
   resolvedFrom: ResolvedFrom
+  /** See `PackageFilesResponse['sourceExists']`. */
+  sourceExists?: boolean
   keepModulesDir?: boolean
   safeToSkip?: boolean
 }

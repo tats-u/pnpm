@@ -63,6 +63,8 @@ export interface LockfileToDepGraphOptions extends RegistryContext {
   enableGlobalVirtualStore?: boolean
   engineStrict: boolean
   force: boolean
+  /** See `installabilityUnderForce` in `@pnpm/config.package-is-installable`. */
+  includeIncompatiblePackages?: boolean
   importerIds: ProjectId[]
   include: IncludedDependencies
   includeUnchangedDeps?: boolean
@@ -168,7 +170,7 @@ export async function lockfileToDepGraph (
     const rootDeps = {
       ...(opts.include.devDependencies ? projectSnapshot.devDependencies : {}),
       ...(opts.include.dependencies ? projectSnapshot.dependencies : {}),
-      ...(opts.include.optionalDependencies ? projectSnapshot.optionalDependencies : {}),
+      ...(opts.include.dependencies && opts.include.optionalDependencies ? projectSnapshot.optionalDependencies : {}),
     }
     directDependenciesByImporterId[importerId] = _getChildrenPaths(rootDeps, null, importerId)
   }
@@ -203,14 +205,14 @@ async function buildGraphFromPackages (
       const pkg = {
         name: pkgName,
         version: pkgVersion,
-        engines: pkgSnapshot.engines,
+        engines: opts.engineStrict && dp.hasPatchHash(depPath) ? undefined : pkgSnapshot.engines,
         cpu: pkgSnapshot.cpu,
         os: pkgSnapshot.os,
         libc: pkgSnapshot.libc,
       }
 
       const packageId = packageIdFromSnapshot(depPath, pkgSnapshot)
-      if (!opts.force && packageIsInstallable(packageId, pkg, {
+      if (!opts.includeIncompatiblePackages && packageIsInstallable(packageId, pkg, {
         // An incompatibility inside an `optionalDependencies` subtree is
         // reported, not fatal — see `filterLockfileByImportersAndEngine`,
         // which classifies these dep paths.

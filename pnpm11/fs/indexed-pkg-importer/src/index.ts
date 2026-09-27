@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { constants, existsSync, type Stats } from 'node:fs'
+import { chmodSync, constants, existsSync, type Stats } from 'node:fs'
 import path from 'node:path'
 import util from 'node:util'
 
@@ -15,14 +15,30 @@ import { isNativeBinary, removeQuarantine } from './removeQuarantine.js'
 
 export { type FilesMap, type ImportIndexedPackage, type ImportOptions }
 
+const BASE_FILE_MODE = 0o666
+const EXEC_FILE_MODE = 0o755
+const CAFS_EXEC_SUFFIX = '-exec'
+const CAFS_DIGEST_MIN_LENGTH = 40
+
 export type PackageImportMethod = 'auto' | 'hardlink' | 'copy' | 'clone' | 'clone-or-copy'
 
-export function createIndexedPkgImporter (packageImportMethod?: PackageImportMethod): ImportIndexedPackage {
-  const importPackage = createImportPackage(packageImportMethod)
+export interface CreateIndexedPkgImporterOptions {
+  disableLogging?: boolean
+}
+
+export function createIndexedPkgImporter (
+  packageImportMethod?: PackageImportMethod,
+  opts?: CreateIndexedPkgImporterOptions
+): ImportIndexedPackage {
+  const importPackage = createImportPackage(packageImportMethod, opts)
   return importPackage
 }
 
-function createImportPackage (packageImportMethod?: PackageImportMethod): ImportIndexedPackage {
+function createImportPackage (
+  packageImportMethod?: PackageImportMethod,
+  opts?: CreateIndexedPkgImporterOptions
+): ImportIndexedPackage {
+  const disableLogging = opts?.disableLogging
   // this works in the following way:
   // - hardlink: hardlink the packages, no fallback
   // - clone: clone the packages, no fallback
@@ -30,25 +46,25 @@ function createImportPackage (packageImportMethod?: PackageImportMethod): Import
   // - copy: copy the packages, do not try to link them first
   switch (packageImportMethod ?? 'auto') {
     case 'clone':
-      packageImportMethodLogger.debug({ method: 'clone' })
+      if (!disableLogging) packageImportMethodLogger.debug({ method: 'clone' })
       return createClonePkg()
     case 'hardlink':
-      packageImportMethodLogger.debug({ method: 'hardlink' })
+      if (!disableLogging) packageImportMethodLogger.debug({ method: 'hardlink' })
       return hardlinkPkg.bind(null, linkOrCopy)
     case 'auto': {
-      return createAutoImporter()
+      return createAutoImporter(opts)
     }
     case 'clone-or-copy':
-      return createCloneOrCopyImporter()
+      return createCloneOrCopyImporter(opts)
     case 'copy':
-      packageImportMethodLogger.debug({ method: 'copy' })
+      if (!disableLogging) packageImportMethodLogger.debug({ method: 'copy' })
       return copyPkg
     default:
       throw new Error(`Unknown package import method ${packageImportMethod as string}`)
   }
 }
 
-function createAutoImporter (): ImportIndexedPackage {
+function createAutoImporter (createOpts?: CreateIndexedPkgImporterOptions): ImportIndexedPackage {
   let auto = initialAuto
 
   return (to, opts) => auto(to, opts)
@@ -69,7 +85,7 @@ function createAutoImporter (): ImportIndexedPackage {
         // clone importer (with ENOTSUP fallback for transient failures
         // during heavy parallel I/O) for all subsequent packages.
         if (!tryClonePkg(to, opts)) return undefined
-        packageImportMethodLogger.debug({ method: 'clone' })
+        if (!createOpts?.disableLogging) packageImportMethodLogger.debug({ method: 'clone' })
         auto = createClonePkg()
         return 'clone'
       } catch {
@@ -77,8 +93,8 @@ function createAutoImporter (): ImportIndexedPackage {
       }
     }
     try {
-      if (!hardlinkPkg(fs.linkSync, to, opts)) return undefined
-      packageImportMethodLogger.debug({ method: 'hardlink' })
+      if (!hardlinkPkg(linkOrThrowOnLinkFailure, to, opts)) return undefined
+      if (!createOpts?.disableLogging) packageImportMethodLogger.debug({ method: 'hardlink' })
       auto = hardlinkPkg.bind(null, linkOrCopy)
       return 'hardlink'
     } catch (err: unknown) {
@@ -86,19 +102,19 @@ function createAutoImporter (): ImportIndexedPackage {
       if (err.message.startsWith('EXDEV: cross-device link not permitted')) {
         globalWarn(err.message)
         globalInfo('Falling back to copying packages from store')
-        packageImportMethodLogger.debug({ method: 'copy' })
+        if (!createOpts?.disableLogging) packageImportMethodLogger.debug({ method: 'copy' })
         auto = copyPkg
         return auto(to, opts)
       }
       // We still choose hard linking that will fall back to copying in edge cases.
-      packageImportMethodLogger.debug({ method: 'hardlink' })
+      if (!createOpts?.disableLogging) packageImportMethodLogger.debug({ method: 'hardlink' })
       auto = hardlinkPkg.bind(null, linkOrCopy)
       return auto(to, opts)
     }
   }
 }
 
-function createCloneOrCopyImporter (): ImportIndexedPackage {
+function createCloneOrCopyImporter (createOpts?: CreateIndexedPkgImporterOptions): ImportIndexedPackage {
   let auto = initialAuto
 
   return (to, opts) => auto(to, opts)
@@ -109,19 +125,26 @@ function createCloneOrCopyImporter (): ImportIndexedPackage {
   ): string | undefined {
     try {
       if (!tryClonePkg(to, opts)) return undefined
-      packageImportMethodLogger.debug({ method: 'clone' })
+      if (!createOpts?.disableLogging) packageImportMethodLogger.debug({ method: 'clone' })
       auto = createClonePkg()
       return 'clone'
     } catch {
       // ignore
     }
-    packageImportMethodLogger.debug({ method: 'copy' })
+    if (!createOpts?.disableLogging) packageImportMethodLogger.debug({ method: 'copy' })
     auto = copyPkg
     return auto(to, opts)
   }
 }
 
 type CloneFunction = (src: string, dest: string) => void
+
+function alignedClone (clone: CloneFunction): CloneFunction {
+  return (src, dest) => {
+    clone(src, dest)
+    alignStoreFileMode(src, dest)
+  }
+}
 
 /**
  * Import a single package using a raw clone function (no ENOTSUP fallback).
@@ -133,8 +156,8 @@ function tryClonePkg (
   to: string,
   opts: ImportOptions
 ): 'clone' | undefined {
-  if (opts.resolvedFrom !== 'store' || opts.force || !pkgExistsAtTargetDir(to, opts.filesMap)) {
-    const clone = createCloneFunction()
+  if (shouldImportPkg(to, opts)) {
+    const clone = alignedClone(createCloneFunction())
     importIndexedDir({ importFile: clone, importFileAtomic: clone }, to, opts.filesMap, opts)
     removeQuarantineFromNativeBinaries(to, opts)
     return 'clone'
@@ -151,7 +174,7 @@ function tryClonePkg (
  * atomic.
  */
 function createClonePkg (): ImportIndexedPackage {
-  const clone = createCloneFunction()
+  const clone = alignedClone(createCloneFunction())
   const withFallback = (fallback: CloneFunction): ImportFile => (src, dest) => {
     try {
       clone(src, dest)
@@ -168,13 +191,29 @@ function createClonePkg (): ImportIndexedPackage {
     importFileAtomic: withFallback(atomicCopyFileSync),
   }
   return (to: string, opts: ImportOptions) => {
-    if (opts.resolvedFrom !== 'store' || opts.force || !pkgExistsAtTargetDir(to, opts.filesMap)) {
+    if (shouldImportPkg(to, opts)) {
       importIndexedDir(importer, to, opts.filesMap, opts)
       removeQuarantineFromNativeBinaries(to, opts)
       return 'clone'
     }
     return undefined
   }
+}
+
+// Whether to (re)import via clone or copy. A directory dependency's source
+// can change without the lockfile changing, so these methods import it
+// unconditionally by default, the same way `shouldRelinkPkg` does for the
+// hardlink path below, including the same guard against wiping an
+// already-materialized target when a `publishConfig.directory` source has
+// not been built yet.
+function shouldImportPkg (
+  to: string,
+  opts: ImportOptions
+): boolean {
+  if (opts.resolvedFrom === 'local-dir' && opts.sourceExists === false) {
+    return targetHasNothingToLose(to)
+  }
+  return opts.resolvedFrom !== 'store' || opts.force || !pkgExistsAtTargetDir(to, opts.filesMap)
 }
 
 function pkgExistsAtTargetDir (targetDir: string, filesMap: FilesMap): boolean {
@@ -230,6 +269,9 @@ function hardlinkPkg (
   to: string,
   opts: ImportOptions
 ): 'hardlink' | undefined {
+  // Checked ahead of `opts.force`: a caller-requested force must not be able
+  // to bypass the missing-source preservation below.
+  if (missingSourceHasSomethingToPreserve(to, opts)) return undefined
   if (opts.force || shouldRelinkPkg(to, opts)) {
     importIndexedDir({ importFile, importFileAtomic: importFile }, to, opts.filesMap, opts)
     removeQuarantineFromNativeBinaries(to, opts)
@@ -243,17 +285,96 @@ function shouldRelinkPkg (
   opts: ImportOptions
 ): boolean {
   if (opts.disableRelinkLocalDirDeps && opts.resolvedFrom === 'local-dir') {
-    try {
-      const files = fs.readdirSync(to)
-      return files.length === 0 || files.length === 1 && files[0] === 'node_modules'
-    } catch {
-      return true
-    }
+    return targetHasNothingToLose(to)
+  }
+  // A directory dependency relinks on every install by default, since its
+  // source can change without the lockfile changing. But when the source is
+  // a `publishConfig.directory` its own `prepare` script has not (re)built
+  // yet, the fetcher tolerates the missing directory and comes back with an
+  // empty `filesMap`; relinking from that would wipe an already-materialized
+  // target. Only skip the relink when there is something in the target
+  // worth preserving — an empty or missing target has nothing to lose, and
+  // still needs the relink to create it so the post-build resync has
+  // somewhere to write into. `hardlinkPkg` checks this same condition ahead
+  // of its own `opts.force`, so this only runs once that has already passed.
+  if (opts.resolvedFrom === 'local-dir' && opts.sourceExists === false) {
+    return targetHasNothingToLose(to)
   }
   return opts.resolvedFrom !== 'store' || !pkgLinkedToStore(opts.filesMap, to)
 }
 
+// See `shouldRelinkPkg`'s comment on the missing-source case. Pulled out so
+// `hardlinkPkg` can apply the same guard ahead of its `opts.force` check,
+// which would otherwise bypass it.
+function missingSourceHasSomethingToPreserve (to: string, opts: ImportOptions): boolean {
+  return opts.resolvedFrom === 'local-dir' && opts.sourceExists === false && !targetHasNothingToLose(to)
+}
+
+function targetHasNothingToLose (to: string): boolean {
+  try {
+    const files = fs.readdirSync(to)
+    return files.length === 0 || files.length === 1 && files[0] === 'node_modules'
+  } catch {
+    return true
+  }
+}
+
+// The CLI never changes its own umask and the import path asks for it once
+// per file, so read it once.
+let umask: number | undefined
+
+function storeEntryMode (executable: boolean): number {
+  umask ??= process.umask()
+  return ((executable ? EXEC_FILE_MODE : BASE_FILE_MODE) & ~umask) & 0o777
+}
+
+// The exact inverse of the CAFS layout `<store>/v<N>/files/<2 hex digits>/<digest>[-exec]`.
+// This importer also materializes local-directory dependencies, whose files keep
+// the modes their project gives them, so only a real store entry is re-derived.
+function isCafsFile (src: string): boolean {
+  const nameSep = src.lastIndexOf(path.sep)
+  if (nameSep < 0) return false
+  const shardSep = src.lastIndexOf(path.sep, nameSep - 1)
+  if (shardSep < 0 || nameSep - shardSep - 1 !== 2 || !isLowerHex(src, shardSep + 1, nameSep)) return false
+  const filesSep = src.lastIndexOf(path.sep, shardSep - 1)
+  if (filesSep < 0 || shardSep - filesSep - 1 !== 'files'.length || !src.startsWith('files', filesSep + 1)) return false
+  const digestEnd = src.endsWith(CAFS_EXEC_SUFFIX) ? src.length - CAFS_EXEC_SUFFIX.length : src.length
+  return digestEnd - nameSep - 1 >= CAFS_DIGEST_MIN_LENGTH && isLowerHex(src, nameSep + 1, digestEnd)
+}
+
+function isLowerHex (value: string, from: number, to: number): boolean {
+  for (let i = from; i < to; i++) {
+    const code = value.charCodeAt(i)
+    if (!((code >= 0x30 && code <= 0x39) || (code >= 0x61 && code <= 0x66))) return false
+  }
+  return true
+}
+
+// A store file carries the umask that was active when it was written, so
+// importing has to apply the current one as though the entry were just
+// written (pnpm/pnpm#3807). POSIX mode bits do not apply on Windows.
+function storeEntryModeForSource (src: string): number | undefined {
+  if (process.platform === 'win32') return undefined
+  return isCafsFile(src) ? storeEntryMode(src.endsWith(CAFS_EXEC_SUFFIX)) : undefined
+}
+
+function alignStoreFileMode (src: string, dest: string): void {
+  const mode = storeEntryModeForSource(src)
+  if (mode === undefined) return
+  chmodSync(dest, mode)
+}
+
+function storeModeDiffers (existingPath: string): boolean {
+  const storeMode = storeEntryModeForSource(existingPath)
+  return storeMode !== undefined && (fs.statSync(existingPath).mode & 0o777) !== storeMode
+}
+
 function linkOrCopy (existingPath: string, newPath: string): void {
+  // A hardlink would pin the store-population mode onto the import.
+  if (storeModeDiffers(existingPath)) {
+    resilientCopyFileSync(existingPath, newPath)
+    return
+  }
   try {
     fs.linkSync(existingPath, newPath)
   } catch (err: unknown) {
@@ -267,15 +388,27 @@ function linkOrCopy (existingPath: string, newPath: string): void {
   }
 }
 
+// The auto-mode hardlink probe: a filesystem that cannot hardlink must keep
+// failing here, so auto backs off to copy.
+function linkOrThrowOnLinkFailure (existingPath: string, newPath: string): void {
+  if (storeModeDiffers(existingPath)) {
+    resilientCopyFileSync(existingPath, newPath)
+    return
+  }
+  fs.linkSync(existingPath, newPath)
+}
+
 // On Linux CI, the kernel's copy_file_range/sendfile can transiently fail
 // with ENOTSUP under heavy parallel I/O on the same store files.
 // Fall back to manual read+write which uses plain read/write syscalls.
 function resilientCopyFileSync (src: string, dest: string): void {
   try {
     fs.copyFileSync(src, dest)
+    alignStoreFileMode(src, dest)
   } catch (err: unknown) {
     if (util.types.isNativeError(err) && 'code' in err && err.code === 'ENOTSUP') {
-      const srcMode = fs.statSync(src).mode
+      const storeMode = storeEntryModeForSource(src)
+      const srcMode = storeMode ?? fs.statSync(src).mode
       fs.writeFileSync(dest, fs.readFileSync(src), { mode: srcMode })
     } else {
       throw err
@@ -302,7 +435,7 @@ export function copyPkg (
   to: string,
   opts: ImportOptions
 ): 'copy' | undefined {
-  if (opts.resolvedFrom !== 'store' || opts.force || !pkgExistsAtTargetDir(to, opts.filesMap)) {
+  if (shouldImportPkg(to, opts)) {
     // copyFileSync is not atomic on non-COW filesystems: a crash mid-copy
     // can leave a partially-written file.  package.json is the completion
     // marker, so it must be written atomically via temp file + rename.

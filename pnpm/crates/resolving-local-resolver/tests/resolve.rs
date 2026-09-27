@@ -36,6 +36,7 @@ fn opts(project_dir: &Path) -> LocalResolverOptions {
         lockfile_dir: None,
         current_pkg: None,
         update: LocalResolverUpdate::Off,
+        inject_workspace_packages: false,
     }
 }
 
@@ -169,6 +170,20 @@ async fn resolve_workspace_directory() {
 
     assert_eq!(result.id.as_str(), "link:..");
     assert_eq!(result.normalized_bare_specifier.as_deref(), Some("link:.."));
+}
+
+#[tokio::test]
+async fn resolve_workspace_directory_with_inject_workspace_packages() {
+    let (_tmp, project_dir) = fixture();
+    let wd = WantedLocalDependency { bare_specifier: "workspace:..".to_string(), injected: false };
+    let opts = LocalResolverOptions { inject_workspace_packages: true, ..opts(&project_dir) };
+
+    let result = resolve_from_local_scheme(&ctx_default(), &wd, &opts).await
+        .expect("resolve")
+        .expect("claims");
+
+    assert_eq!(result.id.as_str(), "file:..");
+    assert_eq!(result.normalized_bare_specifier.as_deref(), Some("file:.."));
 }
 
 #[tokio::test]
@@ -498,6 +513,93 @@ async fn resolve_absolute_tarball_path_stepping_back_through_a_missing_directory
 }
 
 #[tokio::test]
+async fn resolve_missing_tarball_falls_back_to_current_pkg_when_not_updating() {
+    let tmp = TempDir::new().expect("tempdir");
+    let wd = WantedLocalDependency {
+        bare_specifier: "file:./missing-pkg.tgz".to_string(),
+        injected: false,
+    };
+    let mut options = opts(tmp.path());
+    let current_resolution = LockfileResolution::Tarball(TarballResolution {
+        tarball: "file:missing-pkg.tgz".to_string(),
+        integrity: Some("sha512-SAVED_INTEGRITY".parse().unwrap()),
+        revision: None,
+        git_hosted: None,
+        path: None,
+    });
+    options.current_pkg = Some(pnpm_resolving_local_resolver::LocalCurrentPkg {
+        id: PkgResolutionId::from("file:missing-pkg.tgz"),
+        resolution: current_resolution.clone(),
+        manifest: None,
+    });
+    options.update = LocalResolverUpdate::Off;
+
+    let result = resolve_from_local_scheme(&ctx_default(), &wd, &options).await
+        .expect("resolve should succeed with fallback")
+        .expect("claims");
+
+    assert_eq!(result.id.as_str(), "file:missing-pkg.tgz");
+    assert_eq!(result.resolution, current_resolution);
+
+    options.update = LocalResolverUpdate::On;
+    let err = resolve_from_local_scheme(&ctx_default(), &wd, &options).await
+        .expect_err("update should fail when tarball is missing");
+    assert!(matches!(err, ResolveLocalError::LinkedPkgDirNotFound { .. }));
+}
+
+#[tokio::test]
+async fn resolve_missing_tarball_fails_when_current_pkg_has_no_integrity() {
+    let tmp = TempDir::new().expect("tempdir");
+    let wd = WantedLocalDependency {
+        bare_specifier: "file:./missing-pkg.tgz".to_string(),
+        injected: false,
+    };
+    let mut options = opts(tmp.path());
+    options.current_pkg = Some(pnpm_resolving_local_resolver::LocalCurrentPkg {
+        id: PkgResolutionId::from("file:missing-pkg.tgz"),
+        resolution: LockfileResolution::Tarball(TarballResolution {
+            tarball: "file:missing-pkg.tgz".to_string(),
+            integrity: None,
+            revision: None,
+            git_hosted: None,
+            path: None,
+        }),
+        manifest: None,
+    });
+    options.update = LocalResolverUpdate::Off;
+
+    let err = resolve_from_local_scheme(&ctx_default(), &wd, &options).await
+        .expect_err("should fail when integrity is missing");
+    assert!(matches!(err, ResolveLocalError::LinkedPkgDirNotFound { .. }));
+}
+
+#[tokio::test]
+async fn resolve_missing_tarball_fails_when_current_pkg_id_does_not_match() {
+    let tmp = TempDir::new().expect("tempdir");
+    let wd = WantedLocalDependency {
+        bare_specifier: "file:./missing-pkg.tgz".to_string(),
+        injected: false,
+    };
+    let mut options = opts(tmp.path());
+    options.current_pkg = Some(pnpm_resolving_local_resolver::LocalCurrentPkg {
+        id: PkgResolutionId::from("file:other-pkg.tgz"),
+        resolution: LockfileResolution::Tarball(TarballResolution {
+            tarball: "file:other-pkg.tgz".to_string(),
+            integrity: Some("sha512-SAVED_INTEGRITY".parse().unwrap()),
+            revision: None,
+            git_hosted: None,
+            path: None,
+        }),
+        manifest: None,
+    });
+    options.update = LocalResolverUpdate::Off;
+
+    let err = resolve_from_local_scheme(&ctx_default(), &wd, &options).await
+        .expect_err("should fail when current_pkg id does not match");
+    assert!(matches!(err, ResolveLocalError::LinkedPkgDirNotFound { .. }));
+}
+
+#[tokio::test]
 async fn resolve_tarball_specified_with_file_protocol() {
     let tmp = TempDir::new().expect("tempdir");
     let test_dir = tmp.path().join("tgz");
@@ -543,6 +645,7 @@ async fn resolve_file_with_different_integrity_force_fetch() {
             git_hosted: None,
             path: None,
         }),
+        manifest: None,
     });
 
     let wd = WantedLocalDependency {
@@ -657,7 +760,9 @@ async fn do_not_fail_when_resolving_from_not_existing_directory() {
         .expect("claims");
     let manifest = result.manifest.as_ref().expect("manifest");
     assert_eq!(manifest.get("name").and_then(|value| value.as_str()), Some("dir-does-not-exist"));
-    assert_eq!(manifest.get("version").and_then(|value| value.as_str()), Some("0.0.0"));
+    // The version stays unknown so ranged selectors cannot match it
+    // (https://github.com/pnpm/pnpm/issues/15007).
+    assert_eq!(manifest.get("version"), None);
 }
 
 #[tokio::test]

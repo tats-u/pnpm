@@ -157,6 +157,54 @@ fn applies_a_zero_context_insertion_without_a_newline_to_an_empty_file() {
     assert_eq!(applied_hunk("", hunk), "added");
 }
 
+/// `pnpm patch-commit` writes this shape, and pnpm 11 applies it.
+#[test]
+fn applies_deletions_after_a_context_line_marked_without_a_newline() {
+    let original = text_block_fnl! {
+        "one"
+        "two"
+        "three"
+        ""
+    };
+    let hunk = text_block_fnl! {
+        "@@ -1,4 +1,2 @@"
+        " one"
+        " two"
+        r"\ No newline at end of file"
+        "-three"
+        "-"
+    };
+    let expected = text_block_fnl! {
+        "one"
+        "two"
+    };
+    let after = applied_hunk(original, hunk);
+    assert_eq!(after, expected);
+}
+
+/// The preview reads the patch the same way [`apply_patch_to_dir`] does.
+#[test]
+fn previews_deletions_after_a_context_line_marked_without_a_newline() {
+    let patched = tempdir().unwrap();
+    fs::write(patched.path().join("package.json"), format!("{MANIFEST}\n")).unwrap();
+    let patch_dir = tempdir().unwrap();
+    let patch_text = text_block_fnl! {
+        "diff --git a/package.json b/package.json"
+        "--- a/package.json"
+        "+++ b/package.json"
+        "@@ -5,3 +5,2 @@"
+        "   }"
+        " }"
+        r"\ No newline at end of file"
+        "-"
+    };
+    let patch = write_patch(patch_dir.path(), patch_text);
+
+    let preview = preview_patch(patched.path(), &patch).expect("preview must succeed");
+
+    assert_eq!(preview.manifest.as_deref(), Some(MANIFEST));
+}
+
 /// A file rewritten twice is one file, and a delete costs a lookup rather
 /// than a scan of everything written before it.
 #[test]
@@ -205,6 +253,33 @@ fn previews_no_path_for_a_file_the_patch_creates_and_then_deletes() {
             .exists(),
         "no binding.gyp remains",
     );
+}
+
+#[test]
+fn previews_the_paths_a_patch_deletes() {
+    let patched = tempdir().unwrap();
+    fs::write(patched.path().join("binding.gyp"), "{}\n").unwrap();
+    let patch_dir = tempdir().unwrap();
+    let patch = write_patch(patch_dir.path(), BINDING_GYP_DELETE_PATCH);
+
+    let preview = preview_patch(patched.path(), &patch).expect("preview must succeed");
+
+    assert!(preview.written_paths.is_empty(), "written_paths: {:?}", preview.written_paths);
+    assert_eq!(preview.removed_paths, ["binding.gyp"]);
+}
+
+#[test]
+fn previews_a_deleted_then_recreated_path_as_written() {
+    let patched = tempdir().unwrap();
+    fs::write(patched.path().join("binding.gyp"), "{}\n").unwrap();
+    let patch_dir = tempdir().unwrap();
+    let patch =
+        write_patch(patch_dir.path(), &format!("{BINDING_GYP_DELETE_PATCH}{BINDING_GYP_PATCH}"));
+
+    let preview = preview_patch(patched.path(), &patch).expect("preview must succeed");
+
+    assert_eq!(preview.written_paths, ["binding.gyp"]);
+    assert!(preview.removed_paths.is_empty(), "removed_paths: {:?}", preview.removed_paths);
 }
 
 /// The build phase owns the real apply. Applying twice to one slot is not

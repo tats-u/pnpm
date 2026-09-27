@@ -14,7 +14,6 @@ use crate::{
         package_manager::read_root_manifest_json, pipelines::InstallFamilySelection,
         recursive::discover_workspace_projects,
         supported_architectures::SupportedArchitecturesArgs,
-        yarn_workspaces_field::warn_unsupported_workspaces_field,
     },
 };
 use clap::{Args, ValueEnum};
@@ -125,19 +124,18 @@ pub(crate) fn included_dependency_groups(
     dev: bool,
     include_optional: bool,
 ) -> impl Iterator<Item = DependencyGroup> {
-    // `--prod` wins over `--dev`, and a dev-only install drops optional
-    // dependencies along with the production ones.
-    let (has_prod, has_dev, has_optional) = if prod {
-        (true, false, include_optional)
+    // `--prod` wins over `--dev`.
+    let (has_prod, has_dev) = if prod {
+        (true, false)
     } else if dev {
-        (false, true, false)
+        (false, true)
     } else {
-        (true, true, include_optional)
+        (true, true)
     };
     std::iter::empty()
         .chain(has_prod.then_some(DependencyGroup::Prod))
         .chain(has_dev.then_some(DependencyGroup::Dev))
-        .chain(has_optional.then_some(DependencyGroup::Optional))
+        .chain(include_optional.then_some(DependencyGroup::Optional))
 }
 
 #[derive(Debug, Default, Clone, Args)]
@@ -213,6 +211,11 @@ impl InstallArgs {
         } else {
             None
         }
+    }
+
+    /// Package names allowed to run lifecycle (build) scripts during this install.
+    pub fn allow_build(&self) -> &[String] {
+        &self.materialization.allow_build
     }
 
     pub async fn run<Reporter: self::Reporter + 'static>(self, state: State) -> miette::Result<()> {
@@ -351,9 +354,8 @@ impl InstallArgs {
     ///
     /// `--fix-lockfile` rewrites the lockfile, so it is never frozen. On
     /// CI a project that already has a non-empty lockfile installs frozen
-    /// by default, unless the run said otherwise through
-    /// `--lockfile-only`, either `preferFrozenLockfile` flag, or the
-    /// setting itself.
+    /// by default, unless the run is `--lockfile-only` or the effective
+    /// `preferFrozenLockfile` is `false`.
     fn resolve_frozen_lockfile(&self, state: &State) -> miette::Result<bool> {
         if self.lockfile.fix {
             return Ok(false);
@@ -361,12 +363,10 @@ impl InstallArgs {
         if let Some(value) = self.configured_frozen_lockfile(state.config) {
             return Ok(value);
         }
-        let ci_default = state.config.ci
-            && !self.lockfile.only
-            && !self.lockfile.prefer_frozen
-            && !self.lockfile.no_prefer_frozen
-            && !state.config.explicit_settings.contains_key("preferFrozenLockfile");
-        if !ci_default {
+        let prefer_frozen =
+            self.prefer_frozen_override().unwrap_or(state.config.prefer_frozen_lockfile);
+        let ci_frozen = state.config.ci && !self.lockfile.only && prefer_frozen;
+        if !ci_frozen {
             return Ok(false);
         }
         Ok(state.lockfile
@@ -383,6 +383,7 @@ pub(crate) fn workspace_install_selection(
         project_dependencies: &selection.project_dependencies,
         ordered_dirs: &selection.ordered_dirs,
         selected_dirs: selection.selected_dirs.as_ref(),
+        edited_dirs: None,
         install_dirs: selection.install_dirs.as_ref(),
         active_manifest_is_standin: selection.active_manifest_is_standin,
         workspace_cycles: selection.workspace_cycles

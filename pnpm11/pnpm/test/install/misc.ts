@@ -35,6 +35,31 @@ afterAll(() => {
   for (const si of storeIndexes) si.close()
 })
 
+// Covers https://github.com/pnpm/pnpm/issues/895 and https://github.com/pnpm/pnpm/issues/9512
+test('install relinks dependencies after the project directory is moved', async () => {
+  prepare({
+    dependencies: {
+      'is-positive': '1.0.0',
+    },
+  })
+  await execPnpm(['install'])
+
+  // Junctions, which pnpm uses on Windows without the symlink privilege,
+  // point at absolute paths that break when the project is moved.
+  fs.unlinkSync('node_modules/is-positive')
+  fs.symlinkSync(path.resolve('node_modules/.pnpm/is-positive@1.0.0/node_modules/is-positive'), 'node_modules/is-positive', 'junction')
+  const projectDir = process.cwd()
+  const movedDir = path.resolve('../moved-project')
+  process.chdir('..')
+  fs.renameSync(projectDir, movedDir)
+  process.chdir(movedDir)
+  expect(fs.existsSync('node_modules/is-positive/package.json')).toBe(false)
+
+  await execPnpm(['install', '--config.confirm-modules-purge=false'])
+
+  expect(fs.existsSync('node_modules/is-positive/package.json')).toBe(true)
+})
+
 test('bin files are found by lifecycle scripts', () => {
   prepare({
     dependencies: {
@@ -133,6 +158,18 @@ test('install --save-exact', async () => {
   const pkg = await readPackageJsonFromDir(process.cwd())
 
   expect(pkg.devDependencies).toStrictEqual({ 'is-positive': '3.1.0' })
+})
+
+test('install keeps an empty peerDependencies field in package.json', async () => {
+  prepareEmpty()
+  fs.writeFileSync('package.json', JSON.stringify({ name: 'project', version: '0.0.0', peerDependencies: {} }), 'utf8')
+
+  await execPnpm(['install', 'is-positive@3.1.0', '--save-exact'])
+
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+
+  expect(pkg.peerDependencies).toStrictEqual({})
+  expect(pkg.dependencies).toStrictEqual({ 'is-positive': '3.1.0' })
 })
 
 test('install to a project that uses package.yaml', async () => {
@@ -453,6 +490,17 @@ test('installing in a CI environment', async () => {
   })
 
   await execPnpm(['install', '--no-prefer-frozen-lockfile'], { env: { CI: 'true' } })
+
+  rimrafSync('node_modules')
+  project.writePackageJson({
+    dependencies: { rimraf: '1' },
+  })
+  writeYamlFileSync('pnpm-workspace.yaml', { preferFrozenLockfile: true })
+  const lockfileBeforeInstall = fs.readFileSync(WANTED_LOCKFILE, 'utf8')
+  await expect(
+    execPnpm(['install'], { env: { CI: 'true' } })
+  ).rejects.toThrow('ERR_PNPM_OUTDATED_LOCKFILE')
+  expect(fs.readFileSync(WANTED_LOCKFILE, 'utf8')).toBe(lockfileBeforeInstall)
 })
 
 // Tests for issue #9861: frozen-lockfile should be overridable via env vars and updateConfig hook
@@ -803,6 +851,45 @@ test('install --force refetches a dependency whose store content was modified to
   expect(execPnpmSync(['store', 'status']).status).toBe(0)
 })
 
+// Covers https://github.com/pnpm/pnpm/issues/3445
+test('install --force repairs a modified store file in place, keeping its inode', async () => {
+  prepare({
+    dependencies: {
+      'is-positive': '1.0.0',
+    },
+  })
+  const env = { pnpm_config_package_import_method: 'hardlink' }
+
+  await execPnpm(['install'], { env })
+
+  const installedFile = path.resolve('node_modules/is-positive/index.js')
+  const pristine = fs.readFileSync(installedFile, 'utf8')
+  // A second hard link stands in for another project importing the same
+  // store file; its inode is the store file's inode.
+  const linkedCopy = path.resolve('linked-copy.js')
+  fs.linkSync(installedFile, linkedCopy)
+  const inodeBefore = fs.statSync(linkedCopy).ino
+
+  // Append through the hardlink, which mutates the store's copy as well.
+  fs.appendFileSync(installedFile, '\n// tampered\n')
+  // The store skips verifying a file whose mtime is within 100ms of the last
+  // check, so move it past that window to make the edit observable.
+  const afterTheSkipWindow = new Date(Date.now() + 60_000)
+  fs.utimesSync(installedFile, afterTheSkipWindow, afterTheSkipWindow)
+
+  await execPnpm(['install', '--force'], { env })
+
+  expect(fs.readFileSync(installedFile, 'utf8')).toBe(pristine)
+  // The inode-preserving repair does not hold on Windows GHA runners
+  // (see writeBufferToCafs.test.ts), so the healing of hard-linked
+  // copies is asserted only where the in-place overwrite works.
+  if (!isWindows()) {
+    expect(fs.readFileSync(linkedCopy, 'utf8')).toBe(pristine)
+    // The reinstalled file links to the store file, whose inode must be kept
+    expect(fs.statSync(installedFile).ino).toBe(inodeBefore)
+  }
+})
+
 // Covers https://github.com/pnpm/pnpm/issues/919
 test('install --force reports the frozenStore conflict on a repeat install', async () => {
   prepare({
@@ -817,4 +904,78 @@ test('install --force reports the frozenStore conflict on a repeat install', asy
 
   expect(status).toBe(1)
   expect(stdout.toString()).toContain('Cannot use force together with frozenStore')
+})
+
+test('adding a dependency succeeds after deleting offline package source', async () => {
+  const project = prepareEmpty()
+
+  const pkgDir = path.resolve('..', 'offline-pkg')
+  fs.mkdirSync(path.join(pkgDir, 'package'), { recursive: true })
+  fs.writeFileSync(path.join(pkgDir, 'package', 'package.json'), JSON.stringify({
+    name: 'offline-pkg',
+    version: '1.0.0',
+    dependencies: {
+      'is-positive': '1.0.0',
+    },
+  }))
+  execPnpmSync(['pack', '--pack-destination', pkgDir], { cwd: path.join(pkgDir, 'package') })
+  const tarball = path.join(pkgDir, 'offline-pkg-1.0.0.tgz')
+
+  await execPnpm(['add', tarball])
+  project.has('offline-pkg')
+  let lockfile = project.readLockfile()
+  expect(lockfile.packages['is-positive@1.0.0']).toBeDefined()
+
+  fs.unlinkSync(tarball)
+
+  await execPnpm(['add', '@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0'])
+
+  project.has('offline-pkg')
+  project.has('@pnpm.e2e/dep-of-pkg-with-1-dep')
+  lockfile = project.readLockfile()
+  expect(lockfile.packages['is-positive@1.0.0']).toBeDefined()
+})
+
+test('a repeat install relinks a direct dependency whose link points to a missing target', async () => {
+  prepare({
+    dependencies: {
+      'is-positive': '1.0.0',
+    },
+  })
+
+  await execPnpm(['install'])
+
+  const directLink = path.resolve('node_modules/is-positive')
+  fs.rmSync(directLink)
+  fs.symlinkSync(path.resolve('node_modules/.pnpm/is-positive@0.0.0'), directLink, 'junction')
+
+  await execPnpm(['install'])
+
+  expect((await readPackageJsonFromDir(directLink)).version).toBe('1.0.0')
+})
+
+test('a repeat hoisted install relinks a workspace project dependency whose root link points to a missing target', async () => {
+  preparePackages([
+    {
+      location: '.',
+      package: { name: 'root' },
+    },
+    {
+      name: 'project',
+      dependencies: {
+        'is-positive': '1.0.0',
+      },
+    },
+  ])
+  writeYamlFileSync('pnpm-workspace.yaml', { packages: ['project'], nodeLinker: 'hoisted' })
+
+  await execPnpm(['install'])
+
+  const rootEntry = path.resolve('node_modules/is-positive')
+  fs.rmSync(rootEntry, { recursive: true })
+  fs.symlinkSync(path.resolve('node_modules/.missing/is-positive'), rootEntry, 'junction')
+
+  await execPnpm(['install'])
+
+  expect((await readPackageJsonFromDir(rootEntry)).version).toBe('1.0.0')
 })

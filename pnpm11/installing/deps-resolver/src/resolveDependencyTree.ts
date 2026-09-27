@@ -2,15 +2,18 @@ import { resolveFromCatalog } from '@pnpm/catalogs.resolver'
 import type { Catalogs } from '@pnpm/catalogs.types'
 import { pickRegistryContext } from '@pnpm/config.normalize-registries'
 import { createPackageVersionPolicyOrThrow, getPublishedByPolicy } from '@pnpm/config.version-policy'
+import * as dp from '@pnpm/deps.path'
 import type { LockfileObject } from '@pnpm/lockfile.types'
+import { findLockedRootNodeRuntime } from '@pnpm/lockfile.utils'
 import { globalWarn } from '@pnpm/logger'
 import type { PatchGroupRecord } from '@pnpm/patching.config'
 import { BUILTIN_REGISTRIES_BY_PREFIX } from '@pnpm/resolving.npm-resolver'
 import type { PreferredVersions, Resolution, ResolutionPolicyViolation, WorkspacePackages } from '@pnpm/resolving.resolver-base'
 import type { StoreController } from '@pnpm/store.controller-types'
-import type { AllowBuild, AllowedDeprecatedVersions, PkgResolutionId, ProjectId, ProjectManifest, ProjectRootDir, RangeSpecStyle, ReadPackageHook, RegistryContext, SupportedArchitectures, TrustPolicy } from '@pnpm/types'
+import type { AllowBuild, AllowedDeprecatedVersions, DepPath, PkgResolutionId, ProjectId, ProjectManifest, ProjectRootDir, RangeSpecStyle, ReadPackageHook, RegistryContext, SupportedArchitectures, TrustPolicy } from '@pnpm/types'
 import { partition } from 'ramda'
 
+import { collectDirectDependencySpecs, findStalePeerPins, releaseStalePeerPins } from './findStalePeerPins.js'
 import type { WantedDependency } from './getNonDevWantedDependencies.js'
 import type { NodeId } from './nextNodeId.js'
 import {
@@ -118,6 +121,11 @@ export interface ResolveDependenciesOptions extends RegistryContext {
   engineStrict: boolean
   force: boolean
   forceFullResolution: boolean
+  /**
+   * Aliases whose lockfile pins are not reused, because an override that may
+   * have produced them no longer applies.
+   */
+  staleOverrideTargets?: ReadonlySet<string>
   updateChecksums?: boolean
   ignoreScripts?: boolean
   hooks: {
@@ -125,9 +133,16 @@ export interface ResolveDependenciesOptions extends RegistryContext {
   }
   overrideBareSpecifier?: (name: string, bareSpecifier: string, dir?: string) => string | undefined
   nodeVersion?: string
+  /**
+   * Check engines against the Node.js version the root project's `node`
+   * runtime dependency resolves to, when it has one. Set when the user did not
+   * configure `nodeVersion`.
+   */
+  checkEnginesAgainstRootRuntime?: boolean
   patchedDependencies?: PatchGroupRecord
   pnpmVersion: string
   preferredVersions?: PreferredVersions
+  preferredVersionsByImporterId?: Record<string, PreferredVersions>
   preferWorkspacePackages?: boolean
   resolutionMode?: 'highest' | 'time-based' | 'lowest-direct'
   resolvePeersFromWorkspaceRoot?: boolean
@@ -192,6 +207,7 @@ export async function resolveDependencyTree<T> (
     engineStrict: opts.engineStrict,
     force: opts.force,
     forceFullResolution: opts.forceFullResolution,
+    staleOverrideTargets: opts.staleOverrideTargets,
     updateChecksums: opts.updateChecksums,
     ignoreScripts: opts.ignoreScripts,
     injectWorkspacePackages: opts.injectWorkspacePackages,
@@ -221,6 +237,7 @@ export async function resolveDependencyTree<T> (
     virtualStoreDirMaxLength: opts.virtualStoreDirMaxLength,
     wantedLockfile: opts.wantedLockfile,
     updatedSet: new Set<string>(),
+    lockedDepPathByPkgId: getLockedDepPathByPkgId(opts.wantedLockfile),
     workspacePackages: opts.workspacePackages,
     missingPeersOfChildrenByPkgId: {},
     hoistPeers: autoInstallPeers || opts.dedupePeerDependents,
@@ -242,8 +259,30 @@ export async function resolveDependencyTree<T> (
     resolutionPolicyViolations: [],
   }
 
+  if (opts.checkEnginesAgainstRootRuntime === true) {
+    ctx.nodeVersion = await resolveRootRuntimeNodeVersion(importers, opts) ?? opts.nodeVersion
+  }
+
+  const directSpecsByName = autoInstallPeers && importers.some(({ manifest }) => manifest.peerDependencies != null)
+    ? collectDirectDependencySpecs(importers.map(({ manifest }) => manifest), opts.catalogs ?? {})
+    : undefined
   const resolveArgs: ImporterToResolve[] = importers.map((importer) => {
     const projectSnapshot = opts.wantedLockfile.importers[importer.id]
+    const lockedDependencies = {
+      ...projectSnapshot.dependencies,
+      ...projectSnapshot.devDependencies,
+      ...projectSnapshot.optionalDependencies,
+    }
+    const stalePeerPins = directSpecsByName == null
+      ? undefined
+      : findStalePeerPins(lockedDependencies, {
+        directSpecsByName,
+        lockfile: opts.wantedLockfile,
+        manifest: importer.manifest,
+      })
+    const { preferredVersions, resolvedDependencies } = stalePeerPins?.size
+      ? releaseStalePeerPins(stalePeerPins, { preferredVersions: importer.preferredVersions ?? {}, resolvedDependencies: lockedDependencies })
+      : { preferredVersions: importer.preferredVersions ?? {}, resolvedDependencies: lockedDependencies }
     // This may be optimized.
     // We only need to proceed resolving every dependency
     // if the newly added dependency has peer dependencies.
@@ -259,11 +298,7 @@ export async function resolveDependencyTree<T> (
       },
       parentIds: [importer.id as unknown as PkgResolutionId],
       proceed,
-      resolvedDependencies: {
-        ...projectSnapshot.dependencies,
-        ...projectSnapshot.devDependencies,
-        ...projectSnapshot.optionalDependencies,
-      },
+      resolvedDependencies,
       updateDepth: -1,
       updateMatching: importer.updateMatching,
       updatePatches: importer.updatePatches,
@@ -276,7 +311,7 @@ export async function resolveDependencyTree<T> (
       parentPkgAliases: Object.fromEntries(
         importer.wantedDependencies.filter(({ alias }) => alias).map(({ alias }) => [alias, true])
       ) as ParentPkgAliases,
-      preferredVersions: importer.preferredVersions ?? {},
+      preferredVersions,
       wantedDependencies: importer.wantedDependencies,
       options: resolveOpts,
       rangeSpecStyle: importer.rangeSpecStyle,
@@ -289,7 +324,9 @@ export async function resolveDependencyTree<T> (
     for (const directDep of directDependencies as PkgAddress[]) {
       const { alias, normalizedBareSpecifier, version, saveCatalogName } = directDep
 
-      if (saveCatalogName == null) {
+      // A dependency resolved through its `catalog:` reference already belongs to the catalog, and
+      // an update moves that entry through `updatedCatalogs`.
+      if (saveCatalogName == null || directDep.catalogLookup != null) {
         continue
       }
 
@@ -394,4 +431,44 @@ function dedupeSameAliasDirectDeps (directDeps: PkgAddressOrLink[], wantedDepend
     }
   }
   return Array.from(deps.values())
+}
+
+function getLockedDepPathByPkgId (lockfile: LockfileObject): Map<PkgResolutionId, DepPath> {
+  const lockedDepPathByPkgId = new Map<PkgResolutionId, DepPath>()
+  for (const depPath of Object.keys(lockfile.packages ?? {}) as DepPath[]) {
+    const pkgId = dp.tryGetPackageId(depPath) as string as PkgResolutionId
+    if (!lockedDepPathByPkgId.has(pkgId)) {
+      lockedDepPathByPkgId.set(pkgId, depPath)
+    }
+  }
+  return lockedDepPathByPkgId
+}
+
+/**
+ * The Node.js version the root project's `node` runtime dependency resolves
+ * to in this install. It is resolved ahead of the other dependencies because
+ * each package's engines are checked when the package is requested.
+ */
+async function resolveRootRuntimeNodeVersion<T> (
+  importers: Array<ImporterToResolveGeneric<T>>,
+  opts: Pick<ResolveDependenciesOptions, 'lockfileDir' | 'storeController' | 'wantedLockfile'>
+): Promise<string | undefined> {
+  const locked = findLockedRootNodeRuntime(opts.wantedLockfile)
+  const rootImporter = importers.find(({ id }) => id === '.')
+  if (rootImporter == null) return locked?.version
+  const wantedNode = rootImporter.wantedDependencies.find(({ alias, bareSpecifier }) =>
+    alias === 'node' && bareSpecifier.startsWith('runtime:'))
+  if (wantedNode == null) return undefined
+  const updateRequested = wantedNode.updateDepth >= 0 && (rootImporter.updateMatching?.('node', locked?.version) ?? true)
+  if (locked != null && locked.specifier === wantedNode.bareSpecifier && !updateRequested) {
+    return locked.version
+  }
+  const { body } = await opts.storeController.requestPackage(wantedNode, {
+    downloadPriority: 0,
+    lockfileDir: opts.lockfileDir,
+    preferredVersions: {},
+    projectDir: rootImporter.rootDir,
+    skipFetch: true,
+  })
+  return body.manifest?.version
 }

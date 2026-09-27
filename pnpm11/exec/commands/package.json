@@ -1,6 +1,6 @@
 {
   "name": "@pnpm/exec.commands",
-  "version": "1101.1.3",
+  "version": "1101.1.4",
   "description": "Commands for running scripts",
   "keywords": [
     "pnpm",
@@ -46,14 +46,16 @@
     "@pnpm/crypto.hash": "workspace:*",
     "@pnpm/deps.status": "workspace:*",
     "@pnpm/engine.runtime.commands": "workspace:*",
+    "@pnpm/engine.runtime.system-version": "workspace:*",
     "@pnpm/error": "workspace:*",
     "@pnpm/exec.esm-node-path-loader": "workspace:*",
     "@pnpm/exec.lifecycle": "workspace:*",
     "@pnpm/exec.npm-lifecycle": "workspace:*",
     "@pnpm/exec.pnpm-cli-runner": "workspace:*",
+    "@pnpm/fs.dir-lock": "workspace:*",
     "@pnpm/installing.client": "workspace:*",
     "@pnpm/installing.commands": "workspace:*",
-    "@pnpm/log.group": "catalog:",
+    "@pnpm/log.group": "workspace:*",
     "@pnpm/pkg-manifest.reader": "workspace:*",
     "@pnpm/resolving.parse-wanted-dependency": "workspace:*",
     "@pnpm/shell.path": "workspace:*",
@@ -81,7 +83,6 @@
   },
   "devDependencies": {
     "@jest/globals": "catalog:",
-    "@pnpm/engine.runtime.system-version": "workspace:*",
     "@pnpm/exec.commands": "workspace:*",
     "@pnpm/logger": "workspace:*",
     "@pnpm/prepare": "workspace:*",

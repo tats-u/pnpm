@@ -2,9 +2,11 @@ use super::{
     Arc, ArchiveStoreProjection, AuthHeaders, Duration, EndlessReader, FASTIFY_ERROR_INTEGRITY,
     FASTIFY_ERROR_TARBALL, HashMap, IngestTarballToStore, Integrity, MemCache, PrefetchedCasPaths,
     RetryOpts, STREAM_ENTRY_BUFFER_MAX, SharedVerifiedFilesCache, SilentReporter, StoreIndexWriter,
-    TarballError, ThrottledClient, assert_eq, fast_retry_opts, fetch_and_extract_with_retry,
-    integrity, store_index_key, tempdir_with_leaked_path, test_retry_opts, write_zip_entry_to_cas,
+    TarballError, ThrottledClient, UNREACHABLE_URL, assert_eq, fast_retry_opts,
+    fetch_and_extract_with_retry, integrity, store_index_key, tempdir_with_leaked_path,
+    test_retry_opts, write_zip_entry_to_cas,
 };
+use pnpm_testing_utils::untrusted_tls_server::UntrustedTlsServer;
 
 #[tokio::test]
 async fn retries_other_4xx_codes() {
@@ -43,6 +45,35 @@ async fn retries_other_4xx_codes() {
         other => panic!("expected HttpStatus(410), got: {other:?}"),
     }
     mock.assert_async().await;
+    drop(store_dir_keep);
+}
+
+/// <https://github.com/pnpm/pnpm/issues/9134>
+#[tokio::test]
+async fn does_not_retry_an_untrusted_certificate() {
+    let (store_dir_keep, store_path) = tempdir_with_leaked_path();
+    let server = UntrustedTlsServer::start();
+    let url = format!("{}/pkg.tgz", server.url);
+
+    let err = fetch_and_extract_with_retry::<SilentReporter>(
+        &ThrottledClient::default(),
+        &url,
+        Some(&integrity(FASTIFY_ERROR_INTEGRITY)),
+        None,
+        0,
+        "test-pkg",
+        "",
+        store_path,
+        fast_retry_opts(),
+        &AuthHeaders::default(),
+        None,
+        None,
+        false,
+    )
+    .await
+    .expect_err("an untrusted certificate must fail the fetch");
+    assert!(matches!(err, TarballError::FetchTarball(_)), "got: {err:?}");
+    assert_eq!(server.connections(), 1);
     drop(store_dir_keep);
 }
 
@@ -439,11 +470,10 @@ async fn started_fires_for_connection_level_failures() {
         }
     }
 
-    // Reserved-for-documentation TLD per RFC 6761; resolves nowhere
-    // and reqwest's connect step bails before any response. The
-    // tarball pipeline surfaces this as `TarballError::FetchTarball`
-    // — a transient error that the retry loop *would* keep retrying
-    // if we let it, so cap with `retries: 0` for determinism.
+    // The connect fails before any response. The tarball pipeline
+    // surfaces this as `TarballError::FetchTarball`, a transient
+    // error that the retry loop *would* keep retrying if we let it,
+    // so cap with `retries: 0` for determinism.
     let (store_dir_keep, store_path) = tempdir_with_leaked_path();
     let client = ThrottledClient::default();
     let pkg_integrity = integrity(FASTIFY_ERROR_INTEGRITY);
@@ -451,7 +481,7 @@ async fn started_fires_for_connection_level_failures() {
     EVENTS.lock().unwrap().clear();
     let _ = fetch_and_extract_with_retry::<RecordingReporter>(
         &client,
-        "http://127.0.0.1:1/pkg.tgz", // port 1 is reserved → connect-refused
+        UNREACHABLE_URL,
         Some(&pkg_integrity),
         None,
         0,

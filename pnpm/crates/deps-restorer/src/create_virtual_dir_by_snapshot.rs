@@ -105,8 +105,7 @@ impl CreateVirtualDirBySnapshot<'_> {
         let _link_concurrency_guard =
             self.link_concurrency_probe.map(tests::LinkConcurrencyProbe::enter);
 
-        let slot = SlotPaths::create(self.layout, self.dependencies.package_key)?;
-        let interrupted_build = slot.save_path.join(NEEDS_BUILD_MARKER).is_file();
+        let (slot, _slot_lock, interrupted_build) = self.open_slot()?;
         let marked_cas_paths = cas_paths_with_build_marker(
             self.cas_paths,
             &slot.save_path,
@@ -149,7 +148,7 @@ impl CreateVirtualDirBySnapshot<'_> {
         // inside the virtual store. `method` is best-effort — pacquet
         // doesn't surface the per-package resolved method past
         // `link_file`'s install-scoped atomic, so we report the
-        // optimistic value the configured method would resolve to in
+        // optimistic value this slot's import method would resolve to in
         // a non-degraded environment (`Auto` → its platform ladder's
         // head, `CloneOrCopy` → `clone`, explicit settings as-is).
         // Refining to per-package resolution
@@ -158,13 +157,37 @@ impl CreateVirtualDirBySnapshot<'_> {
         Reporter::emit(&LogEvent::Progress(ProgressLog {
             level: LogLevel::Debug,
             message: ProgressMessage::Imported {
-                method: optimistic_wire_method(self.import.method),
+                method: optimistic_wire_method(self.import_method()),
                 requester: self.import.requester.to_owned(),
                 to: slot.save_path.to_string_lossy().into_owned(),
             },
         }));
 
         Ok(())
+    }
+
+    /// The slot's directories, and whether it carries a `.pnpm-needs-build`
+    /// marker. The marker is also there while another install builds the
+    /// slot, which a forced re-import would clobber, so a marked slot is
+    /// returned with its lock held.
+    fn open_slot(
+        &self,
+    ) -> Result<(SlotPaths, Option<pnpm_fs::DirLock>, bool), CreateVirtualDirError> {
+        let slot = SlotPaths::create(self.layout, self.dependencies.package_key)?;
+        let marker = slot.save_path.join(NEEDS_BUILD_MARKER);
+        if !marker.is_file() {
+            return Ok((slot, None, false));
+        }
+        let lock = crate::gvs_slot_lock::lock_global_virtual_store_slot(
+            self.layout,
+            self.dependencies.package_key,
+        );
+        let interrupted_build = marker.is_file();
+        Ok((slot, lock, interrupted_build))
+    }
+
+    fn import_method(&self) -> PackageImportMethod {
+        self.import.method_for(self.source.is_mutable, self.source.needs_build)
     }
 
     fn import_slot<Reporter: self::Reporter>(
@@ -186,7 +209,7 @@ impl CreateVirtualDirBySnapshot<'_> {
             && let Some(cache) = self.dir_clone_cache
             && cache.try_import::<Reporter>(
                 self.import.logged_methods,
-                self.import.method,
+                self.import_method(),
                 self.dependencies.package_key,
                 save_path,
                 cas_paths,
@@ -196,12 +219,17 @@ impl CreateVirtualDirBySnapshot<'_> {
         }
         import_indexed_dir::<Reporter>(
             self.import.logged_methods,
-            self.import.method,
+            self.import_method(),
             save_path,
             cas_paths,
             slot_import_opts(
                 self.layout,
-                (interrupted_build, self.source.is_mutable, self.source.force),
+                SlotForceInputs {
+                    interrupted_build,
+                    source_is_mutable: self.source.is_mutable,
+                    source_exists: self.source.source_exists,
+                    force_import: self.source.force,
+                },
             ),
         )
         .map_err(CreateVirtualDirError::ImportIndexedDir)
@@ -337,16 +365,44 @@ fn cas_paths_with_build_marker(
     Some(paths)
 }
 
+/// Inputs to [`slot_import_opts`]'s force decision, named instead of
+/// positional: four `bool`s in a tuple stopped being safe to read at a
+/// glance once `source_exists` joined `source_is_mutable`.
+#[derive(Clone, Copy)]
+struct SlotForceInputs {
+    interrupted_build: bool,
+    source_is_mutable: bool,
+    /// See [`crate::SlotImportSource::source_exists`]. Ignored unless
+    /// `source_is_mutable` is also set.
+    source_exists: bool,
+    force_import: bool,
+}
+
 fn slot_import_opts(
     layout: &crate::VirtualStoreLayout,
-    slot: (bool, bool, bool),
+    slot: SlotForceInputs,
 ) -> ImportIndexedDirOpts {
-    let (interrupted_build, source_is_mutable, force_import) = slot;
+    let SlotForceInputs {
+        interrupted_build,
+        source_is_mutable,
+        source_exists,
+        force_import,
+    } = slot;
     // Mutable sources can reuse a slot for different contents, so a complete
     // import may be stale.
     let safe_to_skip = layout.enable_global_virtual_store() && !source_is_mutable;
+    // A mutable source that is currently missing must never be forced, even by
+    // interrupted_build or force_import — see SlotImportSource::source_exists.
+    if source_is_mutable && !source_exists {
+        return ImportIndexedDirOpts { safe_to_skip, ..ImportIndexedDirOpts::default() };
+    }
     if interrupted_build || source_is_mutable || force_import {
-        return ImportIndexedDirOpts { force: true, keep_modules_dir: true, safe_to_skip };
+        return ImportIndexedDirOpts {
+            force: true,
+            keep_modules_dir: true,
+            safe_to_skip,
+            preserve_symlinks: source_is_mutable,
+        };
     }
     ImportIndexedDirOpts { safe_to_skip, ..ImportIndexedDirOpts::default() }
 }
@@ -363,6 +419,23 @@ fn remove_obsolete_children<'a>(
         }
     }
     Ok(())
+}
+
+/// The import method a slot's files are actually materialized with.
+///
+/// A package that a lifecycle script or a patch is still going to write must
+/// not share inodes with the source its files were imported from: a hard link
+/// carries those writes back into the workspace directory of an injected
+/// package, or into the content-addressable store for a registry package.
+/// `clone-or-copy` gives the build private inodes and still lets a reflink
+/// avoid a byte-for-byte copy. pnpm v11 applies the same override to
+/// `willBeBuilt` packages in `createPackageImporter`.
+#[must_use]
+pub fn effective_import_method(
+    configured: PackageImportMethod,
+    needs_build: bool,
+) -> PackageImportMethod {
+    if needs_build { PackageImportMethod::CloneOrCopy } else { configured }
 }
 
 /// Map pacquet's configured [`PackageImportMethod`] to the value

@@ -280,13 +280,45 @@ fn walker_errors_on_engine_strict_mismatch() {
         other => panic!("expected Installability error, got {other:?}"),
     }
 }
-/// `opts.force = true` bypasses the installability check
-/// entirely — even a required dep on an unsupported platform
-/// passes through. Used by the `prev_graph` walk so the diff
-/// against the previous lockfile catches packages that
+/// A snapshot marked `patched: true` defers its published engines to the
+/// build phase, which checks the patched manifest instead.
+#[test]
+fn walker_defers_published_engines_of_a_patched_snapshot() {
+    let mut root_deps = ResolvedDependencyMap::new();
+    root_deps.insert(pkg_name("a"), resolved_dep("1.0.0"));
+
+    let mut engines = HashMap::new();
+    engines.insert("node".to_string(), ">=99.0.0".to_string());
+    let mut packages = HashMap::new();
+    packages.insert(
+        dep_key("a", "1.0.0"),
+        PackageMetadata { engines: Some(engines), ..metadata_stub() },
+    );
+
+    let mut snapshots = HashMap::new();
+    snapshots.insert(
+        dep_key("a", "1.0.0"),
+        SnapshotEntry { patched: Some(true), ..SnapshotEntry::default() },
+    );
+
+    let lockfile = lockfile_with(root_deps, packages, snapshots);
+    let opts = LockfileToHoistedDepGraphOptions {
+        installability: crate::HoistedInstallability {
+            engine_strict: true,
+            ..host_aware_opts().installability
+        },
+        ..host_aware_opts()
+    };
+    lockfile_to_hoisted_dep_graph(&lockfile, None, &opts)
+        .expect("a patched snapshot's published engines are checked after patching");
+}
+/// `opts.include_incompatible_packages = true` bypasses the
+/// installability check entirely — even a required dep on an
+/// unsupported platform passes through. Used by the `prev_graph` walk
+/// so the diff against the previous lockfile catches packages that
 /// previously installed but would now be filtered.
 #[test]
-fn walker_force_bypasses_installability_check() {
+fn walker_include_incompatible_packages_bypasses_installability_check() {
     let mut root_deps = ResolvedDependencyMap::new();
     root_deps.insert(pkg_name("a"), resolved_dep("1.0.0"));
 
@@ -297,14 +329,17 @@ fn walker_force_bypasses_installability_check() {
     snapshots.insert(dep_key("a", "1.0.0"), SnapshotEntry::default());
 
     let lockfile = lockfile_with(root_deps, packages, snapshots);
-    let opts = LockfileToHoistedDepGraphOptions { force: true, ..host_aware_opts() };
-    let result =
-        lockfile_to_hoisted_dep_graph(&lockfile, None, &opts).expect("force bypasses check");
+    let opts = LockfileToHoistedDepGraphOptions {
+        include_incompatible_packages: true,
+        ..host_aware_opts()
+    };
+    let result = lockfile_to_hoisted_dep_graph(&lockfile, None, &opts)
+        .expect("include_incompatible_packages bypasses check");
 
-    assert_eq!(result.graph.len(), 1, "force=true emits the dep regardless of platform");
-    assert!(result.skipped.is_empty(), "force=true doesn't add to skipped");
+    assert_eq!(result.graph.len(), 1, "the dep is emitted regardless of platform");
+    assert!(result.skipped.is_empty(), "nothing is added to skipped");
 }
-/// The prev-graph walk uses `force: true, skipped: empty` so
+/// The prev-graph walk uses `include_incompatible_packages: true, skipped: empty` so
 /// the *current* layout is preserved even for packages that
 /// would now fail installability.
 /// Without this, an orphan that targets an unsupported platform

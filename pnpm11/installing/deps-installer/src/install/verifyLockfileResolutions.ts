@@ -4,6 +4,7 @@ import { PnpmError } from '@pnpm/error'
 import { isValidDependencyAlias } from '@pnpm/installing.deps-resolver'
 import type { LockfileObject } from '@pnpm/lockfile.fs'
 import { isGitHostedTarballUrl, nameVerFromPkgSnapshot } from '@pnpm/lockfile.utils'
+import { MINIMUM_RELEASE_AGE_VIOLATION_CODE, TRUST_DOWNGRADE_VIOLATION_CODE } from '@pnpm/resolving.npm-resolver'
 import type {
   Resolution,
   ResolutionPolicyViolation,
@@ -34,6 +35,13 @@ const MAX_VIOLATIONS_TO_PRINT = 20
 const DEFAULT_CONCURRENCY = 64
 
 export const RESOLUTION_SHAPE_MISMATCH_VIOLATION_CODE = 'RESOLUTION_SHAPE_MISMATCH'
+
+// Violations from policies the user can relax. Relaxing a policy cannot clear
+// any other violation.
+const POLICY_VIOLATION_CODES = new Set([
+  MINIMUM_RELEASE_AGE_VIOLATION_CODE,
+  TRUST_DOWNGRADE_VIOLATION_CODE,
+])
 
 // Same code the sink-level guards (`safeJoinModulesDir`) throw.
 export const INVALID_DEPENDENCY_ALIAS_CODE = 'INVALID_DEPENDENCY_NAME'
@@ -76,6 +84,15 @@ export interface VerifyLockfileResolutionsOptions {
   cacheDir?: string
   /** Absolute path of the lockfile being verified. Used by the cache's stat shortcut. */
   lockfilePath?: string
+  /**
+   * Entries the install re-resolves instead of reusing, such as the
+   * targets of `pnpm update <pkg>`. The resolver applies the policies to
+   * whatever it picks for them, so the verifiers skip their locked
+   * versions, which may no longer be served by the registry. The offline
+   * shape and alias checks still cover them. A run that skips an entry
+   * does not record the lockfile as verified.
+   */
+  isReplaced?: (name: string, version: string) => boolean
 }
 
 /**
@@ -116,7 +133,7 @@ export async function verifyLockfileResolutions (
   // cache directory and the lockfile's absolute path — that's the
   // production wiring; unit tests that skip them get the gate without
   // memoization and still exercise the same code path.
-  const cache = options?.cacheDir && options?.lockfilePath
+  let cache = options?.cacheDir && options?.lockfilePath
     ? { cacheDir: options.cacheDir, lockfilePath: options.lockfilePath }
     : undefined
 
@@ -175,6 +192,14 @@ export async function verifyLockfileResolutions (
     throw buildVerificationError(shapeViolations)
   }
   if (verifiers.length === 0) return
+  if (options?.isReplaced != null) {
+    for (const [key, { name, version }] of candidates) {
+      if (options.isReplaced(name, version)) {
+        candidates.delete(key)
+        cache = undefined
+      }
+    }
+  }
   if (candidates.size === 0) {
     if (cache) {
       recordVerification(cache.cacheDir, {
@@ -270,13 +295,20 @@ function buildVerificationError (violations: ResolutionPolicyViolation[]): PnpmE
     errorCode,
     `${violations.length} lockfile entries failed verification:\n${details}`,
     {
-      hint: 'The lockfile contains entries that the active policies reject. ' +
-        'This can mean the lockfile is stale, or that someone committed a ' +
-        'lockfile that bypassed the policy locally — inspect recent changes ' +
-        'to pnpm-lock.yaml before trusting it. If the changes look expected, ' +
-        'run "pnpm clean --lockfile" and then "pnpm install" to rebuild from ' +
-        'a fresh resolution. Alternatively, relax the policy that flagged ' +
-        'them.',
+      hint: violations.every((v) => POLICY_VIOLATION_CODES.has(v.code))
+        ? 'The lockfile contains entries that the active policies reject. ' +
+          'This can mean the lockfile is stale, or that someone committed a ' +
+          'lockfile that bypassed the policy locally — inspect recent changes ' +
+          'to pnpm-lock.yaml before trusting it. If the changes look expected, ' +
+          'run "pnpm clean --lockfile" and then "pnpm install" to rebuild from ' +
+          'a fresh resolution. If the fresh resolution still fails and you ' +
+          'trust the affected packages, relax the policy that flagged them.'
+        : 'The lockfile contains entries that pnpm cannot verify, whatever ' +
+          'the configured policies. This can mean the lockfile is stale, or ' +
+          'that it was tampered with — inspect recent changes to ' +
+          'pnpm-lock.yaml before trusting it. If the changes look expected, ' +
+          'run "pnpm clean --lockfile" and then "pnpm install" to rebuild ' +
+          'from a fresh resolution.',
     }
   )
 }

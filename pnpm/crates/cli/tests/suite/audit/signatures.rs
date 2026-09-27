@@ -1,6 +1,6 @@
 use super::{
     CommandTempCwd, Path, assert_failure, assert_success, fs, stderr, stdout,
-    write_minimal_manifest,
+    write_minimal_manifest, write_two_project_audit_workspace,
 };
 const SIGNATURE_KEYID: &str = "SHA256:test";
 
@@ -34,6 +34,44 @@ fn audit_signatures_reports_verified_packages() {
     assert!(out.contains("1 package has a verified registry signature"), "{out}");
     keys_mock.assert();
     packument_mock.assert();
+}
+
+#[test]
+fn audit_signatures_filter_checks_only_the_selected_projects() {
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
+    let mut registry = mockito::Server::new();
+    let key = signing_key();
+    let integrity = "sha512-abc";
+    let signature = sign_b64(&key, &format!("minimist@1.2.0:{integrity}"));
+    let keys_mock = keys_mock(&mut registry, &public_key_b64(&key)).create();
+    let selected_mock = registry
+        .mock("GET", "/minimist")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(packument_body("minimist", "1.2.0", integrity, &signatures_json(&signature)))
+        .expect(1)
+        .create();
+    let unselected_mock = registry
+        .mock("GET", "/lodash")
+        .expect(0)
+        .create();
+    write_two_project_audit_workspace(&workspace, &registry.url());
+
+    let output = pacquet
+        .arg("audit")
+        .arg("signatures")
+        .arg("--filter")
+        .arg("project-b")
+        .output()
+        .expect("run audit signatures");
+
+    assert_success(&output);
+    assert!(stdout(&output).contains("audited 1 package"), "{}", stdout(&output));
+    keys_mock.assert();
+    selected_mock.assert();
+    unselected_mock.assert();
 }
 
 #[test]
@@ -217,10 +255,10 @@ fn audit_signatures_redacts_registry_credentials_on_network_error() {
     let CommandTempCwd {
         mut pacquet, workspace, root: _root, ..
     } = CommandTempCwd::init();
-    // A registry with embedded credentials pointed at a closed port: the keys
-    // fetch fails at the transport layer, and the resulting error must not leak
-    // the `user:pass@` userinfo into stderr.
-    write_signatures_workspace(&workspace, "https://user:pass@127.0.0.1:1", "signed-pkg");
+    // A registry with embedded credentials pointed at an address whose connect
+    // fails at once: the keys fetch fails at the transport layer, and the
+    // resulting error must not leak the `user:pass@` userinfo into stderr.
+    write_signatures_workspace(&workspace, "https://user:pass@0.0.0.0:1", "signed-pkg");
 
     let output = pacquet
         .arg("audit")
@@ -265,6 +303,47 @@ importers:
 
     assert_failure(&output);
     assert!(stderr(&output).contains("ERR_PNPM_AUDIT_NO_PACKAGES"), "stderr:\n{}", stderr(&output));
+}
+#[test]
+fn audit_signatures_errors_when_lockfile_has_unresolved_dependency() {
+    let CommandTempCwd {
+        mut pacquet, workspace, root: _root, ..
+    } = CommandTempCwd::init();
+    fs::write(workspace.join(".npmrc"), "registry=https://registry.npmjs.org/\n")
+        .expect("write .npmrc");
+    write_minimal_manifest(&workspace);
+    fs::write(
+        workspace.join("pnpm-lock.yaml"),
+        "
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    dependencies:
+      missing-pkg:
+        specifier: 1.0.0
+        version: 1.0.0
+
+packages: {}
+
+snapshots: {}
+",
+    )
+    .expect("write lockfile");
+
+    let output = pacquet
+        .arg("audit")
+        .arg("signatures")
+        .output()
+        .expect("run audit signatures");
+
+    assert_failure(&output);
+    assert!(
+        stderr(&output).contains("ERR_PNPM_LOCKFILE_MISSING_DEPENDENCY"),
+        "stderr:\n{}",
+        stderr(&output),
+    );
 }
 
 #[test]

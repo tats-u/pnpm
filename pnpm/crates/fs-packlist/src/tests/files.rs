@@ -66,6 +66,56 @@ fn files_field_restricts_to_listed_globs() {
 }
 
 #[test]
+fn files_field_always_includes_alternate_manifests_at_root() {
+    let dir = tempdir().unwrap();
+    let root = dir.path();
+    touch(root, "package.yaml");
+    touch(root, "package.json5");
+    touch(root, "dist/index.js");
+    touch(root, "src/index.ts");
+
+    let manifest = json!({
+        "name": "x",
+        "version": "0.0.0",
+        "files": ["dist/**"],
+    });
+
+    let out = packlist(root, &manifest).unwrap();
+    assert_eq!(
+        out,
+        vec!["dist/index.js".to_string(), "package.json5".into(), "package.yaml".into(),],
+        "always-included files (package.yaml/package.json5) ship alongside the `files` glob",
+    );
+}
+
+#[test]
+fn files_field_always_includes_manifest_names_case_insensitively_at_root() {
+    let dir = tempdir().unwrap();
+    let root = dir.path();
+    touch(root, "PACKAGE.YAML");
+    touch(root, "Package.Json5");
+    touch(root, "package.json");
+    touch(root, "dist/index.js");
+
+    let manifest = json!({
+        "name": "x",
+        "version": "0.0.0",
+        "files": ["dist/**"],
+    });
+
+    let out = packlist(root, &manifest).unwrap();
+    assert_eq!(
+        out,
+        vec![
+            "PACKAGE.YAML".to_string(),
+            "Package.Json5".into(),
+            "dist/index.js".into(),
+            "package.json".into(),
+        ],
+    );
+}
+
+#[test]
 fn question_mark_does_not_cross_directory() {
     // Regression: `?` matches a single non-slash byte, not arbitrary
     // characters. Without the explicit `/` guard, `a?b/index.js` would
@@ -383,6 +433,25 @@ fn files_field_keeps_explicitly_deep_patterns() {
 }
 
 #[test]
+fn files_field_exclusion_prunes_the_directory_it_names() {
+    let dir = tempdir().unwrap();
+    let root = dir.path();
+    touch(root, "package.json");
+    touch(root, "src/a.js");
+    touch(root, "test/fixture.js");
+
+    let manifest = json!({
+        "name": "x",
+        "version": "0.0.0",
+        "files": ["**", "!**/test"],
+    });
+    let mut out = packlist(root, &manifest).unwrap();
+    out.sort();
+
+    assert_eq!(out, vec!["package.json".to_string(), "src/a.js".into()]);
+}
+
+#[test]
 fn files_field_exclusions_are_not_anchored() {
     let dir = tempdir().unwrap();
     let root = dir.path();
@@ -400,4 +469,54 @@ fn files_field_exclusions_are_not_anchored() {
     out.sort();
 
     assert_eq!(out, vec!["lib/index.js".to_string(), "package.json".into()]);
+}
+
+#[cfg(unix)]
+#[test]
+fn includes_internal_symlinks_and_excludes_escaping_symlinks() {
+    let dir = tempdir().unwrap();
+    let root = dir.path();
+    touch(root, "package.json");
+    touch(root, "real.txt");
+    touch(root, "sub/nested.txt");
+
+    let outside = tempdir().unwrap();
+    touch(outside.path(), "secret.txt");
+
+    std::os::unix::fs::symlink("real.txt", root.join("symlink-file.txt")).unwrap();
+    std::os::unix::fs::symlink("sub", root.join("symlink-dir")).unwrap();
+    std::os::unix::fs::symlink(outside.path().join("secret.txt"), root.join("symlink-outside"))
+        .unwrap();
+    let dir_name = root
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap();
+    std::os::unix::fs::symlink(format!("../{dir_name}/real.txt"), root.join("symlink-reentering"))
+        .unwrap();
+    std::os::unix::fs::symlink(
+        format!("../../{dir_name}/real.txt"),
+        root.join("sub/nested-reentering"),
+    )
+    .unwrap();
+    std::os::unix::fs::symlink("../real.txt", root.join("sub/nested-link")).unwrap();
+
+    let manifest = json!({
+        "name": "x",
+        "version": "0.0.0",
+    });
+    let mut out = packlist(root, &manifest).unwrap();
+    out.sort();
+
+    assert_eq!(
+        out,
+        vec![
+            "package.json".to_string(),
+            "real.txt".into(),
+            "sub/nested-link".into(),
+            "sub/nested.txt".into(),
+            "symlink-dir".into(),
+            "symlink-file.txt".into(),
+        ],
+    );
 }

@@ -1,3 +1,5 @@
+mod auto_dedupe;
+
 mod integrity;
 
 mod builds;
@@ -12,6 +14,8 @@ mod resolution;
 
 mod lockfile;
 
+mod modules_dir;
+
 mod workspace;
 
 mod installation;
@@ -19,6 +23,8 @@ mod installation;
 mod hooks;
 
 mod in_memory_manifests;
+
+mod overrides;
 
 use super::{
     Decision, OptimisticRepeatInstallCheck, check_optimistic_repeat_install,

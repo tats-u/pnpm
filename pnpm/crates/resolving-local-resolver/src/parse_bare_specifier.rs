@@ -52,6 +52,10 @@ pub(crate) enum LocalSpecKind {
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct ParseOptions {
     pub preserve_absolute_paths: bool,
+    /// `inject-workspace-packages` config. Injects a `workspace:` directory
+    /// dependency the same way the name/range workspace match in
+    /// `resolving-npm-resolver` does. Other specifiers ignore it.
+    pub inject_workspace_packages: bool,
 }
 
 /// `path:` is rejected so users get a nudge toward `link:` / `file:`.
@@ -125,7 +129,9 @@ fn from_local(
     let bare = wd.bare_specifier.as_str();
     let spec = normalize_specifier(bare);
 
-    let protocol = local_protocol(bare, kind, wd.injected);
+    let injected =
+        wd.injected || (bare.starts_with("workspace:") && opts.inject_workspace_packages);
+    let protocol = local_protocol(bare, kind, injected);
     let (fetch_spec, normalized_bare_specifier) =
         fetched_and_normalized(&spec, project_dir, protocol);
 
@@ -252,6 +258,21 @@ pub fn local_tarball_path(bare: &str, project_dir: &Path) -> Option<PathBuf> {
     (matches!(spec.kind, LocalSpecKind::File) && spec.fetch_spec.is_file()).then_some(
         spec.fetch_spec,
     )
+}
+
+/// Resolve a `file:` specifier to the path the local resolver reads: the
+/// package directory, or the tarball file. Returns `None` for any other
+/// specifier.
+#[must_use]
+pub fn local_file_path(bare: &str, project_dir: &Path) -> Option<PathBuf> {
+    if !bare.starts_with("file:") {
+        return None;
+    }
+    let wanted = WantedLocalDependency { bare_specifier: bare.to_string(), injected: false };
+    parse_local_scheme(&wanted, project_dir, project_dir, ParseOptions::default())
+        .ok()
+        .flatten()
+        .map(|spec| spec.fetch_spec)
 }
 
 fn contains_path_sep(bare: &str) -> bool {

@@ -1,5 +1,27 @@
+use pnpm_lockfile::{Lockfile, PkgName};
 use pnpm_resolving_deps_resolver::{UpdateDepth, UpdateTargets};
-use std::collections::BTreeMap;
+use pnpm_resolving_resolver_base::PreferredVersions;
+use std::{
+    collections::{BTreeMap, BTreeSet, HashSet},
+    sync::Arc,
+};
+
+/// Caller-supplied version preferences layered onto the resolution seed.
+///
+/// `shared` applies to every importer. `by_importer` replaces the concrete
+/// version selectors of one importer for the package names it lists, which
+/// is how a nested `yarn.lock` keeps its own pins during `pnpm import`.
+#[derive(Debug, Default)]
+pub struct PreferredVersionsOverride {
+    pub shared: PreferredVersions,
+    pub by_importer: BTreeMap<String, PreferredVersions>,
+}
+
+impl From<PreferredVersions> for PreferredVersionsOverride {
+    fn from(shared: PreferredVersions) -> Self {
+        Self { shared, by_importer: BTreeMap::new() }
+    }
+}
 
 /// Which lockfile-pinned `(name, version)` pairs to *withhold* from the
 /// preferred-versions tie-break seed [`InstallWithFreshLockfile`](crate::InstallWithFreshLockfile) builds
@@ -103,6 +125,54 @@ impl UpdateSeedPolicy {
             | UpdateSeedPolicy::DropOnly { max_depth, .. }
             | UpdateSeedPolicy::ByImporter { max_depth, .. } => *max_depth,
         }
+    }
+
+    /// Matches the update targets whose pins every importer of `lockfile`
+    /// withholds at every depth, so none of their locked versions is
+    /// reused. `None` when a locked version of a target may survive: a
+    /// `--depth` limit, an importer outside `requested_importer_ids`, or an
+    /// importer that is not updating by package name.
+    pub(crate) fn replaced_update_targets(
+        &self,
+        lockfile: &Lockfile,
+        requested_importer_ids: Option<&HashSet<String>>,
+    ) -> Option<crate::IsReplaced> {
+        if self.max_depth() != UpdateDepth::UNLIMITED {
+            return None;
+        }
+        if let Some(requested_importer_ids) = requested_importer_ids
+            && !lockfile.importers
+                .keys()
+                .all(|id| requested_importer_ids.contains(id))
+        {
+            return None;
+        }
+        let targets: BTreeSet<&UpdateTargets> = match self {
+            UpdateSeedPolicy::DropOnly { targets, .. } => BTreeSet::from([targets]),
+            UpdateSeedPolicy::ByImporter { policies, .. } => lockfile.importers
+                .keys()
+                .map(|importer_id| match policies.get(importer_id) {
+                    Some(ImporterUpdateSeedPolicy::DropOnly(targets)) => Some(targets),
+                    Some(ImporterUpdateSeedPolicy::DropAll) | None => None,
+                })
+                .collect::<Option<_>>()?,
+            UpdateSeedPolicy::KeepAll
+            | UpdateSeedPolicy::KeepAllResolveAll
+            | UpdateSeedPolicy::FixLockfile
+            | UpdateSeedPolicy::RefreshRevisions
+            | UpdateSeedPolicy::DropAll { .. } => return None,
+        };
+        if targets.is_empty() {
+            return None;
+        }
+        let targets: Vec<UpdateTargets> = targets.into_iter().cloned().collect();
+        Some(Arc::new(move |name: &PkgName, version: &str| {
+            let Ok(version) = node_semver::Version::parse(version) else { return false };
+            let name = name.to_string();
+            targets
+                .iter()
+                .all(|targets| targets.covers(&name, Some(&version)))
+        }))
     }
 }
 #[derive(Debug, Clone)]

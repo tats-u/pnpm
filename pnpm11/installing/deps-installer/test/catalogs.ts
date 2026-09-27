@@ -18,10 +18,10 @@ const f = fixtures(import.meta.dirname)
 const originalModule = await import('@pnpm/logger')
 jest.unstable_mockModule('@pnpm/logger', () => {
   originalModule.logger.warn = jest.fn()
-  return originalModule
+  return { ...originalModule, globalWarn: jest.fn() }
 })
 
-const { logger } = await import('@pnpm/logger')
+const { globalWarn, logger } = await import('@pnpm/logger')
 const { mutateModules, addDependenciesToPackage } = await import('@pnpm/installing.deps-installer')
 
 function preparePackagesAndReturnObjects (manifests: Array<ProjectManifest & Required<Pick<ProjectManifest, 'name'>>>) {
@@ -1180,6 +1180,56 @@ describe('dedupe', () => {
     expect(Object.keys(dedupedLockfile.packages)).toEqual(['@pnpm.e2e/foo@100.0.0', '@pnpm.e2e/foo@100.1.0'])
     expect(dedupedLockfile.catalogs.default['@pnpm.e2e/foo'].version).toBe('100.0.0')
   })
+
+  test('pnpm dedupe moves transitive dependencies to the version a catalog entry pins', async () => {
+    const { options, projects, readLockfile } = preparePackagesAndReturnObjects([
+      {
+        name: 'pinned',
+        dependencies: {
+          '@pnpm.e2e/dep-of-pkg-with-1-dep': 'catalog:',
+          '@pnpm.e2e/pkg-with-1-dep': '100.0.0',
+        },
+      },
+      {
+        name: 'loose',
+        dependencies: {
+          '@pnpm.e2e/dep-of-pkg-with-1-dep': '100.1.0',
+          '@pnpm.e2e/pkg-with-1-dep': '100.1.0',
+        },
+      },
+    ])
+    const catalogs = {
+      default: { '@pnpm.e2e/dep-of-pkg-with-1-dep': '100.0.0' },
+    }
+
+    await mutateModules(installProjects(projects), {
+      ...options,
+      lockfileOnly: true,
+      catalogs,
+    })
+
+    // Without its direct dependency, loose keeps 100.1.0 only through the
+    // lockfile pin of @pnpm.e2e/pkg-with-1-dep@100.1.0.
+    projects['loose' as ProjectId].dependencies = {
+      '@pnpm.e2e/pkg-with-1-dep': '100.1.0',
+    }
+    await mutateModules(installProjects(projects), {
+      ...options,
+      lockfileOnly: true,
+      catalogs,
+    })
+    expect(readLockfile().packages).toHaveProperty(['@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0'])
+
+    await mutateModules(installProjects(projects), {
+      ...options,
+      dedupe: true,
+      lockfileOnly: true,
+      catalogs,
+    })
+    const lockfile = readLockfile()
+    expect(lockfile.packages).toHaveProperty(['@pnpm.e2e/dep-of-pkg-with-1-dep@100.0.0'])
+    expect(lockfile.packages).not.toHaveProperty(['@pnpm.e2e/dep-of-pkg-with-1-dep@100.1.0'])
+  })
 })
 
 describe('add', () => {
@@ -2020,6 +2070,7 @@ describe('update', () => {
       '@pnpm.e2e/foo': { specifier: '^1.0.0', version: '1.0.0' },
     })
 
+    jest.mocked(globalWarn).mockClear()
     const { updatedCatalogs, updatedProjects } = await mutateModules(
       Object.entries(projects).map(([id, manifest]) => ({
         ...manifest,
@@ -2038,6 +2089,7 @@ describe('update', () => {
     expect(updatedCatalogs).toEqual({
       default: { '@pnpm.e2e/foo': '^1.1.0' },
     })
+    expect(globalWarn).not.toHaveBeenCalledWith(expect.stringContaining('Skip adding'))
 
     const lockfile = readLockfile()
     expect(lockfile.catalogs).toEqual({
@@ -2116,6 +2168,47 @@ describe('update', () => {
     await expect(
       mutateModules(installProjects(projects), { ...mutateOpts, frozenLockfile: true })
     ).resolves.toBeDefined()
+  })
+
+  test('an active override that references a catalog applies the updated catalog during resolution', async () => {
+    await addDistTag({ package: '@pnpm.e2e/foo', version: '100.1.0', distTag: 'latest' })
+    const { options, projects, readLockfile } = preparePackagesAndReturnObjects([{
+      name: 'project1',
+      dependencies: {
+        '@pnpm.e2e/foo': 'catalog:',
+        '@pnpm.e2e/foobar': '100.0.0',
+      },
+    }])
+
+    const mutateOpts = {
+      ...options,
+      lockfileOnly: true,
+      catalogs: {
+        default: { '@pnpm.e2e/foo': '100.0.0' },
+      },
+      overrides: {
+        '@pnpm.e2e/foobar>@pnpm.e2e/foo': 'catalog:',
+      },
+    }
+
+    await mutateModules(installProjects(projects), mutateOpts)
+    expect(readLockfile().snapshots['@pnpm.e2e/foobar@100.0.0'].dependencies?.['@pnpm.e2e/foo']).toBe('100.0.0')
+
+    await addDependenciesToPackage(
+      projects['project1' as ProjectId],
+      ['@pnpm.e2e/foo'],
+      {
+        ...mutateOpts,
+        dir: path.join(options.lockfileDir, 'project1'),
+        update: true,
+        updateToLatest: true,
+      })
+
+    const lockfile = readLockfile()
+    expect(lockfile.catalogs.default).toEqual({ '@pnpm.e2e/foo': { specifier: '100.1.0', version: '100.1.0' } })
+    expect(lockfile.overrides).toEqual({ '@pnpm.e2e/foobar>@pnpm.e2e/foo': '100.1.0' })
+    expect(lockfile.snapshots['@pnpm.e2e/foobar@100.0.0'].dependencies?.['@pnpm.e2e/foo']).toBe('100.1.0')
+    expect(Object.keys(lockfile.snapshots).filter((depPath) => depPath.startsWith('@pnpm.e2e/foo@'))).toEqual(['@pnpm.e2e/foo@100.1.0'])
   })
 
   test('update works on named catalog', async () => {
@@ -2225,6 +2318,53 @@ describe('update', () => {
     // Expecting the manifest to remain unchanged after running an update. The
     // change should be reflected in the returned updatedCatalogs object
     // instead.
+    expect(updatedManifest).toEqual({
+      name: 'project1',
+      dependencies: {
+        '@pnpm.e2e/foo': 'catalog:',
+      },
+    })
+    expect(updatedCatalogs).toEqual({
+      default: {
+        '@pnpm.e2e/foo': '100.1.0',
+      },
+    })
+
+    expect(Object.keys(readLockfile().snapshots)).toEqual(['@pnpm.e2e/foo@100.1.0'])
+  })
+
+  test('update with dist tag works on cataloged dependency', async () => {
+    await addDistTag({ package: '@pnpm.e2e/foo', version: '100.1.0', distTag: 'beta' })
+
+    const { options, projects, readLockfile } = preparePackagesAndReturnObjects([{
+      name: 'project1',
+      dependencies: {
+        '@pnpm.e2e/foo': 'catalog:',
+      },
+    }])
+
+    const catalogs = {
+      default: { '@pnpm.e2e/foo': '1.0.0' },
+    }
+
+    const mutateOpts = {
+      ...options,
+      lockfileOnly: true,
+      catalogs,
+    }
+
+    await mutateModules(installProjects(projects), mutateOpts)
+
+    const { updatedCatalogs, updatedManifest } = await addDependenciesToPackage(
+      projects['project1' as ProjectId],
+      ['@pnpm.e2e/foo@beta'],
+      {
+        ...mutateOpts,
+        dir: path.join(process.cwd(), 'project1'),
+        allowNew: false,
+        update: true,
+      })
+
     expect(updatedManifest).toEqual({
       name: 'project1',
       dependencies: {

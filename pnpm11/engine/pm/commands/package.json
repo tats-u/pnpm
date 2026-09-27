@@ -1,6 +1,6 @@
 {
   "name": "@pnpm/engine.pm.commands",
-  "version": "1102.1.3",
+  "version": "1102.1.4",
   "description": "pnpm commands for self-updating and setting up pnpm",
   "keywords": [
     "pnpm",
@@ -42,6 +42,7 @@
     "@pnpm/deps.graph-hasher": "workspace:*",
     "@pnpm/deps.security.signatures": "workspace:*",
     "@pnpm/error": "workspace:*",
+    "@pnpm/exec.npm-lifecycle": "workspace:*",
     "@pnpm/global.commands": "workspace:*",
     "@pnpm/global.packages": "workspace:*",
     "@pnpm/installing.client": "workspace:*",
@@ -50,7 +51,7 @@
     "@pnpm/lockfile.fs": "workspace:*",
     "@pnpm/lockfile.types": "workspace:*",
     "@pnpm/network.auth-header": "workspace:*",
-    "@pnpm/os.env.path-extender": "catalog:",
+    "@pnpm/os.env.path-extender": "workspace:*",
     "@pnpm/pkg-manifest.utils": "workspace:*",
     "@pnpm/resolving.npm-resolver": "workspace:*",
     "@pnpm/shell.path": "workspace:*",

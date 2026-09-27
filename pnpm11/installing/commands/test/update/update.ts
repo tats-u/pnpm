@@ -102,6 +102,76 @@ test('update with "*" pattern', async () => {
   expect(lockfile.packages['@pnpm.e2e/foo@1.0.0']).toBeTruthy()
 })
 
+test('update --peer updates peer dependency ranges', async () => {
+  prepare({
+    peerDependencies: {
+      '@pnpm.e2e/foo': '^1.0.0',
+    },
+  })
+
+  await addDistTag({ package: '@pnpm.e2e/foo', version: '100.1.0', distTag: 'latest' })
+
+  await execFileAsync(process.execPath, [
+    pnpmBin,
+    'update',
+    '--latest',
+    '--peer',
+    `--registry=${registry}`,
+  ])
+
+  const manifest = loadJsonFileSync<ProjectManifest>('package.json')
+  expect(manifest.peerDependencies).toStrictEqual({
+    '@pnpm.e2e/foo': '^100.1.0',
+  })
+  expect(manifest.dependencies).toBeUndefined()
+})
+
+test('update --peer does not reclassify an ordinary dependency as a peer', async () => {
+  prepare({
+    dependencies: {
+      '@pnpm.e2e/foo': '^1.0.0',
+    },
+  })
+
+  await addDistTag({ package: '@pnpm.e2e/foo', version: '100.1.0', distTag: 'latest' })
+
+  await update.handler({
+    ...DEFAULT_OPTS,
+    cliOptions: { peer: true },
+    dir: process.cwd(),
+    latest: true,
+  }, [])
+
+  const manifest = loadJsonFileSync<ProjectManifest>('package.json')
+  expect(manifest.dependencies).toStrictEqual({
+    '@pnpm.e2e/foo': '^100.1.0',
+  })
+  expect(manifest.peerDependencies).toBeUndefined()
+})
+
+test('update --peer updates a named peer without changing other peers', async () => {
+  prepare({
+    peerDependencies: {
+      '@pnpm.e2e/foo': '^1.0.0',
+      '@pnpm.e2e/peer-a': '^1.0.0',
+    },
+  })
+  await addDistTag({ package: '@pnpm.e2e/foo', version: '100.1.0', distTag: 'latest' })
+  await addDistTag({ package: '@pnpm.e2e/peer-a', version: '2.0.0', distTag: 'latest' })
+
+  await update.handler({
+    ...DEFAULT_OPTS,
+    autoInstallPeers: false,
+    cliOptions: { peer: true },
+    dir: process.cwd(),
+  }, ['@pnpm.e2e/foo@100.1.0'])
+
+  expect(loadJsonFileSync<ProjectManifest>('package.json').peerDependencies).toStrictEqual({
+    '@pnpm.e2e/foo': '^100.1.0',
+    '@pnpm.e2e/peer-a': '^1.0.0',
+  })
+})
+
 test('update to latest should not touch the automatically installed peer dependencies', async () => {
   await addDistTag({ package: '@pnpm.e2e/peer-a', version: '1.0.0', distTag: 'latest' })
   await addDistTag({ package: '@pnpm.e2e/peer-c', version: '1.0.0', distTag: 'latest' })
@@ -133,6 +203,48 @@ test('update to latest should not touch the automatically installed peer depende
   expect(lockfile.packages['@pnpm.e2e/peer-a@1.0.1']).toBeFalsy()
   expect(lockfile.packages['@pnpm.e2e/peer-c@1.0.0']).toBeTruthy()
   expect(lockfile.packages['@pnpm.e2e/peer-c@1.0.1']).toBeFalsy()
+})
+
+// https://github.com/pnpm/pnpm/issues/10486
+test.each([undefined, 100])('update re-resolves an automatically installed transitive peer dependency with --depth=%p', async (depth) => {
+  await addDistTag({ package: '@pnpm.e2e/peer-c', version: '1.0.0', distTag: 'latest' })
+
+  const project = prepare({
+    dependencies: {
+      '@pnpm.e2e/abc-parent-with-ab': '1.0.0',
+    },
+  })
+
+  await install.handler({
+    ...DEFAULT_OPTS,
+    dir: process.cwd(),
+  })
+
+  expect(project.readLockfile().packages['@pnpm.e2e/peer-c@1.0.0']).toBeTruthy()
+
+  await addDistTag({ package: '@pnpm.e2e/peer-c', version: '1.0.1', distTag: 'latest' })
+
+  await update.handler({
+    ...DEFAULT_OPTS,
+    depth,
+    dir: process.cwd(),
+  }, ['@pnpm.e2e/peer-c'])
+
+  const lockfile = project.readLockfile()
+  expect(Object.keys(lockfile.packages).filter((depPath) => depPath.startsWith('@pnpm.e2e/peer-c@'))).toStrictEqual([
+    '@pnpm.e2e/peer-c@1.0.1',
+  ])
+  expect(lockfile.importers['.']).toStrictEqual({
+    dependencies: {
+      '@pnpm.e2e/abc-parent-with-ab': {
+        specifier: '1.0.0',
+        version: '1.0.0(@pnpm.e2e/peer-c@1.0.1)',
+      },
+    },
+  })
+  expect(loadJsonFileSync<ProjectManifest>('package.json').dependencies).toStrictEqual({
+    '@pnpm.e2e/abc-parent-with-ab': '1.0.0',
+  })
 })
 
 test('vulnerability updates do not save dependencies added by packageExtensions', async () => {

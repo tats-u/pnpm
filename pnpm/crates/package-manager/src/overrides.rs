@@ -14,10 +14,10 @@
 //! happens through [`pnpm_package_manifest::PackageManifest::value_mut`]
 //! on the in-memory `Value` only.
 
-pub(crate) use selectors::parse_declared_range;
+pub(crate) use selectors::{matches_target, parse_declared_range};
 
 mod selectors;
-use selectors::{matches_target, semver_satisfies, sort_by_specificity};
+use selectors::{semver_satisfies, sort_by_specificity};
 
 use node_semver::{Range, Version};
 use pnpm_config_parse_overrides::{PackageSelector, VersionOverride};
@@ -516,8 +516,10 @@ fn insert_peer_dependency(value: &mut Value, name: String, spec: String) {
 }
 
 fn remove_peer_dependency(value: &mut Value, name: &str) {
-    if let Some(peers) = value.get_mut("peerDependencies").and_then(Value::as_object_mut) {
-        peers.remove(name);
+    for field in ["peerDependencies", "peerDependenciesMeta"] {
+        if let Some(peers) = value.get_mut(field).and_then(Value::as_object_mut) {
+            peers.remove(name);
+        }
     }
 }
 

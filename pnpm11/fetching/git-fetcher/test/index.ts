@@ -1,5 +1,7 @@
 /// <reference path="../../../__typings__/index.d.ts"/>
+import fs from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { afterAll, beforeEach, expect, jest, test } from '@jest/globals'
 import type { PnpmError } from '@pnpm/error'
@@ -78,13 +80,96 @@ test('fetch', async () => {
   expect(manifest?.name).toBe('is-positive')
 })
 
+test('fetch includes committed Git submodules', async () => {
+  const root = temporaryDirectory()
+  const moduleDir = path.join(root, 'module')
+  const packageDir = path.join(root, 'package')
+  await Promise.all([moduleDir, packageDir].map(async (directory) => {
+    fs.mkdirSync(directory)
+    await execa('git', ['init', '-q', '-b', 'main'], { cwd: directory })
+    await execa('git', ['config', 'user.email', 'test@example.invalid'], { cwd: directory })
+    await execa('git', ['config', 'user.name', 'Test'], { cwd: directory })
+  }))
+  fs.writeFileSync(path.join(moduleDir, 'answer.js'), 'module.exports = 42\n')
+  await commitAll(moduleDir, 'add module')
+  fs.writeFileSync(path.join(packageDir, 'package.json'), '{"name":"with-submodule","version":"1.0.0"}')
+  await commitAll(packageDir, 'initialize package')
+  await execa('git', [
+    '-c', 'protocol.file.allow=always',
+    'submodule', 'add', '--', pathToFileURL(moduleDir).href, 'native',
+  ], { cwd: packageDir })
+  await commitAll(packageDir, 'add module')
+  const { stdout: commit } = await execa('git', ['rev-parse', 'HEAD'], { cwd: packageDir })
+  const storeDir = temporaryDirectory()
+  const fetch = createGitFetcher({ storeIndex: createStoreIndex(storeDir) }).git
+
+  const { filesMap } = await withEnv({
+    GIT_CONFIG_COUNT: '1',
+    GIT_CONFIG_KEY_0: 'protocol.file.allow',
+    GIT_CONFIG_VALUE_0: 'always',
+  }, async () => fetch(
+    createCafsStore(storeDir),
+    { commit: String(commit).trim(), repo: pathToFileURL(packageDir).href, type: 'git' },
+    { filesIndexFile: path.join(storeDir, 'index.json') }
+  ))
+
+  expect(filesMap.has('native/answer.js')).toBeTruthy()
+})
+
+test('fetch includes nested committed Git submodules', async () => {
+  const root = temporaryDirectory()
+  const innerDir = path.join(root, 'inner')
+  const middleDir = path.join(root, 'middle')
+  const packageDir = path.join(root, 'package')
+  await Promise.all([innerDir, middleDir, packageDir].map(async (directory) => {
+    fs.mkdirSync(directory)
+    await execa('git', ['init', '-q', '-b', 'main'], { cwd: directory })
+    await execa('git', ['config', 'user.email', 'test@example.invalid'], { cwd: directory })
+    await execa('git', ['config', 'user.name', 'Test'], { cwd: directory })
+  }))
+  fs.writeFileSync(path.join(innerDir, 'inner.js'), 'module.exports = "nested"\n')
+  await commitAll(innerDir, 'add inner module')
+
+  fs.writeFileSync(path.join(middleDir, 'middle.js'), 'module.exports = "middle"\n')
+  await commitAll(middleDir, 'initialize middle')
+  await execa('git', [
+    '-c', 'protocol.file.allow=always',
+    'submodule', 'add', '--', pathToFileURL(innerDir).href, 'inner',
+  ], { cwd: middleDir })
+  await commitAll(middleDir, 'add inner submodule')
+
+  fs.writeFileSync(path.join(packageDir, 'package.json'), '{"name":"with-nested-submodule","version":"1.0.0"}')
+  await commitAll(packageDir, 'initialize package')
+  await execa('git', [
+    '-c', 'protocol.file.allow=always',
+    'submodule', 'add', '--', pathToFileURL(middleDir).href, 'middle',
+  ], { cwd: packageDir })
+  await commitAll(packageDir, 'add middle submodule')
+  const { stdout: commit } = await execa('git', ['rev-parse', 'HEAD'], { cwd: packageDir })
+  const storeDir = temporaryDirectory()
+  const fetch = createGitFetcher({ storeIndex: createStoreIndex(storeDir) }).git
+
+  const { filesMap } = await withEnv({
+    GIT_CONFIG_COUNT: '1',
+    GIT_CONFIG_KEY_0: 'protocol.file.allow',
+    GIT_CONFIG_VALUE_0: 'always',
+  }, async () => fetch(
+    createCafsStore(storeDir),
+    { commit: String(commit).trim(), repo: pathToFileURL(packageDir).href, type: 'git' },
+    { filesIndexFile: path.join(storeDir, 'index.json') }
+  ))
+
+  expect(filesMap.has('middle/middle.js')).toBeTruthy()
+  expect(filesMap.has('middle/inner/inner.js')).toBeTruthy()
+})
+
 test('fetch a package from Git sub folder', async () => {
   const storeDir = temporaryDirectory()
   const fetch = createGitFetcher({ storeIndex: createStoreIndex(storeDir) }).git
   const { filesMap } = await fetch(
     createCafsStore(storeDir),
     {
-      commit: '2b42a57a945f19f8ffab8ecbd2021fdc2c58ee22',
+      commit: 'e2ad6effb15541c76f39884e5231464ff383853b',
       repo: 'https://github.com/RexSkz/test-git-subfolder-fetch.git',
       path: '/packages/simple-react-app',
       type: 'git',
@@ -105,7 +190,7 @@ test('prevent directory traversal attack when using Git sub folder', async () =>
     fetch(
       createCafsStore(storeDir),
       {
-        commit: '2b42a57a945f19f8ffab8ecbd2021fdc2c58ee22',
+        commit: 'e2ad6effb15541c76f39884e5231464ff383853b',
         repo,
         path: pkgDir,
         type: 'git',
@@ -126,7 +211,7 @@ test('prevent directory traversal attack when using Git sub folder #2', async ()
     fetch(
       createCafsStore(storeDir),
       {
-        commit: '2b42a57a945f19f8ffab8ecbd2021fdc2c58ee22',
+        commit: 'e2ad6effb15541c76f39884e5231464ff383853b',
         repo,
         path: pkgDir,
         type: 'git',
@@ -374,7 +459,9 @@ test('a failed clone over SSH names the package and how to re-record it', async 
   expect(err.code).toBe('ERR_PNPM_GIT_FETCH_FAILED')
   expect(err.message).toContain('Failed to fetch "@scope/pkg" from the git repository "git@github.com:pnpm-e2e/this-repository-does-not-exist.git"')
   expect(err.hint).toContain('needs an SSH key for github.com')
+  expect(err.hint).toContain('ssh-add -l')
   expect(err.hint).toContain('pnpm update @scope/pkg')
+  expect(err.hint).toContain('do not re-resolve git dependencies')
 })
 
 test('a failed clone over HTTPS carries no SSH remediation', async () => {
@@ -458,6 +545,32 @@ test('credentials in the repository URL are redacted from the failure', async ()
 
   expect(err.message).not.toContain('s3cr3t-t0ken')
   expect(err.message).toContain('https://github.com/pnpm-e2e/this-repository-does-not-exist.git')
+})
+
+test('a publickey refusal on an SSH clone names ssh-agent and how to re-record HTTPS', async () => {
+  const storeDir = temporaryDirectory()
+  const fetch = createGitFetcher({ storeIndex: createStoreIndex(storeDir) }).git
+  failGit(Object.assign(new Error('git clone failed'), {
+    stderr: 'git@github.com: Permission denied (publickey).\nfatal: Could not read from remote repository.',
+  }))
+  const err = await fetchFailure(fetch(
+    createCafsStore(storeDir),
+    {
+      commit: 'c9b30e71d704cd30fa71f2edd1ecc7dcc4985493',
+      repo: 'git@github.com:acme/widget.git',
+      type: 'git',
+    },
+    {
+      filesIndexFile: path.join(storeDir, 'index.json'),
+      pkg: { name: '@scope/pkg', version: '1.0.0' },
+    }
+  ))
+
+  expect(err.code).toBe('ERR_PNPM_GIT_FETCH_FAILED')
+  expect(err.message).toContain('Permission denied (publickey)')
+  expect(err.hint).toContain('ssh-add -l')
+  expect(err.hint).toContain('pnpm update @scope/pkg')
+  expect(err.hint).toContain('do not re-resolve git dependencies')
 })
 
 test('git runs with terminal and ssh prompts disabled, so a passphrase prompt cannot block the fetch', async () => {
@@ -560,4 +673,9 @@ function setEnv (vars: Record<string, string | undefined>): void {
       process.env[name] = value
     }
   }
+}
+
+async function commitAll (directory: string, message: string): Promise<void> {
+  await execa('git', ['add', '-A'], { cwd: directory })
+  await execa('git', ['-c', 'commit.gpgsign=false', 'commit', '-q', '-m', message], { cwd: directory })
 }

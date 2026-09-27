@@ -1,13 +1,13 @@
 use super::{
     Config, Context, DependencyGroup, DeployError, DeployWorkspaceConfig, DirectoryResolution,
-    HashMap, HashSet, IntoDiagnostic, Lockfile, LockfileResolution, Map, PackageKey,
-    PackageManifest, PackageMetadata, Path, PathBuf, PkgName, PkgNameVerPeer, Project, ProjectInfo,
-    ProjectPathKey, ProjectSnapshot, ResolveBases, ResolvedDependencyMap, ResolvedDependencySpec,
-    SelectedProject, SnapshotEntry, State, Value, bind_singleton_peers, convert_package_key,
+    HashMap, HashSet, Lockfile, LockfileResolution, Map, PackageKey, PackageManifest,
+    PackageMetadata, Path, PkgName, PkgNameVerPeer, Project, ProjectInfo, ProjectPathKey,
+    ProjectSnapshot, ResolveBases, ResolvedDependencyMap, ResolvedDependencySpec, SelectedProject,
+    SnapshotEntry, State, Value, bind_singleton_peers, convert_package_key,
     convert_package_metadata, convert_resolved_dependency_spec, convert_snapshot,
-    create_file_url_key, is_ancestor_path, lexical_normalize, omit_peers_of_excluded_dependencies,
-    project_snapshot_to_snapshot_entry, prune_deploy_lockfile_graph, relative_path, same_path,
-    validate_lockfile_local_path,
+    create_file_url_key, deploy_peer_edges, deploy_workspace_settings, is_ancestor_path,
+    lexical_normalize, omit_peers_of_excluded_dependencies, project_snapshot_to_snapshot_entry,
+    prune_deploy_lockfile_graph, relative_path, same_path, validate_lockfile_local_path,
 };
 
 pub(super) struct DeployFiles {
@@ -76,6 +76,7 @@ pub(super) fn create_deploy_files(
         packages,
         converted,
         dependency_groups,
+        &deploy_peer_edges(lockfile, config, dependency_groups, &ctx)?,
     )?;
 
     let manifest =
@@ -111,6 +112,10 @@ struct DeployedDependencies<'a> {
 /// dependencies are left out of both the deployed manifest and the deployed
 /// importer, because the graph prune drops the packages they would point at;
 /// a peer the project only declares stays in whichever group carries it.
+/// A runtime reference stays too: the engines field that generates it
+/// survives in the deployed manifest and regenerates the edge on every read,
+/// so the importer must keep it. The deploy install skips it with the rest
+/// of its excluded group.
 fn fill_target_dependencies(
     target_snapshot: &mut ProjectSnapshot,
     deployed: &DeployedDependencies<'_>,
@@ -141,8 +146,10 @@ fn fill_target_dependencies(
             source
                 .iter()
                 .flatten()
-                .filter(|(name, _)| {
-                    included || deployed.peer_only_dependencies.contains(&name.to_string())
+                .filter(|(name, spec)| {
+                    included
+                        || deployed.peer_only_dependencies.contains(&name.to_string())
+                        || spec.specifier.starts_with("runtime:")
                 }),
             deployed.ctx,
             &selected_bases,
@@ -165,6 +172,7 @@ fn converted_deploy_lockfile(
     packages: HashMap<PackageKey, PackageMetadata>,
     converted: DeploySnapshots,
     dependency_groups: &[DependencyGroup],
+    peer_edges: &super::PeerSatisfactionEdges,
 ) -> miette::Result<Lockfile> {
     let mut deploy_lockfile = lockfile.clone();
     deploy_lockfile.catalogs = None;
@@ -179,7 +187,7 @@ fn converted_deploy_lockfile(
         HashMap::from([(Lockfile::ROOT_IMPORTER_KEY.to_string(), target_snapshot.clone())]);
     deploy_lockfile.packages = (!packages.is_empty()).then_some(packages);
     deploy_lockfile.snapshots = (!converted.snapshots.is_empty()).then_some(converted.snapshots);
-    prune_deploy_lockfile_graph(&mut deploy_lockfile, dependency_groups);
+    prune_deploy_lockfile_graph(&mut deploy_lockfile, dependency_groups, peer_edges);
     bind_singleton_peers(&mut deploy_lockfile, &converted.linked_workspace_projects)?;
     Ok(deploy_lockfile)
 }
@@ -269,51 +277,6 @@ fn convert_deploy_snapshots(
         );
     }
     Ok(DeploySnapshots { snapshots, linked_workspace_projects })
-}
-
-/// The `pnpm-workspace.yaml` the deploy writes, and the same settings in
-/// the shape the deploy install consumes. Only the settings that survive
-/// a deploy are carried: patch files, rewritten to paths relative to the
-/// deploy dir, and the build allow-list.
-fn deploy_workspace_settings(
-    lockfile: &Lockfile,
-    config: &Config,
-    lockfile_dir: &Path,
-    deploy_dir: &Path,
-    deploy_lockfile: &mut Lockfile,
-) -> miette::Result<(Map<String, Value>, DeployWorkspaceConfig)> {
-    let mut workspace_manifest = Map::new();
-    let mut workspace_config =
-        DeployWorkspaceConfig { patched_dependencies: None, allow_builds: HashMap::new() };
-    if lockfile.patched_dependencies.is_some()
-        && let Some(patched_dependencies) = config.patched_dependencies.as_ref()
-    {
-        deploy_lockfile.patched_dependencies.clone_from(&lockfile.patched_dependencies);
-        let rewritten = patched_dependencies
-            .iter()
-            .map(|(name, value)| {
-                let absolute = if Path::new(value).is_absolute() {
-                    PathBuf::from(value)
-                } else {
-                    lockfile_dir.join(value)
-                };
-                (name.clone(), relative_path(deploy_dir, &absolute))
-            })
-            .collect::<indexmap::IndexMap<_, _>>();
-        workspace_manifest.insert(
-            "patchedDependencies".to_string(),
-            serde_json::to_value(&rewritten).into_diagnostic()?,
-        );
-        workspace_config.patched_dependencies = Some(rewritten);
-    }
-    if !config.allow_builds.is_empty() {
-        workspace_manifest.insert(
-            "allowBuilds".to_string(),
-            serde_json::to_value(&config.allow_builds).into_diagnostic()?,
-        );
-        workspace_config.allow_builds.clone_from(&config.allow_builds);
-    }
-    Ok((workspace_manifest, workspace_config))
 }
 
 /// A lockfile importer records a dependency group only when it has entries.
@@ -441,9 +404,7 @@ fn finish_deploy_files(
     Ok(DeployFiles {
         manifest,
         lockfile: deploy_lockfile,
-        workspace_manifest: (!workspace_manifest.is_empty()).then_some(Value::Object(
-            workspace_manifest,
-        )),
+        workspace_manifest: Some(Value::Object(workspace_manifest)),
         workspace_config,
     })
 }

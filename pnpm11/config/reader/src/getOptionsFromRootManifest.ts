@@ -59,7 +59,13 @@ interface ReplaceEnvInSettingsOptions {
   expandRequestDestinationEnv: boolean
 }
 
-const REQUEST_DESTINATION_SCALAR_KEYS = new Set(['pnprServer', 'registry', 'httpProxy', 'httpsProxy', 'noProxy', 'proxy', 'noproxy'])
+/**
+ * Scalar settings that pick where a request goes or what it carries. A
+ * repo-controlled file may not resolve an environment variable into either,
+ * since the one lets it choose the host and the other lets it send that host
+ * the variable's value.
+ */
+const REQUEST_SCALAR_KEYS = new Set(['pnprServer', 'registry', 'httpProxy', 'httpsProxy', 'noProxy', 'proxy', 'noproxy', 'userAgent'])
 
 export function getOptionsFromPnpmSettings (
   manifestDir: string | undefined,
@@ -95,9 +101,11 @@ export function getOptionsFromPnpmSettings (
   if (settings.packageExtensions != null) {
     assertValidPackageExtensions(settings.packageExtensions)
   }
-  if (pnpmSettings.patchedDependencies) {
-    settings.patchedDependencies = { ...pnpmSettings.patchedDependencies }
-    for (const [dep, patchFile] of Object.entries(pnpmSettings.patchedDependencies)) {
+  if (settings.patchedDependencies !== undefined) {
+    assertValidPatchedDependencies(settings.patchedDependencies)
+    const patchedDependencies = { ...settings.patchedDependencies }
+    settings.patchedDependencies = patchedDependencies
+    for (const [dep, patchFile] of Object.entries(patchedDependencies)) {
       if (manifestDir == null || path.isAbsolute(patchFile)) continue
       settings.patchedDependencies[dep] = path.join(manifestDir, patchFile)
     }
@@ -585,6 +593,17 @@ function assertValidOverrides (overrides: unknown): asserts overrides is Record<
   }
 }
 
+function assertValidPatchedDependencies (patchedDependencies: unknown): asserts patchedDependencies is Record<string, string> {
+  if (patchedDependencies == null || typeof patchedDependencies !== 'object' || Array.isArray(patchedDependencies)) {
+    throw new PnpmError('INVALID_PATCHED_DEPENDENCY', `The patchedDependencies field should be an object, but got ${renderReceivedType(patchedDependencies)}`)
+  }
+  for (const [dep, patchFile] of Object.entries(patchedDependencies)) {
+    if (typeof patchFile !== 'string') {
+      throw new PnpmError('INVALID_PATCHED_DEPENDENCY', `The value of patchedDependencies.${dep} should be a string, but got ${renderReceivedType(patchFile)}`)
+    }
+  }
+}
+
 const PACKAGE_EXTENSION_DEPENDENCY_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies'] as const
 
 // A malformed range here is not caught by anything downstream: the extender
@@ -682,7 +701,7 @@ function replaceEnvInSettings (
   for (const [key, value] of Object.entries(settings)) {
     const newKey = envReplace(key, process.env)
     if (typeof value === 'string') {
-      if (REQUEST_DESTINATION_SCALAR_KEYS.has(newKey) && !opts.expandRequestDestinationEnv && hasEnvPlaceholder(value)) continue
+      if (REQUEST_SCALAR_KEYS.has(newKey) && !opts.expandRequestDestinationEnv && hasEnvPlaceholder(value)) continue
       // @ts-expect-error
       newSettings[newKey as keyof PnpmSettings] = envReplace(value, process.env)
     } else if (newKey === 'namedRegistries' || (newKey === 'registries' && isScopeRouteMap(value))) {

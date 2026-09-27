@@ -2,14 +2,15 @@ use super::{
     CreateVirtualStoreError, SnapshotWithCacheKey,
     cache_keys::{SlotReuse, dir_clone_cacheable},
     cas_paths_key, partition, removed_aliases_for,
-    slot_linking::{LinkSlotsParallel, SlotLink, emit_warm_snapshot_progress, link_slots_parallel},
+    slot_linking::{
+        LinkSlotsParallel, SlotLink, emit_warm_snapshot_progress, link_slots_parallel,
+        warm_progress_already_reported,
+    },
 };
 use crate::{CasPathsByPkgId, InstallPackageBySnapshotError};
 use pnpm_git_fetcher::{GitFetcherError, resolve_package_build_permission};
 use pnpm_lockfile::{LockfileResolution, PackageKey, PackageMetadata, PkgName};
-use pnpm_package_manifest::{
-    files_include_install_scripts, manifest_requires_build, parse_manifest,
-};
+use pnpm_package_manifest::parse_manifest;
 use pnpm_reporter::Reporter;
 use pnpm_tarball::PrefetchResult;
 use std::{
@@ -112,17 +113,6 @@ pub(super) fn is_git_hosted_resolution(resolution: &LockfileResolution) -> bool 
         _ => false,
     }
 }
-pub(super) fn requires_build_from_cas_paths(cas_paths: &HashMap<String, PathBuf>) -> bool {
-    if files_include_install_scripts(cas_paths.keys()) {
-        return true;
-    }
-    let Some(package_json) = cas_paths.get("package.json") else { return false };
-    let Ok(contents) = fs::read_to_string(package_json) else { return false };
-    let Ok(manifest) = parse_manifest(&contents) else {
-        return false;
-    };
-    manifest_requires_build(&manifest)
-}
 pub(super) fn snapshot_needs_build_marker(snapshot_key: &PackageKey, requires_build: bool) -> bool {
     requires_build || crate::snapshot_has_patch(snapshot_key)
 }
@@ -163,7 +153,7 @@ pub(super) fn warm_cas_paths_by_pkg_id(warm: &[partition::WarmEntry<'_>]) -> Cas
     let mut map = CasPathsByPkgId::with_capacity(warm.len());
     for (snapshot_key, _snapshot, cas_paths, _cache_key, _needs_build_marker) in warm {
         map.entry(cas_paths_key(snapshot_key))
-            .or_insert_with(|| Arc::clone(cas_paths));
+            .or_insert_with(|| Arc::clone(cas_paths).into());
     }
     map
 }
@@ -196,10 +186,12 @@ pub(super) fn link_warm_batch<Reporter: self::Reporter>(
             SlotLink {
                 source: crate::SlotImportSource {
                     is_mutable: false,
+                    source_exists: true,
                     force: force_import,
                     build_marker: needs_build_marker
                         .then_some(batch.needs_build_marker_source)
                         .flatten(),
+                    needs_build: *needs_build_marker,
                 },
                 snapshot_key,
                 snapshot,
@@ -233,7 +225,7 @@ pub(super) fn emit_hoisted_warm_progress<Reporter: self::Reporter>(
         emit_warm_snapshot_progress::<Reporter>(
             &snapshot_key.pkg_id(),
             batch.template.import.requester,
-            batch.template.progress_reported.contains(*cache_key),
+            warm_progress_already_reported(batch.template.progress_reported, cache_key),
         );
     }
 }

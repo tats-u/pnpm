@@ -32,7 +32,8 @@ use level_walk::{assign_level_owners, pkgs_info_from_ids, seeded_dep, settle_lev
 
 mod locked_versions;
 use locked_versions::{
-    ensure_same_registry_revision, overlay_version_view, pin_locked_version, pin_patched_revision,
+    ensure_same_registry_revision, keeps_locked_version, overlay_version_view, pin_locked_version,
+    pin_patched_revision,
 };
 
 mod edge_resolution;
@@ -42,6 +43,7 @@ use futures_util::future;
 use pipe_trait::Pipe;
 use pnpm_catalogs_types::Catalogs;
 use pnpm_lockfile::{LockfileResolution, PkgNameVerPeer, SnapshotEntry, TarballRevision};
+use pnpm_resolving_npm_resolver::PickPackageError;
 use pnpm_resolving_resolver_base::{
     CurrentPkg, GitResolveError, NoMatchingVersionError, PreferredVersionsOverlay,
     RegistryResponseError, ResolveError, ResolveOptions, Resolver, UpdateBehavior,

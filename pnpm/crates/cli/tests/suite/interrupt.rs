@@ -1,5 +1,5 @@
 //! Signal handling under `pnpm run`: what a `SIGINT` at the terminal
-//! reaches, and what it leaves behind.
+//! reaches, what it leaves behind, and what pnpm's own death leaves behind.
 //!
 //! Unix-only by subject, not by harness. The tests send POSIX signals to a
 //! process group of their own; Windows delivers console control events
@@ -11,11 +11,12 @@ use command_extra::CommandExtra;
 use pnpm_testing_utils::bin::CommandTempCwd;
 use serde_json::json;
 use std::{
-    fs,
+    fs, io,
     os::unix::process::ExitStatusExt,
     path::Path,
-    process::{Child, ExitStatus, Stdio},
-    thread::sleep,
+    process::{Child, Command, ExitStatus, Stdio},
+    sync::mpsc,
+    thread::{self, sleep},
     time::{Duration, Instant},
 };
 
@@ -72,7 +73,16 @@ const STUBBORN_SCRIPT: &str = r"const fs = require('node:fs')
 process.on('SIGINT', () => {})
 process.on('SIGTERM', () => {})
 setTimeout(() => process.exit(0), 30_000)
-fs.writeFileSync('started.txt', '')
+fs.writeFileSync('started.tmp', String(process.pid))
+fs.renameSync('started.tmp', 'started.txt')
+";
+
+/// A script that records its process id, so a test can tell whether it
+/// is still running once pnpm is gone.
+const LINGERING_SCRIPT: &str = r"const fs = require('node:fs')
+fs.writeFileSync('started.tmp', String(process.pid))
+fs.renameSync('started.tmp', 'started.txt')
+setInterval(() => {}, 1000)
 ";
 
 /// A script that reads a repeated interrupt as an order to stop at once,
@@ -175,6 +185,117 @@ fn ctrl_c_interrupts_the_script_once() {
     drop(root);
 }
 
+/// A nested `pnpm run` keeps a shell as the script's parent. dash holds the
+/// terminal's `SIGINT` until that command exits, so pnpm's status is the
+/// script's own status
+/// (<https://github.com/pnpm/pnpm/issues/9945>).
+#[test]
+fn a_nested_run_keeps_the_scripts_exit_status_after_ctrl_c() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    let pnpm = pacquet.get_program().to_owned();
+    let bin = root.path().join("bin");
+    fs::create_dir_all(&bin).expect("create a bin directory");
+    std::os::unix::fs::symlink(&pnpm, bin.join("pnpm")).expect("expose the test pnpm as pnpm");
+    let path = std::env::join_paths(
+        std::iter::once(bin)
+            .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())),
+    )
+    .expect("join PATH");
+    write_project_running(&workspace, "test", "node dev.js", GRACEFUL_SCRIPT);
+    let manifest = json!({
+        "name": "test",
+        "version": "0.0.0",
+        "scripts": {
+            "start": "node dev.js",
+            "start:with-bug": "pnpm run start",
+        },
+    });
+    fs::write(workspace.join("package.json"), manifest.to_string()).expect("write package.json");
+
+    let mut terminal = Terminal::open();
+    let mut process = terminal.spawn_foreground(
+        pacquet
+            .with_env("PATH", path)
+            .with_args(["--config.verify-deps-before-run=false", "run", "start:with-bug"]),
+    );
+    wait_for_file(&workspace.join("started.txt"), &mut process);
+    terminal.press_ctrl_c();
+    let status = wait_for_shutdown(&mut process);
+    let output = terminal.captured_output();
+
+    assert!(
+        workspace.join("shut-down.txt").exists(),
+        "the script must have finished shutting down before pnpm exited\n{output}",
+    );
+    assert!(
+        !output.contains("ELIFECYCLE"),
+        "a script that shut down cleanly is not a lifecycle failure\n{output}",
+    );
+    assert_eq!(status.code(), Some(0), "the script exited 0, so pnpm does too\n{output}");
+
+    drop(root);
+}
+
+/// After a command handles a terminal `SIGINT`, the rest of the script runs
+/// in every shell, as bash runs it. dash on its own would die from the
+/// signal.
+#[test]
+fn ctrl_c_handled_by_a_command_lets_the_rest_of_the_script_run() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    write_project_running(&workspace, "test", "node dev.js && echo > after.txt", GRACEFUL_SCRIPT);
+
+    let mut terminal = Terminal::open();
+    let mut process = terminal.spawn_foreground(pacquet.with_args([
+        "--config.verify-deps-before-run=false",
+        "run",
+        "dev",
+    ]));
+    wait_for_file(&workspace.join("started.txt"), &mut process);
+    terminal.press_ctrl_c();
+    let status = wait_for_shutdown(&mut process);
+    let output = terminal.captured_output();
+
+    assert!(
+        workspace.join("after.txt").exists(),
+        "the command after the interrupted one must run\n{output}",
+    );
+    assert_eq!(status.code(), Some(0), "the script exited 0, so pnpm does too\n{output}");
+
+    drop(root);
+}
+
+/// The same shell, when the script never handles `SIGINT`, still ends
+/// pnpm with that signal. The child's status is a real interrupt, and
+/// pnpm reports it.
+#[test]
+fn ctrl_c_still_reports_a_script_the_shell_could_not_keep_alive() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    write_project_running(&workspace, "test", "node dev.js", LINGERING_SCRIPT);
+
+    let mut terminal = Terminal::open();
+    let mut process = terminal.spawn_foreground(pacquet.with_args([
+        "--config.verify-deps-before-run=false",
+        "run",
+        "dev",
+    ]));
+    wait_for_file(&workspace.join("started.txt"), &mut process);
+    terminal.press_ctrl_c();
+    let status = wait_for_shutdown(&mut process);
+    let output = terminal.captured_output();
+
+    assert_eq!(
+        status.signal(),
+        Some(libc::SIGINT),
+        "an unhandled interrupt still ends pnpm with SIGINT\n{output}",
+    );
+    assert!(
+        output.contains("[ELIFECYCLE] Command failed with signal SIGINT."),
+        "an unhandled interrupt is still a lifecycle failure\n{output}",
+    );
+
+    drop(root);
+}
+
 /// Without a terminal, the shell running the script may stay its parent
 /// (dash does) and then keeps a relayed `SIGINT` to itself until its
 /// child exits. pnpm signals the script's whole process group instead,
@@ -258,14 +379,16 @@ fn a_parallel_run_relays_the_interrupt_to_every_project() {
 
 /// A script cannot trap the terminal by ignoring what pnpm relays: the
 /// third interrupt stops the waiting, and pnpm then ends the way the
-/// signal would have ended it all along.
+/// signal would have ended it all along. The script, which nothing but
+/// pnpm could reach, ends with it.
 #[test]
 fn a_third_interrupt_ends_pnpm_even_when_the_script_ignores_them() {
     let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
     write_project(&workspace, "test", STUBBORN_SCRIPT);
 
-    // The script outlives pnpm here by design, so its stdio is discarded
-    // rather than left holding the test harness's pipes open.
+    // The script outlives pnpm for a moment, so its stdio is discarded
+    // rather than left holding the test harness's pipes open should it
+    // outlive pnpm for good.
     let mut process = spawn_without_terminal(
         pacquet
             .with_args(["run", "dev"])
@@ -273,6 +396,7 @@ fn a_third_interrupt_ends_pnpm_even_when_the_script_ignores_them() {
             .with_stderr(Stdio::null()),
     );
     wait_for_file(&workspace.join("started.txt"), &mut process);
+    let script = read_pid(&workspace.join("started.txt"));
     for _ in 0..3 {
         interrupt(&process);
         // Signals do not queue, so each has to be taken before the next.
@@ -285,6 +409,81 @@ fn a_third_interrupt_ends_pnpm_even_when_the_script_ignores_them() {
         Some(libc::SIGINT),
         "pnpm should end as an unhandled interrupt would, not with a plain exit code",
     );
+    // Well before the script gives up on its own, so only the watchdog can
+    // satisfy this.
+    assert!(ends_within(script, Duration::from_secs(10)), "the script should not outlive pnpm");
+
+    drop(root);
+}
+
+/// A tool that starts `pnpm run` detached and stops it by killing its
+/// process group, as Playwright's `webServer` does, reaches pnpm but not
+/// a script in a group of its own. The script must still end with pnpm:
+/// a survivor keeps the tool's output pipes open, and the tool waits on
+/// them for ever
+/// ([pnpm/pnpm#15555](https://github.com/pnpm/pnpm/issues/15555)).
+#[test]
+fn killing_the_process_group_of_pnpm_kills_the_script_behind_its_shell_too() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    write_project_running(&workspace, "test", "node dev.js", LINGERING_SCRIPT);
+
+    let mut process = spawn_without_terminal(
+        pacquet
+            .with_args(["run", "dev"])
+            .with_stdout(Stdio::piped())
+            .with_stderr(Stdio::piped()),
+    );
+    let stdout = process.stdout.take().expect("stdout is piped");
+    let stderr = process.stderr.take().expect("stderr is piped");
+    wait_for_file(&workspace.join("started.txt"), &mut process);
+    let script = read_pid(&workspace.join("started.txt"));
+    signal_group(&process, libc::SIGKILL);
+    let status = wait_for_shutdown(&mut process);
+
+    assert_eq!(status.signal(), Some(libc::SIGKILL), "the kill should have reached pnpm");
+    let stdout_closed = closes_within(stdout, SHUTDOWN_DEADLINE);
+    let stderr_closed = closes_within(stderr, SHUTDOWN_DEADLINE);
+    if !stdout_closed || !stderr_closed {
+        // SAFETY: `script` is the process the test's own fixture recorded.
+        unsafe {
+            libc::kill(script, libc::SIGKILL);
+        }
+    }
+    assert!(stdout_closed, "the script kept pnpm's stdout pipe open after pnpm was killed");
+    assert!(stderr_closed, "the script kept pnpm's stderr pipe open after pnpm was killed");
+    assert!(ends_within(script, SHUTDOWN_DEADLINE), "the script should not outlive pnpm");
+
+    drop(root);
+}
+
+/// pnpm's own exit is not its death. A process the script started and
+/// left behind in its group runs on afterwards, as it does when the
+/// script shares pnpm's group.
+#[test]
+fn a_process_the_script_left_behind_survives_the_exit_of_pnpm() {
+    let CommandTempCwd { pacquet, root, workspace, .. } = CommandTempCwd::init();
+    write_project_running(
+        &workspace,
+        "test",
+        "node dev.js </dev/null >/dev/null 2>&1 &",
+        LINGERING_SCRIPT,
+    );
+
+    let mut process = spawn_without_terminal(pacquet.with_args(["run", "dev"]));
+    let status = wait_for_shutdown(&mut process);
+    assert_eq!(status.code(), Some(0), "the script backgrounds its work and exits at once");
+    let started = workspace.join("started.txt");
+    assert!(wait_until(|| started.exists()), "the process left behind should have started");
+    let left_behind = read_pid(&started);
+    // A watchdog that mistook pnpm's exit for its death would have struck
+    // by now.
+    sleep(Duration::from_millis(500));
+    let running = is_running(left_behind);
+    // SAFETY: `left_behind` is the process the test's own fixture recorded.
+    unsafe {
+        libc::kill(left_behind, libc::SIGKILL);
+    }
+    assert!(running, "pnpm's exit should not end a process the script left behind");
 
     drop(root);
 }
@@ -366,6 +565,89 @@ fn signal(process: &Child, signal: libc::c_int) {
     // yet, so it is not a recycled process id.
     let signalled = unsafe { libc::kill(pid, signal) };
     assert_eq!(signalled, 0, "the signal should reach pnpm");
+}
+
+/// Send `signal` to the process group pnpm leads, as a tool that started
+/// pnpm detached does to stop it.
+fn signal_group(process: &Child, signal: libc::c_int) {
+    let pid = i32::try_from(process.id()).expect("the pid fits in a pid_t");
+    // SAFETY: `pid` leads the group of the child this test spawned and has
+    // not waited for yet, so it is not a recycled process id.
+    let signalled = unsafe { libc::kill(-pid, signal) };
+    assert_eq!(signalled, 0, "the signal should reach pnpm's process group");
+}
+
+/// The process id a fixture script wrote to `path`. The fixtures write it
+/// to a temporary file and rename that into place, so a file that exists
+/// already holds the whole id.
+fn read_pid(path: &Path) -> libc::pid_t {
+    fs::read_to_string(path)
+        .expect("read the recorded pid")
+        .trim()
+        .parse()
+        .expect("the fixture recorded its pid")
+}
+
+/// Whether `pid` still names a live process. One the kernel no longer
+/// knows is gone, and so is one that has exited and only waits to be
+/// reaped; one that refuses the probe is still there.
+fn is_running(pid: libc::pid_t) -> bool {
+    // SAFETY: a signal of 0 only probes for the process.
+    if unsafe { libc::kill(pid, 0) } != 0 {
+        return match io::Error::last_os_error().raw_os_error() {
+            Some(libc::ESRCH) => false,
+            Some(libc::EPERM) => true,
+            _ => panic!("probe process {pid}: {}", io::Error::last_os_error()),
+        };
+    }
+    !is_zombie(pid)
+}
+
+/// Whether `pid` has exited and waits for a parent to reap it. An orphan
+/// stays one until init takes it over, which the probe above cannot tell
+/// from a running process.
+fn is_zombie(pid: libc::pid_t) -> bool {
+    let state = Command::new("ps")
+        .args(["-o", "stat=", "-p", &pid.to_string()])
+        .output()
+        .expect("run ps");
+    state.stdout.trim_ascii_start().first() == Some(&b'Z')
+}
+
+/// Whether `pid` is gone before `deadline` passes.
+fn ends_within(pid: libc::pid_t, deadline: Duration) -> bool {
+    let deadline = Instant::now() + deadline;
+    while Instant::now() < deadline {
+        if !is_running(pid) {
+            return true;
+        }
+        sleep(Duration::from_millis(20));
+    }
+    false
+}
+
+/// Whether `stream` reaches its end before `deadline` passes, which it
+/// does once no process holds it open any more.
+fn closes_within(mut stream: impl io::Read + Send + 'static, deadline: Duration) -> bool {
+    let (sender, receiver) = mpsc::channel();
+    thread::spawn(move || {
+        let drained = io::copy(&mut stream, &mut io::sink());
+        let _ = sender.send(drained);
+    });
+    receiver.recv_timeout(deadline).is_ok()
+}
+
+/// Wait until `condition` holds, for as long as a script is given to
+/// start.
+fn wait_until(mut condition: impl FnMut() -> bool) -> bool {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while Instant::now() < deadline {
+        if condition() {
+            return true;
+        }
+        sleep(Duration::from_millis(20));
+    }
+    false
 }
 
 /// Wait for pnpm to end, so a relay that never reached the script fails

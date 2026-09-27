@@ -10,6 +10,8 @@ mod store;
 
 mod installation;
 
+mod optional_progress;
+
 mod reporting;
 
 use super::CreateVirtualStore;
@@ -243,6 +245,7 @@ impl SeededStoreInstall {
                 snapshots: Some(&self.snapshots),
             },
             current_entries: LockfileEntries::default(),
+            importers: &HashMap::new(),
 
             dir_clone_cache: None,
 
@@ -383,7 +386,13 @@ fn slot_link<'a>(
     removed_aliases: &'a [PkgName],
 ) -> crate::create_virtual_store::slot_linking::SlotLink<'a> {
     crate::create_virtual_store::slot_linking::SlotLink {
-        source: crate::SlotImportSource { is_mutable: true, force: false, build_marker: None },
+        source: crate::SlotImportSource {
+            is_mutable: true,
+            source_exists: true,
+            force: false,
+            build_marker: None,
+            needs_build: false,
+        },
         snapshot_key,
         snapshot,
         cas_paths,

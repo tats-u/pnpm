@@ -1,4 +1,5 @@
 pub use archive_options::*;
+pub use archive_request::CacheHeaders;
 pub use download::*;
 pub use error::*;
 pub(crate) use extract::{
@@ -9,7 +10,9 @@ pub(crate) use extract::{
     normalize_bundled_manifest, oversized_manifest_error, stream_extract_gzipped_channel,
     tar_entry_payload,
 };
-pub use fetch_for_resolution::{FetchTarballForResolution, ResolvedTarball};
+pub use fetch_for_resolution::{
+    FetchTarballForResolution, NotModifiedResponse, ResolvedTarball, TarballResolutionFetch,
+};
 pub use local_tarball::*;
 pub use pnpm_network::RetryOpts;
 pub(crate) use prefetch::CachedCasPaths;
@@ -216,6 +219,13 @@ pub type ReportedProgressKeys = DashSet<String>;
 /// install and shared between early fetchers and the later install-pass
 /// reporter.
 pub type SharedReportedProgressKeys = Arc<ReportedProgressKeys>;
+
+/// Namespaced marker for a resolution observer that may report this package
+/// after fetch and materialization paths have had the first chance to claim it.
+#[must_use]
+pub fn pending_progress_key(store_index_key: &str) -> String {
+    format!("\0observer:{store_index_key}")
+}
 
 /// A verified archive's CAFS files and bundled package metadata.
 #[derive(Debug, Clone)]

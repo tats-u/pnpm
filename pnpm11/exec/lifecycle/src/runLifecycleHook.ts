@@ -24,6 +24,11 @@ export interface RunLifecycleHookOptions {
   pkgRoot: string
   raiseOnInterrupt?: boolean
   rootModulesDir: string
+  /**
+   * The `.bin` holding `pkgRoot`'s own executables, when `modulesDir` puts
+   * them somewhere other than `<pkgRoot>/node_modules/.bin`.
+   */
+  wdBinDir?: string
   scriptShell?: string
   silent?: boolean
   scriptsPrependNodePath?: boolean | 'warn-only'
@@ -86,7 +91,7 @@ Please unset the scriptShell option, or configure it to a .exe instead.
       }
       break
     case 'install':
-      if (!m.scripts.install && !m.scripts.preinstall) {
+      if (!m.scripts.install && !m.scripts.preinstall && m.gypfile !== false) {
         checkBindingGyp(opts.pkgRoot, m.scripts)
       }
       break
@@ -117,6 +122,7 @@ Please unset the scriptShell option, or configure it to a .exe instead.
     : undefined
   await lifecycle(m, stage, opts.pkgRoot, {
     dir: opts.rootModulesDir,
+    wdBinDir: opts.wdBinDir,
     extraBinPaths: opts.extraBinPaths,
     extraEnv: {
       ...opts.extraEnv,
@@ -179,8 +185,12 @@ Please unset the scriptShell option, or configure it to a .exe instead.
 }
 
 /**
- * Run node-gyp when binding.gyp is available. Only do this when there are no
- * `install` and `preinstall` scripts (see `npm help scripts`).
+ * Set `scripts.install` to `node-gyp rebuild` when `root` holds a binding.gyp.
+ *
+ * The caller decides whether the synthesized script applies: only when the
+ * manifest declares no `install` or `preinstall` script and does not opt out
+ * with `gypfile: false` (see `npm help scripts` and
+ * https://docs.npmjs.com/cli/v12/configuring-npm/package-json#gypfile).
  */
 function checkBindingGyp (
   root: string,

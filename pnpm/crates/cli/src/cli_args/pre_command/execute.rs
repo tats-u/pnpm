@@ -1,9 +1,10 @@
 use super::{
-    Config, Context, EnvLockfileSync, OsString, PNPM_VERSION, PackageManager, PackageManagerCheck,
-    Path, PathBuf, PreCommandPlan, SilentReporter, SwitchPlan, SwitchSource, SwitchTarget,
-    assert_release_is_installable, config_deps, install_engine_from_env, install_engine_to_store,
-    slice, spawn_pnpm,
+    Config, Context, EnvLockfileSync, InstalledEngine, OsString, PNPM_VERSION, PackageManager,
+    PackageManagerCheck, Path, PreCommandPlan, SilentReporter, SwitchPlan, SwitchSource,
+    SwitchTarget, assert_release_is_installable, config_deps, install_engine_from_env,
+    install_engine_to_store, slice, spawn_pnpm,
 };
+use crate::cli_args::dlx::exit_unless_success;
 
 /// Carry out what the pre-command checks planned. Returns whether the command
 /// has already been run by a delegated pnpm, in which case the caller is done.
@@ -34,46 +35,48 @@ pub(crate) async fn execute_plan(
     }
 }
 
-#[expect(clippy::exit, reason = "delegated pnpm must preserve the child exit code")]
 async fn execute_switch(plan: SwitchPlan, child_argv: &[OsString]) -> miette::Result<bool> {
     let SwitchPlan { config, target } = plan;
     let SwitchTarget { spec, source } = target;
     let config = Config::leak(config);
-    let Some((version, bin_dir)) = install_switch_target(config, &spec, source).await? else {
+    let Some((version, engine)) = install_switch_target(config, &spec, source).await? else {
         return Ok(false);
     };
 
-    let status =
-        spawn_pnpm(slice::from_ref(&bin_dir), child_argv.iter(), PackageManagerCheck::Enabled)
-            .wrap_err_with(|| format!("switch pnpm to v{version}"))?;
-    if !status.success() {
-        std::process::exit(status.code().unwrap_or(1));
-    }
+    let status = spawn_pnpm(
+        slice::from_ref(&engine.bin_dir),
+        child_argv.iter(),
+        PackageManagerCheck::Enabled,
+    )
+    .wrap_err_with(|| format!("switch pnpm to v{version}"))?;
+    drop(engine);
+    // End the way the delegated pnpm did: with its exit code, or with its
+    // signal when a signal killed it.
+    exit_unless_success(status);
     Ok(true)
 }
 
-/// Install the pinned pnpm and return where its bin landed. `None` when
-/// the running pnpm already is the pinned one, so there is nothing to
-/// switch to.
+/// Install the pinned pnpm and return it. `None` when the running pnpm
+/// already is the pinned one, so there is nothing to switch to.
 async fn install_switch_target(
     config: &'static Config,
     spec: &str,
     source: SwitchSource,
-) -> miette::Result<Option<(String, PathBuf)>> {
+) -> miette::Result<Option<(String, InstalledEngine)>> {
     match source {
         SwitchSource::LockedEnv { env, version } => {
             if version == PNPM_VERSION {
                 return Ok(None);
             }
             assert_release_is_installable(&version)?;
-            let bin_dir = Box::pin(install_engine_from_env::<SilentReporter>(
+            let engine = Box::pin(install_engine_from_env::<SilentReporter>(
                 config,
                 PackageManager::Pnpm,
                 &env,
                 &version,
             ))
             .await?;
-            Ok(Some((version, bin_dir)))
+            Ok(Some((version, engine)))
         }
         SwitchSource::Resolve {
             env_root,
@@ -128,7 +131,7 @@ async fn install_resolved_switch_target(
     frozen_lockfile: bool,
     force_resync: bool,
     locked_version: Option<String>,
-) -> miette::Result<Option<(String, PathBuf)>> {
+) -> miette::Result<Option<(String, InstalledEngine)>> {
     let version = match locked_version.filter(|_| frozen_lockfile) {
         Some(locked) => locked,
         None => {
@@ -143,7 +146,7 @@ async fn install_resolved_switch_target(
         return Ok(None);
     }
     assert_release_is_installable(&version)?;
-    let bin_dir = Box::pin(install_engine_to_store::<SilentReporter>(
+    let engine = Box::pin(install_engine_to_store::<SilentReporter>(
         config,
         PackageManager::Pnpm,
         env_root,
@@ -153,5 +156,5 @@ async fn install_resolved_switch_target(
         force_resync,
     ))
     .await?;
-    Ok(Some((version, bin_dir)))
+    Ok(Some((version, engine)))
 }
