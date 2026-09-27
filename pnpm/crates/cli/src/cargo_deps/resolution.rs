@@ -34,9 +34,7 @@ pub(super) fn has_source_overrides(root: &Path) -> Result<bool> {
 fn has_override_sources(overrides: &toml::Value) -> Result<bool> {
     let Some(overrides) = overrides.as_table() else { return Ok(false) };
     for dependency in overrides.values() {
-        let Some(url) = dependency.get("git").and_then(toml::Value::as_str) else {
-            continue;
-        };
+        let Some(url) = dependency.get("git").and_then(toml::Value::as_str) else { continue };
         let source = format!("git+{url}")
             .parse()
             .into_diagnostic()

@@ -141,9 +141,7 @@ async fn hosted_package_has_maintainer(storage: &Storage, name: &str, needle: &s
     let Ok(parsed) = CanonicalPackageName::parse(name, pnpr_package_name::Ecosystem::Npm) else {
         return false;
     };
-    let Ok(Some(bytes)) = storage.read_hosted_document(&parsed).await else {
-        return false;
-    };
+    let Ok(Some(bytes)) = storage.read_hosted_document(&parsed).await else { return false };
     let Ok(packument) = serde_json::from_slice::<Value>(&bytes) else { return false };
     packument_has_maintainer(&packument, needle)
 }

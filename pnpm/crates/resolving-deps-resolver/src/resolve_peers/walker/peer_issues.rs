@@ -15,9 +15,7 @@ impl Walker<'_> {
         ancestor_pkg_ids: &SharedChain<String>,
         peer_name: &str,
     ) -> bool {
-        let Some(scope) = self.opts.scope.hoist_missing_scope.as_ref() else {
-            return false;
-        };
+        let Some(scope) = self.opts.scope.hoist_missing_scope.as_ref() else { return false };
         scope.suppresses_iter(ancestor_pkg_ids.iter(), peer_name)
     }
 
@@ -194,9 +192,7 @@ impl Walker<'_> {
         parent_context: &Arc<HashMap<String, ParentPkgInfo>>,
     ) {
         let Some(tree_node) = self.tree.dependencies_tree.get(node_id) else { return };
-        let Some(pkg) = self.tree.packages.get(&tree_node.resolved_package_id) else {
-            return;
-        };
+        let Some(pkg) = self.tree.packages.get(&tree_node.resolved_package_id) else { return };
         if self.is_peer_relevant(alias, pkg) {
             self.caches.parent_pkgs_of_node.insert(node_id.clone(), Arc::clone(parent_context));
         }

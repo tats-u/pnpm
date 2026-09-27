@@ -428,7 +428,7 @@ async fn a_declared_registry_the_resolve_never_reaches_is_not_rejected() {
     assert!(
         packages
             .keys()
-            .any(|key| { key.to_string().starts_with("@foo/no-deps@1.0.0") }),
+            .any(|key| key.to_string().starts_with("@foo/no-deps@1.0.0")),
     );
 }
 

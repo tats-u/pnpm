@@ -166,9 +166,7 @@ impl PythonPrepare<'_> {
                 built.wheel.filename,
             );
         }
-        let Some(declared) = built.metadata.requires_python.as_deref() else {
-            return Ok(());
-        };
+        let Some(declared) = built.metadata.requires_python.as_deref() else { return Ok(()) };
         let specifiers: pep440_rs::VersionSpecifiers = declared.parse().into_diagnostic()?;
         if !specifiers.contains(self.interpreter.target.environment.python_full_version()) {
             bail!(
@@ -295,9 +293,7 @@ impl PythonPrepare<'_> {
             // may need the environment this chain is currently preparing.
             match entry.try_lock() {
                 Ok(environment) => environment,
-                Err(_) => {
-                    return self.install_nested_requirements::<Reporter>(requires, key).await;
-                }
+                Err(_) => return self.install_nested_requirements::<Reporter>(requires, key).await,
             }
         };
         if let Some(root) = environment.as_ref() {

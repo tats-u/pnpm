@@ -138,12 +138,10 @@ fn sbom_spdx_creation_info() {
     assert!(
         creators
             .iter()
-            .any(|creator| {
-                creator
-                    .as_str()
-                    .unwrap()
-                    .contains("pnpm")
-            }),
+            .any(|creator| creator
+                .as_str()
+                .unwrap()
+                .contains("pnpm")),
     );
 }
 

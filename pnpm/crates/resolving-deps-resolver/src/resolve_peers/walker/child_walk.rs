@@ -207,9 +207,7 @@ impl Walker<'_> {
     ) -> ParentRefs {
         let mut new_parent_refs = ParentRefs::default();
         for (alias, child_node_id) in provider_children {
-            let Some(child_tree) = self.tree.dependencies_tree.get(child_node_id) else {
-                continue;
-            };
+            let Some(child_tree) = self.tree.dependencies_tree.get(child_node_id) else { continue };
             let Some(child_pkg) = self.tree.packages.get(&child_tree.resolved_package_id) else {
                 continue;
             };

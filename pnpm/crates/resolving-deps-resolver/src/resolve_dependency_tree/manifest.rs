@@ -207,9 +207,7 @@ fn collect_deps(
     bundled: &HashSet<&str>,
     out: &mut Vec<ChildSpec>,
 ) -> Result<(), ResolveDependencyTreeError> {
-    let Some(map) = manifest.get(key).and_then(Value::as_object) else {
-        return Ok(());
-    };
+    let Some(map) = manifest.get(key).and_then(Value::as_object) else { return Ok(()) };
     for (name, range) in map {
         if let Some(range_str) = range.as_str() {
             if !crate::is_valid_dependency_alias(name) {

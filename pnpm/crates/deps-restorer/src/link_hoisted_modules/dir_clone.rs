@@ -72,9 +72,7 @@ impl<'a> HoistedDirCloneCache<'a> {
         if node.present || node.package.patch.is_some() || node.package.has_bundled_dependencies {
             return false;
         }
-        let Ok(key) = node.package.dep_path.as_str().parse::<PackageKey>() else {
-            return false;
-        };
+        let Ok(key) = node.package.dep_path.as_str().parse::<PackageKey>() else { return false };
         if !self.snapshots.contains(&key) || ships_bundled_modules(cas_paths) {
             return false;
         }

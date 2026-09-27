@@ -138,9 +138,7 @@ impl<Probe: GitProbe + 'static, Runner: GitCommandRunner + 'static> GitResolver<
         wanted_dependency: &WantedDependency,
         _opts: &ResolveOptions,
     ) -> Result<Option<ResolveResult>, ResolveError> {
-        let Some(bare) = wanted_dependency.bare_specifier.as_deref() else {
-            return Ok(None);
-        };
+        let Some(bare) = wanted_dependency.bare_specifier.as_deref() else { return Ok(None) };
         let Some(partial) = parse_bare_specifier(bare) else { return Ok(None) };
         let spec = partial.finalize();
         let auth_headers =

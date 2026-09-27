@@ -242,9 +242,7 @@ pub fn record_verification(
     mut hash_lockfile: impl FnMut() -> String,
     precomputed: CachePrecomputed,
 ) {
-    let Some(stat) = precomputed.stat.or_else(|| stat_lockfile(lockfile_path)) else {
-        return;
-    };
+    let Some(stat) = precomputed.stat.or_else(|| stat_lockfile(lockfile_path)) else { return };
     let hash = precomputed.hash.unwrap_or_else(&mut hash_lockfile);
     let record = CacheRecord {
         lockfile: CacheLockfile {

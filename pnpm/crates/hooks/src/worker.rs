@@ -409,9 +409,7 @@ fn spawn_stdout_reader(stdout: ChildStdout, pending: PendingMap, stdin: Arc<Mute
 
 fn dispatch_line(pending: &PendingMap, stdin: &Arc<Mutex<ChildStdin>>, line: &str) {
     let Ok(message) = serde_json::from_str::<Value>(line) else { return };
-    let Some(id) = message.get("id").and_then(Value::as_u64) else {
-        return;
-    };
+    let Some(id) = message.get("id").and_then(Value::as_u64) else { return };
 
     if let Some(log) = message.get("log").and_then(Value::as_str) {
         let log_fn = pending
@@ -455,9 +453,7 @@ fn dispatch_callback(
     id: u64,
     callback: &Value,
 ) {
-    let Some(callback_id) = callback.get("id").and_then(Value::as_u64) else {
-        return;
-    };
+    let Some(callback_id) = callback.get("id").and_then(Value::as_u64) else { return };
     let Some(method) = callback.get("method").cloned() else { return };
     let Ok(method) = serde_json::from_value(method) else { return };
     let resolution = callback

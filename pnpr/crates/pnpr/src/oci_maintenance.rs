@@ -204,9 +204,7 @@ async fn finish_pending_deletions(
     while let Some(repository) = next_repository(inventory, &previous)? {
         let name = CanonicalPackageName::parse(&repository, Ecosystem::Oci)?;
         previous = repository;
-        let Some(body) = storage.read_hosted_document(&name).await? else {
-            continue;
-        };
+        let Some(body) = storage.read_hosted_document(&name).await? else { continue };
         let mut document = ImageDocument::parse(&body)?;
         let Some(digest) = document.deleting_blob.take() else { continue };
         let size = storage
@@ -283,9 +281,7 @@ async fn referenced_blobs(
     name: &CanonicalPackageName,
     manifest_limit: usize,
 ) -> Result<HashSet<String>> {
-    let Some(bytes) = storage.read_hosted_document(name).await? else {
-        return Ok(HashSet::new());
-    };
+    let Some(bytes) = storage.read_hosted_document(name).await? else { return Ok(HashSet::new()) };
     let document = ImageDocument::parse(&bytes)?;
     referenced_document_blobs(storage, name, &document, manifest_limit).await
 }

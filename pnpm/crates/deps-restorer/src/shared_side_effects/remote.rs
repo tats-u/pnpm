@@ -220,9 +220,7 @@ pub(super) async fn apply_resolved_artifact(
         return;
     }
     let Some((first_snapshot, _, _)) = group.snapshots.first() else { return };
-    let Some(base) = context.base_cas_paths.get(first_snapshot) else {
-        return;
-    };
+    let Some(base) = context.base_cas_paths.get(first_snapshot) else { return };
     let staged = match stage_artifact(context, artifact, base).await {
         Ok(staged) => staged,
         Err((error, quarantine)) => {

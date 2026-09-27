@@ -261,7 +261,7 @@ async fn cors_allows_only_configured_origins_and_handles_preflight() {
         .unwrap();
     assert!(
         vary.split(',')
-            .any(|header| { header.trim().eq_ignore_ascii_case("origin") }),
+            .any(|header| header.trim().eq_ignore_ascii_case("origin")),
     );
 
     let missing = app
