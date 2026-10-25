@@ -81,6 +81,8 @@ fn breaks_readme_ties_in_utf16_order() {
     ));
 }
 
+mod allow_scripts;
+
 mod behavior;
 
 mod manifests;

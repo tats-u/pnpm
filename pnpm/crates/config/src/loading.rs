@@ -212,6 +212,9 @@ impl Config {
             for_self_update,
         )?;
 
+        let root_manifest_dir = self.root_project_manifest_dir(start_dir).to_path_buf();
+        crate::allow_scripts::apply_root_allow_scripts(self, &root_manifest_dir)?;
+
         // Apply `_auth` routes after workspace yaml (so they win over
         // repo-controlled registries) but before `PNPM_CONFIG_*` (so an
         // explicit `pnpm_config_registry` / `--registry` still wins) —

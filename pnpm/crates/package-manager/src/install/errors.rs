@@ -478,6 +478,10 @@ pub enum InstallError {
         #[error(source)] pnpm_workspace_manifest_writer::UpdateWorkspaceManifestError,
     ),
 
+    /// Failed to sync the root manifest's existing `allowScripts` object.
+    #[diagnostic(transparent)]
+    SyncAllowScripts(#[error(source)] pnpm_package_manifest::PackageManifestError),
+
     /// Surfaces a failure from post-install pruning of policy and build
     /// entries in `pnpm-workspace.yaml`.
     #[diagnostic(transparent)]

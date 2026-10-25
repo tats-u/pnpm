@@ -30,7 +30,7 @@ use derive_more::{Display, Error};
 use miette::{Context, Diagnostic, IntoDiagnostic};
 use pnpm_config::Config;
 use pnpm_package_manager::{Add, build_workspace_packages_map, parse_allow_build_selector};
-use pnpm_package_manifest::DependencyGroup;
+use pnpm_package_manifest::{DependencyGroup, sync_allow_scripts_in_package_json};
 use pnpm_registry::RangeSpecStyle;
 use pnpm_reporter::{LogEvent, LogLevel, PnpmLog, Reporter};
 use pnpm_resolving_parse_wanted_dependency::parse_wanted_dependency;
@@ -397,10 +397,27 @@ pub(crate) fn apply_allow_build(
         }
         .into());
     }
-    set_allow_builds(settings_dir, allow_build_map.iter().copied()).into_diagnostic()?;
     for (name, is_allow) in allow_build_map {
         config.allow_builds.insert(name.to_string(), is_allow);
     }
+    write_allow_build_settings(config, settings_dir)
+}
+
+fn write_allow_build_settings(config: &Config, settings_dir: &Path) -> miette::Result<()> {
+    set_allow_builds(
+        settings_dir,
+        config.allow_builds
+            .iter()
+            .map(|(pkg, &value)| (pkg.as_str(), value)),
+    )
+    .into_diagnostic()?;
+    sync_allow_scripts_in_package_json(
+        config.root_project_manifest_dir(settings_dir),
+        config.allow_builds
+            .iter()
+            .map(|(pkg, &value)| (pkg.as_str(), value)),
+    )
+    .into_diagnostic()?;
     Ok(())
 }
 

@@ -365,6 +365,8 @@ fn load_with_auth_file_and_npmrc(auth_yaml: &str, npmrc: &str) -> Config {
     load_with_fake_env(project.path())
 }
 
+mod allow_scripts;
+
 mod behavior;
 
 mod lockfile;

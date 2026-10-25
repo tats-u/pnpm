@@ -20,7 +20,7 @@ pub async fn approve_global_builds<Reporter: self::Reporter + 'static>(
         return Ok(());
     };
 
-    write_approval_settings(global_pkg_dir, &decision)?;
+    write_approval_settings(global_pkg_dir, global_pkg_dir, &base_config.allow_builds, &decision)?;
     let mut rebuild_groups = Vec::new();
     for (install_dir, scan) in groups {
         let build_packages: Vec<String> = decision.build_packages

@@ -8,6 +8,8 @@ use command_extra::CommandExtra;
 use pnpm_testing_utils::bin::{AddMockedRegistry, CommandTempCwd};
 use std::{fmt::Write as _, fs, path::Path, process::Command};
 
+mod allow_scripts;
+
 /// The install marker the `@pnpm.e2e/install-script-example` package's
 /// `install` lifecycle script writes when it runs.
 const INSTALL_MARKER: &str = "node_modules/.pnpm/@pnpm.e2e+install-script-example@1.0.0\

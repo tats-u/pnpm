@@ -9,12 +9,13 @@ use miette::{Context, Diagnostic, IntoDiagnostic};
 use pnpm_config::{Config, PermissionCapability, WorkspaceSettings};
 use pnpm_modules_yaml::{Host, write_modules_manifest};
 use pnpm_package_manager::{allow_build_key_from_ignored_build, parse_allow_build_selector};
+use pnpm_package_manifest::sync_allow_scripts_in_package_json;
 use pnpm_reporter::{Reporter, emit_global_warning};
 use pnpm_workspace_manifest_writer::set_permissions;
 #[cfg(not(target_family = "wasm"))]
 use std::io::IsTerminal;
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     path::Path,
 };
 #[cfg(target_family = "wasm")]
@@ -91,7 +92,12 @@ impl ApproveBuildsArgs {
         };
 
         let settings_dir = config.workspace_dir.clone().unwrap_or_else(|| dir.to_path_buf());
-        write_approval_settings(&settings_dir, &decision)?;
+        write_approval_settings(
+            &settings_dir,
+            config.root_project_manifest_dir(dir),
+            &config.allow_builds,
+            &decision,
+        )?;
         clear_decided_ignored_builds(scan.modules_manifest, &scan.modules_dir, &decision)?;
 
         // Only a package that was awaiting approval has something to
@@ -198,15 +204,31 @@ fn confirm_selected_builds(build_packages: &[String]) -> miette::Result<bool> {
 
 pub(crate) fn write_approval_settings(
     settings_dir: &Path,
+    root_project_manifest_dir: &Path,
+    current_allow_builds: &HashMap<String, bool>,
     decision: &ApprovalDecision,
 ) -> miette::Result<()> {
+    let mut merged_allow_builds = current_allow_builds.clone();
+    merged_allow_builds.extend(
+        decision.decisions
+            .iter()
+            .map(|(pkg, &value)| (pkg.clone(), value)),
+    );
     set_permissions(
         settings_dir,
-        decision.decisions
+        merged_allow_builds
             .iter()
             .map(|(pkg, &value)| (pkg.as_str(), PermissionCapability::Build, value)),
     )
-    .into_diagnostic()
+    .into_diagnostic()?;
+    sync_allow_scripts_in_package_json(
+        root_project_manifest_dir,
+        merged_allow_builds
+            .iter()
+            .map(|(pkg, &value)| (pkg.as_str(), value)),
+    )
+    .into_diagnostic()?;
+    Ok(())
 }
 
 /// The names an `approve-builds` argument list decides, split by verdict.

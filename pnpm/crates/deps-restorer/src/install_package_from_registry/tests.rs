@@ -64,6 +64,7 @@ fn create_config(
         reporter: Default::default(),
         workspace_key_issues: Default::default(),
         npmrc_warnings: Vec::new(),
+        allow_scripts_warning: None,
         versioning: Default::default(),
         hoist: false,
         hoist_pattern: None,
